@@ -6,6 +6,9 @@ import { useRouter } from 'expo-router';
 const ColorBends = require('../components/ColorBends.jsx').default;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const StarBorder = require('../components/StarBorder.jsx').default;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const GradualBlur = require('../components/GradualBlur.jsx').default;
+
 
 // Load component CSS only on web to avoid native errors
 if (Platform.OS === 'web') {
@@ -88,7 +91,28 @@ export default function LandingPage() {
 
 
     </div>
-
+<GradualBlur
+    target="screen"
+    position="bottom"
+    height="6rem"
+    strength={5}
+    divCount={10}
+    curve="bezier"
+    exponential={true}
+    opacity={1}
+    reactive={true}
+  />
+  <GradualBlur
+    target="screen"
+    position="top"
+    height="3rem"
+    strength={2}
+    divCount={5}
+    curve="bezier"
+    exponential={true}
+    opacity={1}
+    reactive={true}
+  />
     
 
 </section>
