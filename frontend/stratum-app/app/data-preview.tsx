@@ -144,6 +144,17 @@ export default function DataPreviewScreen() {
             }
             return;
           }
+          
+          if (ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg')) {
+          const videoBlob = await blob;
+          const videoUrl = URL.createObjectURL(videoBlob);
+
+          return {
+            type: 'video',
+            src: videoUrl
+          };
+        }
+
 
           // Handle text files (txt, md, json)
           if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
