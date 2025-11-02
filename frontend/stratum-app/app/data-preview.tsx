@@ -7,6 +7,7 @@ import TextFilePanel from '../src/components/data/TextFilePanel';
 import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
 import PdfPanel from '../src/components/data/PdfPanel.web';
+import VideoPanel from '../src/components/data/VideoPanel'
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
