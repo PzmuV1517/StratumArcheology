@@ -36,6 +36,7 @@ export default function DataPreviewScreen() {
   const [pointUrl, setPointUrl] = useState<string | null>(null);
   const [meshUrl, setMeshUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1); // web zoom for preview types
+  const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
   const gridRef = useRef<any>(null);
   const defaultCols = 1000; // virtual infinite feel
@@ -81,6 +82,12 @@ export default function DataPreviewScreen() {
       /* KaTeX layout */
       .markdown-body .katex-display { margin: 1em 0; overflow-x: auto; }
       .markdown-body .katex { font-size: 1em; }
+      /* Preview viewport refinements */
+      #preview-viewport { outline: none !important; background-color: #111111 !important; }
+      #preview-viewport *:focus { outline: none !important; }
+      #preview-content { transform-origin: 0 0 !important; background-color: #111111 !important; }
+      #preview-viewport iframe { border: 0 !important; background: #111111 !important; }
+      #preview-viewport model-viewer { background: #111111 !important; }
     `;
     document.head.appendChild(style);
 
@@ -426,8 +433,46 @@ export default function DataPreviewScreen() {
     return (name as string) || (kind === 'csv' ? 'CSV' : 'Spreadsheet');
   }, [name, kind, editing, isNoteFile, editableTitle, originalTitle]);
 
-  // Web-only zoom wrappers
-  const zoomStyle = Platform.OS === 'web' ? ({ zoom } as any) : undefined;
+  // Only enable custom zoom for preview types that don't have their own zoom (disable for mesh/pdf/video)
+  const canZoomWeb = useMemo(() => {
+    return Platform.OS === 'web' && !(isPdf || isVideo || isMesh);
+  }, [isPdf, isVideo, isMesh]);
+
+  // Web-only: keyboard shortcuts for zoom (i = in, o = out)
+  useEffect(() => {
+    if (!canZoomWeb) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'i' || e.key === 'I') {
+        setZoom((z) => Math.min(4, +(z + 0.1).toFixed(2)));
+      } else if (e.key === 'o' || e.key === 'O') {
+        setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canZoomWeb]);
+
+  // Web-only: mouse wheel to zoom when hovering the preview area
+  useEffect(() => {
+    if (!canZoomWeb) return;
+    const onWheel = (e: WheelEvent) => {
+      const host = wrapperRef.current as HTMLElement | null;
+      if (!host) return;
+      if (!host.contains(e.target as Node)) return;
+      // Only zoom when CTRL/CMD is not pressed (avoid browser-level zoom)
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      const step = (e.deltaY || 0) > 0 ? -0.1 : 0.1;
+      setZoom((z) => {
+        let nz = +(z + step).toFixed(2);
+        if (nz < 0.25) nz = 0.25;
+        if (nz > 4) nz = 4;
+        return nz;
+      });
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel as any);
+  }, [canZoomWeb]);
 
   return (
     <View style={styles.container}>
@@ -453,58 +498,67 @@ export default function DataPreviewScreen() {
             </View>
           )}
           {!loading && !error && (
-            <View style={Platform.OS === 'web' ? [styles.zoomWrapper, zoomStyle] : styles.zoomWrapper}>
-              {isPdf ? (
-                <PdfPanel src={pdfUrl} />
-              ) : isVideo ? (
-                <VideoPanel src={videoUrl} />
-              ) : isMesh ? (
-                <MeshPanel src={meshUrl} name={name as string} />
-              ) : isPoint ? (
-                <PointCloudPanel src={pointUrl} name={name as string} />
-              ) : table ? (
-                (() => {
-                  const ext = (name as string)?.toLowerCase() || '';
-                  const isCsv = ext.endsWith('.csv') || kind === 'csv';
-                  const Panel = isCsv ? CsvPanel : ExcelPanel;
-                  return (
-                    <Panel
-                      table={table}
-                      setTable={(updater: any) => setTable((prev) => updater(prev || [] as any) as any)}
-                      editing={editing}
-                      onDirty={() => setDirty(true)}
-                    />
-                  );
-                })()
-              ) : (
-                <TextFilePanel
-                  editing={editing}
-                  isNoteFile={isNoteFile}
-                  editableTitle={editableTitle}
-                  setEditableTitle={(t) => { setEditableTitle(t); setDirty(true); }}
-                  textContent={textContent || ''}
-                  setTextContent={(t) => { setTextContent(t); setDirty(true); }}
-                  filename={(name as string) || ''}
-                  onDirty={() => setDirty(true)}
-                />
-              )}
+            // Viewport: scrollable on web so scaled content can be panned
+            <View
+              ref={wrapperRef}
+              nativeID={Platform.OS === 'web' ? 'preview-viewport' : undefined}
+              style={Platform.OS === 'web' ? styles.zoomViewportWeb : styles.zoomWrapper}
+            >
+              {/* Apply transform scale only when allowed; otherwise render normally to let inner viewers (e.g., model-viewer) handle zoom */}
+              <View
+                nativeID={Platform.OS === 'web' ? 'preview-content' : undefined}
+                style={
+                  Platform.OS === 'web'
+                    ? (
+                        canZoomWeb
+                          ? [styles.zoomContentWeb, { transform: [{ scale: zoom }] as any, transformOrigin: '0 0' as any }]
+                          : styles.zoomWrapper
+                      )
+                    : styles.zoomWrapper
+                }
+              >
+                {isPdf ? (
+                  <PdfPanel src={pdfUrl} />
+                ) : isVideo ? (
+                  <VideoPanel src={videoUrl} />
+                ) : isMesh ? (
+                  <MeshPanel src={meshUrl} name={name as string} />
+                ) : isPoint ? (
+                  <PointCloudPanel src={pointUrl} name={name as string} />
+                ) : table ? (
+                  (() => {
+                    const ext = (name as string)?.toLowerCase() || '';
+                    const isCsv = ext.endsWith('.csv') || kind === 'csv';
+                    const Panel = isCsv ? CsvPanel : ExcelPanel;
+                    return (
+                      <Panel
+                        table={table}
+                        setTable={(updater: any) => setTable((prev) => updater(prev || [] as any) as any)}
+                        editing={editing}
+                        onDirty={() => setDirty(true)}
+                      />
+                    );
+                  })()
+                ) : (
+                  <TextFilePanel
+                    editing={editing}
+                    isNoteFile={isNoteFile}
+                    editableTitle={editableTitle}
+                    setEditableTitle={(t) => { setEditableTitle(t); setDirty(true); }}
+                    textContent={textContent || ''}
+                    setTextContent={(t) => { setTextContent(t); setDirty(true); }}
+                    filename={(name as string) || ''}
+                    onDirty={() => setDirty(true)}
+                  />
+                )}
+              </View>
             </View>
           )}
         </View>
       </View>
 
-      {/* Actions: hide Edit/Save for PDFs, Videos, Point Clouds, Mesh; add Zoom +/- for preview types */}
+      {/* Actions: Edit/Save hidden for PDFs, Videos, Point Clouds, Mesh */}
       <View style={styles.actions}>
-        {(isPdf || isVideo || isPoint || isMesh) && Platform.OS === 'web' && (
-          <>
-            <TouchableOpacity style={styles.actionButton} onPress={() => setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)))}>
-              <Text style={styles.actionButtonText}>-</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={() => setZoom((z) => Math.min(4, +(z + 0.1).toFixed(2)))}>
-              <Text style={styles.actionButtonText}>+</Text>
-            </TouchableOpacity>
-          </>
-        )}
         {!(isPdf || isVideo || isPoint || isMesh) && (
           <>
             <TouchableOpacity
@@ -553,4 +607,8 @@ const styles = StyleSheet.create({
   headerText: { color: '#9A9A9A', fontSize: 10, fontWeight: '600' },
   markdownWrapper: {},
   zoomWrapper: { flex: 1 },
+  // Scrollable viewport on web to avoid tearing and allow panning when zoomed
+  zoomViewportWeb: { flex: 1, overflow: 'scroll' as any },
+  // Inner content gets scaled
+  zoomContentWeb: { minWidth: '100%', minHeight: '100%', maxWidth: "500%", maxHeight: "500%" },
 });
