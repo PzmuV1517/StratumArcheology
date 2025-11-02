@@ -320,12 +320,17 @@ export default function ProjectDetailScreen() {
     const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
     const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
     const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-    if (isCsv || isExcel || isText || isPdf || isVideo) {
+    const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
+    const isMesh = /\.(glb|gltf)$/i.test(lower);
+
+    if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
       let kind: string = 'csv';
       if (isExcel) kind = 'excel';
       else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
       else if (isPdf) kind = 'pdf';
       else if (isVideo) kind = 'video';
+      else if (isPoint) kind = 'pointcloud';
+      else if (isMesh) kind = 'mesh';
       router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });
       return;
     }
@@ -576,12 +581,17 @@ export default function ProjectDetailScreen() {
             const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
             const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
             const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-            if (isCsv || isExcel || isText || isPdf || isVideo) {
+            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
+            const isMesh = /\.(glb|gltf)$/i.test(lower);
+
+            if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
               let kind: string = 'csv';
               if (isExcel) kind = 'excel';
               else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
               else if (isPdf) kind = 'pdf';
               else if (isVideo) kind = 'video';
+              else if (isPoint) kind = 'pointcloud';
+              else if (isMesh) kind = 'mesh';
               reopenFilesOnReturnRef.current = true;
               setShowFilesOverlay(false);
               router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });
