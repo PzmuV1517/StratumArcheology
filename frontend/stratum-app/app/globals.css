@@ -10,6 +10,8 @@ html, body, #root {
   min-height: 100%;
   overflow-x: hidden;
 }
+/* Ensure dark base behind fixed overlays */
+body { background-color: #000; }
 
 /* Hide scrollbars on web while keeping scrolling functional */
 /* Firefox */

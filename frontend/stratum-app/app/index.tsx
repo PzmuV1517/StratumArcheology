@@ -7,6 +7,8 @@ const ColorBends = require('../components/ColorBends.jsx').default;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const StarBorder = require('../components/StarBorder.jsx').default;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const DotGrid = require('../components/DotGrid.jsx').default;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const GradualBlur = require('../components/GradualBlur.jsx').default;
 
 
@@ -14,6 +16,8 @@ const GradualBlur = require('../components/GradualBlur.jsx').default;
 if (Platform.OS === 'web') {
   // @ts-ignore - CSS handled by web bundler
   require('../components/ColorBends.css');
+  // @ts-ignore - CSS handled by web bundler
+  require('../components/DotGrid.css');
   // @ts-ignore - CSS handled by web bundler
   require('../components/StarBorder.css');
 }
@@ -24,13 +28,32 @@ export default function LandingPage() {
   return (
 
 <section style={{position: 'relative',overflow: 'hidden'}}>
+    {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
+
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
+            {React.createElement(DotGrid, {
+            dotSize: 10,
+            gap: 15,
+            baseColor: '#281f38',
+            activeColor: '#ff0000',
+            proximity: 120,
+            shockRadius: 250,
+            shockStrength: 5,
+            resistance: 750,
+            returnDuration: 1.5,
+              style: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' },
+          })}
+        </div>
+      </div>
+
     <div style={{ height: '100%',overflowY: 'auto'}}>
 
             <View style={styles.container}>
       <View style={[styles.hero, Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null]}>
                 {/* Animated background */}
                 <View style={styles.bg}>
-                <ColorBends
+        <ColorBends
                     colors={["#ff0000", "#ff1717ff", "#9d0000ff"]}
                     rotation={19}
                     autoRotate={0}
@@ -41,7 +64,7 @@ export default function LandingPage() {
                     mouseInfluence={1}
                     parallax={0.5}
                     noise={0.1}
-                    transparent
+          transparent={false}
                 />
                 </View>
 
@@ -124,13 +147,15 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   hero: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    zIndex: 10,
+    backgroundColor: '#000',
   },
   bg: {
     ...StyleSheet.absoluteFillObject,
@@ -199,7 +224,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   infoSection: {
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     paddingTop: 48,
     paddingBottom: 80,
