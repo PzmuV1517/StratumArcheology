@@ -24,3 +24,16 @@ body::-webkit-scrollbar-thumb { background: transparent; }
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 /* StarBorder uses its own CSS from components/StarBorder.css; no global overrides needed here. */
+
+/* Blend the bottom of ColorBends into the page background (web only) */
+.colorbends-fade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20rem; /* increase/decrease to control fade length */
+  pointer-events: none;
+  z-index: 1; /* sits above ColorBends background, below content */
+  /* Fade from transparent to the page bg (#000) */
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #000 100%);
+}

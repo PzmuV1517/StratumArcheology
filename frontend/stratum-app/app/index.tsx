@@ -5,16 +5,12 @@ import { useRouter } from 'expo-router';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ColorBends = require('../components/ColorBends.jsx').default;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const GradualBlur = require('../components/GradualBlur.jsx').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const StarBorder = require('../components/StarBorder.jsx').default;
 
 // Load component CSS only on web to avoid native errors
 if (Platform.OS === 'web') {
   // @ts-ignore - CSS handled by web bundler
   require('../components/ColorBends.css');
-  // @ts-ignore - CSS handled by web bundler
-  require('../components/GradualBlur.css');
   // @ts-ignore - CSS handled by web bundler
   require('../components/StarBorder.css');
 }
@@ -28,7 +24,7 @@ export default function LandingPage() {
     <div style={{ height: '100%',overflowY: 'auto'}}>
 
             <View style={styles.container}>
-            <View style={[styles.hero, Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null]}>
+      <View style={[styles.hero, Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null]}>
                 {/* Animated background */}
                 <View style={styles.bg}>
                 <ColorBends
@@ -45,6 +41,9 @@ export default function LandingPage() {
                     transparent
                 />
                 </View>
+
+        {/* Web-only bottom fade to blend ColorBends into page background */}
+        {Platform.OS === 'web' ? <div className="colorbends-fade-bottom" /> : null}
 
                 {/* Content overlay */}
                 <View style={styles.center}>
@@ -90,27 +89,7 @@ export default function LandingPage() {
 
     </div>
 
-    <GradualBlur
-    target="screen"
-    position="bottom"
-    height="6rem"
-    strength={5}
-    divCount={10}
-    curve="bezier"
-    exponential={true}
-    opacity={1}
-    responsive={true}
-  />
-<GradualBlur
-    target="screen"
-    position="top"
-    height="3rem"
-    strength={2}
-    divCount={5}
-    curve="bezier"
-    exponential={true}
-    opacity={1}
-  />
+    
 
 </section>
 
@@ -131,12 +110,14 @@ const styles = StyleSheet.create({
   },
   bg: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
   },
   center: {
     width: '100%',
     maxWidth: 960,
     paddingHorizontal: 24,
     alignItems: 'center',
+    zIndex: 2,
   },
   logo: {
     color: '#ffffff',
