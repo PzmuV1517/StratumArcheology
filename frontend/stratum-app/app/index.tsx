@@ -33,9 +33,9 @@ export default function LandingPage() {
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', inset: 0 }}>
             {React.createElement(DotGrid, {
-            dotSize: 10,
+            dotSize: 5,
             gap: 15,
-            baseColor: '#281f38',
+            baseColor: '#000000ff',
             activeColor: '#ff0000',
             proximity: 120,
             shockRadius: 250,
@@ -46,6 +46,9 @@ export default function LandingPage() {
           })}
         </div>
       </div>
+
+    {/* Fixed top fade to blend DotGrid into hero */}
+    {Platform.OS === 'web' ? <div className="dotgrid-fade-top" /> : null}
 
     <div style={{ height: '100%',overflowY: 'auto'}}>
 
@@ -148,6 +151,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+    position: 'relative',
+    zIndex: 2,
   },
   hero: {
     flex: 1,
