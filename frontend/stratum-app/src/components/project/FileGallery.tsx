@@ -227,6 +227,7 @@ function iconFor(node: FileNode) {
   if (lower.endsWith('.csv')) return '📊';
   if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) return '📈';
   if (lower.endsWith('.md') || lower.endsWith('.txt')) return '📄';
+  if (lower.match(/\.(mp4|webm|ogg|mov)$/)) return '🎬';
   if (lower.endsWith('.pdf')) return '📑';
   return '📁';
 }
