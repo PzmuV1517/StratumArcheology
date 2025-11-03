@@ -1,5 +1,5 @@
 import React from "react";
-import video.js from "video.js";
+import videojs from "video.js";
 import "video.js/dist/video-js.css";
 import { View, StyleSheet } from "react-native";
 
@@ -9,7 +9,8 @@ interface Props {
 
 export default function VideoPanel({ src }: Props) {
     const videoRef = React.useRef<HTMLVideoElement | null>(null);
-    const playerRef = React.useRef<videojs.Player | null>(null);
+    // Use a broad type to avoid type dependency issues across environments
+    const playerRef = React.useRef<any>(null);
     React.useEffect(() => {
         if (videoRef.current && src) {
             playerRef.current = videojs(videoRef.current, {

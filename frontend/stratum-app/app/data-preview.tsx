@@ -8,8 +8,8 @@ import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
 import PdfPanel from '../src/components/data/PdfPanel.web';
 import VideoPanel from '../src/components/data/VideoPanel';
-import PointCloudPanel from '../src/components/data/PointCloudPanel';
-import MeshPanel from '../src/components/data/MeshPanel';
+import PointCloudPanel from '../src/components/data/PointCloudPanel.web';
+import MeshPanel from '../src/components/data/MeshPanel.web';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
