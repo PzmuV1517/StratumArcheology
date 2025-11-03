@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaEyeSlash } from 'react-icons/fa';
 import { FaEye } from 'react-icons/fa';
 import {
@@ -11,15 +11,44 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../src/services/api';
 import { config } from '../../src/config/config';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const FaultyTerminal = require('../../components/FaultyTerminal.jsx').default;
+// Load component CSS only on web
+if (Platform.OS === 'web') {
+  // @ts-ignore - CSS handled by web bundler
+  require('../../components/FaultyTerminal.css');
+}
 
 export default function LoginScreen() {
+  const params = useLocalSearchParams<{ fadeDelay?: string }>();
+  const fadeDelayMs = useMemo(() => {
+    const v = params.fadeDelay ? parseInt(String(params.fadeDelay), 10) : NaN;
+    return Number.isFinite(v) ? v : 1200; // default, changeable
+  }, [params.fadeDelay]);
+
+  const fade = useRef(new Animated.Value(0)).current;
+  const translate = fade.interpolate({ inputRange: [0, 1], outputRange: [24, 0] });
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }, fadeDelayMs);
+    return () => clearTimeout(t);
+  }, [fade, fadeDelayMs]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -90,11 +119,39 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Background: FaultyTerminal (web only) */}
+      {Platform.OS === 'web' ? (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', inset: 0 }}>
+            {React.createElement(FaultyTerminal, {
+              scale: 1.5,
+              speed: 0.5,
+              gridMul: [2, 1],
+              digitSize: 1.2,
+              timeScale: 1,
+              pause: false,
+              scanlineIntensity: 0.5,
+              glitchAmount: 1,
+              flickerAmount: 1,
+              noiseAmp: 1,
+              chromaticAberration: 0,
+              dither: 0,
+              curvature: 0.1,
+              tint: '#ff0000',
+              mouseReact: true,
+              mouseStrength: 0.5,
+              pageLoadAnimation: true,
+              brightness: 0.6,
+              style: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+            })}
+          </div>
+        </div>
+      ) : null}
+      {/* Login card with fade-up */}
+      <Animated.View style={[styles.loginCard, { opacity: fade, transform: [{ translateY: translate }] }]}>      
       <View style={styles.header}>
-        <Text style={styles.title}>STRATUM</Text>
-        <Text style={styles.subtitle}>Archaeological Documentation System</Text>
+        <Text style={styles.logo}>STRATUM</Text>
       </View>
-
       <View style={styles.form}>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>EMAIL</Text>
@@ -169,6 +226,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </Link>
       </View>
+      </Animated.View>
 
       {/* Dev modal for API override */}
       <Modal visible={showDevModal} transparent animationType="fade" onRequestClose={() => setShowDevModal(false)}>
@@ -206,13 +264,34 @@ export default function LoginScreen() {
 const styles: any = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     padding: 24
   },
+  logo: {
+    color: '#ffffff',
+    opacity: 0.9,
+    fontSize: 14,
+    letterSpacing: 6,
+    fontWeight: '800',
+    marginBottom: 25,
+    textAlign: 'center',
+  },
+  loginCard: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    backgroundColor: '#0A0A0A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    borderRadius: 16,
+    padding: 20,
+  },
   header: {
-    marginBottom: 48,
-    alignItems: 'center'
+    minHeight: 80,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   title: {
     fontSize: 48,
