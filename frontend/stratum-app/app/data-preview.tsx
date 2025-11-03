@@ -7,6 +7,7 @@ import TextFilePanel from '../src/components/data/TextFilePanel';
 import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
 import PdfPanel from '../src/components/data/PdfPanel.web';
+import VideoPanel from '../src/components/data/VideoPanel';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
@@ -29,6 +30,7 @@ export default function DataPreviewScreen() {
   const [editableTitle, setEditableTitle] = useState<string>('');
   const [isNoteFile, setIsNoteFile] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   // markdown handled by TextFilePanel
   const gridRef = useRef<any>(null);
   const defaultCols = 1000; // virtual infinite feel
@@ -138,6 +140,19 @@ export default function DataPreviewScreen() {
             const url = window.URL.createObjectURL(blob);
             if (!cancelled) {
               setPdfUrl(url);
+              setVideoUrl(null);
+              setTable(null);
+              setTextContent(null);
+            }
+            return;
+          }
+
+          // Video detection and preview (web)
+          if (ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || (kind === 'video')) {
+            const url = window.URL.createObjectURL(blob);
+            if (!cancelled) {
+              setVideoUrl(url);
+              setPdfUrl(null);
               setTable(null);
               setTextContent(null);
             }
@@ -148,11 +163,6 @@ export default function DataPreviewScreen() {
           if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
             const text = await blob.text();
             setTextContent(text);
-            // Markdown preloading now moved into MarkdownView/TextFilePanel
-
-            // Check if this is a note file (by checking if it's a txt file, which might be a note)
-            // We'll assume txt files could be notes and allow title editing
-            // You could also check the kind parameter or make an API call to determine if it's in Notes folder
             if (ext.endsWith('.txt')) {
               setIsNoteFile(true);
               const filename = (name as string) || '';
@@ -315,7 +325,7 @@ export default function DataPreviewScreen() {
     }
   };
 
-  // Revoke PDF URL on unmount/change
+  // Revoke object URLs on unmount/change
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && pdfUrl) {
@@ -324,22 +334,33 @@ export default function DataPreviewScreen() {
     };
   }, [pdfUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web' && videoUrl) {
+        try { window.URL.revokeObjectURL(videoUrl); } catch {}
+      }
+    };
+  }, [videoUrl]);
+
   const isPdf = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     return ext.endsWith('.pdf') || kind === 'pdf';
   }, [name, kind]);
 
+  const isVideo = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || '';
+    return ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || kind === 'video';
+  }, [name, kind]);
+
   const header = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     if (ext.endsWith('.txt')) {
-      // For note files, show the editable title when editing, otherwise show the current title
-      if (editing && isNoteFile) {
-        return editableTitle || 'Text File';
-      }
+      if (editing && isNoteFile) return editableTitle || 'Text File';
       return originalTitle || (name as string) || 'Text File';
     }
     if (ext.endsWith('.md')) return (name as string) || 'Markdown File';
     if (ext.endsWith('.pdf') || kind === 'pdf') return (name as string) || 'PDF File';
+    if (ext.match(/\.(mp4|webm|ogg|mov)$/) || kind === 'video') return (name as string) || 'Video';
     return (name as string) || (kind === 'csv' ? 'CSV' : 'Spreadsheet');
   }, [name, kind, editing, isNoteFile, editableTitle, originalTitle]);
 
@@ -369,6 +390,8 @@ export default function DataPreviewScreen() {
           {!loading && !error && (
             isPdf ? (
               <PdfPanel src={pdfUrl} />
+            ) : isVideo ? (
+              <VideoPanel src={videoUrl} />
             ) : table ? (
               (() => {
                 const ext = (name as string)?.toLowerCase() || '';
@@ -399,9 +422,9 @@ export default function DataPreviewScreen() {
         </View>
       </View>
 
-      {/* Actions: hide Edit/Save for PDFs */}
+      {/* Actions: hide Edit/Save for PDFs and Videos */}
       <View style={styles.actions}>
-        {!isPdf && (
+        {!(isPdf || isVideo) && (
           <>
             <TouchableOpacity
               style={styles.actionButton}
