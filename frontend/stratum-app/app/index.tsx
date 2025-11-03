@@ -232,7 +232,7 @@ export default function LandingPage() {
             </View>
 
             {/* Closing CTA */}
-            <View style={[styles.ctaSection, { paddingTop: 20, paddingBottom: 500 }]}>
+            <View style={[styles.ctaSection, { paddingTop: 20, paddingBottom: 400 }]}>
               <Text style={styles.ctaHeading}>Start your next discovery</Text>
               <Text style={styles.ctaSub}>Spin up a project and ship your first artefact in minutes.</Text>
               <View style={{ marginTop: 20 }}>
