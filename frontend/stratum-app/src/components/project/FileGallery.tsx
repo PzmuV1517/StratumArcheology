@@ -229,6 +229,8 @@ function iconFor(node: FileNode) {
   if (lower.endsWith('.md') || lower.endsWith('.txt')) return '📄';
   if (lower.match(/\.(mp4|webm|ogg|mov)$/)) return '🎬';
   if (lower.endsWith('.pdf')) return '📑';
+  if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower)) return '🌫️'; // point clouds
+  if (/\.(glb|gltf)$/i.test(lower)) return '🧩'; // 3D meshes
   return '📁';
 }
 

@@ -8,6 +8,8 @@ import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
 import PdfPanel from '../src/components/data/PdfPanel.web';
 import VideoPanel from '../src/components/data/VideoPanel';
+import PointCloudPanel from '../src/components/data/PointCloudPanel.web';
+import MeshPanel from '../src/components/data/MeshPanel.web';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
@@ -31,6 +33,10 @@ export default function DataPreviewScreen() {
   const [isNoteFile, setIsNoteFile] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [pointUrl, setPointUrl] = useState<string | null>(null);
+  const [meshUrl, setMeshUrl] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1); // web zoom for preview types
+  const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
   const gridRef = useRef<any>(null);
   const defaultCols = 1000; // virtual infinite feel
@@ -76,6 +82,12 @@ export default function DataPreviewScreen() {
       /* KaTeX layout */
       .markdown-body .katex-display { margin: 1em 0; overflow-x: auto; }
       .markdown-body .katex { font-size: 1em; }
+      /* Preview viewport refinements */
+      #preview-viewport { outline: none !important; background-color: #111111 !important; }
+      #preview-viewport *:focus { outline: none !important; }
+      #preview-content { transform-origin: 0 0 !important; background-color: #111111 !important; }
+      #preview-viewport iframe { border: 0 !important; background: #111111 !important; }
+      #preview-viewport model-viewer { background: #111111 !important; }
     `;
     document.head.appendChild(style);
 
@@ -135,24 +147,55 @@ export default function DataPreviewScreen() {
           const { blob }: any = await fileService.downloadFileStream(nodeId, token, undefined);
           const ext = (name as string)?.toLowerCase() || '';
 
-          // PDF detection and preview
+          // PDF
           if (ext.endsWith('.pdf') || (kind === 'pdf')) {
             const url = window.URL.createObjectURL(blob);
             if (!cancelled) {
               setPdfUrl(url);
               setVideoUrl(null);
+              setPointUrl(null);
               setTable(null);
               setTextContent(null);
             }
             return;
           }
 
-          // Video detection and preview (web)
+          // Video
           if (ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || (kind === 'video')) {
             const url = window.URL.createObjectURL(blob);
             if (!cancelled) {
               setVideoUrl(url);
               setPdfUrl(null);
+              setPointUrl(null);
+              setMeshUrl(null);
+              setTable(null);
+              setTextContent(null);
+            }
+            return;
+          }
+
+          // 3D Mesh: .glb/.gltf
+          if (/\.(glb|gltf)$/i.test(ext) || kind === 'mesh') {
+            const url = window.URL.createObjectURL(blob);
+            if (!cancelled) {
+              setMeshUrl(url);
+              setPdfUrl(null);
+              setVideoUrl(null);
+              setPointUrl(null);
+              setTable(null);
+              setTextContent(null);
+            }
+            return;
+          }
+
+          // Point cloud: .las/.laz/.ply/.e57/.pcd/.rwi/.rwp
+          if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
+            const url = window.URL.createObjectURL(blob);
+            if (!cancelled) {
+              setPointUrl(url);
+              setPdfUrl(null);
+              setVideoUrl(null);
+              setMeshUrl(null);
               setTable(null);
               setTextContent(null);
             }
@@ -212,9 +255,7 @@ export default function DataPreviewScreen() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [nodeId, name, kind]);
 
   const handleDownload = async () => {
@@ -342,6 +383,22 @@ export default function DataPreviewScreen() {
     };
   }, [videoUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web' && pointUrl) {
+        try { window.URL.revokeObjectURL(pointUrl); } catch {}
+      }
+    };
+  }, [pointUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web' && meshUrl) {
+        try { window.URL.revokeObjectURL(meshUrl); } catch {}
+      }
+    };
+  }, [meshUrl]);
+
   const isPdf = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     return ext.endsWith('.pdf') || kind === 'pdf';
@@ -350,6 +407,16 @@ export default function DataPreviewScreen() {
   const isVideo = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     return ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || kind === 'video';
+  }, [name, kind]);
+
+  const isPoint = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || '';
+    return /\.(las|laz|ply|e57|pcd|rwi|rwp)$/.test(ext) || kind === 'pointcloud';
+  }, [name, kind]);
+
+  const isMesh = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || '';
+    return /\.(glb|gltf)$/.test(ext) || kind === 'mesh';
   }, [name, kind]);
 
   const header = useMemo(() => {
@@ -361,8 +428,51 @@ export default function DataPreviewScreen() {
     if (ext.endsWith('.md')) return (name as string) || 'Markdown File';
     if (ext.endsWith('.pdf') || kind === 'pdf') return (name as string) || 'PDF File';
     if (ext.match(/\.(mp4|webm|ogg|mov)$/) || kind === 'video') return (name as string) || 'Video';
+    if (ext.match(/\.(glb|gltf)$/) || kind === 'mesh') return (name as string) || '3D Model';
+    if (ext.match(/\.(las|laz|ply|e57|pcd|rwi|rwp)$/) || kind === 'pointcloud') return (name as string) || 'Point Cloud';
     return (name as string) || (kind === 'csv' ? 'CSV' : 'Spreadsheet');
   }, [name, kind, editing, isNoteFile, editableTitle, originalTitle]);
+
+  // Only enable custom zoom for preview types that don't have their own zoom (disable for mesh/pdf/video)
+  const canZoomWeb = useMemo(() => {
+    return Platform.OS === 'web' && !(isPdf || isVideo || isMesh);
+  }, [isPdf, isVideo, isMesh]);
+
+  // Web-only: keyboard shortcuts for zoom (i = in, o = out)
+  useEffect(() => {
+    if (!canZoomWeb) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'i' || e.key === 'I') {
+        setZoom((z) => Math.min(4, +(z + 0.1).toFixed(2)));
+      } else if (e.key === 'o' || e.key === 'O') {
+        setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [canZoomWeb]);
+
+  // Web-only: mouse wheel to zoom when hovering the preview area
+  useEffect(() => {
+    if (!canZoomWeb) return;
+    const onWheel = (e: WheelEvent) => {
+      const host = wrapperRef.current as HTMLElement | null;
+      if (!host) return;
+      if (!host.contains(e.target as Node)) return;
+      // Only zoom when CTRL/CMD is not pressed (avoid browser-level zoom)
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      const step = (e.deltaY || 0) > 0 ? -0.1 : 0.1;
+      setZoom((z) => {
+        let nz = +(z + step).toFixed(2);
+        if (nz < 0.25) nz = 0.25;
+        if (nz > 4) nz = 4;
+        return nz;
+      });
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel as any);
+  }, [canZoomWeb]);
 
   return (
     <View style={styles.container}>
@@ -388,43 +498,68 @@ export default function DataPreviewScreen() {
             </View>
           )}
           {!loading && !error && (
-            isPdf ? (
-              <PdfPanel src={pdfUrl} />
-            ) : isVideo ? (
-              <VideoPanel src={videoUrl} />
-            ) : table ? (
-              (() => {
-                const ext = (name as string)?.toLowerCase() || '';
-                const isCsv = ext.endsWith('.csv') || kind === 'csv';
-                const Panel = isCsv ? CsvPanel : ExcelPanel;
-                return (
-                  <Panel
-                    table={table}
-                    setTable={(updater: any) => setTable((prev) => updater(prev || [] as any) as any)}
+            // Viewport: scrollable on web so scaled content can be panned
+            <View
+              ref={wrapperRef}
+              nativeID={Platform.OS === 'web' ? 'preview-viewport' : undefined}
+              style={Platform.OS === 'web' ? styles.zoomViewportWeb : styles.zoomWrapper}
+            >
+              {/* Apply transform scale only when allowed; otherwise render normally to let inner viewers (e.g., model-viewer) handle zoom */}
+              <View
+                nativeID={Platform.OS === 'web' ? 'preview-content' : undefined}
+                style={
+                  Platform.OS === 'web'
+                    ? (
+                        canZoomWeb
+                          ? [styles.zoomContentWeb, { transform: [{ scale: zoom }] as any, transformOrigin: '0 0' as any }]
+                          : styles.zoomWrapper
+                      )
+                    : styles.zoomWrapper
+                }
+              >
+                {isPdf ? (
+                  <PdfPanel src={pdfUrl} />
+                ) : isVideo ? (
+                  <VideoPanel src={videoUrl} />
+                ) : isMesh ? (
+                  <MeshPanel src={meshUrl} name={name as string} />
+                ) : isPoint ? (
+                  <PointCloudPanel src={pointUrl} name={name as string} />
+                ) : table ? (
+                  (() => {
+                    const ext = (name as string)?.toLowerCase() || '';
+                    const isCsv = ext.endsWith('.csv') || kind === 'csv';
+                    const Panel = isCsv ? CsvPanel : ExcelPanel;
+                    return (
+                      <Panel
+                        table={table}
+                        setTable={(updater: any) => setTable((prev) => updater(prev || [] as any) as any)}
+                        editing={editing}
+                        onDirty={() => setDirty(true)}
+                      />
+                    );
+                  })()
+                ) : (
+                  <TextFilePanel
                     editing={editing}
+                    isNoteFile={isNoteFile}
+                    editableTitle={editableTitle}
+                    setEditableTitle={(t) => { setEditableTitle(t); setDirty(true); }}
+                    textContent={textContent || ''}
+                    setTextContent={(t) => { setTextContent(t); setDirty(true); }}
+                    filename={(name as string) || ''}
                     onDirty={() => setDirty(true)}
                   />
-                );
-              })()
-            ) : (
-              <TextFilePanel
-                editing={editing}
-                isNoteFile={isNoteFile}
-                editableTitle={editableTitle}
-                setEditableTitle={(t) => { setEditableTitle(t); setDirty(true); }}
-                textContent={textContent || ''}
-                setTextContent={(t) => { setTextContent(t); setDirty(true); }}
-                filename={(name as string) || ''}
-                onDirty={() => setDirty(true)}
-              />
-            )
+                )}
+              </View>
+            </View>
           )}
         </View>
       </View>
 
-      {/* Actions: hide Edit/Save for PDFs and Videos */}
+      {/* Actions: Edit/Save hidden for PDFs, Videos, Point Clouds, Mesh */}
       <View style={styles.actions}>
-        {!(isPdf || isVideo) && (
+        {!(isPdf || isVideo || isPoint || isMesh) && (
           <>
             <TouchableOpacity
               style={styles.actionButton}
@@ -471,4 +606,9 @@ const styles = StyleSheet.create({
   headerCell: { backgroundColor: '#151515', borderRightWidth: 1, borderRightColor: '#2A2A2A', borderBottomWidth: 1, borderBottomColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 4 },
   headerText: { color: '#9A9A9A', fontSize: 10, fontWeight: '600' },
   markdownWrapper: {},
+  zoomWrapper: { flex: 1 },
+  // Scrollable viewport on web to avoid tearing and allow panning when zoomed
+  zoomViewportWeb: { flex: 1, overflow: 'scroll' as any },
+  // Inner content gets scaled
+  zoomContentWeb: { minWidth: '100%', minHeight: '100%', maxWidth: "500%", maxHeight: "500%" },
 });
