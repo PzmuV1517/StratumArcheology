@@ -17,43 +17,39 @@ function ensureModelViewerScript() {
 
 export default function MeshPanel({ src, name }: { src: string | null; name?: string }) {
   const viewerRef = useRef<any>(null);
-  
+
   useEffect(() => {
     ensureModelViewerScript();
-    
-    // Keyboard zoom: dispatch synthetic wheel events to model-viewer
-    // This triggers the exact same zoom code path as mouse scroll
+
     const onKey = (e: KeyboardEvent) => {
-      const el = viewerRef.current;
+      const el = viewerRef.current as HTMLElement | null;
       if (!el) return;
-      
       const k = e.key;
       let deltaY = 0;
-      
-      if (k === 'i' || k === 'I') {
-        deltaY = -100; // zoom in (negative = scroll up)
-      } else if (k === 'o' || k === 'O') {
-        deltaY = 100; // zoom out (positive = scroll down)
-      } else {
-        return;
+      if (k === 'i' || k === 'I') deltaY = -100; // zoom in
+      else if (k === 'o' || k === 'O') deltaY = 100; // zoom out
+      else return;
+
+      try {
+        const wheelEvent = new WheelEvent('wheel', {
+          deltaY,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        });
+        el.dispatchEvent(wheelEvent);
+      } catch {
+        const evt: any = document.createEvent('Event');
+        evt.initEvent('wheel', true, true);
+        evt.deltaY = deltaY;
+        (el as any).dispatchEvent(evt);
       }
 
-      // Create and dispatch a synthetic wheel event
-      const wheelEvent = new WheelEvent('wheel', {
-        deltaY,
-        deltaMode: 0,
-        clientX: el.offsetWidth / 2,
-        clientY: el.offsetHeight / 2,
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      });
-      
-      el.dispatchEvent(wheelEvent);
       e.preventDefault();
       e.stopPropagation();
     };
-    
+
     document.addEventListener('keydown', onKey, { capture: true });
     return () => document.removeEventListener('keydown', onKey, { capture: true } as any);
   }, []);
