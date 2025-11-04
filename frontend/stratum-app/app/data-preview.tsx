@@ -189,6 +189,7 @@ export default function DataPreviewScreen() {
           }
 
           // Point cloud: .las/.laz/.ply/.pcd/.rwi/.rwp
+          // Currently not working: .pcd/.rwi/.rwp
           if (/\.(las|laz|ply|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
             const url = window.URL.createObjectURL(blob);
             if (!cancelled) {
