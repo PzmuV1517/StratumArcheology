@@ -7,6 +7,7 @@ import aiohttp
 import hashlib
 import os
 from app.minio_client import minio_client
+from io import BytesIO
 
 router = APIRouter(prefix="/convert", tags=["convert"])
 
@@ -375,6 +376,48 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
     return positions, None
 
 
+def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Optional[list]]:
+    """Parse LAZ (compressed LAS) using laspy + lazrs, return positions and optional RGB colors.
+    Falls back to elevation-only coloring on the frontend if RGB is absent.
+    """
+    try:
+        import laspy
+        import numpy as np  # laspy depends on numpy
+    except Exception as e:
+        raise ValueError(f"LAZ support not available: {e}")
+
+    try:
+        las = laspy.read(BytesIO(buf))
+    except Exception as e:
+        raise ValueError(f"Failed to read LAZ: {e}")
+
+    n = len(las.points)
+    if n == 0:
+        return [], None
+
+    step = max(1, n // max_points) if n > max_points else 1
+    # Vectorized subsample
+    x = las.x[::step]
+    y = las.y[::step]
+    z = las.z[::step]
+    positions = []
+    positions_extend = positions.extend
+    for xi, yi, zi in zip(x, y, z):
+        positions_extend([float(xi), float(yi), float(zi)])
+
+    colors: Optional[list] = None
+    dims = set(las.point_format.dimension_names)
+    if {'red', 'green', 'blue'}.issubset(dims):
+        r = las.red[::step]
+        g = las.green[::step]
+        b = las.blue[::step]
+        colors = []
+        for ri, gi, bi in zip(r, g, b):
+            colors.extend([float(ri) / 65535.0, float(gi) / 65535.0, float(bi) / 65535.0])
+
+    return positions, colors
+
+
 @router.get("/pointcloud")
 async def convert_pointcloud(src: str = Query(..., description="Source URL to point cloud"), name: Optional[str] = None):
     ext = detect_ext(name or src)
@@ -406,8 +449,25 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
+    if ext == "laz":
+        if src.startswith("blob:" ) or src.startswith("data:"):
+            raise HTTPException(status_code=400, detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.")
+        data = await fetch_bytes(src)
+        try:
+            positions, colors = parse_laz_laspy(data, max_points=2_000_000)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"LAZ parse failed: {e}")
+        if not positions:
+            raise HTTPException(status_code=400, detail="LAZ parse produced no points")
+        ply_bytes = write_ply_ascii(positions, colors)
+        key_base = hashlib.sha1((src or name or "").encode("utf-8")).hexdigest()
+        object_name = f"converted/{key_base}.ply"
+        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        url = minio_client.get_presigned_url(object_name, expiry=3600)
+        return JSONResponse({"ok": True, "format": "PLY", "url": url})
+
     # Unsupported in-browser: attempt to signal conversion requirement
-    if ext in ("laz", "e57", "rwi", "rwp"):
+    if ext in ("e57", "rwi", "rwp"):
         # Placeholder: require PDAL/CloudCompare on server to implement
         raise HTTPException(status_code=501, detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.")
 
@@ -455,7 +515,21 @@ async def convert_pointcloud_upload(
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
-    if ext in ("laz", "e57", "rwi", "rwp"):
+    if ext == "laz":
+        try:
+            positions, colors = parse_laz_laspy(data, max_points=2_000_000)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"LAZ parse failed: {e}")
+        if not positions:
+            raise HTTPException(status_code=400, detail="LAZ parse produced no points")
+        ply_bytes = write_ply_ascii(positions, colors)
+        key_base = hashlib.sha1((provided_name + str(len(ply_bytes))).encode("utf-8")).hexdigest()
+        object_name = f"converted/{key_base}.ply"
+        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        url = minio_client.get_presigned_url(object_name, expiry=3600)
+        return JSONResponse({"ok": True, "format": "PLY", "url": url})
+
+    if ext in ("e57", "rwi", "rwp"):
         raise HTTPException(status_code=501, detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.")
 
     raise HTTPException(status_code=400, detail=f"Unsupported point cloud format: {extU}")

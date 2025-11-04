@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 import { PCDLoader } from 'three/examples/jsm/loaders/PCDLoader.js';
 import { config } from '../../config/config';
@@ -14,7 +14,7 @@ export default function PointCloudPanel({ src, name }: Props) {
   const rendererRef = React.useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = React.useRef<THREE.Scene | null>(null);
   const cameraRef = React.useRef<THREE.PerspectiveCamera | null>(null);
-  const controlsRef = React.useRef<OrbitControls | null>(null);
+  const controlsRef = React.useRef<TrackballControls | null>(null);
   const pointsRef = React.useRef<THREE.Points | null>(null);
   const axesRef = React.useRef<THREE.AxesHelper | null>(null);
   const gridRef = React.useRef<THREE.GridHelper | null>(null);
@@ -22,6 +22,9 @@ export default function PointCloudPanel({ src, name }: Props) {
   const radiusRef = React.useRef<number>(1);
 
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [progress, setProgress] = React.useState(0); // 0..1
+  const [loadingText, setLoadingText] = React.useState<string>('');
   const [showAxes, setShowAxes] = React.useState(true);
   const [showGrid, setShowGrid] = React.useState(true);
   const [bg, setBg] = React.useState('#0E0E0E');
@@ -53,11 +56,15 @@ export default function PointCloudPanel({ src, name }: Props) {
     renderer.setSize(host.clientWidth, host.clientHeight);
     host.appendChild(renderer.domElement);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-  controls.enableZoom = true;
-  controls.zoomSpeed = 1.0;
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.2;
+    (controls as any).noRotate = false;
+    (controls as any).noZoom = false;
+    (controls as any).noPan = false;
+    (controls as any).staticMoving = false;
+    (controls as any).dynamicDampingFactor = 0.2;
     controls.target.set(0, 0, 0);
 
   const light = new THREE.AmbientLight(0xffffff, 1.0);
@@ -173,11 +180,18 @@ export default function PointCloudPanel({ src, name }: Props) {
 
     if (!src || !ext) return;
 
+    // init loading state
+    setLoading(true);
+    setProgress(0);
+    setLoadingText('Starting…');
+
     const loadPLY = async () => {
       const loader = new PLYLoader();
       loader.load(
         src,
         (geometry) => {
+          setProgress(1);
+          setLoading(false);
           geometry.computeBoundingSphere();
           // record metadata
           const zStats = getZStats(geometry);
@@ -198,8 +212,20 @@ export default function PointCloudPanel({ src, name }: Props) {
           updatePointSize();
           tuneHelpersToFit(fit.radius);
         },
-        undefined,
-  (err: any) => setError('Failed to load PLY: ' + (err?.message || String(err)))
+        (evt) => {
+          setLoadingText('Loading PLY…');
+          if ((evt as any)?.lengthComputable) {
+            const p = (evt as any).loaded / Math.max(1, (evt as any).total);
+            setProgress(Math.max(0, Math.min(1, p)));
+          } else {
+            // fallback: nudge progress up to 0.9 while unknown
+            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+          }
+        },
+        (err: any) => {
+          setLoading(false);
+          setError('Failed to load PLY: ' + (err?.message || String(err)));
+        }
       );
     };
 
@@ -208,6 +234,8 @@ export default function PointCloudPanel({ src, name }: Props) {
       loader.load(
         src,
         (points) => {
+          setProgress(1);
+          setLoading(false);
           // points is THREE.Points already, ensure colors/intensity
           const geom = points.geometry as THREE.BufferGeometry;
           const zStats = getZStats(geom);
@@ -228,8 +256,19 @@ export default function PointCloudPanel({ src, name }: Props) {
           updatePointSize();
           tuneHelpersToFit(fit.radius);
         },
-        undefined,
-  (err: any) => setError('Failed to load PCD: ' + (err?.message || String(err)))
+        (evt) => {
+          setLoadingText('Loading PCD…');
+          if ((evt as any)?.lengthComputable) {
+            const p = (evt as any).loaded / Math.max(1, (evt as any).total);
+            setProgress(Math.max(0, Math.min(1, p)));
+          } else {
+            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+          }
+        },
+        (err: any) => {
+          setLoading(false);
+          setError('Failed to load PCD: ' + (err?.message || String(err)));
+        }
       );
     };
 
@@ -242,6 +281,8 @@ export default function PointCloudPanel({ src, name }: Props) {
           let convertedUrl: string | undefined;
           const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
           if (isBlobLike) {
+            setLoadingText('Uploading for conversion…');
+            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
             // Upload file bytes via multipart/form-data
             const blob = await fetch(src).then(r => r.blob());
             const form = new FormData();
@@ -265,6 +306,8 @@ export default function PointCloudPanel({ src, name }: Props) {
             const data = await resp.json();
             convertedUrl = data?.url;
           } else {
+            setLoadingText('Requesting conversion…');
+            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
             const qs = new URLSearchParams();
             if (src) qs.set('src', src);
             if (name) qs.set('name', name);
@@ -289,6 +332,8 @@ export default function PointCloudPanel({ src, name }: Props) {
           loader.load(
             convertedUrl,
             (geometry) => {
+              setProgress(1);
+              setLoading(false);
               geometry.computeBoundingSphere();
               const zStats = getZStats(geometry);
               geomMetaRef.current = {
@@ -307,14 +352,23 @@ export default function PointCloudPanel({ src, name }: Props) {
               updatePointSize();
               tuneHelpersToFit(fit.radius);
             },
-            undefined,
-            (err: any) => setError('Failed to load converted PLY: ' + (err?.message || String(err)))
+            (evt) => {
+              setLoadingText('Downloading point cloud…');
+              if ((evt as any)?.lengthComputable) {
+                const p = (evt as any).loaded / Math.max(1, (evt as any).total);
+                setProgress(Math.max(0, Math.min(1, p)));
+              } else {
+                setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+              }
+            },
+            (err: any) => { setLoading(false); setError('Failed to load converted PLY: ' + (err?.message || String(err))); }
           );
         } catch (e: any) {
           // Fallback: if this was a local LAS (blob/data) and conversion failed, try in-browser LAS parse (uncompressed only)
           try {
             const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
             if (ext === 'las' && isBlobLike) {
+              setLoadingText('Parsing LAS (client)…');
               const blob = await fetch(src).then(r => r.blob());
               const ab = await blob.arrayBuffer();
               const res = parseLAS(ab, { maxPoints: 2_000_000 });
@@ -332,11 +386,14 @@ export default function PointCloudPanel({ src, name }: Props) {
               updatePointSize();
               tuneHelpersToFit(fit.radius);
               setError(null);
+              setProgress(1);
+              setLoading(false);
               return;
             }
           } catch (e2: any) {
             // fall through to display the original conversion error below
           }
+          setLoading(false);
           setError('Conversion error: ' + (e?.message || String(e)));
         }
       })();
@@ -390,6 +447,19 @@ export default function PointCloudPanel({ src, name }: Props) {
   return (
     <View style={styles.wrapper}>
       <View ref={hostRef} style={styles.fill} />
+      {/* Loading overlay with progress bar */}
+      {!!src && !error && loading && (
+        <div style={loadingOverlayStyle}>
+          <div style={loadingBoxStyle}>
+            <div style={loadingLabelStyle}>{loadingText || 'Loading…'}</div>
+            <div style={progressBarOuterStyle}>
+              <div style={{ ...progressBarInnerStyle, width: `${Math.round(progress * 100)}%` }} />
+            </div>
+            <div style={percentStyle}>{Math.round(progress * 100)}%</div>
+            {!!name && <div style={fileNameStyle}>{name}</div>}
+          </div>
+        </div>
+      )}
       {/* Web-only controls overlay */}
       <div style={controlsStyle}>
         <div style={rowStyle}>
@@ -584,7 +654,7 @@ function colormapFn(map: 'turbo' | 'viridis' | 'gray', t: number) {
 
 function fitViewToGeometry(
   camera: THREE.PerspectiveCamera,
-  controls: OrbitControls,
+  controls: { target: THREE.Vector3 },
   geometry: THREE.BufferGeometry
 ) {
   geometry.computeBoundingSphere();
@@ -626,3 +696,43 @@ const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', g
 const labelStyle: React.CSSProperties = { color: '#ddd', fontSize: 12, minWidth: 72 };
 const selectStyle: React.CSSProperties = { background: '#111', color: '#eee', border: '1px solid #444', borderRadius: 6, padding: '4px 6px' };
 const valueStyle: React.CSSProperties = { color: '#aaa', width: 48, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+
+// Loading overlay styles
+const loadingOverlayStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  background: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 2,
+};
+const loadingBoxStyle: React.CSSProperties = {
+  background: 'rgba(16,16,16,0.9)',
+  border: '1px solid #333',
+  borderRadius: 10,
+  padding: '16px 18px',
+  minWidth: 260,
+  maxWidth: 420,
+  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+};
+const loadingLabelStyle: React.CSSProperties = {
+  color: '#eee',
+  fontSize: 13,
+  marginBottom: 8,
+};
+const progressBarOuterStyle: React.CSSProperties = {
+  width: '100%',
+  height: 10,
+  background: '#1a1a1a',
+  border: '1px solid #333',
+  borderRadius: 6,
+  overflow: 'hidden',
+};
+const progressBarInnerStyle: React.CSSProperties = {
+  height: '100%',
+  background: 'linear-gradient(90deg, #58a6ff, #79c0ff)',
+  transition: 'width 120ms ease',
+};
+const percentStyle: React.CSSProperties = { color: '#aaa', fontSize: 12, marginTop: 6, textAlign: 'right' };
+const fileNameStyle: React.CSSProperties = { color: '#888', fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
