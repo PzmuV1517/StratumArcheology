@@ -51,20 +51,20 @@ export default function PointCloudPanel({ src, name }: Props) {
   scene.background = new THREE.Color(bg);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 5000);
     camera.position.set(0.5, 0.5, 1.5);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' as any });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(host.clientWidth, host.clientHeight);
     host.appendChild(renderer.domElement);
 
-    const controls = new TrackballControls(camera, renderer.domElement);
-    controls.rotateSpeed = 5.0;
-    controls.zoomSpeed = 2.0;
-    controls.panSpeed = 1.2;
-    (controls as any).noRotate = false;
-    (controls as any).noZoom = false;
-    (controls as any).noPan = false;
-    (controls as any).staticMoving = false;
-    (controls as any).dynamicDampingFactor = 0.2;
+  const controls = new TrackballControls(camera, renderer.domElement);
+  controls.rotateSpeed = 5.0;
+  controls.zoomSpeed = 2.0;
+  controls.panSpeed = 1.2;
+  (controls as any).noRotate = false;
+  (controls as any).noZoom = false;
+  (controls as any).noPan = false;
+  (controls as any).staticMoving = true; // stop smoothing after input, reduces post-drag jitter
+  (controls as any).dynamicDampingFactor = 0.06;
     controls.target.set(0, 0, 0);
 
   const light = new THREE.AmbientLight(0xffffff, 1.0);
@@ -193,6 +193,10 @@ export default function PointCloudPanel({ src, name }: Props) {
           setProgress(1);
           setLoading(false);
           geometry.computeBoundingSphere();
+          const bs = geometry.boundingSphere!;
+          // recenter to origin to reduce precision jitter
+          geometry.translate(-bs.center.x, -bs.center.y, -bs.center.z);
+          geometry.computeBoundingSphere();
           // record metadata
           const zStats = getZStats(geometry);
           geomMetaRef.current = {
@@ -238,6 +242,10 @@ export default function PointCloudPanel({ src, name }: Props) {
           setLoading(false);
           // points is THREE.Points already, ensure colors/intensity
           const geom = points.geometry as THREE.BufferGeometry;
+          geom.computeBoundingSphere();
+          const bs = geom.boundingSphere!;
+          geom.translate(-bs.center.x, -bs.center.y, -bs.center.z);
+          geom.computeBoundingSphere();
           const zStats = getZStats(geom);
           geomMetaRef.current = {
             zMin: zStats.min,
@@ -335,6 +343,9 @@ export default function PointCloudPanel({ src, name }: Props) {
               setProgress(1);
               setLoading(false);
               geometry.computeBoundingSphere();
+              const bs = geometry.boundingSphere!;
+              geometry.translate(-bs.center.x, -bs.center.y, -bs.center.z);
+              geometry.computeBoundingSphere();
               const zStats = getZStats(geometry);
               geomMetaRef.current = {
                 zMin: zStats.min,
@@ -377,6 +388,10 @@ export default function PointCloudPanel({ src, name }: Props) {
               if (res.colors) {
                 geometry.setAttribute('color', new THREE.BufferAttribute(res.colors, 3));
               }
+              geometry.computeBoundingSphere();
+              const bs = geometry.boundingSphere!;
+              geometry.translate(-bs.center.x, -bs.center.y, -bs.center.z);
+              geometry.computeBoundingSphere();
               const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!res.colors });
               const pts = new THREE.Points(geometry, material);
               scene.add(pts);
@@ -659,12 +674,14 @@ function fitViewToGeometry(
 ) {
   geometry.computeBoundingSphere();
   const bs = geometry.boundingSphere!;
-  controls.target.copy(bs.center);
+  // geometry is centered at origin; target origin for CAD-like control stability
+  controls.target.set(0, 0, 0);
   const radius = bs.radius || 1;
   const dist = radius * 2.5;
-  camera.position.set(bs.center.x + dist, bs.center.y + dist, bs.center.z + dist);
-  camera.near = Math.max(0.001, radius / 1000);
-  camera.far = Math.max(1000, radius * 10);
+  camera.position.set(dist, dist, dist);
+  // tighten near/far to improve depth precision and reduce shimmer
+  camera.near = Math.max(0.01, radius / 250);
+  camera.far = Math.max(100, radius * 8);
   camera.updateProjectionMatrix();
   return { center: bs.center, radius };
 }
