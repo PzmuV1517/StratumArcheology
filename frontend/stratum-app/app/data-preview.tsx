@@ -188,8 +188,8 @@ export default function DataPreviewScreen() {
             return;
           }
 
-          // Point cloud: .las/.laz/.ply/.e57/.pcd/.rwi/.rwp
-          if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
+          // Point cloud: .las/.laz/.ply/.pcd/.rwi/.rwp
+          if (/\.(las|laz|ply|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
             const url = window.URL.createObjectURL(blob);
             if (!cancelled) {
               setPointUrl(url);
