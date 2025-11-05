@@ -5,63 +5,50 @@ APP NAME: Stratum
 In archaeology and geology, it refers to a layer of material or sediment that has accumulated over time,
 for example, soil, ash, or rock. Each stratum represents a distinct period in history.
 
+// ALREADY IMPLEMENTED
+
+	1.	Crearea "siturilor"
+	2.	Luat notite 
+	3.	Database-ul proiectului este backed up automat în cloud 
+	4.	Suport pentru vizionare și editare a fișierelor PLY
+	5.	Suport pentru vizionare și editare a fișierelor LAS
+	6.	Suport pentru vizionare și editare a fișierelor LAZ
+	7.	Suport pentru vizionare și editare a fișierelor GLB
+	8.	Suport pentru vizionare și editare a fișierelor GLTF
+	9.	Suport pentru vizionare și editare a fișierelor SHP
+	10.	Suport pentru vizionare și editare a fișierelor OBJ
+	11.	Suport pentru vizionare și editare a fișierelor PDF
+	12.	Suport pentru vizionare și editare a fișierelor TXT
+	13.	Suport pentru vizionare și editare a fișierelor MD
+	14.	Suport pentru vizionare și editare a fișierelor JSON
+	15.	Suport pentru vizionare și editare a fișierelor CSV
+	16.	Suport pentru vizionare și editare a fișierelor XLS
+	17.	Suport pentru vizionare și editare a fișierelor XLXS
+	18.	Suport pentru vizionare și editare a fișierelor MP4
+	19.	Suport pentru vizionare și editare a fișierelor WEBM
+	20.	Suport pentru vizionare și editare a fișierelor OGG
+	21.	Suport pentru vizionare și editare a fișierelor MOV
+	22.	Suport pentru vizionare și editare a fișierelor PNG
+	23.	Suport pentru vizionare și editare a fișierelor JPG
+	24.	Suport pentru vizionare și editare a fișierelor JPEG
+	25.	Suport pentru vizionare și editare a fișierelor GIF
+	26.	Suport pentru vizionare și editare a fișierelor WEBP
+	27.	Suport pentru vizionare și editare a fișierelor HEIC
+	28.	Organizarea fișierelor în formă de "galerie" în funcție de data creării 
+	29.	Marcarea artefactelor prin coduri QR unice care arată fișiere relevante artefactului(poze, notite, scan-uri)
 
 
-PHASE 1 // Foundations
+// TO IMPLEMENT (in no particular order)
 
-Focus: core system + team structure
-	1.	Authentication system (accounts, login, permissions, using firebase).
-	2.	Create a Project (each project = 1 archaeological site).
-	3.	Collaboration (invite members, assign roles: Leader, Researcher, Guest, etc).
-	4.	Basic Notes system (text + simple photo upload per user).
-    5.  data syncing between local and cloud (users will have downloaded a copy of the databse and it will be available offline if there is no internet connection; once connected back to internet conflicts will be forced to be resolved by overwriting the cloud save or local save, this happends per file or note or document etc)
-
-⸻
-
-PHASE 2 // Planning & Site Setup
-
-Focus: organizing sites, artifacts, tasks
-	1.	Site Creation (site as in archeological site); sites will be "projects" under wich planning and notes and etc etc will be stored 
-	•	Add site name, GPS boundaries (manual points on map or perimeter trace).
-	•	Metadata: date conceived, expected dismantle date, active archaeologists.
-	•	Role hierarchy for site (who edits/reads/posts).
-	2.	Planning Tab
-	•	Create & assign tasks.
-	•	Upload schematics/photos.
-	•	Write and share notes (option for voice notes).
-	•	Calendar: plan dates, set reminders, link notes/tasks to dates.
-	3.	Artifact Database (basic)
-	•	Add artifact: name, description, measurements, photos, discovery date, tags, categories.
-	•	Link artifact to site.
-	•	QR code generation for each artifact (print & stick for rapid access).
-
-⸻
-
-PHASE 3 // Expedition & Data Capture
-
-Focus: deeper data logging + AI integration
-	1.	Artifact Database (advanced)
-	•	Support LiDAR photo uploads.
-	•	Optional mobile LiDAR scanning integration (where device supports it).
-	•	Attach multiple photos, 3D scans.
-	2.	AI Summaries
-	•	AI generates concise + detailed summaries of:
-	•	Artifacts (use, context, where found).
-	•	Sites (condition, findings, progress).
-	•	AI suggestions for best excavation times (weather/conditions).
-	3.	Notes Upgrade
-	•	Rich notes (voice notes, image-embedded notes).
-	•	Private vs shared notes toggling.
-	•	AI-assisted summarization of notes across the project.
-
-⸻
-
-PHASE 4 // Professional Features
-
-Focus: scaling + integrations
-	1.	Cloud / NAS storage options (all data saved in secure cloud; optional self-host on NAS).
-	2.	Advanced collaboration tools (chat within project, file versioning, document history).
-	3.	Mapping & Visualization
-	•	Layered maps of sites, artifacts, excavation zones.
-	•	Tagging artifacts within GPS-based map.
-	•	Export reports (PDF/Word) with AI-generated site/expedition summaries.
+	30.	Colaborare între mai multe persoane 
+	31.	Downloadare locală a database-ului pentru munca offline 
+	32.	Delimitare a sitului folosind coordonate GPS si imaginilor satelit
+	33.	AI pentru organizarea fisierelor
+	34.	AI pentru crearea notitelor
+	35.	AI pentru informarea despre progresul celorlalti
+	36.	Exportarea datelor gasite sub forma de rapoarte si articole
+	37.	O baza de date publica unde arheologii isi pot pune proiectele cu scopul de a ajuta alti alti arheologi sau pentru a educa
+	38.	Folosirea Senzorilor LIDAR de pe Iphone-uri pentru a scana artefacte 
+	39.	Notite vocale
+	40.	Plasarea artefactelor “virtuale” (cele de la punctul 29) pe harta sitului (cea de la punctul 32), pentru a avea o copie digitala a locului unde au fost descoperite
+	41.	Suport pentru crearea propriei baze de date, in loc de a folosii cea oferita de noi (pentru libertatea de a detine complet datele)
