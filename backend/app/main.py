@@ -4,7 +4,7 @@ from app.config import settings
 from sqlalchemy import text
 from app.database import engine, Base
 from app.firebase_config import initialize_firebase
-from app.routes import auth, projects, notes, files, convert
+from app.routes import auth, projects, notes, files, convert, gps
 
 # Initialize Firebase
 initialize_firebase()
@@ -44,6 +44,7 @@ app.include_router(projects.router, prefix="/api")
 app.include_router(notes.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
 app.include_router(convert.router, prefix="/api")
+app.include_router(gps.router, prefix="/api")
 
 
 @app.get("/")

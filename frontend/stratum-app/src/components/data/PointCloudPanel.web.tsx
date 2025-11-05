@@ -189,7 +189,7 @@ export default function PointCloudPanel({ src, name }: Props) {
       const loader = new PLYLoader();
       loader.load(
         src,
-        (geometry) => {
+        (geometry: THREE.BufferGeometry) => {
           setProgress(1);
           setLoading(false);
           geometry.computeBoundingSphere();
@@ -216,7 +216,7 @@ export default function PointCloudPanel({ src, name }: Props) {
           updatePointSize();
           tuneHelpersToFit(fit.radius);
         },
-        (evt) => {
+        (evt: any) => {
           setLoadingText('Loading PLY…');
           if ((evt as any)?.lengthComputable) {
             const p = (evt as any).loaded / Math.max(1, (evt as any).total);
@@ -237,7 +237,7 @@ export default function PointCloudPanel({ src, name }: Props) {
       const loader = new PCDLoader();
       loader.load(
         src,
-        (points) => {
+        (points: THREE.Points) => {
           setProgress(1);
           setLoading(false);
           // points is THREE.Points already, ensure colors/intensity
@@ -264,7 +264,7 @@ export default function PointCloudPanel({ src, name }: Props) {
           updatePointSize();
           tuneHelpersToFit(fit.radius);
         },
-        (evt) => {
+        (evt: any) => {
           setLoadingText('Loading PCD…');
           if ((evt as any)?.lengthComputable) {
             const p = (evt as any).loaded / Math.max(1, (evt as any).total);
@@ -339,7 +339,7 @@ export default function PointCloudPanel({ src, name }: Props) {
           const loader = new PLYLoader();
           loader.load(
             convertedUrl,
-            (geometry) => {
+            (geometry: THREE.BufferGeometry) => {
               setProgress(1);
               setLoading(false);
               geometry.computeBoundingSphere();
@@ -363,7 +363,7 @@ export default function PointCloudPanel({ src, name }: Props) {
               updatePointSize();
               tuneHelpersToFit(fit.radius);
             },
-            (evt) => {
+            (evt: any) => {
               setLoadingText('Downloading point cloud…');
               if ((evt as any)?.lengthComputable) {
                 const p = (evt as any).loaded / Math.max(1, (evt as any).total);

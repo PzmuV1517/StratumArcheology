@@ -136,3 +136,15 @@ class NoteAttachment(Base):
     
     # Relationships
     note = relationship('Note', back_populates='attachments')
+
+
+class ProjectGPS(Base):
+    __tablename__ = 'project_gps'
+
+    # One row per project
+    project_id = Column(String, ForeignKey('projects.id', ondelete='CASCADE'), primary_key=True)
+    data = Column(Text, nullable=False, default='{}')  # JSON blob: { work: {points, closed}, sites: [{points, closed}] }
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship not strictly needed, but can be useful
+    project = relationship('Project', backref=backref('gps', uselist=False, cascade='all, delete-orphan'))

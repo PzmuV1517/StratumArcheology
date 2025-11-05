@@ -26,6 +26,7 @@ import ProjectHeader from '../../src/components/project/ProjectHeader';
 import NotesSection from '../../src/components/project/NotesSection';
 import FileGallery from '../../src/components/project/FileGallery';
 import ArtefactsTab from '../../src/components/project/ArtefactsTab';
+import MapEditor from '../../src/components/map/MapEditor';
 import ProjectMenuModal from '../../src/components/project/modals/ProjectMenuModal';
 import NewFolderModal from '../../src/components/project/modals/NewFolderModal';
 import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfirmModal';
@@ -67,7 +68,7 @@ export default function ProjectDetailScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'gallery' | 'artefacts' | 'notes'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'artefacts' | 'notes' | 'gps'>('gallery');
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string | null; name: string }>>([{ id: null, name: 'Root' }]);
@@ -113,6 +114,7 @@ export default function ProjectDetailScreen() {
   if (tabParam === 'notes') setActiveTab('notes');
   else if (tabParam === 'artefacts') setActiveTab('artefacts');
   else if (tabParam === 'gallery') setActiveTab('gallery');
+    else if (tabParam === 'gps') setActiveTab('gps');
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
   }, [globalParams?.tab]);
@@ -488,7 +490,7 @@ export default function ProjectDetailScreen() {
         {/* Project Header */}
         <ProjectHeader project={project as any} />
 
-        {/* Tab Navigation: File Gallery + Artefacts + Notes */}
+        {/* Tab Navigation: File Gallery + Artefacts + Notes + GPS */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'gallery' && styles.activeTab]}
@@ -514,6 +516,14 @@ export default function ProjectDetailScreen() {
               Notes ({notes.length})
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'gps' && styles.activeTab]}
+            onPress={() => setActiveTab('gps')}
+          >
+            <Text style={[styles.tabText, activeTab === 'gps' && styles.activeTabText]}>
+              GPS
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
@@ -524,6 +534,28 @@ export default function ProjectDetailScreen() {
             <ArtefactsTab projectId={project?.id as string} />
           ) : activeTab === 'notes' ? (
             <NotesSection notes={notes as any} onCreateNote={handleCreateNote} onNotePress={handleNotePress} />
+          ) : activeTab === 'gps' ? (
+            <View
+              style={
+                Platform.OS === 'web'
+                  ? ({
+                      height: 'calc(100vh - 285px)',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                    } as any)
+                  : {
+                      height: 40,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                    }
+              }
+            >
+              <MapEditor projectId={project?.id as string} />
+            </View>
           ) : null}
         </View>
       </ScrollView>

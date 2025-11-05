@@ -93,4 +93,14 @@ export const projectService = {
       throw error.response?.data || error;
     }
   },
+
+  // GPS state
+  getGps: async (projectId) => {
+    const res = await api.get(`/projects/${projectId}/gps`);
+    return res.data;
+  },
+  setGps: async (projectId, state) => {
+    const res = await api.put(`/projects/${projectId}/gps`, state);
+    return res.data;
+  },
 };
