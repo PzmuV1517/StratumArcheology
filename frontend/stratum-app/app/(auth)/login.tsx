@@ -22,6 +22,8 @@ import api from '../../src/services/api';
 import { config } from '../../src/config/config';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const FaultyTerminal = require('../../components/FaultyTerminal.jsx').default;
+// Prevent unnecessary re-renders of the heavy background
+const MemoFaultyTerminal = React.memo(FaultyTerminal);
 // Load component CSS only on web
 if (Platform.OS === 'web') {
   // @ts-ignore - CSS handled by web bundler
@@ -57,6 +59,36 @@ export default function LoginScreen() {
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState('');
   const [savingApi, setSavingApi] = useState(false);
+
+  // Stable props for FaultyTerminal so typing doesn't restart its animation
+  const terminalGridMul = useMemo(() => [2, 1] as [number, number], []);
+  const terminalStyle = useMemo(
+    () => ({ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const),
+    []
+  );
+  const terminalProps = useMemo(
+    () => ({
+      scale: 1.5,
+      timeScale: 1,
+      gridMul: terminalGridMul,
+      digitSize: 1.2,
+      pause: false,
+      scanlineIntensity: 0.5,
+      glitchAmount: 1,
+      flickerAmount: 1,
+      noiseAmp: 1,
+      chromaticAberration: 0,
+      dither: 0,
+      curvature: 0.1,
+      tint: '#ff0000',
+      mouseReact: true,
+      mouseStrength: 0.5,
+      pageLoadAnimation: true,
+      brightness: 0.6,
+      style: terminalStyle,
+    }),
+    [terminalGridMul, terminalStyle]
+  );
 
   useEffect(() => {
     (async () => {
@@ -123,27 +155,7 @@ export default function LoginScreen() {
       {Platform.OS === 'web' ? (
         <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', inset: 0 }}>
-            {React.createElement(FaultyTerminal, {
-              scale: 1.5,
-              speed: 0.5,
-              gridMul: [2, 1],
-              digitSize: 1.2,
-              timeScale: 1,
-              pause: false,
-              scanlineIntensity: 0.5,
-              glitchAmount: 1,
-              flickerAmount: 1,
-              noiseAmp: 1,
-              chromaticAberration: 0,
-              dither: 0,
-              curvature: 0.1,
-              tint: '#ff0000',
-              mouseReact: true,
-              mouseStrength: 0.5,
-              pageLoadAnimation: true,
-              brightness: 0.6,
-              style: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-            })}
+            {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
         </div>
       ) : null}
