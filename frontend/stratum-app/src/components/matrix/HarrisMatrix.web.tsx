@@ -58,7 +58,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       let g = svg.select('g.main-group');
       if (g.empty()) g = svg.append('g').attr('class', 'main-group');
       const GRID_CELL_SIZE = 60;
-      const GRID_COLOR = '#e9ecef';
+  // Darken grid lines to better fit the dark theme
+  const GRID_COLOR = '#2f3336';
       const zoom = d3.zoom().scaleExtent([0.1, 5]).on('zoom', (event: any) => g.attr('transform', event.transform));
       svg.call(zoom as any);
 
