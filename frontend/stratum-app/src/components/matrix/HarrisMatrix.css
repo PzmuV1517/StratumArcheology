@@ -1,0 +1,268 @@
+.harris-matrix {
+  /* Theme variables from provided HTML */
+  --primary-bg: #f0f2f5;
+  --container-bg: #ffffff;
+  --panel-bg: #f8f9fa;
+  --header-color: #2c3e50;
+  --text-color: #34495e;
+  --border-color: #dee2e6;
+  --primary-accent: #007bff;
+  --primary-accent-hover: #0056b3;
+  --danger-accent: #dc3545;
+  --success-accent: #28a745;
+  --warning-accent: #ffc107;
+  --cancel-accent: #6c757d;
+  --phase-1: #e3f2fd;
+  --phase-2: #f3e5f5;
+  --phase-3: #e8f5e8;
+  --group-bg: #fff3e0;
+  --subgroup-bg: #fafafa;
+  color: var(--text-color);
+  width: 100%;
+  height: 100%;
+}
+
+.harris-matrix .container {
+  width: 100%;
+  height: 100%;
+  background: var(--container-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 0; /* Content panes own padding */
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.harris-matrix .workspace {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  height: 100%;
+}
+
+/* Put visualization first (left), data-panel second (right) */
+.harris-matrix .visualization-panel {
+  flex: 1;
+  border-left: 1px solid var(--border-color);
+  min-height: 100%;
+  position: relative;
+  cursor: grab;
+  overflow: hidden;
+}
+
+.harris-matrix #matrixSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.harris-matrix .data-panel {
+  width: 400px;
+  background: var(--panel-bg);
+  padding: 16px;
+  border-left: 1px solid var(--border-color);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.harris-matrix .data-panel h3 {
+  margin: 0 0 12px 0;
+  color: var(--header-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.harris-matrix .tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+
+.harris-matrix .tab {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.2s;
+  font-weight: 600;
+}
+
+.harris-matrix .tab.active {
+  border-bottom-color: var(--primary-accent);
+  background: #f8f9fa;
+}
+
+.harris-matrix .tab-content { display: none; }
+.harris-matrix .tab-content.active { display: block; }
+
+/* Context Styles */
+.harris-matrix .context-node-group { cursor: move; }
+.harris-matrix .context-node-group.dragging { opacity: 0.7; cursor: grabbing; }
+.harris-matrix .context-node {
+  fill: var(--primary-accent);
+  stroke: var(--primary-accent-hover);
+  stroke-width: 2px;
+  cursor: pointer;
+  transition: fill 0.2s, transform 0.2s ease-out;
+}
+.harris-matrix .context-node:hover { fill: var(--primary-accent-hover); transform: scale(1.05); }
+.harris-matrix .context-node.grouped { fill: var(--warning-accent); stroke: #e0a800; }
+.harris-matrix .context-node.phased { fill: var(--success-accent); stroke: #1e7e34; }
+.harris-matrix .context-node.temporal-conflict { fill: var(--danger-accent); stroke: #c82333; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Group and Phase Visualization */
+.harris-matrix .group-boundary {
+  fill: var(--group-bg);
+  stroke: #ff9800;
+  stroke-width: 2px;
+  stroke-dasharray: 5,5;
+  opacity: 0.3;
+  pointer-events: none;
+}
+.harris-matrix .subgroup-boundary {
+  fill: var(--subgroup-bg);
+  stroke: #9c27b0;
+  stroke-width: 1px;
+  stroke-dasharray: 3,3;
+  opacity: 0.2;
+  pointer-events: none;
+}
+.harris-matrix .phase-boundary {
+  fill: var(--phase-1);
+  stroke: #4caf50;
+  stroke-width: 3px;
+  stroke-dasharray: 10,5;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.harris-matrix .context-label {
+  font-size: 14px;
+  font-weight: 600;
+  text-anchor: middle;
+  pointer-events: none;
+  fill: white;
+}
+.harris-matrix .relationship-path { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.harris-matrix .relationship-path.stratigraphic { stroke: #495057; stroke-width: 2px; marker-end: url(#arrowhead); }
+.harris-matrix .relationship-path.cuts { stroke: var(--danger-accent); stroke-width: 2.5px; stroke-dasharray: 6,4; marker-end: url(#arrowhead-cuts); }
+.harris-matrix .relationship-path.contemporary { stroke: #495057; stroke-width: 1.5px; }
+.harris-matrix .relationship-path.temporal-conflict { stroke: var(--danger-accent); stroke-width: 3px; animation: pulse 2s infinite; marker-end: url(#arrowhead-cuts); }
+.harris-matrix .relationship-path.redundant { stroke: #adb5bd; stroke-width: 1.5px; stroke-dasharray: 2, 3; marker-end: url(#arrowhead-redundant); }
+
+/* Modal Styles */
+.harris-matrix .modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.harris-matrix .modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.harris-matrix .modal-content h4 { margin: 0 0 12px 0; }
+.harris-matrix .modal-content input,
+.harris-matrix .modal-content select,
+.harris-matrix .modal-content textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.harris-matrix .modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+.harris-matrix .modal-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: white;
+}
+.harris-matrix .modal-buttons button.confirm { background: var(--primary-accent); }
+.harris-matrix .modal-buttons button.danger { background: var(--danger-accent); }
+.harris-matrix .modal-buttons button.cancel { background: var(--cancel-accent); }
+
+/* Form Styles */
+.harris-matrix .form-group { margin-bottom: 10px; }
+.harris-matrix .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+.harris-matrix .form-row { display: flex; gap: 10px; }
+.harris-matrix .form-row input { flex: 1; }
+.harris-matrix .date-inputs { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+
+/* Data Display Styles */
+.harris-matrix .hierarchy-list { margin-bottom: 12px; }
+.harris-matrix .hierarchy-item {
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+  border-left: 4px solid var(--primary-accent);
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.harris-matrix .hierarchy-item:hover { background: #e9ecef; }
+.harris-matrix .hierarchy-item.group { border-left-color: #ff9800; background: var(--group-bg); }
+.harris-matrix .hierarchy-item.subgroup { border-left-color: #9c27b0; background: var(--subgroup-bg); margin-left: 20px; }
+.harris-matrix .hierarchy-item.phase { border-left-color: #4caf50; background: var(--phase-1); }
+.harris-matrix .hierarchy-item.temporal-conflict { border-left-color: var(--danger-accent); background: #ffebee; }
+
+.harris-matrix .item-header { font-weight: bold; margin-bottom: 5px; }
+.harris-matrix .item-details { font-size: 0.9em; color: #666; }
+.harris-matrix .item-contexts { font-size: 0.8em; color: #888; margin-top: 5px; }
+
+/* Actions Panel */
+.harris-matrix .actions-panel { margin-top: 12px; }
+.harris-matrix .actions-panel button {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.harris-matrix .btn-primary { background: var(--primary-accent); }
+.harris-matrix .btn-success { background: var(--success-accent); }
+.harris-matrix .btn-danger { background: var(--danger-accent); }
+.harris-matrix .btn-warning { background: var(--warning-accent); color: #333; }
+
+/* Conflict Indicators */
+.harris-matrix .conflict-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--danger-accent);
+  margin-left: 5px;
+  animation: pulse 2s infinite;
+}
+.harris-matrix .valid-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--success-accent);
+  margin-left: 5px;
+}

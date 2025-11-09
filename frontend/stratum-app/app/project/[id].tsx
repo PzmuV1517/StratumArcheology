@@ -27,6 +27,7 @@ import NotesSection from '../../src/components/project/NotesSection';
 import FileGallery from '../../src/components/project/FileGallery';
 import ArtefactsTab from '../../src/components/project/ArtefactsTab';
 import MapEditor from '../../src/components/map/MapEditor';
+// Harris Matrix (web only) dynamic require later to avoid SSR issues
 import ProjectMenuModal from '../../src/components/project/modals/ProjectMenuModal';
 import NewFolderModal from '../../src/components/project/modals/NewFolderModal';
 import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfirmModal';
@@ -68,7 +69,7 @@ export default function ProjectDetailScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'gallery' | 'artefacts' | 'notes' | 'gps'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix'>('gallery');
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string | null; name: string }>>([{ id: null, name: 'Root' }]);
@@ -114,6 +115,7 @@ export default function ProjectDetailScreen() {
   if (tabParam === 'notes') setActiveTab('notes');
   else if (tabParam === 'artefacts') setActiveTab('artefacts');
   else if (tabParam === 'gallery') setActiveTab('gallery');
+  else if (tabParam === 'matrix') setActiveTab('matrix');
     else if (tabParam === 'gps') setActiveTab('gps');
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
@@ -524,6 +526,14 @@ export default function ProjectDetailScreen() {
               GPS
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'matrix' && styles.activeTab]}
+            onPress={() => setActiveTab('matrix')}
+          >
+            <Text style={[styles.tabText, activeTab === 'matrix' && styles.activeTabText]}>
+              Matrix
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
@@ -539,14 +549,14 @@ export default function ProjectDetailScreen() {
               style={
                 Platform.OS === 'web'
                   ? ({
-                      height: 'calc(100vh - 285px)',
+                      height: 'calc(100vh - 220px)',
                       borderRadius: 12,
                       overflow: 'hidden',
                       borderWidth: 1,
                       borderColor: '#2A2A2A',
                     } as any)
                   : {
-                      height: 40,
+                      height: 520,
                       borderRadius: 12,
                       overflow: 'hidden',
                       borderWidth: 1,
@@ -555,6 +565,38 @@ export default function ProjectDetailScreen() {
               }
             >
               <MapEditor projectId={project?.id as string} />
+            </View>
+          ) : activeTab === 'matrix' ? (
+            <View
+              style={
+                Platform.OS === 'web'
+                  ? ({
+                      height: 'calc(100vh - 220px)',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    } as any)
+                  : {
+                      height: 520,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    }
+              }
+            >
+              {Platform.OS === 'web' ? (
+                <div style={{ height: '100%', width: '100%' }}>
+                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string })}
+                </div>
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#9A9A9A' }}>Harris Matrix is available on web only.</Text>
+                </View>
+              )}
             </View>
           ) : null}
         </View>
