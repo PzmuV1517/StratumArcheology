@@ -1,0 +1,197 @@
+GLINA-BĂLĂCEANCA:
+Complex / Feature no.
+
+SECTOR:
+Stratigraphic Unit (-s) SU
+
+Stratigraphic matrix
+Earlier than
+
+Later than
+
+Complex / Feature Type
+Pit ☐
+Trench ☐
+House ☐
+Grave ☐
+Oven/Hearth ☐
+Other ☐
+Location
+
+Dimensions
+Area / Surface / Section
+
+Length
+                                                   m
+Grid square
+
+Width
+                                                   m
+X coordinate
+
+Depth
+                                                   m
+Y coordinate
+
+MASL
+
+Z coordinate
+
+
+Shape
+Circular ☐
+Oval ☐
+Rectangular ☐
+Orientation
+
+
+Other ☐
+Finds
+Sketch Plan
+Pottery ☐
+Metal ☐
+
+
+
+
+
+
+
+
+
+
+Flint ☐
+Stone ☐
+
+
+
+
+
+
+
+
+
+
+Wood ☐
+Charcoal ☐
+
+
+
+
+
+
+
+
+
+
+Shell ☐
+Snail ☐
+
+
+
+
+
+
+
+
+
+
+Ash ☐
+Adobe ☐
+
+
+
+
+
+
+
+
+
+
+Beads ☐
+Pendant ☐
+
+
+
+
+
+
+
+
+
+
+Ring ☐
+Seed ☐
+
+
+
+
+
+
+
+
+
+
+Animal bones ☐
+
+
+
+
+
+
+
+
+
+
+Human bones ☐
+
+
+
+
+
+
+
+
+
+
+Other ☐
+
+
+
+
+
+
+
+
+
+
+Description:
+
+
+
+
+
+
+
+
+Drawing ☐ 
+Plan no. ☐
+Photogrammetry ☐
+Photos ☐
+Video ☐
+Samples
+Environmental samples ☐ 
+Bag no. ☐
+Quantity ☐
+aDNA sample ☐
+14C ☐
+Isotopic ☐
+Other ☐
+Bag no.
+Type:
+Quantity:
+Author:
+Date:
+Checked by
+Date:
+
