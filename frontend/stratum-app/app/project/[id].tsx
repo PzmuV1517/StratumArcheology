@@ -307,8 +307,14 @@ export default function ProjectDetailScreen() {
   }, [showFilesOverlay, id]);
 
   const openGalleryItem = (node: any) => {
-    if (node.type === 'note' && node.note_id) {
-      router.push({ pathname: '/note-detail', params: { noteId: node.note_id, projectId: project?.id } });
+    const lower = (node.name || '').toLowerCase();
+    const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+    if (isAudio) {
+      if (node.note_id) {
+        router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
+      } else {
+        router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+      }
       return;
     }
     const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.heic)$/i.test(node.name || '');
@@ -316,34 +322,41 @@ export default function ProjectDetailScreen() {
       router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
       return;
     }
-    const lower = (node.name || '').toLowerCase();
-    const isCsv = (node.mime_type === 'text/csv') || lower.endsWith('.csv');
-    const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower.endsWith('.xlsx') || lower.endsWith('.xls');
-    const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
-    const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
-    const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-    const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
-    const isMesh = /\.(glb|gltf)$/i.test(lower);
-    const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+    const lower2 = (node.name || '').toLowerCase();
+    const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
+    const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
+    const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
+    const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
+    const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+    const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
+    const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
-    if (isAudio) {
-      if (node.note_id) {
-        router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
-        return;
-      }
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+    if (isMesh) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'mesh' } });
       return;
     }
-
-    if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
-      let kind: string = 'csv';
-      if (isExcel) kind = 'excel';
-      else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
-      else if (isPdf) kind = 'pdf';
-      else if (isVideo) kind = 'video';
-      else if (isPoint) kind = 'pointcloud';
-      else if (isMesh) kind = 'mesh';
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });
+    if (isPoint) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pointcloud' } });
+      return;
+    }
+    if (isVideo) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'video' } });
+      return;
+    }
+    if (isPdf) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pdf' } });
+      return;
+    }
+    if (isText) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: lower2.endsWith('.md') ? 'markdown' : 'text' } });
+      return;
+    }
+    if (isExcel) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'excel' } });
+      return;
+    }
+    if (isCsv) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'csv' } });
       return;
     }
   };
@@ -614,6 +627,16 @@ export default function ProjectDetailScreen() {
           onDelete={(node: any) => setDeleteNodeTarget(node)}
           onOpenFile={async (node: any) => {
             if (node.type === 'folder') return;
+            const lower = (node.name || '').toLowerCase();
+            const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+            if (isAudio) {
+              if (node.note_id) {
+                router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
+              } else {
+                router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+              }
+              return;
+            }
             const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || '');
             if (isImage) {
               reopenFilesOnReturnRef.current = true;
@@ -621,20 +644,19 @@ export default function ProjectDetailScreen() {
               router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
               return;
             }
-            const lower = (node.name || '').toLowerCase();
-            const isCsv = (node.mime_type === 'text/csv') || lower.endsWith('.csv');
-            const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower.endsWith('.xlsx') || lower.endsWith('.xls');
-            const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
-            const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
-            const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
-            const isMesh = /\.(glb|gltf)$/i.test(lower);
-            const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+            const lower2 = (node.name || '').toLowerCase();
+            const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
+            const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
+            const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
+            const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
+            const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
+            const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
             if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh || isAudio) {
               let kind: string = 'csv';
               if (isExcel) kind = 'excel';
-              else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
+              else if (isText) kind = lower2.endsWith('.md') ? 'markdown' : 'text';
               else if (isPdf) kind = 'pdf';
               else if (isVideo) kind = 'video';
               else if (isPoint) kind = 'pointcloud';

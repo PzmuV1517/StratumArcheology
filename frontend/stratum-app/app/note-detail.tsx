@@ -211,17 +211,17 @@ export default function NoteDetailScreen() {
               <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
               {note.attachments.map((att: any) => {
                 const isAudio = att.mime_type?.startsWith('audio/');
-                if (Platform.OS === 'web' && isAudio) {
+                if (isAudio) {
                   return (
                     <View key={att.id} style={{ marginBottom: 16, padding: 12, borderWidth: 1, borderColor: '#2A2A2A', borderRadius: 12, backgroundColor: '#1A1A1A' }}>
-                      <Text style={{ color: '#F5F5F5', marginBottom: 6 }}>{att.filename || att.file_path || 'audio'}</Text>
+                      <Text style={{ color: '#F5F5F5', marginBottom: 6 }}>{att.filename || 'audio'}</Text>
                       <AudioAttachmentPlayer url={att.url} />
                     </View>
                   );
                 }
                 return (
                   <View key={att.id} style={{ marginBottom: 12 }}>
-                    <Text style={{ color: '#9A9A9A' }}>{att.filename || att.file_path}</Text>
+                    <Text style={{ color: '#9A9A9A' }}>{att.filename}</Text>
                   </View>
                 );
               })}
@@ -266,6 +266,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   React.useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (!url || !audioRef.current || !canvasRef.current) return;
     let ctx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
@@ -297,8 +298,9 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   }, [url]);
   return (
     <View style={{ gap: 8 }}>
-      <audio ref={audioRef} src={url} controls style={{ width: '100%' }} />
-      <canvas ref={canvasRef} width={600} height={60} style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }} />
+      {/* @ts-ignore web-only controls */}
+      <audio ref={audioRef as any} src={url} controls style={{ width: '100%' }} />
+      <canvas ref={canvasRef as any} width={600} height={60} style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }} />
     </View>
   );
 };

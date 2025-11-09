@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -119,6 +119,13 @@ export default function CreateNoteScreen() {
     setIsRecording(false);
   };
 
+  const navigateBackToNotes = useCallback(() => {
+    const dest = { pathname: '/project/[id]', params: { id: String(projectId), tab: 'notes' } };
+    router.replace(dest as any);
+    // web sometimes needs a push to refresh list
+    setTimeout(() => { try { router.push(dest as any); } catch {} }, 10);
+  }, [projectId]);
+
   const handleCreate = async () => {
     if (!title.trim()) {
       Alert.alert('Error', 'Title required');
@@ -155,7 +162,7 @@ export default function CreateNoteScreen() {
           Alert.alert('Warning', 'Note saved but audio upload failed');
         }
       }
-      router.replace({ pathname: '/project/[id]', params: { id: String(projectId), tab: 'notes' } });
+      navigateBackToNotes();
     } catch (error) {
       console.error('Failed to create note:', error);
       Alert.alert('Error', 'Failed to create note');
