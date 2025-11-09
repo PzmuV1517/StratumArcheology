@@ -105,7 +105,8 @@ export const noteService = {
   uploadAudioBlob: async (noteId, blob, filename = 'voice-note.webm') => {
     try {
       const formData = new FormData();
-      formData.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }));
+      const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
+      formData.append('file', file, filename);
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

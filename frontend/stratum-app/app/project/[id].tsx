@@ -615,8 +615,9 @@ export default function ProjectDetailScreen() {
             const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
             const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
             const isMesh = /\.(glb|gltf)$/i.test(lower);
+            const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
 
-            if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
+            if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh || isAudio) {
               let kind: string = 'csv';
               if (isExcel) kind = 'excel';
               else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
@@ -624,6 +625,7 @@ export default function ProjectDetailScreen() {
               else if (isVideo) kind = 'video';
               else if (isPoint) kind = 'pointcloud';
               else if (isMesh) kind = 'mesh';
+              else if (isAudio) kind = 'audio';
               reopenFilesOnReturnRef.current = true;
               setShowFilesOverlay(false);
               router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });

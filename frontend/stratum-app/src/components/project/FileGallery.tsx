@@ -231,6 +231,7 @@ function iconFor(node: FileNode) {
   if (lower.endsWith('.pdf')) return '📑';
   if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower)) return '🌫️'; // point clouds
   if (/\.(glb|gltf)$/i.test(lower)) return '🧩'; // 3D meshes
+  if (/\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower)) return '🎵'; // audio files
   return '📁';
 }
 

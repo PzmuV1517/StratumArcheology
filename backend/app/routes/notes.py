@@ -296,8 +296,8 @@ async def add_note_attachment(
     
     # Validate file type
     allowed_types = [
-        "image/jpeg", "image/png", "image/jpg", "image/heic",
-        "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm"
+        "image/jpeg", "image/png", "image/jpg", "image/heic", "image/webp",
+        "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/aac", "audio/ogg", "audio/m4a"
     ]
     if file.content_type not in allowed_types:
         raise HTTPException(

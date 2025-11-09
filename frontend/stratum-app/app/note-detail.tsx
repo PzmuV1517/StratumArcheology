@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Platform
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
@@ -22,6 +23,13 @@ interface Note {
   updated_at: string;
   author_id: string;
   project_id: string;
+  attachments?: Array<{
+    id: string;
+    filename?: string;
+    file_path?: string;
+    mime_type?: string;
+    url?: string;
+  }>;
 }
 
 export default function NoteDetailScreen() {
@@ -183,6 +191,29 @@ export default function NoteDetailScreen() {
           <View style={styles.contentContainer}>
             <Text style={styles.noteContent}>{note.content}</Text>
           </View>
+
+          {/* Attachments section */}
+          {note.attachments && note.attachments.length > 0 && (
+            <View style={{ marginTop: 24 }}>
+              <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
+              {note.attachments.map((att: any) => {
+                const isAudio = att.mime_type?.startsWith('audio/');
+                if (Platform.OS === 'web' && isAudio) {
+                  return (
+                    <View key={att.id} style={{ marginBottom: 16, padding: 12, borderWidth: 1, borderColor: '#2A2A2A', borderRadius: 12, backgroundColor: '#1A1A1A' }}>
+                      <Text style={{ color: '#F5F5F5', marginBottom: 6 }}>{att.filename || att.file_path || 'audio'}</Text>
+                      <AudioAttachmentPlayer url={att.url} />
+                    </View>
+                  );
+                }
+                return (
+                  <View key={att.id} style={{ marginBottom: 12 }}>
+                    <Text style={{ color: '#9A9A9A' }}>{att.filename || att.file_path}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -217,6 +248,47 @@ export default function NoteDetailScreen() {
     </View>
   );
 }
+
+const AudioAttachmentPlayer = ({ url }: { url: string }) => {
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  React.useEffect(() => {
+    if (!url || !audioRef.current || !canvasRef.current) return;
+    let ctx: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let raf = 0;
+    try {
+      ctx = new AudioContext();
+      const src = ctx.createMediaElementSource(audioRef.current);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      src.connect(analyser);
+      analyser.connect(ctx.destination);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const g = canvasRef.current.getContext('2d')!;
+      const draw = () => {
+        raf = requestAnimationFrame(draw);
+        analyser!.getByteFrequencyData(data);
+        g.clearRect(0,0,canvasRef.current!.width,canvasRef.current!.height);
+        const w = canvasRef.current!.width / data.length;
+        for (let i=0;i<data.length;i++){
+          const v = data[i]/255;
+          const h = v * canvasRef.current!.height;
+          g.fillStyle = '#FF2A2A';
+          g.fillRect(i*w, canvasRef.current!.height - h, w-1, h);
+        }
+      };
+      draw();
+    } catch {}
+    return () => { if (raf) cancelAnimationFrame(raf); try { ctx?.close(); } catch {} };
+  }, [url]);
+  return (
+    <View style={{ gap: 8 }}>
+      <audio ref={audioRef} src={url} controls style={{ width: '100%' }} />
+      <canvas ref={canvasRef} width={600} height={60} style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }} />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

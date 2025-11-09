@@ -6,10 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TextFilePanel from '../src/components/data/TextFilePanel';
 import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
-import PdfPanel from '../src/components/data/PdfPanel.web';
+// Use platform resolution (no .web suffix) so native picks *.native.tsx
+import PdfPanel from '../src/components/data/PdfPanel';
 import VideoPanel from '../src/components/data/VideoPanel';
-import PointCloudPanel from '../src/components/data/PointCloudPanel.web';
-import MeshPanel from '../src/components/data/MeshPanel.web';
+import PointCloudPanel from '../src/components/data/PointCloudPanel';
+import MeshPanel from '../src/components/data/MeshPanel';
+import AudioPanel from '../src/components/data/AudioPanel';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
@@ -35,6 +37,7 @@ export default function DataPreviewScreen() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [pointUrl, setPointUrl] = useState<string | null>(null);
   const [meshUrl, setMeshUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1); // web zoom for preview types
   const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
@@ -199,6 +202,17 @@ export default function DataPreviewScreen() {
               setMeshUrl(null);
               setTable(null);
               setTextContent(null);
+            }
+            return;
+          }
+
+          // Audio: .mp3 .wav .webm .m4a .aac .ogg
+          if (/\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(ext) || kind === 'audio' || (blob.type && /^audio\//.test(blob.type))) {
+            const url = window.URL.createObjectURL(blob);
+            if (!cancelled) {
+              setAudioUrl(url);
+              setPdfUrl(null); setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
+              setTable(null); setTextContent(null);
             }
             return;
           }
@@ -400,6 +414,14 @@ export default function DataPreviewScreen() {
     };
   }, [meshUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (Platform.OS === 'web' && audioUrl) {
+        try { URL.revokeObjectURL(audioUrl); } catch {} 
+      }
+    };
+  }, [audioUrl]);
+
   const isPdf = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     return ext.endsWith('.pdf') || kind === 'pdf';
@@ -420,6 +442,11 @@ export default function DataPreviewScreen() {
     return /\.(glb|gltf)$/.test(ext) || kind === 'mesh';
   }, [name, kind]);
 
+  const isAudio = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || '';
+    return /\.(mp3|wav|webm|m4a|aac|ogg)$/.test(ext) || kind === 'audio';
+  }, [name, kind]);
+
   const header = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
     if (ext.endsWith('.txt')) {
@@ -431,6 +458,7 @@ export default function DataPreviewScreen() {
     if (ext.match(/\.(mp4|webm|ogg|mov)$/) || kind === 'video') return (name as string) || 'Video';
     if (ext.match(/\.(glb|gltf)$/) || kind === 'mesh') return (name as string) || '3D Model';
     if (ext.match(/\.(las|laz|ply|e57|pcd|rwi|rwp)$/) || kind === 'pointcloud') return (name as string) || 'Point Cloud';
+    if (ext.match(/\.(mp3|wav|webm|m4a|aac|ogg)$/) || kind === 'audio') return (name as string) || 'Audio';
     return (name as string) || (kind === 'csv' ? 'CSV' : 'Spreadsheet');
   }, [name, kind, editing, isNoteFile, editableTitle, originalTitle]);
 
@@ -518,7 +546,9 @@ export default function DataPreviewScreen() {
                     : styles.zoomWrapper
                 }
               >
-                {isPdf ? (
+                {isAudio ? (
+                  <AudioPanel src={audioUrl} name={name as string} />
+                ) : isPdf ? (
                   <PdfPanel src={pdfUrl} />
                 ) : isVideo ? (
                   <VideoPanel src={videoUrl} />
@@ -560,7 +590,7 @@ export default function DataPreviewScreen() {
 
       {/* Actions: Edit/Save hidden for PDFs, Videos, Point Clouds, Mesh */}
       <View style={styles.actions}>
-        {!(isPdf || isVideo || isPoint || isMesh) && (
+        {!(isPdf || isVideo || isPoint || isMesh || isAudio) && (
           <>
             <TouchableOpacity
               style={styles.actionButton}
