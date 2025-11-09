@@ -83,4 +83,22 @@ export const noteService = {
       throw error.response?.data || error;
     }
   },
+
+  // Upload audio to a note
+  uploadAudio: async (noteId, audioUri) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: audioUri,
+        type: 'audio/mpeg',
+        name: 'voice-note.mp3',
+      });
+      const response = await api.post(`/notes/${noteId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

@@ -295,7 +295,10 @@ async def add_note_attachment(
     check_project_permission(note.project_id, current_user, db)
     
     # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/jpg", "image/heic"]
+    allowed_types = [
+        "image/jpeg", "image/png", "image/jpg", "image/heic",
+        "audio/mpeg", "audio/wav", "audio/mp4"
+    ]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
