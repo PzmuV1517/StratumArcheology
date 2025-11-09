@@ -189,7 +189,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         nodeGroups.append('text').attr('class', 'context-label').attr('dy', '0.35em').text((d: any) => d);
       }
 
-      // Layout core (simplified topological layering + dummy nodes)
+      // Layout core (matching original HTML implementation)
+      // Only create equivalence mappings for groups with >1 member (to mirror original behavior)
       function findEquivalenceGroups() {
         const adj: Map<string, string[]> = new Map(Array.from(contexts.keys()).map((id) => [id, []]));
         (relationships || []).forEach((rel: any) => {
@@ -200,22 +201,24 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         });
         const visited = new Set<string>();
         const contextToGroupRep = new Map<string, string>();
-        const groupRepToMembers = new Map<string, string[]>();
+        const groupRepToMembers = new Map<string, Set<string>>();
         for (const contextId of contexts.keys()) {
           if (!visited.has(contextId)) {
-            const stack = [contextId];
-            const comp: string[] = [];
+            const queue: string[] = [contextId];
             visited.add(contextId);
-            while (stack.length) {
-              const u = stack.pop()!;
-              comp.push(u);
-              for (const v of (adj.get(u) || [])) {
-                if (!visited.has(v)) { visited.add(v); stack.push(v); }
-              }
+            const groupMembers = new Set<string>();
+            while (queue.length) {
+              const u = queue.shift()!;
+              groupMembers.add(u);
+              (adj.get(u) || []).forEach((v) => {
+                if (!visited.has(v)) { visited.add(v); queue.push(v); }
+              });
             }
-            const rep = comp[0];
-            groupRepToMembers.set(rep, comp);
-            comp.forEach((n) => contextToGroupRep.set(n, rep));
+            if (groupMembers.size > 1) {
+              const representative = contextId; // choose first encountered as rep
+              groupRepToMembers.set(representative, groupMembers);
+              groupMembers.forEach((memberId) => contextToGroupRep.set(memberId, representative));
+            }
           }
         }
         return { contextToGroupRep, groupRepToMembers };
@@ -236,27 +239,27 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           else if (['below', 'sealed_by', 'cut_by', 'filled_by'].includes(rel.type)) { from = rel.from; to = rel.to; }
           else if (['contemporary_with', 'equivalent', 'same_as'].includes(rel.type)) { contemporaryLinks.push({ from: rel.from, to: rel.to }); }
           if (from && to && contexts.has(from) && contexts.has(to)) {
-            const fromRep = contextToGroupRep.get(from) || from;
-            const toRep = contextToGroupRep.get(to) || to;
-            if (fromRep !== toRep) {
-              adj.get(fromRep)!.push(toRep);
-              inDegree.set(toRep, (inDegree.get(toRep) || 0) + 1);
-              stratigraphicEdges.push({ from, to, originalIndex: index, isCut: ['cuts', 'cut_by'].includes(rel.type) });
+            const repFrom = contextToGroupRep.get(from) || from;
+            const repTo = contextToGroupRep.get(to) || to;
+            if (repFrom !== repTo) {
+              if (!adj.get(repFrom)!.includes(repTo)) adj.get(repFrom)!.push(repTo);
+              inDegree.set(repTo, (inDegree.get(repTo) || 0) + 1);
             }
+            // Always record stratigraphic edge (even if reps equal) like original HTML
+            stratigraphicEdges.push({ from, to, isCut: ['cuts', 'cut_by'].includes(rel.type), originalIndex: index });
           }
         });
         const levels: Map<string, number> = new Map();
         const queue = Array.from(logicalNodes).filter((id) => (inDegree.get(id) || 0) === 0);
         const processed: string[] = [];
         for (let i = 0; i < queue.length; i++) {
-          const u = queue[i];
-          processed.push(u);
-          levels.set(u, levels.get(u) || 0);
-          (adj.get(u) || []).forEach((v) => {
-            const next = (levels.get(u) || 0) + 1;
-            levels.set(v, Math.max(levels.get(v) || 0, next));
-            inDegree.set(v, (inDegree.get(v) || 0) - 1);
-            if ((inDegree.get(v) || 0) === 0) queue.push(v);
+          const u_rep = queue[i];
+          processed.push(u_rep);
+          levels.set(u_rep, levels.get(u_rep) || 0);
+          (adj.get(u_rep) || []).forEach((v_rep) => {
+            levels.set(v_rep, Math.max(levels.get(v_rep) || 0, (levels.get(u_rep) || 0) + 1));
+            inDegree.set(v_rep, (inDegree.get(v_rep) || 0) - 1);
+            if ((inDegree.get(v_rep) || 0) === 0) queue.push(v_rep);
           });
         }
         const hasCycle = processed.length < logicalNodes.size;
@@ -276,18 +279,19 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         edges.forEach((edge) => {
           const fromLevel = levels.get(edge.from)!;
           const toLevel = levels.get(edge.to)!;
-          if (toLevel - fromLevel > 1) {
-            let last = edge.from;
-            for (let l = fromLevel + 1; l < toLevel; l++) {
-              const dummyId = `__d_${edge.from}_${edge.to}_${l}`;
-              dummyNodes.set(dummyId, { id: dummyId });
-              allEdges.push({ from: last, to: dummyId, isCut: edge.isCut, originalIndex: edge.originalIndex });
-              last = dummyId;
+            if (toLevel - fromLevel > 1) {
+              let lastNodeId = edge.from;
+              for (let i = fromLevel + 1; i < toLevel; i++) {
+                const dummyId = `dummy_${edge.from}_${edge.to}_${i}`;
+                dummyNodes.set(dummyId, { id: dummyId, originalSource: edge.from, originalTarget: edge.to });
+                levels.set(dummyId, i); // ensure dummy node participates in layering
+                allEdges.push({ from: lastNodeId, to: dummyId, isCut: edge.isCut, originalIndex: edge.originalIndex });
+                lastNodeId = dummyId;
+              }
+              allEdges.push({ from: lastNodeId, to: edge.to, isCut: edge.isCut, originalIndex: edge.originalIndex });
+            } else {
+              allEdges.push(edge);
             }
-            allEdges.push({ from: last, to: edge.to, isCut: edge.isCut, originalIndex: edge.originalIndex });
-          } else {
-            allEdges.push(edge);
-          }
         });
         return { dummyNodes, allEdges };
       }
@@ -299,25 +303,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const adj: Map<string, string[]> = new Map(Array.from(allNodes.keys()).map((id) => [id, []]));
         const revAdj: Map<string, string[]> = new Map(Array.from(allNodes.keys()).map((id) => [id, []]));
         allEdges.forEach((e) => { adj.get(e.from)!.push(e.to); revAdj.get(e.to)!.push(e.from); });
-        const barycenter = (nodes: string[], neighbors: Map<string, string[]>, pos: Map<string, number>) => nodes.map((n) => {
-          const neigh = neighbors.get(n) || [];
-          if (neigh.length === 0) return { n, b: Infinity };
-          const s = neigh.reduce((sum, v) => sum + (pos.get(v) || 0), 0);
-          return { n, b: s / neigh.length };
-        }).sort((a, b) => a.b - b.b).map((x) => x.n);
-        for (let iter = 0; iter < 6; iter++) {
+        for (let iter = 0; iter < 10; iter++) {
+          // Downward pass (use predecessors for ordering)
           for (let i = 1; i < sortedLayers.length; i++) {
-            const upper = orderedLevels.get(sortedLayers[i - 1])!;
-            const lower = orderedLevels.get(sortedLayers[i])!;
-            const pos = new Map(lower.map((id, idx) => [id, idx] as [string, number]));
-            orderedLevels.set(sortedLayers[i], barycenter(lower, revAdj, new Map(upper.map((id, idx) => [id, idx] as [string, number]))));
+            const layer = orderedLevels.get(sortedLayers[i])!;
+            const prevLayer = orderedLevels.get(sortedLayers[i - 1])!;
+            const posInPrev = new Map(prevLayer.map((id, idx) => [id, idx] as [string, number]));
+            layer.sort((a, b) => (d3.mean(revAdj.get(a) || [], (n: string) => posInPrev.get(n)) ?? -1) - (d3.mean(revAdj.get(b) || [], (n: string) => posInPrev.get(n)) ?? -1));
           }
-          for (let i = sortedLayers.length - 2; i >= 0; i--) {
-            const lower = orderedLevels.get(sortedLayers[i + 1])!;
-            const upper = orderedLevels.get(sortedLayers[i])!;
-            const pos = new Map(upper.map((id, idx) => [id, idx] as [string, number]));
-            orderedLevels.set(sortedLayers[i], barycenter(upper, adj, new Map(lower.map((id, idx) => [id, idx] as [string, number]))));
-          }
+          // Upward pass (use successors for ordering)
+            for (let i = sortedLayers.length - 2; i >= 0; i--) {
+              const layer = orderedLevels.get(sortedLayers[i])!;
+              const nextLayer = orderedLevels.get(sortedLayers[i + 1])!;
+              const posInNext = new Map(nextLayer.map((id, idx) => [id, idx] as [string, number]));
+              layer.sort((a, b) => (d3.mean(adj.get(a) || [], (n: string) => posInNext.get(n)) ?? -1) - (d3.mean(adj.get(b) || [], (n: string) => posInNext.get(n)) ?? -1));
+            }
         }
         return orderedLevels;
       }
@@ -328,7 +328,28 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const width = (svg.node() as any).getBoundingClientRect().width;
         const maxLevel = Math.max(0, ...Array.from(orderedLevels.keys()));
         const fixedNodeIds = new Set<string>();
+        // Preserve fixed node positions
         contexts.forEach((context: any) => { if (context.fixed) { positions[context.id] = { x: context.x, y: context.y }; fixedNodeIds.add(context.id); }});
+        // Interpolate dummy nodes between two fixed endpoints (HTML behavior)
+        orderedLevels.forEach((nodes: string[], level: number) => {
+          nodes.forEach((id) => {
+            const dummyInfo = dummyNodes.get(id);
+            if (dummyInfo && fixedNodeIds.has(dummyInfo.originalSource) && fixedNodeIds.has(dummyInfo.originalTarget)) {
+              const sourcePos = positions[dummyInfo.originalSource];
+              const targetPos = positions[dummyInfo.originalTarget];
+              const sourceLevel = levels.get(dummyInfo.originalSource)!;
+              const targetLevel = levels.get(dummyInfo.originalTarget)!;
+              if (targetLevel > sourceLevel) {
+                const progress = (level - sourceLevel) / (targetLevel - sourceLevel);
+                positions[id] = {
+                  x: sourcePos.x + (targetPos.x - sourcePos.x) * progress,
+                  y: sourcePos.y + (targetPos.y - sourcePos.y) * progress,
+                };
+              }
+            }
+          });
+        });
+        // Place remaining (floating) nodes centered per layer
         const floatingLevels = new Map<number, string[]>();
         orderedLevels.forEach((nodes: string[], level: number) => {
           const floatingNodes = nodes.filter((id) => !positions[id]);
@@ -441,11 +462,19 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         });
       }
 
+      // Flag to force a full auto-layout (clearing manual fixed positions) after structural changes
+      let forceAutoLayoutNext = false;
+
       function updateUI() {
         updateHierarchyDisplay();
         updateConflictsDisplay();
         updateRelationshipsDisplay();
         updateDropdownOptions();
+        // If structural changes occurred (new context / relationship add/remove / delete / rename), clear fixed positions
+        if (forceAutoLayoutNext) {
+          contexts.forEach((c: any) => { c.fixed = false; });
+          forceAutoLayoutNext = false;
+        }
         applyLayoutAndDraw();
         saveToStorage();
       }
@@ -515,6 +544,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           context.latestDate = parseDateFromInputs(lYear, lEra);
           context.dateType = dateType.value;
           contexts.set(id, context);
+          // New context triggers full rearrangement
+          forceAutoLayoutNext = true;
           hideModals(); updateUI();
         };
       }
@@ -566,6 +597,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         }
         if (newGroupId) { const group = groups.get(newGroupId); group?.contexts.add(newId); if (newSubGroupId) { group?.subGroups.add(newSubGroupId); } }
         if (newSubGroupId) { subGroups.get(newSubGroupId)?.contexts.add(newId); }
+        // Editing a node can affect layout structure; trigger full rearrangement
+        forceAutoLayoutNext = true;
         hideModals(); updateUI();
       }
 
@@ -595,6 +628,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         </optgroup>`;
         (document.getElementById('confirmRelationshipBtn') as HTMLButtonElement).onclick = () => {
           relationships.push({ from: sourceId, to: targetId, type: select.value });
+          // Relationship addition impacts stratigraphy ordering
+          forceAutoLayoutNext = true;
           hideModals(); updateUI();
         };
       }
@@ -607,10 +642,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         contexts.delete(contextId);
         relationships = relationships.filter((rel) => rel.from !== contextId && rel.to !== contextId);
         temporalConflicts = temporalConflicts.filter((c: any) => c.context1 !== contextId && c.context2 !== contextId);
+        // Deletion changes graph topology
+        forceAutoLayoutNext = true;
         hideModals(); updateUI();
       }
 
-      function removeRelationship(index: number) { relationships.splice(index, 1); updateUI(); }
+      function removeRelationship(index: number) { relationships.splice(index, 1); forceAutoLayoutNext = true; updateUI(); }
 
       function resetZoom() { (svg as any).transition().duration(750).call(zoom.transform, d3.zoomIdentity); }
 
