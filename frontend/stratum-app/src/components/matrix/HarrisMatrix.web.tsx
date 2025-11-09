@@ -850,25 +850,31 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               <div className={`tab ${activeTab === 'relationships' ? 'active' : ''}`} onClick={() => setActiveTab('relationships')}>Relationships</div>
             </div>
             <div id="hierarchy-tab" className={`tab-content ${activeTab === 'hierarchy' ? 'active' : ''}`}>
+              <h3>Stratigraphic Hierarchy</h3>
               <div id="hierarchyList" className="hierarchy-list"></div>
             </div>
             <div id="conflicts-tab" className={`tab-content ${activeTab === 'conflicts' ? 'active' : ''}`}>
+              <h3>Temporal Conflicts</h3>
               <div id="conflictsList" className="hierarchy-list"></div>
             </div>
             <div id="relationships-tab" className={`tab-content ${activeTab === 'relationships' ? 'active' : ''}`}>
+              <h3>Relationships</h3>
               <div id="relationshipsList" className="hierarchy-list"></div>
             </div>
 
             <div className="actions-panel">
-              <button className="btn-primary" onClick={() => apiRef.current.createGroup()}>Create Group</button>
-              <button className="btn-primary" onClick={() => apiRef.current.createSubGroup()}>Create Sub-Group</button>
+              <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset View</button>
+              <h3>Management Tools</h3>
+              <button className="btn-warning" onClick={() => apiRef.current.createGroup()}>Create Group</button>
+              <button className="btn-warning" onClick={() => apiRef.current.createSubGroup()}>Create Sub-Group</button>
               <button className="btn-success" onClick={() => apiRef.current.createPhase()}>Create Phase</button>
-              <button className="btn-warning" onClick={() => apiRef.current.analyzeTemporalConflicts()}>Analyze Temporal Conflicts</button>
-              <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset Zoom</button>
+              <button className="btn-primary" onClick={() => apiRef.current.analyzeTemporalConflicts()}>Analyze Conflicts</button>
+              <h3>Import/Export</h3>
               <button className="btn-primary" onClick={() => apiRef.current.exportCSV()}>Export CSV</button>
-              <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>Export SVG</button>
+              <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>Export View as SVG</button>
+              <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>Import from CSV</button>
+              <h3>Start Over</h3>
               <button className="btn-danger" onClick={() => apiRef.current.clearAll()}>Clear All</button>
-              <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>Import CSV</button>
               <input ref={fileInputRef} type="file" id="csvFileInput" accept=".csv" style={{ display: 'none' }} onChange={(e) => (apiRef.current && apiRef.current.__handleFileSelect ? apiRef.current.__handleFileSelect(e) : undefined)} />
             </div>
           </div>
