@@ -32,7 +32,7 @@ Template for tasks:
 
 ### Dev Environment & Core
 
-- [ ] [P0] Docker Compose environment (Postgres, MinIO, backend, optional pgAdmin)
+- [x] [P0] Docker Compose environment (Postgres, MinIO, backend, optional pgAdmin)
 	- Notes: One-command spin-up for onboarding and CI reproducibility
 - [ ] [P0] Alembic baseline & remove create_all bootstrap
 	- Notes: Create initial revision from current schema; document migration workflow
