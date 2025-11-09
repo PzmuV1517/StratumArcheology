@@ -1,5 +1,7 @@
 # STRATUM Project TODO / Roadmap (Living Document)
 
+#  TASKS ARE ONLY COPILOT SUGGESTIONS. TALK TO COLLEAGUES BEFORE WORKING ON A CHANGE
+
 This file uses priority tags and per-task notes to help plan work:
 
 - Priority tags: [P0] critical, [P1] high, [P2] normal, [P3] nice-to-have
