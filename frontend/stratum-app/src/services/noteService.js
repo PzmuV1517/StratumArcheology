@@ -101,4 +101,17 @@ export const noteService = {
       throw error.response?.data || error;
     }
   },
+  // Upload audio blob (web MediaRecorder)
+  uploadAudioBlob: async (noteId, blob, filename = 'voice-note.webm') => {
+    try {
+      const formData = new FormData();
+      formData.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }));
+      const response = await api.post(`/notes/${noteId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

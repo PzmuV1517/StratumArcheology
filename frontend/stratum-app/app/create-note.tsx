@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,15 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
-import { Audio } from 'expo-av';
+import { Platform } from 'react-native';
+// Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
+let Audio: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    Audio = require('expo-av').Audio;
+  } catch {}
+}
 
 export default function CreateNoteScreen() {
   const { projectId } = useLocalSearchParams();
@@ -21,24 +29,44 @@ export default function CreateNoteScreen() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVoiceNote, setIsVoiceNote] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recording, setRecording] = useState<any>(null); // expo-av Recording or MediaRecorder
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
   const startRecording = async () => {
     try {
       setRecordingError(null);
-      const perm = await Audio.requestPermissionsAsync();
-      if (!perm.granted) {
-        setRecordingError('Microphone permission denied');
-        return;
+      if (Platform.OS === 'web') {
+        if (!navigator.mediaDevices) {
+          setRecordingError('MediaDevices unavailable');
+          return;
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaChunksRef.current = [];
+        mr.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) mediaChunksRef.current.push(ev.data);
+        };
+        mr.start();
+        setRecording(mr);
+        setIsRecording(true);
+      } else {
+        if (!Audio) {
+          setRecordingError('Audio module unavailable');
+          return;
+        }
+        const perm = await Audio.requestPermissionsAsync();
+        if (!perm.granted) {
+          setRecordingError('Microphone permission denied');
+          return;
+        }
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const result = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        setRecording(result.recording);
+        setIsRecording(true);
       }
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-      const result = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(result.recording);
     } catch (e: any) {
       console.error('Start recording failed', e);
       setRecordingError('Failed to start recording');
@@ -48,10 +76,24 @@ export default function CreateNoteScreen() {
   const stopRecording = async () => {
     try {
       if (!recording) return;
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecordedUri(uri);
-      setRecording(null);
+      if (Platform.OS === 'web') {
+        const mr: MediaRecorder = recording;
+        if (mr.state !== 'inactive') mr.stop();
+        setIsRecording(false);
+        // Wait a tick for ondataavailable final chunk
+        setTimeout(() => {
+          const blob = new Blob(mediaChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setRecordedUri(url);
+          setRecording(null);
+        }, 150);
+      } else {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setRecordedUri(uri);
+        setRecording(null);
+        setIsRecording(false);
+      }
     } catch (e: any) {
       console.error('Stop recording failed', e);
       setRecordingError('Failed to stop recording');
@@ -59,9 +101,13 @@ export default function CreateNoteScreen() {
   };
 
   const resetRecording = () => {
+    if (Platform.OS === 'web' && recordedUri) {
+      try { URL.revokeObjectURL(recordedUri); } catch {}
+    }
     setRecording(null);
     setRecordedUri(null);
     setRecordingError(null);
+    setIsRecording(false);
   };
 
   const handleCreate = async () => {
@@ -87,7 +133,14 @@ export default function CreateNoteScreen() {
       });
       if (isVoiceNote && recordedUri) {
         try {
-          await noteService.uploadAudio(note.id, recordedUri);
+          if (Platform.OS === 'web') {
+            // Convert object URL to blob
+            const response = await fetch(recordedUri);
+            const blob = await response.blob();
+            await noteService.uploadAudioBlob(note.id, blob, 'voice-note.webm');
+          } else {
+            await noteService.uploadAudio(note.id, recordedUri);
+          }
         } catch (e) {
           console.error('Audio upload failed', e);
           Alert.alert('Warning', 'Note saved but audio upload failed');
