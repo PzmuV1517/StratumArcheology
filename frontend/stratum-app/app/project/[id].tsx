@@ -324,6 +324,16 @@ export default function ProjectDetailScreen() {
     const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
     const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
     const isMesh = /\.(glb|gltf)$/i.test(lower);
+    const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+
+    if (isAudio) {
+      if (node.note_id) {
+        router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
+        return;
+      }
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+      return;
+    }
 
     if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
       let kind: string = 'csv';
@@ -346,10 +356,14 @@ export default function ProjectDetailScreen() {
   };
 
   const handleNotePress = (noteId: string) => {
-    router.push({
-      pathname: '/note-detail',
-      params: { noteId, projectId: project?.id }
-    });
+    const n: any = (notes as any[]).find((x: any) => x.id === noteId);
+    const hasAudio = (n?.attachments || []).some((a: any) => a?.mime_type?.startsWith('audio/'));
+    const isVoice = (!n?.content || n?.content.trim() === '') && hasAudio;
+    if (isVoice) {
+      router.push({ pathname: '/voice-note/[id]', params: { id: noteId } });
+      return;
+    }
+    router.push({ pathname: '/note-detail', params: { noteId, projectId: project?.id } });
   };
 
   const handleManageMembers = () => {

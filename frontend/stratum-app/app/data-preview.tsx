@@ -6,12 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TextFilePanel from '../src/components/data/TextFilePanel';
 import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
-// Use platform resolution (no .web suffix) so native picks *.native.tsx
-import PdfPanel from '../src/components/data/PdfPanel';
-import VideoPanel from '../src/components/data/VideoPanel';
-import PointCloudPanel from '../src/components/data/PointCloudPanel';
-import MeshPanel from '../src/components/data/MeshPanel';
-import AudioPanel from '../src/components/data/AudioPanel';
+
+import PdfPanel from '../src/components/data/PdfPanel.web';
+import VideoPanel from '../src/components/data/VideoPanel.web';
+import PointCloudPanel from '../src/components/data/PointCloudPanel.web';
+import MeshPanel from '../src/components/data/MeshPanel.web';
+import AudioPanel from '../src/components/data/AudioPanel.web';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
@@ -502,6 +502,10 @@ export default function DataPreviewScreen() {
     window.addEventListener('wheel', onWheel, { passive: false });
     return () => window.removeEventListener('wheel', onWheel as any);
   }, [canZoomWeb]);
+
+  const handleNotePress = (noteId: string) => {
+    router.push({ pathname: '/note-detail', params: { noteId, projectId: project?.id } });
+  };
 
   return (
     <View style={styles.container}>

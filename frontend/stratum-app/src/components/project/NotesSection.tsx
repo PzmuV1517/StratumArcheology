@@ -8,16 +8,21 @@ interface Note {
   updated_at: string;
 }
 
-export default function NotesSection({ notes, onCreateNote, onNotePress }: { notes: Note[]; onCreateNote: () => void; onNotePress: (id: string) => void; }) {
-  const renderNote = ({ item }: { item: Note }) => (
-    <TouchableOpacity style={styles.noteCard} onPress={() => onNotePress(item.id)}>
-      <View style={styles.noteHeader}>
-        <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
-  <Text style={styles.noteDate}>{new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
-      </View>
-      {!!item.content && <Text style={styles.notePreview} numberOfLines={2}>{item.content}</Text>}
-    </TouchableOpacity>
-  );
+export default function NotesSection({ notes, onCreateNote, onNotePress }: { notes: any[]; onCreateNote: () => void; onNotePress: (id: string) => void; }) {
+  const renderNote = ({ item }: { item: Note }) => {
+    const isVoice = (!item.content || item.content.trim() === '') && (item.attachments || []).some((a: any) => a.mime_type?.startsWith('audio/'));
+
+    return (
+      <TouchableOpacity style={styles.noteCard} onPress={() => onNotePress(item.id)}>
+        <View style={styles.noteHeader}>
+          <Text style={styles.noteTitle} numberOfLines={1}>{item.title}{isVoice ? ' 🔊' : ''}</Text>
+          <Text style={styles.noteDate}>{new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
+        </View>
+        {/* hide content preview for voice notes */}
+        {!!item.content && !isVoice && <Text style={styles.notePreview} numberOfLines={2}>{item.content}</Text>}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View>

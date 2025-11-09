@@ -22,9 +22,14 @@ export const noteService = {
   },
 
   // Create a new note
-  createNote: async (noteData) => {
+  createNote: async (data) => {
     try {
-      const response = await api.post('/notes', noteData);
+      const response = await api.post('/notes', {
+        title: data.title,
+        content: data.content,
+        project_id: data.project_id,
+        is_voice: data.is_voice || false,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

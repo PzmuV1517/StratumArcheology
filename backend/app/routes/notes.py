@@ -8,8 +8,16 @@ from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 from app.minio_client import minio_client
 from datetime import datetime
 import uuid
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/notes", tags=["notes"])
+
+
+class NoteCreate(BaseModel):
+    title: str
+    content: str | None = None
+    project_id: str
+    is_voice: bool | None = False
 
 
 @router.post("/", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
@@ -51,33 +59,29 @@ async def create_note(
     db.add(note)
     db.commit()
     db.refresh(note)
-    
-    # Store note content as a txt file in MinIO
-    filename = f"{note_data.title}.txt"
-    content_bytes = (note_data.content or '').encode('utf-8')
-    storage_path = f"notes/{note_data.project_id}/{note.id}.txt"
-    
-    await minio_client.upload_file(content_bytes, storage_path, "text/plain")
-    
-    # Create file node pointing to the txt file
-    note_node = FileNode(
-        project_id=note_data.project_id,
-        parent_id=notes_folder.id,
-        name=filename,
-        type=FileNodeType.FILE,
-        mime_type="text/plain",
-        size=str(len(content_bytes)),
-        storage_path=storage_path,
-        is_locked=False,  # Allow editing as regular file
-    )
-    db.add(note_node)
-    db.commit()
-    db.refresh(note_node)
 
-    # Link note to file node
-    link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
-    db.add(link)
-    db.commit()
+    is_voice = getattr(note_data, "is_voice", False)
+
+    if not is_voice:
+        filename = f"{note_data.title}.txt"
+        content_bytes = (note_data.content or '').encode('utf-8')
+        storage_path = f"notes/{note_data.project_id}/{note.id}.txt"
+        
+        await minio_client.upload_file(content_bytes, storage_path, "text/plain")
+        
+        # Create file node pointing to the txt file
+        note_node = FileNode(
+            project_id=note_data.project_id,
+            parent_id=notes_folder.id,
+            name=filename,
+            type=FileNodeType.FILE,
+            storage_path=storage_path,
+            mime_type="text/plain"
+        )
+        db.add(note_node)
+        link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
+        db.add(link)
+        db.commit()
     
     return note
 

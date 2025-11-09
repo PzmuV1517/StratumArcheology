@@ -29,11 +29,12 @@ export default function CreateNoteScreen() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [isVoiceNote, setIsVoiceNote] = useState(false);
-  const [recording, setRecording] = useState<any>(null); // expo-av Recording or MediaRecorder
+  const [recording, setRecording] = useState<any>(null);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
 
   const startRecording = async () => {
     try {
@@ -44,6 +45,7 @@ export default function CreateNoteScreen() {
           return;
         }
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setLiveStream(stream);
         const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         mediaChunksRef.current = [];
         mr.ondataavailable = (ev) => {
@@ -80,13 +82,16 @@ export default function CreateNoteScreen() {
         const mr: MediaRecorder = recording;
         if (mr.state !== 'inactive') mr.stop();
         setIsRecording(false);
-        // Wait a tick for ondataavailable final chunk
         setTimeout(() => {
           const blob = new Blob(mediaChunksRef.current, { type: 'audio/webm' });
           const url = URL.createObjectURL(blob);
           setRecordedUri(url);
           setRecording(null);
-        }, 150);
+          if (liveStream) {
+            liveStream.getTracks().forEach(t => t.stop());
+            setLiveStream(null);
+          }
+        }, 200);
       } else {
         await recording.stopAndUnloadAsync();
         const uri = recording.getURI();
@@ -103,6 +108,10 @@ export default function CreateNoteScreen() {
   const resetRecording = () => {
     if (Platform.OS === 'web' && recordedUri) {
       try { URL.revokeObjectURL(recordedUri); } catch {}
+    }
+    if (liveStream) {
+      liveStream.getTracks().forEach(t => t.stop());
+      setLiveStream(null);
     }
     setRecording(null);
     setRecordedUri(null);
@@ -130,11 +139,11 @@ export default function CreateNoteScreen() {
         title: title.trim(),
         content: isVoiceNote ? '' : content.trim(),
         project_id: projectId as string,
+        is_voice: isVoiceNote
       });
       if (isVoiceNote && recordedUri) {
         try {
           if (Platform.OS === 'web') {
-            // Convert object URL to blob
             const response = await fetch(recordedUri);
             const blob = await response.blob();
             await noteService.uploadAudioBlob(note.id, blob, 'voice-note.webm');
@@ -190,13 +199,8 @@ export default function CreateNoteScreen() {
               style={[styles.toggleButton, isVoiceNote && styles.toggleActive]}
               onPress={() => {
                 setIsVoiceNote(v => !v);
-                if (!isVoiceNote) {
-                  // switching to voice mode – clear text content
-                  setContent('');
-                } else {
-                  // leaving voice mode – reset recording state
-                  resetRecording();
-                }
+                if (!isVoiceNote) setContent('');
+                else resetRecording();
               }}
               disabled={loading}
             >
@@ -223,6 +227,8 @@ export default function CreateNoteScreen() {
           {isVoiceNote && (
             <View style={styles.voiceContainer}>
               <Text style={styles.label}>Voice Recording</Text>
+              {Platform.OS === 'web' && <LiveWaveform stream={liveStream} isRecording={isRecording} />}
+              {Platform.OS !== 'web' && <NativeLevelBar active={isRecording} />}
               {recording ? (
                 <TouchableOpacity style={[styles.recButton, styles.stop]} onPress={stopRecording} disabled={loading}>
                   <Text style={styles.recButtonText}>Stop Recording</Text>
@@ -237,14 +243,15 @@ export default function CreateNoteScreen() {
                 </TouchableOpacity>
               )}
               {recordedUri && !recording && (
-                <Text style={styles.recInfo}>Recorded file ready to upload</Text>
+                <>
+                  <Text style={styles.recInfo}>Recorded file ready to upload</Text>
+                  {Platform.OS === 'web' ? <audio src={recordedUri} controls style={{ width: '100%', marginBottom: 8 }} /> : null}
+                  <TouchableOpacity style={styles.clearAudio} onPress={resetRecording} disabled={loading}>
+                    <Text style={styles.clearAudioText}>Remove Audio</Text>
+                  </TouchableOpacity>
+                </>
               )}
               {recordingError && <Text style={styles.errorText}>{recordingError}</Text>}
-              {!!recordedUri && (
-                <TouchableOpacity style={styles.clearAudio} onPress={resetRecording} disabled={loading}>
-                  <Text style={styles.clearAudioText}>Remove Audio</Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
 
@@ -269,6 +276,59 @@ export default function CreateNoteScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+// Live waveform (web)
+function LiveWaveform({ stream, isRecording }: { stream: MediaStream | null; isRecording: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const acRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  useEffect(() => {
+    if (!stream || !isRecording || !canvasRef.current) return;
+    const ac = new AudioContext();
+    acRef.current = ac;
+    const src = ac.createMediaStreamSource(stream);
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+    src.connect(analyser);
+    analyserRef.current = analyser;
+    const data = new Uint8Array(analyser.fftSize);
+    const ctx = canvasRef.current.getContext('2d')!;
+    let raf = 0;
+    const draw = () => {
+      raf = requestAnimationFrame(draw);
+      analyser.getByteTimeDomainData(data);
+      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      ctx.strokeStyle = '#FF2A2A';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const slice = canvasRef.current!.width / data.length;
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0 - 1.0;
+        const y = (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+        if (i === 0) ctx.moveTo(0, y);
+        else ctx.lineTo(i * slice, y);
+      }
+      ctx.stroke();
+    };
+    draw();
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      try { ac.close(); } catch {}
+    };
+  }, [stream, isRecording]);
+  return <canvas ref={canvasRef} width={800} height={120} style={{ width: '100%', height: 120, backgroundColor: '#111', borderRadius: 8, marginBottom: 12 }} />;
+}
+
+// Native simple level bar placeholder
+function NativeLevelBar({ active }: { active: boolean }) {
+  return (
+    <View style={{ height: 40, marginBottom: 12, justifyContent: 'center' }}>
+      <View style={{ height: 8, backgroundColor: '#2A2A2A', borderRadius: 4, overflow: 'hidden' }}>
+        <View style={{ width: active ? '80%' : '5%', height: 8, backgroundColor: '#FF2A2A' }} />
+      </View>
     </View>
   );
 }

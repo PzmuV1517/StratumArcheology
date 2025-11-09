@@ -147,6 +147,8 @@ export default function NoteDetailScreen() {
     );
   }
 
+  const isAudioNote = note && (!note.content || note.content.trim() === '') && (note.attachments || []).some((a: any) => a.mime_type?.startsWith('audio/'));
+
   return (
     <View style={styles.container}>
         <Stack.Screen 
@@ -188,9 +190,20 @@ export default function NoteDetailScreen() {
             )}
           </View>
 
-          <View style={styles.contentContainer}>
-            <Text style={styles.noteContent}>{note.content}</Text>
-          </View>
+          {isAudioNote ? (
+            <View style={styles.voiceNoteWrapper}>
+              <Text style={styles.sectionTitle}>Voice Note</Text>
+              {note.attachments.filter((a: any) => a.mime_type?.startsWith('audio/')).map((att: any) => (
+                <View key={att.id} style={styles.voicePlayback}>
+                  <AudioAttachmentPlayer url={att.url} />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.noteContentWrapper}>
+              <Text style={styles.noteContent}>{note.content}</Text>
+            </View>
+          )}
 
           {/* Attachments section */}
           {note.attachments && note.attachments.length > 0 && (
@@ -424,5 +437,29 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
     fontSize: 14,
     fontWeight: '600',
+  },
+  voiceNoteWrapper: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  voicePlayback: {
+    marginBottom: 16,
+  },
+  noteContentWrapper: {
+    backgroundColor: '#1E1E1E',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  sectionTitle: {
+    color: '#F5F5F5',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 12,
   },
 });
