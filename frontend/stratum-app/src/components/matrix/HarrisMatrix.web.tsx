@@ -397,6 +397,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const allNodes = new Map<string, any>([...contexts, ...dummyNodes]);
         const orderedLevels = reduceCrossings(levels, allNodes, allEdges);
         nodePositions = assignCoordinates(orderedLevels, levels, dummyNodes);
+        // Store computed edges for reuse when moving nodes manually
+        lastComputedEdges = allEdges;
+        lastComputedContemporaryLinks = contemporaryLinks;
         drawMatrix(nodePositions, allEdges, contemporaryLinks);
       }
 
@@ -500,6 +503,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
 
       // Flag to force a full auto-layout (clearing manual fixed positions) after structural changes
       let forceAutoLayoutNext = false;
+      // Store last computed edges to redraw after manual node movements
+      let lastComputedEdges: any[] = [];
+      let lastComputedContemporaryLinks: any[] = [];
 
       function updateUI() {
         updateHierarchyDisplay();
@@ -540,8 +546,16 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           if (targetId) { showRelationshipModal(sourceId, targetId); }
           else {
             const ctx = contexts.get(sourceId);
-            if (ctx) { ctx.x = Math.round(event.x / GRID_CELL_SIZE) * GRID_CELL_SIZE; ctx.y = Math.round(event.y / GRID_CELL_SIZE) * GRID_CELL_SIZE; ctx.fixed = true; }
-            updateUI();
+            if (ctx) { 
+              ctx.x = Math.round(event.x / GRID_CELL_SIZE) * GRID_CELL_SIZE; 
+              ctx.y = Math.round(event.y / GRID_CELL_SIZE) * GRID_CELL_SIZE; 
+              ctx.fixed = true;
+              // Update node position in the positions record
+              nodePositions[sourceId] = { x: ctx.x, y: ctx.y };
+            }
+            // Only save and redraw with existing edges without restructuring
+            saveToStorage();
+            drawMatrix(nodePositions, lastComputedEdges, lastComputedContemporaryLinks);
           }
         } else {
           showEditNodeModal(d);
@@ -1224,6 +1238,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         },
         analyzeTemporalConflicts,
         resetZoom,
+        restructure: () => {
+          // Clear all fixed positions and force full layout
+          contexts.forEach((c: any) => { c.fixed = false; });
+          applyLayoutAndDraw();
+          saveToStorage();
+        },
         exportCSV,
         exportSVG: exportViewAsSVG,
         clearAll: confirmClear,
@@ -1507,6 +1527,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
             <div className="actions-panel">
               <div className="button-grid" style={{ marginBottom: 10 }}>
                 <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset View</button>
+                <button className="btn-warning" onClick={() => apiRef.current.restructure()}>Restructure</button>
               </div>
               <h3>Management Tools</h3>
               <div className="button-grid">
