@@ -488,7 +488,10 @@ export default function ProjectDetailScreen() {
         }} 
       />
       
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        scrollEnabled={activeTab !== 'matrix'}
+      >
         {/* Project Header */}
         <ProjectHeader project={project as any} />
 

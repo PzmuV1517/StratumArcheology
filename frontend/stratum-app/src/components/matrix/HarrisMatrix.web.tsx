@@ -1505,19 +1505,27 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
             </div>
 
             <div className="actions-panel">
-              <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset View</button>
+              <div className="button-grid" style={{ marginBottom: 10 }}>
+                <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset View</button>
+              </div>
               <h3>Management Tools</h3>
-              <button className="btn-warning" onClick={() => apiRef.current.createGroup()}>Create Group</button>
-              <button className="btn-warning" onClick={() => apiRef.current.createSubGroup()}>Create Sub-Group</button>
-              <button className="btn-success" onClick={() => apiRef.current.createPhase()}>Create Phase</button>
-              <button className="btn-primary" onClick={() => apiRef.current.analyzeTemporalConflicts()}>Analyze Conflicts</button>
-              <button className="btn-primary" onClick={() => apiRef.current.quickSelfTest()}>Run Quick Self-Test</button>
+              <div className="button-grid">
+                <button className="btn-warning" onClick={() => apiRef.current.createGroup()}>Create Group</button>
+                <button className="btn-warning" onClick={() => apiRef.current.createSubGroup()}>Create Sub-Group</button>
+                <button className="btn-success" onClick={() => apiRef.current.createPhase()}>Create Phase</button>
+                <button className="btn-primary" onClick={() => apiRef.current.analyzeTemporalConflicts()}>Analyze Conflicts</button>
+                <button className="btn-primary" onClick={() => apiRef.current.quickSelfTest()}>Quick Self-Test</button>
+              </div>
               <h3>Import/Export</h3>
-              <button className="btn-primary" onClick={() => apiRef.current.exportCSV()}>Export CSV</button>
-              <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>Export View as SVG</button>
-              <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>Import from CSV</button>
+              <div className="button-grid">
+                <button className="btn-primary" onClick={() => apiRef.current.exportCSV()}>Export CSV</button>
+                <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>Export SVG</button>
+                <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>Import CSV</button>
+              </div>
               <h3>Start Over</h3>
-              <button className="btn-danger" onClick={() => apiRef.current.clearAll()}>Clear All</button>
+              <div className="button-grid">
+                <button className="btn-danger" onClick={() => apiRef.current.clearAll()}>Clear All</button>
+              </div>
               <input ref={fileInputRef} type="file" id="csvFileInput" accept=".csv" style={{ display: 'none' }} onChange={(e) => (apiRef.current && apiRef.current.__handleFileSelect ? apiRef.current.__handleFileSelect(e) : undefined)} />
             </div>
           </div>

@@ -1,3 +1,170 @@
+/* Layout and theming for Harris Matrix React port */
+:root {
+  --primary-bg: #0f1115;
+  --container-bg: #141820;
+  --panel-bg: #151a23;
+  --header-color: #e6eaf2;
+  --text-color: #d3d8e4;
+  --border-color: #283041;
+  --primary-accent: #3b82f6;
+  --primary-accent-hover: #2563eb;
+  --danger-accent: #ef4444;
+  --success-accent: #22c55e;
+  --warning-accent: #f59e0b;
+}
+
+.harris-matrix {
+  width: 100% !important;
+  height: 92% !important; /* override inline styles to fill parent container */
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* prevent page-level scroll */
+}
+
+.harris-matrix .container {
+  width: 100%;
+  max-width: 100%;
+  height: 100%; /* fill parent */
+  margin: 0 auto;
+  background: var(--container-bg);
+  overflow: hidden; /* no scroll at container level */
+  display: flex;
+  flex-direction: column;
+}
+
+.harris-matrix .workspace {
+  display: flex;
+  gap: 12px;
+  flex: 1; /* grow to fill remaining space */
+  overflow: hidden; /* prevent workspace-level scroll */
+  min-height: 0; /* allow flex children to shrink */
+}
+
+.harris-matrix .visualization-panel {
+  flex: 1 1 520px; /* grow, minimum width */
+  min-height: 0; /* allow shrinking within flex parent */
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.harris-matrix #matrixSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.harris-matrix .data-panel {
+  flex: 0 0 420px; /* fixed width, don't grow or shrink */
+  max-width: 420px;
+  min-height: 0; /* allow flex parent to control height */
+  background: var(--panel-bg);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow-y: auto; /* vertical scroll only */
+  overflow-x: hidden; /* disable horizontal scroll */
+  box-sizing: border-box;
+}
+
+/* Tabs: wrap across lines to avoid horizontal scrolling */
+.harris-matrix .tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 10px;
+}
+.harris-matrix .tab {
+  padding: 8px 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #10151d;
+  user-select: none;
+  white-space: nowrap;
+}
+.harris-matrix .tab.active {
+  border-color: var(--primary-accent);
+  background: #0e1726;
+}
+.harris-matrix .tab-content {
+  display: none;
+  max-width: 100%;
+  overflow-x: hidden; /* ensure no horizontal overflow inside tabs */
+}
+.harris-matrix .tab-content.active { display: block; }
+
+/* Generic form styles */
+.harris-matrix .form-group { margin-bottom: 10px; }
+.harris-matrix .form-group label { display: block; margin-bottom: 4px; font-weight: 600; }
+.harris-matrix input, 
+.harris-matrix select, 
+.harris-matrix textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0e1420;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+}
+.harris-matrix .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.harris-matrix .fieldset-group { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+.harris-matrix .fieldset-group legend { padding: 0 6px; color: var(--text-color); }
+
+/* Lists */
+.harris-matrix .hierarchy-list { margin: 6px 0 12px 0; }
+
+/* Action buttons: tile horizontally and become square if desired */
+.harris-matrix .actions-panel { margin-top: 12px; }
+.harris-matrix .actions-panel h3 { margin: 10px 0; }
+.harris-matrix .button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.harris-matrix .button-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.harris-matrix .btn-primary,
+.harris-matrix .btn-success,
+.harris-matrix .btn-danger,
+.harris-matrix .btn-warning {
+  border: none;
+  color: white;
+  border-radius: 6px;
+  padding: 6px 8px;
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal; /* allow wrapping to keep height compact */
+}
+.harris-matrix .btn-primary { background: var(--primary-accent); }
+.harris-matrix .btn-success { background: var(--success-accent); }
+.harris-matrix .btn-danger { background: var(--danger-accent); }
+.harris-matrix .btn-warning { background: var(--warning-accent); color: #0e0e0e; }
+
+/* Removed square enforcement to allow rectangular, compact buttons */
+
+/* Tables */
+.harris-matrix table.registry-table { width: 100%; border-collapse: collapse; }
+.harris-matrix table.registry-table th,
+.harris-matrix table.registry-table td { border: 1px solid var(--border-color); padding: 6px; font-size: 12px; }
+.harris-matrix table.registry-table thead th { background: #121826; }
+
+/* Modals */
+.harris-matrix .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.harris-matrix .modal-content { background: #0f141f; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); width: 420px; max-width: calc(100% - 24px); max-height: 80vh; overflow-y: auto; }
+.harris-matrix .modal-buttons { display: flex; gap: 8px; }
+
+/* Utility */
+.harris-matrix .muted { color: #9aa4b2; font-size: 12px; }
 .harris-matrix {
   /* Dark theme variables aligned with app styling */
   --bg-root: #111111;
