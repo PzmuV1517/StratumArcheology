@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FaWrench } from 'react-icons/fa';
+import { FaWrench, FaArrowLeft } from 'react-icons/fa';
 import { MdOutlineViewInAr } from 'react-icons/md';
 import { FaArrowRotateRight } from 'react-icons/fa6';
 import { HiDotsHorizontal } from 'react-icons/hi';
@@ -72,6 +72,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeTab, setActiveTab] = useState<'hierarchy' | 'conflicts' | 'relationships' | 'records' | 'featureForm' | 'suForm' | 'artefacts' | 'export'>('hierarchy');
+  const [sidebarView, setSidebarView] = useState<'default' | 'featureForm' | 'suForm' | 'artefacts'>('default');
   const [toolMenuOpen, setToolMenuOpen] = useState(false);
   const [overlayData, setOverlayData] = useState<GroupOverlayData | null>(null);
   const toolMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1612,15 +1613,30 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
             <svg id="matrixSvg" ref={svgRef} />
           </div>
           <div className="data-panel">
-            <div className="tabs">
-              <div className={`tab ${activeTab === 'hierarchy' ? 'active' : ''}`} onClick={() => setActiveTab('hierarchy')}>Hierarchy</div>
-              <div className={`tab ${activeTab === 'relationships' ? 'active' : ''}`} onClick={() => setActiveTab('relationships')}>Relationships</div>
-              <div className={`tab ${activeTab === 'records' ? 'active' : ''}`} onClick={() => setActiveTab('records')}>Records</div>
-              <div className={`tab ${activeTab === 'featureForm' ? 'active' : ''}`} onClick={() => setActiveTab('featureForm')}>Context Feature Form</div>
-              <div className={`tab ${activeTab === 'suForm' ? 'active' : ''}`} onClick={() => setActiveTab('suForm')}>SU Form</div>
-              <div className={`tab ${activeTab === 'artefacts' ? 'active' : ''}`} onClick={() => setActiveTab('artefacts')}>Artefacts</div>
-              <div className={`tab ${activeTab === 'export' ? 'active' : ''}`} onClick={() => setActiveTab('export')}>Export</div>
-            </div>
+            {sidebarView === 'default' ? (
+              <div className="tabs">
+                <div className={`tab ${activeTab === 'hierarchy' ? 'active' : ''}`} onClick={() => setActiveTab('hierarchy')}>Hierarchy</div>
+                <div className={`tab ${activeTab === 'relationships' ? 'active' : ''}`} onClick={() => setActiveTab('relationships')}>Relationships</div>
+                <div className={`tab ${activeTab === 'records' ? 'active' : ''}`} onClick={() => setActiveTab('records')}>Records</div>
+                <div className={`tab ${activeTab === 'export' ? 'active' : ''}`} onClick={() => setActiveTab('export')}>Export</div>
+              </div>
+            ) : (
+              <div className="tabs" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  className="tool-menu-toggle"
+                  aria-label="Back"
+                  title="Back"
+                  onClick={() => { setSidebarView('default'); setActiveTab('records'); }}
+                  style={{ marginRight: 6 }}
+                >
+                  <FaArrowLeft size={14} />
+                </button>
+                <div style={{ fontSize: 12, color: 'var(--muted,#adb5bd)' }}>
+                  {sidebarView === 'featureForm' ? 'Context Feature Form' : sidebarView === 'suForm' ? 'SU Form' : 'Artefact Registry'}
+                </div>
+              </div>
+            )}
             <div id="hierarchy-tab" className={`tab-content ${activeTab === 'hierarchy' ? 'active' : ''}`}>
               <h3>Stratigraphic Hierarchy</h3>
               <div id="hierarchyList" className="hierarchy-list"></div>
@@ -1634,12 +1650,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               <div id="relationshipsList" className="hierarchy-list"></div>
             </div>
 
-            <div id="records-tab" className={`tab-content ${activeTab === 'records' ? 'active' : ''}`}>
+            <div id="records-tab" className={`tab-content ${(activeTab === 'records' && sidebarView === 'default') ? 'active' : ''}`}>
               <h3>Digitized Records</h3>
-              <div id="recordsSummary" className="hierarchy-list"></div>
+              <div id="recordsSummary" className="hierarchy-list" style={{ marginBottom: 8 }}></div>
+              <div className="button-grid">
+                <button className="btn-primary" onClick={() => setSidebarView('featureForm')}>Open Context Feature Form</button>
+                <button className="btn-primary" onClick={() => setSidebarView('suForm')}>Open SU Form</button>
+                <button className="btn-primary" onClick={() => setSidebarView('artefacts')}>Open Artefact Registry</button>
+              </div>
             </div>
 
-            <div id="featureForm-tab" className={`tab-content ${activeTab === 'featureForm' ? 'active' : ''}`}>
+            <div id="featureForm-tab" className={`tab-content ${(activeTab === 'featureForm' || sidebarView === 'featureForm') ? 'active' : ''}`}>
               <h3>Full Context Feature Record</h3>
               <p style={{ fontSize: '12px', color: 'var(--muted,#adb5bd)', marginBottom: '8px' }}>Select a context node to preload some fields, then fill the detailed record.</p>
               <form id="contextFeatureForm" onSubmit={(e) => { e.preventDefault(); }}>
@@ -1731,7 +1752,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               </form>
             </div>
 
-            <div id="suForm-tab" className={`tab-content ${activeTab === 'suForm' ? 'active' : ''}`}>
+            <div id="suForm-tab" className={`tab-content ${(activeTab === 'suForm' || sidebarView === 'suForm') ? 'active' : ''}`}>
               <h3>Stratigraphic Unit (SU) Record</h3>
               <form id="suForm" onSubmit={(e) => e.preventDefault()}>
                 <div className="form-row" style={{ display:'flex', gap:8 }}>
@@ -1828,7 +1849,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               </form>
             </div>
 
-            <div id="artefacts-tab" className={`tab-content ${activeTab === 'artefacts' ? 'active' : ''}`}>
+            <div id="artefacts-tab" className={`tab-content ${(activeTab === 'artefacts' || sidebarView === 'artefacts') ? 'active' : ''}`}>
               <h3>Artefact Registry</h3>
               <div className="form-row" style={{ display:'flex', gap:8 }}>
                 <div className="form-group" style={{ flex:1 }}><label>Filter Text</label><input type="text" id="af_filterText" onInput={() => apiRef.current.refreshArtefactTable()} placeholder="Search number/type/SU" /></div>
