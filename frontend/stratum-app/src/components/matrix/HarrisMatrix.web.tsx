@@ -1,6 +1,69 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { FaWrench } from 'react-icons/fa';
+import { MdOutlineViewInAr } from 'react-icons/md';
+import { FaArrowRotateRight } from 'react-icons/fa6';
+import { HiDotsHorizontal } from 'react-icons/hi';
 import './HarrisMatrix.css';
 import { ContextFeatureRecord, StratigraphicUnitRecord, ArtefactRegistries, createEmptyRegistries, normalizeLoadedData, ArtefactRecord } from './registryModels';
+
+const DEFAULT_GROUP_COLOR = '#ff9800';
+const DEFAULT_SUBGROUP_COLOR = '#9c27b0';
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100;
+  l /= 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase();
+}
+
+function generateGroupColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = 65 + Math.floor(Math.random() * 20); // 65-85%
+  const lightness = 45 + Math.floor(Math.random() * 12); // 45-57%
+  return hslToHex(hue, saturation, lightness);
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+  if (![3, 6].includes(normalized.length)) return hex;
+  const fullHex = normalized.length === 3
+    ? normalized.split('').map((c) => c + c).join('')
+    : normalized;
+  const bigint = parseInt(fullHex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+interface GroupOverlayContext {
+  id: string;
+  label: string;
+  type?: string;
+  description?: string;
+}
+
+interface GroupOverlayData {
+  id: string;
+  type: 'group' | 'subgroup';
+  name: string;
+  description?: string;
+  color: string;
+  contexts: GroupOverlayContext[];
+}
 
 interface HarrisMatrixProps { projectId: string }
 
@@ -8,7 +71,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeTab, setActiveTab] = useState<'hierarchy' | 'conflicts' | 'relationships' | 'records' | 'featureForm' | 'suForm' | 'artefacts'>('hierarchy');
+  const [activeTab, setActiveTab] = useState<'hierarchy' | 'conflicts' | 'relationships' | 'records' | 'featureForm' | 'suForm' | 'artefacts' | 'export'>('hierarchy');
+  const [toolMenuOpen, setToolMenuOpen] = useState(false);
+  const [overlayData, setOverlayData] = useState<GroupOverlayData | null>(null);
+  const toolMenuRef = useRef<HTMLDivElement | null>(null);
+  const openGroupModalRef = useRef<((entity: 'group' | 'subgroup' | 'phase', mode: 'create' | 'edit', id?: string) => void) | null>(null);
+  const dotsIconMarkup = useMemo(() => renderToStaticMarkup(<HiDotsHorizontal />), []);
 
   // Expose imperative handlers to JSX via ref
   const apiRef = useRef<any>({});
@@ -64,6 +132,153 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           artefactRegistries = extended.artefacts;
         } catch {}
       }
+
+        type GroupModalEntity = 'group' | 'subgroup' | 'phase';
+        interface GroupModalOptions {
+          mode: 'create' | 'edit';
+          entity: GroupModalEntity;
+          id?: string;
+        }
+
+        function openGroupModal(options: GroupModalOptions) {
+          const modal = document.getElementById('groupModal') as HTMLElement | null; if (!modal) return;
+          const titleEl = document.getElementById('groupModalTitle') as HTMLElement | null;
+          const nameInput = document.getElementById('groupName') as HTMLInputElement | null;
+          const descriptionInput = document.getElementById('groupDescription') as HTMLTextAreaElement | null;
+          const typeWrapper = document.getElementById('groupTypeWrapper') as HTMLElement | null;
+          const typeSelect = document.getElementById('groupType') as HTMLSelectElement | null;
+          const colorRow = document.getElementById('groupColorRow') as HTMLElement | null;
+          const colorInput = document.getElementById('groupColor') as HTMLInputElement | null;
+          const randomizeButton = document.getElementById('groupRandomizeColor') as HTMLButtonElement | null;
+          const confirmBtn = document.getElementById('confirmGroupBtn') as HTMLButtonElement | null;
+          if (!titleEl || !nameInput || !descriptionInput || !typeWrapper || !typeSelect || !confirmBtn) return;
+
+          const isGroup = options.entity === 'group';
+          const isSubGroup = options.entity === 'subgroup';
+          const showColorControls = isGroup || isSubGroup;
+          const modalTitle = options.mode === 'edit'
+            ? (isGroup ? 'Edit Group' : isSubGroup ? 'Edit Sub-Group' : 'Edit Phase')
+            : (isGroup ? 'Create Group' : isSubGroup ? 'Create Sub-Group' : 'Create Phase');
+          titleEl.innerText = modalTitle;
+
+          typeWrapper.style.display = isGroup ? 'block' : 'none';
+          if (isGroup && !options.id) {
+            typeSelect.value = 'functional';
+          }
+
+          if (colorRow) colorRow.style.display = showColorControls ? 'block' : 'none';
+          const ensureColorValue = () => {
+            if (!showColorControls || !colorInput) return undefined;
+            const sourceColor = colorInput.value || generateGroupColor();
+            colorInput.value = sourceColor;
+            return sourceColor;
+          };
+
+          if (options.mode === 'edit' && options.id) {
+            if (isGroup) {
+              const group = groups.get(options.id);
+              if (!group) return;
+              nameInput.value = group.name || '';
+              descriptionInput.value = group.description || '';
+              typeSelect.value = group.type || 'functional';
+              if (colorInput) colorInput.value = group.color || DEFAULT_GROUP_COLOR;
+            } else if (isSubGroup) {
+              const subgroup = subGroups.get(options.id);
+              if (!subgroup) return;
+              nameInput.value = subgroup.name || '';
+              descriptionInput.value = subgroup.description || '';
+              if (colorInput) colorInput.value = subgroup.color || DEFAULT_SUBGROUP_COLOR;
+            } else {
+              const phase = phases.get(options.id);
+              if (!phase) return;
+              nameInput.value = phase.name || '';
+              descriptionInput.value = phase.description || '';
+            }
+          } else {
+            nameInput.value = '';
+            descriptionInput.value = '';
+            if (showColorControls && colorInput) colorInput.value = generateGroupColor();
+          }
+
+          if (randomizeButton) {
+            randomizeButton.onclick = () => {
+              if (colorInput) colorInput.value = generateGroupColor();
+            };
+          }
+
+          confirmBtn.innerText = options.mode === 'edit' ? 'Save Changes' : 'Create';
+          confirmBtn.onclick = () => {
+            const name = nameInput.value.trim();
+            if (!name) { alert('Name is required.'); return; }
+            const description = descriptionInput.value.trim();
+            const selectedColor = showColorControls ? (colorInput?.value || generateGroupColor()) : undefined;
+
+            if (options.mode === 'create') {
+              if (isGroup) {
+                const id = `group_${Date.now()}`;
+                const group = {
+                  id,
+                  name,
+                  type: typeSelect.value,
+                  description,
+                  color: selectedColor || generateGroupColor(),
+                  contexts: new Set<string>(),
+                  subGroups: new Set<string>(),
+                };
+                groups.set(id, group);
+              } else if (isSubGroup) {
+                const id = `subgroup_${Date.now()}`;
+                const subgroup = {
+                  id,
+                  name,
+                  type: 'subgroup',
+                  description,
+                  color: selectedColor || generateGroupColor(),
+                  contexts: new Set<string>(),
+                };
+                subGroups.set(id, subgroup);
+              } else {
+                const id = `phase_${Date.now()}`;
+                const phase = { id, name, type: 'phase', description };
+                phases.set(id, phase);
+              }
+            } else if (options.id) {
+              if (isGroup) {
+                const group = groups.get(options.id);
+                if (!group) return;
+                group.name = name;
+                group.description = description;
+                group.type = typeSelect.value;
+                group.color = selectedColor || group.color || DEFAULT_GROUP_COLOR;
+                setOverlayData((prev) => (prev && prev.id === group.id && prev.type === 'group')
+                  ? { ...prev, name, description, color: group.color }
+                  : prev);
+              } else if (isSubGroup) {
+                const subgroup = subGroups.get(options.id);
+                if (!subgroup) return;
+                subgroup.name = name;
+                subgroup.description = description;
+                subgroup.color = selectedColor || subgroup.color || DEFAULT_SUBGROUP_COLOR;
+                setOverlayData((prev) => (prev && prev.id === subgroup.id && prev.type === 'subgroup')
+                  ? { ...prev, name, description, color: subgroup.color }
+                  : prev);
+              } else {
+                const phase = phases.get(options.id);
+                if (!phase) return;
+                phase.name = name;
+                phase.description = description;
+              }
+            }
+
+            hideModals();
+            updateUI();
+          };
+
+          modal.style.display = 'flex';
+          ensureColorValue();
+        }
+
+        openGroupModalRef.current = (entity, mode, id) => openGroupModal({ entity, mode, id });
       loadFromStorage();
 
       // D3 Setup
@@ -117,7 +332,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function drawGroupBoundaries(positions: Record<string, any>) {
-        const drawRectBoundary = (contextIds: string[], className: string) => {
+        const drawRectBoundary = (contextIds: string[], className: string, color?: string, fallbackColor?: string) => {
           const validPositions = contextIds.map((id) => positions[id]).filter(Boolean);
           if (validPositions.length < 1) return;
           const padX = 60; const padY = 40;
@@ -125,15 +340,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           const maxX = d3.max(validPositions, (p: any) => p.x) + padX;
           const minY = d3.min(validPositions, (p: any) => p.y) - padY;
           const maxY = d3.max(validPositions, (p: any) => p.y) + padY;
-          g.insert('rect', ':first-child').attr('class', className).attr('x', minX).attr('y', minY)
+          const rect = g.insert('rect', ':first-child').attr('class', className).attr('x', minX).attr('y', minY)
             .attr('width', maxX - minX).attr('height', maxY - minY).attr('rx', 15);
+          const resolvedColor = color || fallbackColor;
+          if (resolvedColor) {
+            const fillAlpha = className === 'group-boundary' ? 0.16 : 0.12;
+            rect.style('stroke', resolvedColor).style('fill', hexToRgba(resolvedColor, fillAlpha));
+          }
         };
         phases.forEach((phase: any) => {
           const ids = Array.from(contexts.values()).filter((c: any) => c.phaseId === phase.id).map((c: any) => c.id);
           drawRectBoundary(ids, 'phase-boundary');
         });
-        groups.forEach((group: any) => drawRectBoundary(Array.from(group.contexts || []), 'group-boundary'));
-        subGroups.forEach((sg: any) => drawRectBoundary(Array.from(sg.contexts || []), 'subgroup-boundary'));
+        groups.forEach((group: any) => drawRectBoundary(Array.from(group.contexts || []), 'group-boundary', group.color, DEFAULT_GROUP_COLOR));
+        subGroups.forEach((sg: any) => drawRectBoundary(Array.from(sg.contexts || []), 'subgroup-boundary', sg.color, DEFAULT_SUBGROUP_COLOR));
       }
 
       function drawMatrix(positions: Record<string, any>, allEdges: any[], contemporaryLinks: any[]) {
@@ -419,7 +639,39 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         if (groups.size > 0) {
           html += '<div style="font-weight: bold; margin: 10px 0;">Groups</div>';
           groups.forEach((group: any) => {
-            html += `<div class="hierarchy-item group" onclick="window.__hm_highlightGroup && window.__hm_highlightGroup('${group.id}')"><div class="item-header">Group: ${group.name}</div><div class="item-details">${group.description || ''}</div><div class="item-contexts">${(group.contexts && group.contexts.size) || 0} contexts</div></div>`;
+            const color = group.color || DEFAULT_GROUP_COLOR;
+            const description = group.description ? escapeHtml(group.description) : '';
+            const title = escapeHtml(group.name || 'Untitled Group');
+            const contextsCount = (group.contexts && group.contexts.size) || 0;
+            html += `
+              <div class="hierarchy-item group" data-entity="group" data-id="${group.id}" onclick="window.__hm_showGroupOverlay && window.__hm_showGroupOverlay('group','${group.id}')">
+                <div class="item-header">
+                  <span class="group-color-chip" style="background:${color}"></span>
+                  <span class="item-title">Group: ${title}</span>
+                  <button type="button" class="group-more" onclick="window.__hm_editGroupEntity && window.__hm_editGroupEntity(event,'group','${group.id}')" aria-label="Edit group">${dotsIconMarkup}</button>
+                </div>
+                <div class="item-details">${description}</div>
+                <div class="item-contexts">${contextsCount} contexts</div>
+              </div>`;
+          });
+        }
+        if (subGroups.size > 0) {
+          html += '<div style="font-weight: bold; margin: 10px 0;">Sub-Groups</div>';
+          subGroups.forEach((sg: any) => {
+            const color = sg.color || DEFAULT_SUBGROUP_COLOR;
+            const description = sg.description ? escapeHtml(sg.description) : '';
+            const title = escapeHtml(sg.name || 'Untitled Sub-Group');
+            const contextsCount = (sg.contexts && sg.contexts.size) || 0;
+            html += `
+              <div class="hierarchy-item subgroup" data-entity="subgroup" data-id="${sg.id}" onclick="window.__hm_showGroupOverlay && window.__hm_showGroupOverlay('subgroup','${sg.id}')">
+                <div class="item-header">
+                  <span class="group-color-chip" style="background:${color}"></span>
+                  <span class="item-title">Sub-Group: ${title}</span>
+                  <button type="button" class="group-more" onclick="window.__hm_editGroupEntity && window.__hm_editGroupEntity(event,'subgroup','${sg.id}')" aria-label="Edit sub-group">${dotsIconMarkup}</button>
+                </div>
+                <div class="item-details">${description}</div>
+                <div class="item-contexts">${contextsCount} contexts</div>
+              </div>`;
           });
         }
         const unassigned = Array.from(contexts.values()).filter((c: any) => !c.groupId && !c.phaseId);
@@ -427,7 +679,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           html += '<div style="font-weight: bold; margin: 10px 0;">Unassigned Contexts</div>';
           unassigned.forEach((context: any) => {
             const hasConflicts = temporalConflicts.some((c: any) => c.context1 === context.id || c.context2 === context.id);
-            html += `<div class="hierarchy-item ${hasConflicts ? 'temporal-conflict' : ''}" onclick="window.__hm_highlightContext && window.__hm_highlightContext('${context.id}')"><div class="item-header">${context.id} (${context.type || 'layer'})${hasConflicts ? '<span class="conflict-indicator"></span>' : ''}</div><div class="item-details">${context.description || ''}</div></div>`;
+            const contextTitle = `${escapeHtml(context.id)} (${escapeHtml(context.type || 'layer')})`;
+            const contextDescription = context.description ? escapeHtml(context.description) : '';
+            html += `<div class="hierarchy-item ${hasConflicts ? 'temporal-conflict' : ''}" onclick="window.__hm_highlightContext && window.__hm_highlightContext('${context.id}')"><div class="item-header"><span class="item-title">${contextTitle}</span>${hasConflicts ? '<span class="conflict-indicator"></span>' : ''}</div><div class="item-details">${contextDescription}</div></div>`;
           });
         }
         listDiv.innerHTML = html || '<em>No data yet. Click in the canvas to add contexts.</em>';
@@ -487,15 +741,14 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const div = document.getElementById('recordsSummary');
         if (!div) return;
         try {
-          const artefactCounts = Object.entries(artefactRegistries).map(([k, arr]: any) => `<li>${k.replace(/_/g,' ')}: <strong>${arr.length}</strong></li>`).join('');
+          const totalArtefacts = Object.values(artefactRegistries).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
           div.innerHTML = `
             <p>Digitized forms and registries are enabled in this project.</p>
             <ul>
               <li>Context feature forms: <strong>${Array.from(contextForms.keys()).length}</strong></li>
               <li>Stratigraphic unit forms: <strong>${Array.from(stratigraphicUnits.keys()).length}</strong></li>
-              <li>Artefact registries:</li>
+              <li>Artefact registries: <strong>${totalArtefacts}</strong></li>
             </ul>
-            <ul style="padding-left: 20px;">${artefactCounts}</ul>
             <p style="margin-top: 8px; font-size: 12px; color: var(--muted, #adb5bd);">UI for data entry will be added next. Data persists with the matrix save.</p>
           `;
         } catch {}
@@ -519,6 +772,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           forceAutoLayoutNext = false;
         }
         applyLayoutAndDraw();
+        setOverlayData((current) => {
+          if (!current) return current;
+          const source = current.type === 'group' ? groups.get(current.id) : subGroups.get(current.id);
+          if (!source) return null;
+          const color = source.color || (current.type === 'group' ? DEFAULT_GROUP_COLOR : DEFAULT_SUBGROUP_COLOR);
+          const contextIds = Array.from(source.contexts || []) as string[];
+          const contextsPayload: GroupOverlayContext[] = contextIds
+            .map((ctxId) => contexts.get(ctxId))
+            .filter(Boolean)
+            .map((ctx: any) => ({ id: ctx.id, label: ctx.id, type: ctx.type, description: ctx.description }));
+          return { ...current, name: source.name, description: source.description, color, contexts: contextsPayload };
+        });
         saveToStorage();
       }
 
@@ -1167,8 +1432,43 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       // Expose helpers for buttons/tables
       (window as any).__hm_removeRelationship = removeRelationship;
       (window as any).__hm_highlightPhase = (id: string) => highlightBy((c: any) => c.phaseId === id, '#4caf50');
-      (window as any).__hm_highlightGroup = (id: string) => highlightBy((c: any) => c.groupId === id, '#ff9800');
+      (window as any).__hm_highlightGroup = (id: string) => {
+        const group = groups.get(id);
+        const color = group?.color || DEFAULT_GROUP_COLOR;
+        highlightBy((c: any) => c.groupId === id, color);
+      };
+      (window as any).__hm_highlightSubGroup = (id: string) => {
+        const subgroup = subGroups.get(id);
+        const color = subgroup?.color || DEFAULT_SUBGROUP_COLOR;
+        highlightBy((c: any) => c.subGroupId === id, color);
+      };
       (window as any).__hm_highlightContext = (id: string) => highlightBy((c: any) => c.id === id, 'gold');
+      (window as any).__hm_clearHighlights = () => highlightBy(() => false, '#0056b3');
+
+      (window as any).__hm_showGroupOverlay = (entityType: 'group' | 'subgroup', entityId: string) => {
+        const source = entityType === 'group' ? groups.get(entityId) : subGroups.get(entityId);
+        if (!source) return;
+        const color = source.color || (entityType === 'group' ? DEFAULT_GROUP_COLOR : DEFAULT_SUBGROUP_COLOR);
+        const contextIds = Array.from(source.contexts || []) as string[];
+        const contextsPayload: GroupOverlayContext[] = contextIds
+          .map((ctxId) => contexts.get(ctxId))
+          .filter(Boolean)
+          .map((ctx: any) => ({ id: ctx.id, label: ctx.id, type: ctx.type, description: ctx.description }));
+        setOverlayData({
+          id: entityId,
+          type: entityType,
+          name: source.name,
+          description: source.description,
+          color,
+          contexts: contextsPayload,
+        });
+        highlightBy((c: any) => (entityType === 'group' ? c.groupId === entityId : c.subGroupId === entityId), color);
+      };
+
+      (window as any).__hm_editGroupEntity = (event: MouseEvent, entityType: 'group' | 'subgroup', entityId: string) => {
+        event?.stopPropagation();
+        openGroupModal({ mode: 'edit', entity: entityType, id: entityId });
+      };
 
       function highlightBy(filterFn: (c: any) => boolean, color: string) {
         g.selectAll('.context-node-group').each(function (this: any) {
@@ -1196,46 +1496,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
 
       // Wire API ref for React buttons
       apiRef.current = {
-        createGroup: () => {
-          const modal = document.getElementById('groupModal') as HTMLElement | null; if (!modal) return;
-          (document.getElementById('groupModalTitle') as HTMLElement).innerText = 'Create Group';
-          (document.getElementById('groupTypeWrapper') as HTMLElement).style.display = 'block';
-          (document.getElementById('groupName') as HTMLInputElement).value = '';
-          (document.getElementById('groupDescription') as HTMLTextAreaElement).value = '';
-          (document.getElementById('confirmGroupBtn') as HTMLButtonElement).onclick = () => {
-            const name = (document.getElementById('groupName') as HTMLInputElement).value.trim(); if (!name) { alert('Group name is required.'); return; }
-            const id = `group_${Date.now()}`; const group = { id, name, type: (document.getElementById('groupType') as HTMLSelectElement).value, description: (document.getElementById('groupDescription') as HTMLTextAreaElement).value.trim(), contexts: new Set(), subGroups: new Set() };
-            groups.set(id, group); hideModals(); updateUI();
-          };
-          modal.style.display = 'flex';
-        },
+        createGroup: () => openGroupModal({ mode: 'create', entity: 'group' }),
         createSubGroup: () => {
           if (groups.size === 0) { alert('Please create a parent group first.'); return; }
-          const modal = document.getElementById('groupModal') as HTMLElement | null; if (!modal) return;
-          (document.getElementById('groupModalTitle') as HTMLElement).innerText = 'Create Sub-Group';
-          (document.getElementById('groupTypeWrapper') as HTMLElement).style.display = 'none';
-          (document.getElementById('groupName') as HTMLInputElement).value = '';
-          (document.getElementById('groupDescription') as HTMLTextAreaElement).value = '';
-          (document.getElementById('confirmGroupBtn') as HTMLButtonElement).onclick = () => {
-            const name = (document.getElementById('groupName') as HTMLInputElement).value.trim(); if (!name) { alert('Sub-group name is required.'); return; }
-            const id = `subgroup_${Date.now()}`; const sg = { id, name, type: 'subgroup', description: (document.getElementById('groupDescription') as HTMLTextAreaElement).value.trim(), contexts: new Set() };
-            subGroups.set(id, sg); hideModals(); updateUI();
-          };
-          modal.style.display = 'flex';
+          openGroupModal({ mode: 'create', entity: 'subgroup' });
         },
-        createPhase: () => {
-          const modal = document.getElementById('groupModal') as HTMLElement | null; if (!modal) return;
-          (document.getElementById('groupModalTitle') as HTMLElement).innerText = 'Create Phase';
-          (document.getElementById('groupTypeWrapper') as HTMLElement).style.display = 'none';
-          (document.getElementById('groupName') as HTMLInputElement).value = '';
-          (document.getElementById('groupDescription') as HTMLTextAreaElement).value = '';
-          (document.getElementById('confirmGroupBtn') as HTMLButtonElement).onclick = () => {
-            const name = (document.getElementById('groupName') as HTMLInputElement).value.trim(); if (!name) { alert('Phase name is required.'); return; }
-            const id = `phase_${Date.now()}`; const ph = { id, name, type: 'phase', description: (document.getElementById('groupDescription') as HTMLTextAreaElement).value.trim() };
-            phases.set(id, ph); hideModals(); updateUI();
-          };
-          modal.style.display = 'flex';
-        },
+        createPhase: () => openGroupModal({ mode: 'create', entity: 'phase' }),
         analyzeTemporalConflicts,
         resetZoom,
         restructure: () => {
@@ -1259,25 +1525,101 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       };
     })();
 
-    return () => { cleanup && cleanup(); };
+    return () => {
+      cleanup && cleanup();
+      (window as any).__hm_removeRelationship = undefined;
+      (window as any).__hm_highlightPhase = undefined;
+      (window as any).__hm_highlightGroup = undefined;
+      (window as any).__hm_highlightSubGroup = undefined;
+      (window as any).__hm_highlightContext = undefined;
+      (window as any).__hm_clearHighlights = undefined;
+      (window as any).__hm_showGroupOverlay = undefined;
+      (window as any).__hm_editGroupEntity = undefined;
+      openGroupModalRef.current = null;
+    };
   }, [projectId]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!toolMenuRef.current) return;
+      if (!toolMenuRef.current.contains(event.target as Node)) {
+        setToolMenuOpen(false);
+      }
+    }
+    if (toolMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [toolMenuOpen]);
+
+  const handleOverlayClose = () => {
+    const clearHighlights = (window as any)?.__hm_clearHighlights;
+    if (typeof clearHighlights === 'function') { clearHighlights(); }
+    setOverlayData(null);
+  };
 
   return (
     <div ref={rootRef} className="harris-matrix" style={{ width: '100%', height: '100%' }}>
       <div className="container">
         <div className="workspace" style={{ width: '100%' }}>
           <div className="visualization-panel">
+            <div
+              ref={toolMenuRef}
+              className={`tool-menu ${toolMenuOpen ? 'open' : ''}`}
+            >
+              <button
+                type="button"
+                className="tool-menu-toggle"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setToolMenuOpen((prev) => !prev);
+                  (event.currentTarget as HTMLButtonElement).blur();
+                }}
+                aria-label="Management tools"
+              >
+                <FaWrench size={16} />
+              </button>
+              <button
+                type="button"
+                className="tool-menu-toggle"
+                onClick={(e) => { apiRef.current.resetZoom?.(); (e.currentTarget as HTMLButtonElement).blur(); }}
+                aria-label="Reset view"
+                title="Reset view"
+              >
+                <MdOutlineViewInAr size={16} />
+              </button>
+              <button
+                type="button"
+                className="tool-menu-toggle"
+                onClick={(e) => { apiRef.current.restructure?.(); (e.currentTarget as HTMLButtonElement).blur(); }}
+                aria-label="Restructure layout"
+                title="Restructure layout"
+              >
+                <FaArrowRotateRight size={14} />
+              </button>
+              {toolMenuOpen && (
+                <div className="tool-menu-dropdown">
+                  <button className="btn-warning" onClick={(e) => { apiRef.current.createGroup(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Create Group</button>
+                  <button className="btn-warning" onClick={(e) => { apiRef.current.createSubGroup(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Create Sub-Group</button>
+                  <button className="btn-success" onClick={(e) => { apiRef.current.createPhase(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Create Phase</button>
+                  <button className="btn-primary" onClick={(e) => { apiRef.current.analyzeTemporalConflicts(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Analyze Conflicts</button>
+                  <button className="btn-primary" onClick={(e) => { apiRef.current.quickSelfTest(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Quick Self-Test</button>
+                </div>
+              )}
+            </div>
             <svg id="matrixSvg" ref={svgRef} />
           </div>
           <div className="data-panel">
             <div className="tabs">
               <div className={`tab ${activeTab === 'hierarchy' ? 'active' : ''}`} onClick={() => setActiveTab('hierarchy')}>Hierarchy</div>
-              <div className={`tab ${activeTab === 'conflicts' ? 'active' : ''}`} onClick={() => setActiveTab('conflicts')}>Conflicts</div>
               <div className={`tab ${activeTab === 'relationships' ? 'active' : ''}`} onClick={() => setActiveTab('relationships')}>Relationships</div>
               <div className={`tab ${activeTab === 'records' ? 'active' : ''}`} onClick={() => setActiveTab('records')}>Records</div>
               <div className={`tab ${activeTab === 'featureForm' ? 'active' : ''}`} onClick={() => setActiveTab('featureForm')}>Context Feature Form</div>
               <div className={`tab ${activeTab === 'suForm' ? 'active' : ''}`} onClick={() => setActiveTab('suForm')}>SU Form</div>
               <div className={`tab ${activeTab === 'artefacts' ? 'active' : ''}`} onClick={() => setActiveTab('artefacts')}>Artefacts</div>
+              <div className={`tab ${activeTab === 'export' ? 'active' : ''}`} onClick={() => setActiveTab('export')}>Export</div>
             </div>
             <div id="hierarchy-tab" className={`tab-content ${activeTab === 'hierarchy' ? 'active' : ''}`}>
               <h3>Stratigraphic Hierarchy</h3>
@@ -1524,26 +1866,14 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               <input type="file" id="af_importInput" accept=".csv" style={{ display:'none' }} onChange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) apiRef.current.__importArtefactsCSV(f); (e.target as HTMLInputElement).value=''; }} />
             </div>
 
-            <div className="actions-panel">
-              <div className="button-grid" style={{ marginBottom: 10 }}>
-                <button className="btn-primary" onClick={() => apiRef.current.resetZoom()}>Reset View</button>
-                <button className="btn-warning" onClick={() => apiRef.current.restructure()}>Restructure</button>
-              </div>
-              <h3>Management Tools</h3>
-              <div className="button-grid">
-                <button className="btn-warning" onClick={() => apiRef.current.createGroup()}>Create Group</button>
-                <button className="btn-warning" onClick={() => apiRef.current.createSubGroup()}>Create Sub-Group</button>
-                <button className="btn-success" onClick={() => apiRef.current.createPhase()}>Create Phase</button>
-                <button className="btn-primary" onClick={() => apiRef.current.analyzeTemporalConflicts()}>Analyze Conflicts</button>
-                <button className="btn-primary" onClick={() => apiRef.current.quickSelfTest()}>Quick Self-Test</button>
-              </div>
-              <h3>Import/Export</h3>
+            <div id="export-tab" className={`tab-content ${activeTab === 'export' ? 'active' : ''}`}>
+              <h3>Export & Import</h3>
               <div className="button-grid">
                 <button className="btn-primary" onClick={() => apiRef.current.exportCSV()}>Export CSV</button>
                 <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>Export SVG</button>
                 <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>Import CSV</button>
               </div>
-              <h3>Start Over</h3>
+              <h3 style={{ marginTop: 12 }}>Start Over</h3>
               <div className="button-grid">
                 <button className="btn-danger" onClick={() => apiRef.current.clearAll()}>Clear All</button>
               </div>
@@ -1552,6 +1882,52 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           </div>
         </div>
       </div>
+
+      {overlayData && (
+        <div className="group-overlay-backdrop" onClick={handleOverlayClose}>
+          <div className="group-overlay" onClick={(e) => e.stopPropagation()} style={{ borderTopColor: overlayData.color }}>
+            <div className="group-overlay-header">
+              <div className="group-overlay-heading">
+                <span className="group-color-chip" style={{ background: overlayData.color }}></span>
+                <div>
+                  <div className="group-overlay-title">{overlayData.name || (overlayData.type === 'group' ? 'Untitled Group' : 'Untitled Sub-Group')}</div>
+                  <div className="group-overlay-meta">{overlayData.type === 'group' ? 'Group' : 'Sub-Group'} • {overlayData.contexts.length} context{overlayData.contexts.length === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+              <div className="group-overlay-actions">
+                <button
+                  type="button"
+                  className="group-edit-button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openGroupModalRef.current?.(overlayData.type, 'edit', overlayData.id);
+                  }}
+                  aria-label="Edit group"
+                >
+                  <HiDotsHorizontal size={18} />
+                </button>
+                <button type="button" className="group-overlay-close" onClick={handleOverlayClose} aria-label="Close">×</button>
+              </div>
+            </div>
+            {overlayData.description && (
+              <p className="group-overlay-description">{overlayData.description}</p>
+            )}
+            <div className="group-overlay-contexts">
+              {overlayData.contexts.length === 0 ? (
+                <div className="context-card empty">No contexts assigned yet.</div>
+              ) : (
+                overlayData.contexts.map((ctx) => (
+                  <div key={ctx.id} className="context-card">
+                    <div className="context-card-title">{ctx.label}</div>
+                    <div className="context-card-meta">{ctx.type || 'layer'}</div>
+                    {ctx.description && <div className="context-card-description">{ctx.description}</div>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {/* Import Modal */}
@@ -1693,6 +2069,13 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               <option value="spatial">Spatial</option>
               <option value="material">Material</option>
             </select>
+          </div>
+          <div className="form-group" id="groupColorRow">
+            <label>Colour</label>
+            <div className="color-input-row">
+              <input type="color" id="groupColor" />
+              <button type="button" id="groupRandomizeColor" className="color-randomize">Randomize</button>
+            </div>
           </div>
           <div className="modal-buttons">
             <button id="confirmGroupBtn" className="confirm">Create</button>
