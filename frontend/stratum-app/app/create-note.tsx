@@ -167,7 +167,8 @@ export default function CreateNoteScreen() {
           Alert.alert('Warning', 'Note saved but audio upload failed');
         }
       }
-      navigateBackToNotes();
+      // Refresh notes after audio upload finishes by delaying navigation slightly
+      setTimeout(() => navigateBackToNotes(), 150);
     } catch (error) {
       console.error('Failed to create note:', error);
       Alert.alert('Error', 'Failed to create note');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -118,34 +118,6 @@ export default function ProjectDetailScreen() {
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
   }, [globalParams?.tab]);
-
-  // Reload notes when screen comes back into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (project?.id) {
-        noteService.getNotes(project.id).then(setNotes).catch(console.error);
-      }
-    }, [project?.id])
-  );
-
-  // If we navigated to a file from the Files overlay, reopen overlay on return
-  useFocusEffect(
-    React.useCallback(() => {
-      if (reopenFilesOnReturnRef.current) {
-        setShowFilesOverlay(true);
-        reopenFilesOnReturnRef.current = false;
-      }
-    }, [])
-  );
-
-  // Reload project data when screen comes back into focus (after editing)
-  useFocusEffect(
-    React.useCallback(() => {
-      if (id) {
-        loadProjectData();
-      }
-    }, [id])
-  );
 
   const loadProjectData = async () => {
     try {
@@ -395,8 +367,6 @@ export default function ProjectDetailScreen() {
       Alert.alert('Please wait', 'Project is still loading.');
     }
   };
-
-
 
   const renderNote = ({ item }: { item: Note }) => (
     <TouchableOpacity style={styles.noteCard} onPress={() => handleNotePress(item.id)}>

@@ -266,17 +266,26 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   const ctxRef = React.useRef<AudioContext | null>(null);
   const analyserRef = React.useRef<AnalyserNode | null>(null);
   const rafRef = React.useRef<number>(0);
+  const [ready, setReady] = React.useState(false);
 
-  React.useEffect(() => {
-    cleanup();
+  const cleanup = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    try { ctxRef.current?.close(); } catch {}
+    ctxRef.current = null;
+    analyserRef.current = null;
+  };
+
+  const init = () => {
     if (!url || !audioRef.current || !canvasRef.current) return;
+    if (ctxRef.current) return; // already initialized
     try {
+      audioRef.current.crossOrigin = 'anonymous';
       const ctx = new AudioContext();
       ctxRef.current = ctx;
-      const src = ctx.createMediaElementSource(audioRef.current);
+      const srcNode = ctx.createMediaElementSource(audioRef.current);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 1024;
-      src.connect(analyser);
+      srcNode.connect(analyser);
       analyser.connect(ctx.destination);
       analyserRef.current = analyser;
       const data = new Uint8Array(analyser.fftSize);
@@ -297,38 +306,64 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
         g.stroke();
       };
       draw();
-    } catch {}
-    return cleanup;
-  }, [url]);
-
-  const cleanup = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    try { ctxRef.current?.close(); } catch {}
+      setReady(true);
+    } catch (e) {
+      console.warn('Attachment audio init failed', e);
+    }
   };
 
   React.useEffect(() => {
+    cleanup();
+    // Wait for user interaction or metadata before initializing
     const el = audioRef.current;
     if (!el) return;
-    const onMeta = () => { try { el.currentTime = 0; } catch {} };
-    const onInteract = () => {
+    const onMeta = () => { try { el.currentTime = 0; } catch {}; };
+    const onFirstPlay = () => {
+      init();
       const ctx = ctxRef.current;
       if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
     };
     el.addEventListener('loadedmetadata', onMeta);
-    el.addEventListener('play', onInteract);
-    el.addEventListener('click', onInteract);
+    el.addEventListener('play', onFirstPlay, { once: true });
     return () => {
       el.removeEventListener('loadedmetadata', onMeta);
-      el.removeEventListener('play', onInteract);
-      el.removeEventListener('click', onInteract);
+      el.removeEventListener('play', onFirstPlay);
+      cleanup();
     };
   }, [url]);
 
+  const needsResume = ctxRef.current && ctxRef.current.state === 'suspended';
+
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 8, position: 'relative' }}>
       {/* @ts-ignore */}
-      <audio ref={audioRef as any} src={url} controls style={{ width: '100%' }} preload="metadata" />
-      <canvas ref={canvasRef as any} width={600} height={60} style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }} />
+      <audio
+        ref={audioRef as any}
+        src={url}
+        controls
+        style={{ width: '100%' }}
+        preload="metadata"
+        playsInline
+      />
+      {(!ready || needsResume) && (
+        <TouchableOpacity
+          style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', borderRadius: 6 }}
+          onPress={() => {
+            init();
+            const ctx = ctxRef.current;
+            if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+            try { audioRef.current?.play(); } catch {}
+          }}
+        >
+          <Text style={{ color: '#F5F5F5', fontWeight: '600' }}>Tap to enable audio</Text>
+        </TouchableOpacity>
+      )}
+      <canvas
+        ref={canvasRef as any}
+        width={600}
+        height={60}
+        style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }}
+      />
     </View>
   );
 };
