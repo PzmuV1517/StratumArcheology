@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, Platform, Alert } from 'react-native';
 
 interface NoteAttachment {
   id?: string;
@@ -26,6 +26,7 @@ interface Props {
 }
 
 export default function NotesSection({ notes, onCreateNote, onNotePress, onDeleteNote }: Props) {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const MiniAudio = ({ url }: { url?: string }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -120,12 +121,46 @@ export default function NotesSection({ notes, onCreateNote, onNotePress, onDelet
         </TouchableOpacity>
         {isVoice && (
           <View style={styles.voiceActions}>
-            <TouchableOpacity style={styles.metaBtn} onPress={() => { /* could expand details later */ }}>
-              <Text style={styles.metaBtnText}>Created {new Date(item.created_at).toLocaleDateString()}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.metaBtn, styles.deleteBtn]} onPress={() => onDeleteNote(item.id)}>
-              <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
-            </TouchableOpacity>
+            {pendingDeleteId === item.id ? (
+              <View style={styles.inlineConfirm}>
+                <Text style={styles.confirmText}>Delete this voice note?</Text>
+                <View style={styles.confirmButtons}>
+                  <TouchableOpacity
+                    style={[styles.metaBtn, styles.cancelBtn]}
+                    onPress={() => setPendingDeleteId(null)}
+                  >
+                    <Text style={styles.metaBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.metaBtn, styles.deleteBtn]}
+                    onPress={() => { setPendingDeleteId(null); onDeleteNote(item.id); }}
+                  >
+                    <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.metaBtn, styles.deleteBtn]}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    // Inline confirmation for web
+                    setPendingDeleteId(item.id);
+                  } else {
+                    Alert.alert(
+                      'Delete voice note?',
+                      'This will permanently delete the note and its audio attachment.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => onDeleteNote(item.id) }
+                      ]
+                    );
+                  }
+                }}
+              >
+                <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -183,4 +218,8 @@ const styles = StyleSheet.create({
   metaBtnText: { color: '#CFCFCF', fontSize: 12, fontWeight: '600' },
   deleteBtn: { borderColor: '#3A0C0C', backgroundColor: '#2A1414' },
   deleteBtnText: { color: '#FF4444' },
+  inlineConfirm: { flex: 1, padding: 8, backgroundColor: '#1E1E1E', borderRadius: 8, borderWidth: 1, borderColor: '#333', gap: 8 },
+  confirmText: { color: '#F5F5F5', fontSize: 12, fontWeight: '600' },
+  confirmButtons: { flexDirection: 'row', gap: 8 },
+  cancelBtn: { backgroundColor: '#2A2A2A', borderColor: '#444' },
 });
