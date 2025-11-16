@@ -5,6 +5,7 @@ import { MdOutlineViewInAr } from 'react-icons/md';
 import { FaArrowRotateRight } from 'react-icons/fa6';
 import { HiDotsHorizontal } from 'react-icons/hi';
 import './HarrisMatrix.css';
+import { formsService } from '../../services/formsService';
 import { ContextFeatureRecord, StratigraphicUnitRecord, ArtefactRegistries, createEmptyRegistries, normalizeLoadedData, ArtefactRecord } from './registryModels';
 
 const DEFAULT_GROUP_COLOR = '#ff9800';
@@ -743,14 +744,71 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         if (!div) return;
         try {
           const totalArtefacts = Object.values(artefactRegistries).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+          const cfRows = Array.from(contextForms.values())
+            .sort((a: any, b: any) => (a.id || '').localeCompare(b.id || ''))
+            .map((rec: any) => `
+              <tr>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.featureNumber || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
+                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openCFRecord && window.__hm_openCFRecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Open</button>
+                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteCFRecord && window.__hm_deleteCFRecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Delete</button>
+                </td>
+              </tr>`)
+            .join('');
+          const suRows = Array.from(stratigraphicUnits.values())
+            .sort((a: any, b: any) => (a.id || '').localeCompare(b.id || ''))
+            .map((rec: any) => `
+              <tr>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.unitType || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
+                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openSURecord && window.__hm_openSURecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Open</button>
+                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteSURecord && window.__hm_deleteSURecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Delete</button>
+                </td>
+              </tr>`)
+            .join('');
+
+          // Artefact entries across all categories
+          const artefactFlat: Array<{id:string; category:string; number?:string; type?:string; su?:string; feature?:string; qty?:number}> = [];
+          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
+            (arr || []).forEach((r: any) => artefactFlat.push({ id: r.id, category: cat, number: r.number, type: r.type, su: r.stratigraphicUnit, feature: r.complexFeature, qty: r.quantity }));
+          });
+          artefactFlat.sort((a, b) => a.category.localeCompare(b.category) || (a.number||'').localeCompare(b.number||''));
+          const afRows = artefactFlat.map((r) => `
+            <tr>
+              <td style=\"border:1px solid #333;padding:4px;\">${(r.category||'').replace(/_/g,' ')}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.number||''}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.type||''}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.su||''}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.feature||''}</td>
+              <td style=\"border:1px solid #333;padding:4px; text-align:right;\">${r.qty!=null?r.qty:''}</td>
+              <td style=\"border:1px solid #333;padding:4px; text-align:center;\">\
+                <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openArtefact && window.__hm_openArtefact('${r.id}')\">Open</button>\
+                <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteArtefact && window.__hm_deleteArtefact('${r.id}')\">Delete</button>\
+              </td>
+            </tr>`).join('');
+
           div.innerHTML = `
-            <p>Digitized forms and registries are enabled in this project.</p>
             <ul>
               <li>Context feature forms: <strong>${Array.from(contextForms.keys()).length}</strong></li>
               <li>Stratigraphic unit forms: <strong>${Array.from(stratigraphicUnits.keys()).length}</strong></li>
               <li>Artefact registries: <strong>${totalArtefacts}</strong></li>
             </ul>
-            <p style="margin-top: 8px; font-size: 12px; color: var(--muted, #adb5bd);">UI for data entry will be added next. Data persists with the matrix save.</p>
+            <div style=\"margin-top:10px;\">
+              <h4 style=\"margin:6px 0;\">Context Feature Forms</h4>
+              ${cfRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Feature</th><th>Sector</th><th>Actions</th></tr></thead><tbody>${cfRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No context feature forms yet.</div>'}
+            </div>
+            <div style=\"margin-top:10px;\">
+              <h4 style=\"margin:6px 0;\">Stratigraphic Unit Forms</h4>
+              ${suRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Type</th><th>Sector</th><th>Actions</th></tr></thead><tbody>${suRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No stratigraphic unit forms yet.</div>'}
+            </div>
+            <div style=\"margin-top:10px;\">
+              <h4 style=\"margin:6px 0;\">Artefact Registry Entries</h4>
+              ${afRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>Category</th><th>No.</th><th>Type</th><th>SU</th><th>Feature</th><th style=\\\"text-align:right;\\\">Qty</th><th>Actions</th></tr></thead><tbody>${afRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No artefacts recorded yet.</div>'}
+            </div>
           `;
         } catch {}
       }
@@ -773,6 +831,61 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           forceAutoLayoutNext = false;
         }
         applyLayoutAndDraw();
+        // Expose helpers for opening records into forms
+        (window as any).__hm_openCFRecord = (id: string) => {
+          const rec = contextForms.get(id);
+          if (!rec) return;
+          populateContextFeatureFormFromRecord(rec);
+          setSidebarView('featureForm');
+        };
+        (window as any).__hm_openSURecord = (id: string) => {
+          const rec = stratigraphicUnits.get(id);
+          if (!rec) return;
+          populateSUFormFromRecord(rec);
+          setSidebarView('suForm');
+        };
+        (window as any).__hm_deleteCFRecord = (id: string) => {
+          if (!contextForms.has(id)) return;
+          if (!confirm('Delete context feature form?')) return;
+          contextForms.delete(id);
+          saveToStorage();
+          updateRecordsDisplay();
+        };
+        (window as any).__hm_deleteSURecord = (id: string) => {
+          if (!stratigraphicUnits.has(id)) return;
+          if (!confirm('Delete stratigraphic unit form?')) return;
+          stratigraphicUnits.delete(id);
+          saveToStorage();
+          updateRecordsDisplay();
+        };
+        (window as any).__hm_openArtefact = (id: string) => {
+          let found: any = null;
+          let category: string | null = null;
+          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
+            if (found) return;
+            const x = (arr || []).find((r: any) => r.id === id);
+            if (x) { found = x; category = cat; }
+          });
+          setSidebarView('artefacts');
+          if (found) {
+            setInputValue('af_filterText', found.number || found.type || found.stratigraphicUnit || '');
+            if (category) setInputValue('af_filterCategory', category);
+          }
+          if (apiRef.current?.refreshArtefactTable) apiRef.current.refreshArtefactTable();
+        };
+        (window as any).__hm_deleteArtefact = (id: string) => {
+          let removed = false;
+          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
+            if (removed) return;
+            const idx = (arr || []).findIndex((r: any) => r.id === id);
+            if (idx >= 0) { arr.splice(idx, 1); removed = true; }
+          });
+          if (removed) {
+            saveToStorage();
+            updateRecordsDisplay();
+            if (apiRef.current?.refreshArtefactTable) apiRef.current.refreshArtefactTable();
+          }
+        };
         setOverlayData((current) => {
           if (!current) return current;
           const source = current.type === 'group' ? groups.get(current.id) : subGroups.get(current.id);
@@ -833,10 +946,90 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       // Feature form helpers
       function readInputValue(id: string): string { return (document.getElementById(id) as HTMLInputElement | null)?.value || ''; }
       function readCheckbox(id: string): boolean { return (document.getElementById(id) as HTMLInputElement | null)?.checked || false; }
+
+      function setInputValue(id: string, value: string) {
+        const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+        if (el) (el as any).value = value ?? '';
+      }
+      function setCheckbox(id: string, checked: boolean) {
+        const el = document.getElementById(id) as HTMLInputElement | null;
+        if (el) el.checked = !!checked;
+      }
+
+  function populateContextFeatureFormFromRecord(rec: ContextFeatureRecord) {
+        setInputValue('cf_id', rec.id || '');
+        setInputValue('cf_featureNumber', rec.featureNumber || '');
+        setInputValue('cf_sector', rec.sector || '');
+        setInputValue('cf_earlierThan', (rec.earlierThan || []).join(','));
+        setInputValue('cf_laterThan', (rec.laterThan || []).join(','));
+        const dims = rec.dimensions || {} as any;
+        setInputValue('cf_length', dims.length != null ? String(dims.length) : '');
+        setInputValue('cf_width', dims.width != null ? String(dims.width) : '');
+        setInputValue('cf_depth', dims.depth != null ? String(dims.depth) : '');
+        const coords = rec.coordinates || {} as any;
+        setInputValue('cf_x', coords.x != null ? String(coords.x) : '');
+        setInputValue('cf_y', coords.y != null ? String(coords.y) : '');
+        setInputValue('cf_z', coords.zMasl != null ? String(coords.zMasl) : '');
+        setInputValue('cf_featureType', (rec.featureType as any) || '');
+        setInputValue('cf_location', rec.location || '');
+        setInputValue('cf_shape', (rec.shape as any) || '');
+        setInputValue('cf_orientation', rec.orientation || '');
+        setInputValue('cf_description', rec.description || '');
+        const finds = (rec.findsPresent || {}) as any;
+        ['pottery','metal','flint','stone','wood','charcoal','shell','snail','ash','adobe','beads','pendant','ring','seed','animalBones','humanBones','other'].forEach(k => setCheckbox(`cf_find_${k}`, !!finds[k]));
+        const docs = (rec.documentation || {}) as any;
+        ;['drawing','plan','photogrammetry','photos','video'].forEach(k => setCheckbox(`cf_doc_${k}`, !!docs[k]));
+        setInputValue('cf_planNumber', docs.planNumber || '');
+        const samp = (rec.samples || {}) as any;
+        ;['environmental','aDNA','c14','isotopic','other'].forEach(k => setCheckbox(`cf_samp_${k}`, !!samp[k]));
+        setInputValue('cf_sampleBag', (samp.bagNo as any) || '');
+        setInputValue('cf_sampleQty', (samp.quantity != null ? String(samp.quantity) : ''));
+        setInputValue('cf_sampleOtherType', (samp.otherType as any) || '');
+        setInputValue('cf_author', rec.author || '');
+        setInputValue('cf_dateCreated', rec.dateCreated || '');
+        setInputValue('cf_checkedBy', rec.checkedBy || '');
+        setInputValue('cf_dateChecked', rec.dateChecked || '');
+      }
+
+  function populateSUFormFromRecord(rec: StratigraphicUnitRecord) {
+        setInputValue('su_id', rec.id || '');
+        setInputValue('su_sector', rec.sector || '');
+        setInputValue('su_complexFeatureNo', rec.complexFeatureNo || '');
+        setInputValue('su_unitType', (rec.unitType as any) || '');
+        setInputValue('su_earlierThan', (rec.earlierThan || []).join(','));
+        setInputValue('su_laterThan', (rec.laterThan || []).join(','));
+        setInputValue('su_location', rec.location || '');
+        const dims = rec.dimensions || {} as any;
+        setInputValue('su_length', dims.length != null ? String(dims.length) : '');
+        setInputValue('su_thickness', dims.thickness != null ? String(dims.thickness) : '');
+        setInputValue('su_depth', dims.depth != null ? String(dims.depth) : '');
+        setInputValue('su_areaSurface', dims.areaSurface != null ? String(dims.areaSurface) : '');
+        setInputValue('su_orientation', rec.orientation || '');
+        const structure = (rec.structure || {}) as any;
+        setInputValue('su_colour', (structure.colour as any) || '');
+        setInputValue('su_munsell', (structure.munsellCode as any) || '');
+        setInputValue('su_compaction', (structure.compaction as any) || '');
+        setCheckbox('su_homogeneous', !!structure.homogeneous);
+        setCheckbox('su_heterogeneous', !!structure.heterogeneous);
+        const comp = (rec.composition || {}) as any;
+        ['pottery','flint','stone','wood','charcoal','shell','snail','ash','adobe','metal','organic','mineral','gravels','silt','sand','argil','loess','mud','other'].forEach(k => setCheckbox(`su_comp_${k}`, !!comp[k]));
+        setInputValue('su_granulation', (rec.granulation as any) || '');
+        setInputValue('su_contamination', (rec.contaminationRisk as any) || '');
+        setCheckbox('su_bones', !!rec.bones);
+        setCheckbox('su_seed', !!rec.seed);
+        const docs = (rec.documentation || {}) as any;
+        ;['drawing','plan','photogrammetry','samples','photos','video'].forEach(k => setCheckbox(`su_doc_${k}`, !!docs[k]));
+        setInputValue('su_planNumber', (docs.planNumber as any) || '');
+        setInputValue('su_description', rec.description || '');
+        setInputValue('su_author', rec.author || '');
+        setInputValue('su_dateCreated', rec.dateCreated || '');
+        setInputValue('su_checkedBy', rec.checkedBy || '');
+        setInputValue('su_dateChecked', rec.dateChecked || '');
+      }
       function attachFeatureFormHandlers() {
         const saveBtn = document.getElementById('cf_saveBtn') as HTMLButtonElement | null;
         const clearBtn = document.getElementById('cf_clearBtn') as HTMLButtonElement | null;
-        if (saveBtn) saveBtn.onclick = () => {
+        if (saveBtn) saveBtn.onclick = async () => {
           const id = readInputValue('cf_id').trim().toUpperCase();
           if (!id) { alert('Context ID is required for saving the feature record.'); return; }
           // Gather record
@@ -878,6 +1071,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           contextForms.set(id, rec);
           saveToStorage();
           updateRecordsDisplay();
+          // Persist to backend CSV (best-effort)
+          try { await formsService.saveContextFeature(projectId, rec as any); } catch (e) { /* network errors ignored for now */ }
           alert('Context feature record saved.');
         };
         if (clearBtn) clearBtn.onclick = () => {
@@ -894,7 +1089,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       function attachSUFormHandlers() {
         const saveBtn = document.getElementById('su_saveBtn') as HTMLButtonElement | null;
         const clearBtn = document.getElementById('su_clearBtn') as HTMLButtonElement | null;
-        if (saveBtn) saveBtn.onclick = () => {
+        if (saveBtn) saveBtn.onclick = async () => {
           const id = readInputValue('su_id').trim();
           if (!id) { alert('SU ID is required.'); return; }
           const earlierThan = readInputValue('su_earlierThan').split(',').map(s => s.trim()).filter(Boolean);
@@ -951,6 +1146,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           stratigraphicUnits.set(id, rec);
           saveToStorage();
           updateRecordsDisplay();
+          try { await formsService.saveStratigraphicUnit(projectId, rec as any); } catch (e) { /* ignore */ }
           alert('SU record saved.');
         };
         if (clearBtn) clearBtn.onclick = () => {
@@ -966,7 +1162,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       // Artefact registry handlers
       function attachArtefactHandlers() {
         const addBtn = document.getElementById('af_addBtn') as HTMLButtonElement | null;
-        if (addBtn) addBtn.onclick = () => {
+        if (addBtn) addBtn.onclick = async () => {
           const category = (document.getElementById('af_category') as HTMLSelectElement | null)?.value as keyof ArtefactRegistries;
           const record: Omit<ArtefactRecord,'id'|'category'> = {
             number: readInputValue('af_number'),
@@ -989,6 +1185,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
           if (invalid) { alert('Please fill required fields: Number and Type.'); return; }
           addArtefact(category, record);
           renderArtefactTable();
+          try { await formsService.saveArtefact(projectId, { category, ...record } as any); } catch (e) { /* ignore */ }
         };
         renderArtefactTable();
       }
