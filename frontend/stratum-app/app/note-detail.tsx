@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Platform
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
@@ -22,6 +23,13 @@ interface Note {
   updated_at: string;
   author_id: string;
   project_id: string;
+  attachments?: Array<{
+    id: string;
+    filename?: string;
+    file_path?: string;
+    mime_type?: string;
+    url?: string;
+  }>;
 }
 
 export default function NoteDetailScreen() {
@@ -139,6 +147,9 @@ export default function NoteDetailScreen() {
     );
   }
 
+  const isAudioNote = note && (!note.content || note.content.trim() === '') &&
+    (note.attachments || []).some((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
+
   return (
     <View style={styles.container}>
         <Stack.Screen 
@@ -180,9 +191,40 @@ export default function NoteDetailScreen() {
             )}
           </View>
 
-          <View style={styles.contentContainer}>
-            <Text style={styles.noteContent}>{note.content}</Text>
-          </View>
+          {isAudioNote ? (
+            <View style={styles.voiceNoteWrapper}>
+              <Text style={styles.sectionTitle}>Voice Note</Text>
+              {note.attachments
+                .filter((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'))
+                .map((att: any) => (
+                  <View key={att.id} style={styles.voicePlayback}>
+                    <AudioAttachmentPlayer url={att.url} />
+                  </View>
+                ))}
+            </View>
+          ) : (
+            <View style={styles.noteContentWrapper}>
+              <Text style={styles.noteContent}>{note.content}</Text>
+            </View>
+          )}
+
+          {/* Attachments section */}
+          {note.attachments && note.attachments.length > 0 && (
+            (() => {
+              const nonAudio = note.attachments.filter((a: any) => !(a.mime_type || a.file_type)?.startsWith('audio/'));
+              if (isAudioNote && nonAudio.length === 0) return null;
+              return (
+                <View style={{ marginTop: 24 }}>
+                  <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
+                  {nonAudio.map((att: any) => (
+                    <View key={att.id} style={{ marginBottom: 12 }}>
+                      <Text style={{ color: '#9A9A9A' }}>{att.filename}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()
+          )}
         </View>
       </ScrollView>
 
@@ -217,6 +259,114 @@ export default function NoteDetailScreen() {
     </View>
   );
 }
+
+const AudioAttachmentPlayer = ({ url }: { url: string }) => {
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = React.useRef<AudioContext | null>(null);
+  const analyserRef = React.useRef<AnalyserNode | null>(null);
+  const rafRef = React.useRef<number>(0);
+  const [ready, setReady] = React.useState(false);
+
+  const cleanup = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    try { ctxRef.current?.close(); } catch {}
+    ctxRef.current = null;
+    analyserRef.current = null;
+  };
+
+  const init = () => {
+    if (!url || !audioRef.current || !canvasRef.current) return;
+    if (ctxRef.current) return; // already initialized
+    try {
+      audioRef.current.crossOrigin = 'anonymous';
+      const ctx = new AudioContext();
+      ctxRef.current = ctx;
+      const srcNode = ctx.createMediaElementSource(audioRef.current);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      srcNode.connect(analyser);
+      analyser.connect(ctx.destination);
+      analyserRef.current = analyser;
+      const data = new Uint8Array(analyser.fftSize);
+      const g = canvasRef.current.getContext('2d')!;
+      const draw = () => {
+        rafRef.current = requestAnimationFrame(draw);
+        analyser.getByteTimeDomainData(data);
+        g.clearRect(0,0,canvasRef.current!.width,canvasRef.current!.height);
+        g.strokeStyle = '#FF2A2A';
+        g.lineWidth = 2;
+        g.beginPath();
+        const slice = canvasRef.current!.width / data.length;
+        for (let i=0;i<data.length;i++){
+          const v = data[i] / 128.0 - 1.0;
+          const y = (v * canvasRef.current!.height)/2 + canvasRef.current!.height/2;
+          if (i===0) g.moveTo(0,y); else g.lineTo(i*slice,y);
+        }
+        g.stroke();
+      };
+      draw();
+      setReady(true);
+    } catch (e) {
+      console.warn('Attachment audio init failed', e);
+    }
+  };
+
+  React.useEffect(() => {
+    cleanup();
+    // Wait for user interaction or metadata before initializing
+    const el = audioRef.current;
+    if (!el) return;
+    const onMeta = () => { try { el.currentTime = 0; } catch {}; };
+    const onFirstPlay = () => {
+      init();
+      const ctx = ctxRef.current;
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    };
+    el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('play', onFirstPlay, { once: true });
+    return () => {
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('play', onFirstPlay);
+      cleanup();
+    };
+  }, [url]);
+
+  const needsResume = ctxRef.current && ctxRef.current.state === 'suspended';
+
+  return (
+    <View style={{ gap: 8, position: 'relative' }}>
+      {/* @ts-ignore */}
+      <audio
+        ref={audioRef as any}
+        src={url}
+        controls
+        style={{ width: '100%' }}
+        preload="metadata"
+        playsInline
+      />
+      {(!ready || needsResume) && (
+        <TouchableOpacity
+          style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', borderRadius: 6 }}
+          onPress={() => {
+            init();
+            const ctx = ctxRef.current;
+            if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+            try { audioRef.current?.play(); } catch {}
+          }}
+        >
+          <Text style={{ color: '#F5F5F5', fontWeight: '600' }}>Tap to enable audio</Text>
+        </TouchableOpacity>
+      )}
+      <canvas
+        ref={canvasRef as any}
+        width={600}
+        height={60}
+        style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -352,5 +502,29 @@ const styles = StyleSheet.create({
     color: '#F5F5F5',
     fontSize: 14,
     fontWeight: '600',
+  },
+  voiceNoteWrapper: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  voicePlayback: {
+    marginBottom: 16,
+  },
+  noteContentWrapper: {
+    backgroundColor: '#1E1E1E',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  sectionTitle: {
+    color: '#F5F5F5',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 12,
   },
 });

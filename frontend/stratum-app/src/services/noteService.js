@@ -22,9 +22,14 @@ export const noteService = {
   },
 
   // Create a new note
-  createNote: async (noteData) => {
+  createNote: async (data) => {
     try {
-      const response = await api.post('/notes', noteData);
+      const response = await api.post('/notes/', {
+        title: data.title,
+        content: data.content,
+        project_id: data.project_id,
+        is_voice: data.is_voice || false,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -79,6 +84,38 @@ export const noteService = {
   deletePhoto: async (noteId, attachmentId) => {
     try {
       await api.delete(`/notes/${noteId}/attachments/${attachmentId}`);
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Upload audio to a note
+  uploadAudio: async (noteId, audioUri, filename = 'voice-note.mp3') => {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: audioUri,
+        type: 'audio/mpeg',
+        name: filename,
+      });
+      const response = await api.post(`/notes/${noteId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+  // Upload audio blob (web MediaRecorder)
+  uploadAudioBlob: async (noteId, blob, filename = 'voice-note.webm') => {
+    try {
+      const formData = new FormData();
+      const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
+      formData.append('file', file, filename);
+      const response = await api.post(`/notes/${noteId}/attachments`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }

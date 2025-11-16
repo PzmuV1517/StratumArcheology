@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -120,34 +120,6 @@ export default function ProjectDetailScreen() {
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
   }, [globalParams?.tab]);
-
-  // Reload notes when screen comes back into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (project?.id) {
-        noteService.getNotes(project.id).then(setNotes).catch(console.error);
-      }
-    }, [project?.id])
-  );
-
-  // If we navigated to a file from the Files overlay, reopen overlay on return
-  useFocusEffect(
-    React.useCallback(() => {
-      if (reopenFilesOnReturnRef.current) {
-        setShowFilesOverlay(true);
-        reopenFilesOnReturnRef.current = false;
-      }
-    }, [])
-  );
-
-  // Reload project data when screen comes back into focus (after editing)
-  useFocusEffect(
-    React.useCallback(() => {
-      if (id) {
-        loadProjectData();
-      }
-    }, [id])
-  );
 
   const loadProjectData = async () => {
     try {
@@ -309,8 +281,14 @@ export default function ProjectDetailScreen() {
   }, [showFilesOverlay, id]);
 
   const openGalleryItem = (node: any) => {
-    if (node.type === 'note' && node.note_id) {
-      router.push({ pathname: '/note-detail', params: { noteId: node.note_id, projectId: project?.id } });
+    const lower = (node.name || '').toLowerCase();
+    const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+    if (isAudio) {
+      if (node.note_id) {
+        router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
+      } else {
+        router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+      }
       return;
     }
     const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.heic)$/i.test(node.name || '');
@@ -318,24 +296,41 @@ export default function ProjectDetailScreen() {
       router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
       return;
     }
-    const lower = (node.name || '').toLowerCase();
-    const isCsv = (node.mime_type === 'text/csv') || lower.endsWith('.csv');
-    const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower.endsWith('.xlsx') || lower.endsWith('.xls');
-    const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
-    const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
-    const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-    const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
-    const isMesh = /\.(glb|gltf)$/i.test(lower);
+    const lower2 = (node.name || '').toLowerCase();
+    const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
+    const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
+    const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
+    const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
+    const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+    const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
+    const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
-    if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
-      let kind: string = 'csv';
-      if (isExcel) kind = 'excel';
-      else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
-      else if (isPdf) kind = 'pdf';
-      else if (isVideo) kind = 'video';
-      else if (isPoint) kind = 'pointcloud';
-      else if (isMesh) kind = 'mesh';
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });
+    if (isMesh) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'mesh' } });
+      return;
+    }
+    if (isPoint) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pointcloud' } });
+      return;
+    }
+    if (isVideo) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'video' } });
+      return;
+    }
+    if (isPdf) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pdf' } });
+      return;
+    }
+    if (isText) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: lower2.endsWith('.md') ? 'markdown' : 'text' } });
+      return;
+    }
+    if (isExcel) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'excel' } });
+      return;
+    }
+    if (isCsv) {
+      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'csv' } });
       return;
     }
   };
@@ -347,11 +342,37 @@ export default function ProjectDetailScreen() {
     });
   };
 
+  const loadNotes = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await noteService.getNotes(id as string);
+      setNotes(data || []);
+    } catch (e) {
+      console.error('Failed to load notes', e);
+    }
+  }, [id]);
+
+  useEffect(() => { loadNotes(); }, [loadNotes]);
+
   const handleNotePress = (noteId: string) => {
-    router.push({
-      pathname: '/note-detail',
-      params: { noteId, projectId: project?.id }
-    });
+    const n: any = (notes as any[]).find((x: any) => x.id === noteId);
+    if (!n) return;
+    const hasAudio = (n.attachments || []).some((a: any) => (a?.mime_type || a?.file_type || '').startsWith('audio/'));
+    const isVoice = (!n.content || n.content.trim() === '') && hasAudio;
+    if (isVoice) {
+      // Do not navigate; inline preview stays
+      return;
+    }
+    router.push({ pathname: '/note-detail', params: { noteId, projectId: id as string } });
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await noteService.deleteNote(noteId);
+      await loadNotes();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete note');
+    }
   };
 
   const handleManageMembers = () => {
@@ -370,8 +391,6 @@ export default function ProjectDetailScreen() {
       Alert.alert('Please wait', 'Project is still loading.');
     }
   };
-
-
 
   const renderNote = ({ item }: { item: Note }) => (
     <TouchableOpacity style={styles.noteCard} onPress={() => handleNotePress(item.id)}>
@@ -546,7 +565,12 @@ export default function ProjectDetailScreen() {
           ) : activeTab === 'artefacts' ? (
             <ArtefactsTab projectId={project?.id as string} />
           ) : activeTab === 'notes' ? (
-            <NotesSection notes={notes as any} onCreateNote={handleCreateNote} onNotePress={handleNotePress} />
+            <NotesSection
+              notes={notes as any}
+              onCreateNote={handleCreateNote}
+              onNotePress={handleNotePress}
+              onDeleteNote={handleDeleteNote}
+            />
           ) : activeTab === 'gps' ? (
             <View
               style={
@@ -645,6 +669,16 @@ export default function ProjectDetailScreen() {
           onDelete={(node: any) => setDeleteNodeTarget(node)}
           onOpenFile={async (node: any) => {
             if (node.type === 'folder') return;
+            const lower = (node.name || '').toLowerCase();
+            const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+            if (isAudio) {
+              if (node.note_id) {
+                router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
+              } else {
+                router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+              }
+              return;
+            }
             const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || '');
             if (isImage) {
               reopenFilesOnReturnRef.current = true;
@@ -652,23 +686,24 @@ export default function ProjectDetailScreen() {
               router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
               return;
             }
-            const lower = (node.name || '').toLowerCase();
-            const isCsv = (node.mime_type === 'text/csv') || lower.endsWith('.csv');
-            const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower.endsWith('.xlsx') || lower.endsWith('.xls');
-            const isText = (node.mime_type === 'text/plain') || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || node.mime_type === 'application/json';
-            const isPdf = (node.mime_type === 'application/pdf') || lower.endsWith('.pdf');
-            const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower);
-            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower);
-            const isMesh = /\.(glb|gltf)$/i.test(lower);
+            const lower2 = (node.name || '').toLowerCase();
+            const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
+            const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
+            const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
+            const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
+            const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
+            const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
-            if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh) {
+            if (isCsv || isExcel || isText || isPdf || isVideo || isPoint || isMesh || isAudio) {
               let kind: string = 'csv';
               if (isExcel) kind = 'excel';
-              else if (isText) kind = lower.endsWith('.md') ? 'markdown' : 'text';
+              else if (isText) kind = lower2.endsWith('.md') ? 'markdown' : 'text';
               else if (isPdf) kind = 'pdf';
               else if (isVideo) kind = 'video';
               else if (isPoint) kind = 'pointcloud';
               else if (isMesh) kind = 'mesh';
+              else if (isAudio) kind = 'audio';
               reopenFilesOnReturnRef.current = true;
               setShowFilesOverlay(false);
               router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });

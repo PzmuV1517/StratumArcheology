@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form, Depends, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -8,11 +8,20 @@ from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 from app.minio_client import minio_client
 from datetime import datetime
 import uuid
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 
+class NoteCreate(BaseModel):
+    title: str
+    content: str | None = None
+    project_id: str
+    is_voice: bool | None = False
+
+
 @router.post("/", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=NoteResponse, status_code=status.HTTP_201_CREATED)  # accept no-trailing-slash to avoid CORS redirect
 async def create_note(
     note_data: NoteCreate,
     current_user: User = Depends(get_current_user),
@@ -21,64 +30,61 @@ async def create_note(
     """Create a new note in a project"""
     check_project_permission(note_data.project_id, current_user, db)
     
-    # Ensure Notes folder exists
-    notes_folder = db.query(FileNode).filter(
-        FileNode.project_id == note_data.project_id,
-        FileNode.parent_id == None,
-        FileNode.name == "Notes",
-        FileNode.type == FileNodeType.FOLDER
-    ).first()
-    if not notes_folder:
-        notes_folder = FileNode(
-            project_id=note_data.project_id,
-            parent_id=None,
-            name="Notes",
-            type=FileNodeType.FOLDER,
-            is_locked=True,
-        )
-        db.add(notes_folder)
-        db.commit()
-        db.refresh(notes_folder)
-    
-    # Create note in database (for backwards compatibility and metadata)
+    # Create base note
     note = Note(
         title=note_data.title,
-        content=note_data.content,
+        content=note_data.content or '',
         project_id=note_data.project_id,
-        author_id=current_user.id
+        author_id=current_user.id,
     )
-    
     db.add(note)
     db.commit()
     db.refresh(note)
-    
-    # Store note content as a txt file in MinIO
-    filename = f"{note_data.title}.txt"
-    content_bytes = (note_data.content or '').encode('utf-8')
-    storage_path = f"notes/{note_data.project_id}/{note.id}.txt"
-    
-    await minio_client.upload_file(content_bytes, storage_path, "text/plain")
-    
-    # Create file node pointing to the txt file
-    note_node = FileNode(
-        project_id=note_data.project_id,
-        parent_id=notes_folder.id,
-        name=filename,
-        type=FileNodeType.FILE,
-        mime_type="text/plain",
-        size=str(len(content_bytes)),
-        storage_path=storage_path,
-        is_locked=False,  # Allow editing as regular file
-    )
-    db.add(note_node)
-    db.commit()
-    db.refresh(note_node)
 
-    # Link note to file node
-    link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
-    db.add(link)
-    db.commit()
-    
+    # Voice notes do NOT create a .txt file node; text notes do
+    is_voice = getattr(note_data, "is_voice", False)
+    if not is_voice:
+        # Ensure "Notes" folder exists
+        notes_folder = db.query(FileNode).filter(
+            FileNode.project_id == note.project_id,
+            FileNode.parent_id == None,
+            FileNode.name == "Notes",
+            FileNode.type == FileNodeType.FOLDER
+        ).first()
+        if not notes_folder:
+            notes_folder = FileNode(
+                project_id=note.project_id,
+                parent_id=None,
+                name="Notes",
+                type=FileNodeType.FOLDER,
+            )
+            db.add(notes_folder)
+            db.commit()
+            db.refresh(notes_folder)
+
+        # Upload .txt content to object storage
+        filename = f"{note.title}.txt"
+        storage_path = f"notes/{note.project_id}/{note.id}.txt"
+        await minio_client.upload_file((note.content or '').encode('utf-8'), storage_path, "text/plain")
+
+        # Mirror as FileNode
+        note_node = FileNode(
+            project_id=note.project_id,
+            parent_id=notes_folder.id,
+            name=filename,
+            type=FileNodeType.FILE,
+            storage_path=storage_path,
+            mime_type="text/plain"
+        )
+        db.add(note_node)
+        db.commit()
+        db.refresh(note_node)
+
+        # Link note to its txt FileNode for future sync/update
+        link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
+        db.add(link)
+        db.commit()
+    # Return full ORM object so response_model includes all fields (author_id, timestamps, attachments)
     return note
 
 
@@ -294,42 +300,87 @@ async def add_note_attachment(
     
     check_project_permission(note.project_id, current_user, db)
     
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/jpg", "image/heic"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type {file.content_type} not allowed. Allowed types: {', '.join(allowed_types)}"
-        )
-    
-    # Read file content
-    file_content = await file.read()
-    file_size = len(file_content)
-    
-    # Generate unique file path
-    file_extension = file.filename.split('.')[-1]
-    file_path = f"notes/{note_id}/{uuid.uuid4()}.{file_extension}"
-    
+    # Validate file type (includes audio)
+    allowed = {
+        "image/jpeg", "image/png", "image/jpg", "image/heic", "image/webp",
+        "audio/mpeg", "audio/wav", "audio/mp4", "audio/webm", "audio/aac", "audio/ogg", "audio/m4a"
+    }
+    if (file.content_type or "") not in allowed:
+        raise HTTPException(status_code=400, detail=f"File type {file.content_type} not allowed")
+
     # Upload to MinIO
-    await minio_client.upload_file(file_content, file_path, file.content_type)
-    
-    # Create attachment record
+    raw = await file.read()
+    ext = (file.filename or "blob").split(".")[-1]
+    object_name = f"notes/{note_id}/{uuid.uuid4()}.{ext}"
+    await minio_client.upload_file(raw, object_name, file.content_type or "application/octet-stream")
+
+    # Save attachment row
     attachment = NoteAttachment(
         note_id=note_id,
-        filename=file.filename,
-        file_path=file_path,
-        file_type=file.content_type,
-        file_size=str(file_size)
+        filename=file.filename or "attachment",
+        file_path=object_name,
+        file_type=file.content_type or "application/octet-stream",
+        file_size=str(len(raw))
     )
-    
     db.add(attachment)
+
+    # Mirror as FileNode under project "Notes" so it appears in Files/Gallery
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    notes_folder = db.query(FileNode).filter(
+        FileNode.project_id == note.project_id,
+        FileNode.parent_id == None,
+        FileNode.name == "Notes",
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
+    if not notes_folder:
+        notes_folder = FileNode(
+            project_id=note.project_id,
+            parent_id=None,
+            name="Notes",
+            type=FileNodeType.FOLDER,
+        )
+        db.add(notes_folder)
+        db.commit()
+        db.refresh(notes_folder)
+
+    # Ensure sibling-unique filename
+    node_name = attachment.filename or "attachment"
+    base, dot, ext2 = node_name.rpartition(".")
+    candidate = node_name
+    i = 1
+    while db.query(FileNode).filter(
+        FileNode.project_id == note.project_id,
+        FileNode.parent_id == notes_folder.id,
+        FileNode.name == candidate
+    ).first():
+        candidate = f"{base or node_name} ({i}){dot}{ext2}" if dot else f"{node_name} ({i})"
+        i += 1
+
+    mirrored_node = FileNode(
+        project_id=note.project_id,
+        parent_id=notes_folder.id,
+        name=candidate,
+        type=FileNodeType.FILE,
+        mime_type=attachment.file_type,
+        size=attachment.file_size,
+        storage_path=attachment.file_path,
+    )
+    db.add(mirrored_node)
+
     db.commit()
     db.refresh(attachment)
-    
-    # Add presigned URL
-    attachment.url = minio_client.get_presigned_url(file_path)
-    
-    return attachment
+
+    return {
+        "id": attachment.id,
+        "filename": attachment.filename,
+        "file_type": attachment.file_type,
+        "file_size": attachment.file_size,
+        "uploaded_at": attachment.uploaded_at,
+        "url": minio_client.get_presigned_url(attachment.file_path)
+    }
 
 
 @router.delete("/{note_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
