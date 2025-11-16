@@ -1,0 +1,126 @@
+GLINA-BĂLĂCEANCA:
+Stratigraphic Unit (SU)
+
+SECTOR:
+
+
+Complex / Feature no.
+Stratigraphic matrix
+Earlier than
+
+Later than
+
+Stratigraphic Unit Type
+Cut ☐
+Deposit / Fill ☐
+Anthropic ☐
+Natural ☐
+Demolition ☐
+Negative ☐
+Construction ☐
+Abandonment ☐
+Other ☐
+Location
+
+Dimensions
+Area / Surface 
+
+Length
+                                                   
+Grid square
+
+Thickness
+                                                  
+Orientation
+
+Depth
+                                                   
+Structure
+Compaction
+Colour
+Homogeneous ☐
+Dry ☐
+Compact ☐
+Medium ☐
+
+Heterogeneous ☐
+Wet ☐
+Soft ☐
+Very Soft ☐
+Munsell code:
+Finds
+Composition
+Texture
+Pottery ☐
+Metal ☐
+Organic ☐
+Mineral ☐
+
+Flint ☐
+Stone ☐
+Gravels ☐
+Silt ☐
+
+Wood ☐
+Charcoal ☐
+Sand ☐
+Argil ☐
+Granulation
+Shell ☐
+Snail ☐
+Loess ☐
+Mud ☐
+High ☐ 
+Medium☐
+Low☐
+Ash ☐
+Adobe ☐
+Other ☐
+Contamination  Risk
+
+
+
+High ☐ 
+Medium☐
+Low☐
+Bones ☐
+Seed ☐
+
+
+
+
+
+
+Perturbation
+Other ☐
+Natural ☐
+Burrow ☐
+Roots ☐
+Other ☐
+
+Anthropic ☐
+Type:
+Description:
+
+
+
+
+
+
+
+
+
+Documentation
+Drawing ☐ 
+Plan no. ☐
+Photogrammetry ☐
+Samples ☐
+Photos ☐
+Video ☐
+Sample type:
+Sample bag no.
+Author:
+Date:
+Checked by
+Date:
+
