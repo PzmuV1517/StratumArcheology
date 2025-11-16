@@ -135,137 +135,127 @@ export default function DataPreviewScreen() {
     (async () => {
       try {
         if (Platform.OS !== 'web') {
-          // For now show simple message with Download fallback on native
+          // native fallback unchanged
           const res = await fileService.downloadFile(nodeId);
           const reader = new FileReader();
           reader.onloadend = () => {
-            if (!cancelled) {
-              const content = typeof reader.result === 'string' ? reader.result : '';
-              setTextContent(content);
-            }
+            if (!cancelled) setTextContent(typeof reader.result === 'string' ? reader.result : '');
           };
           reader.readAsText(res.data);
+          return;
+        }
+        const token = await AsyncStorage.getItem('authToken');
+        const { blob }: any = await fileService.downloadFileStream(nodeId, token, undefined);
+        const ext = (name as string)?.toLowerCase() || '';
+        
+        // AUDIO FIRST (handles audio/webm)
+        const isBlobAudio = blob.type && /^audio\//.test(blob.type);
+        if (isBlobAudio || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(ext) || kind === 'audio') {
+          const url = window.URL.createObjectURL(blob);
+          if (!cancelled) {
+            setAudioUrl(url);
+            setPdfUrl(null); setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
+            setTable(null); setTextContent(null);
+          }
+          return;
+        }
+
+        // PDF
+        if (ext.endsWith('.pdf') || kind === 'pdf') {
+          const url = window.URL.createObjectURL(blob);
+          if (!cancelled) {
+            setPdfUrl(url);
+            setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
+            setTable(null); setTextContent(null);
+          }
+          return;
+        }
+
+        // VIDEO (skip if blob was audio)
+        const isVideoExt = /\.(mp4|webm|ogg|mov)$/i.test(ext) || kind === 'video';
+        const isBlobVideo = blob.type && /^video\//.test(blob.type);
+        if (isVideoExt && isBlobVideo) {
+          const url = window.URL.createObjectURL(blob);
+          if (!cancelled) {
+            setVideoUrl(url);
+            setPdfUrl(null); setPointUrl(null); setMeshUrl(null);
+            setAudioUrl(null);
+            setTable(null); setTextContent(null);
+          }
+          return;
+        }
+
+        // MESH
+        if (/\.(glb|gltf)$/i.test(ext) || kind === 'mesh') {
+          const url = window.URL.createObjectURL(blob);
+          if (!cancelled) {
+            setMeshUrl(url);
+            setPdfUrl(null); setVideoUrl(null); setPointUrl(null);
+            setAudioUrl(null); setTable(null); setTextContent(null);
+          }
+          return;
+        }
+
+        // POINT CLOUD
+        if (/\.(las|laz|ply|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
+          const url = window.URL.createObjectURL(blob);
+          if (!cancelled) {
+            setPointUrl(url);
+            setPdfUrl(null); setVideoUrl(null); setMeshUrl(null);
+            setAudioUrl(null); setTable(null); setTextContent(null);
+          }
+          return;
+        }
+
+        // TEXT / CSV / EXCEL (unchanged below)
+        // Handle text files (txt, md, json)
+        if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
+          const text = await blob.text();
+          setTextContent(text);
+          if (ext.endsWith('.txt')) {
+            setIsNoteFile(true);
+            const filename = (name as string) || '';
+            const titleWithoutExt = filename.endsWith('.txt') ? filename.slice(0, -4) : filename;
+            setOriginalTitle(titleWithoutExt);
+            setEditableTitle(titleWithoutExt);
+          }
         } else {
-          const token = await AsyncStorage.getItem('authToken');
-          const { blob }: any = await fileService.downloadFileStream(nodeId, token, undefined);
-          const ext = (name as string)?.toLowerCase() || '';
+          // Handle CSV/Excel files
+          if (!Papa) Papa = (await import('papaparse')).default || (await import('papaparse'));
+          if (!XLSX) XLSX = await import('xlsx');
+          if (!AutoSizer) AutoSizer = (await import('react-virtualized-auto-sizer')).default;
+          if (!VariableSizeGrid) VariableSizeGrid = (await import('react-window')).VariableSizeGrid;
+          setGridReady(true);
 
-          // PDF
-          if (ext.endsWith('.pdf') || (kind === 'pdf')) {
-            const url = window.URL.createObjectURL(blob);
-            if (!cancelled) {
-              setPdfUrl(url);
-              setVideoUrl(null);
-              setPointUrl(null);
-              setTable(null);
-              setTextContent(null);
-            }
-            return;
-          }
+          // (moved markdown preloading to the txt/md branch above)
 
-          // Video
-          if (ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || (kind === 'video')) {
-            const url = window.URL.createObjectURL(blob);
-            if (!cancelled) {
-              setVideoUrl(url);
-              setPdfUrl(null);
-              setPointUrl(null);
-              setMeshUrl(null);
-              setTable(null);
-              setTextContent(null);
-            }
-            return;
-          }
-
-          // 3D Mesh: .glb/.gltf
-          if (/\.(glb|gltf)$/i.test(ext) || kind === 'mesh') {
-            const url = window.URL.createObjectURL(blob);
-            if (!cancelled) {
-              setMeshUrl(url);
-              setPdfUrl(null);
-              setVideoUrl(null);
-              setPointUrl(null);
-              setTable(null);
-              setTextContent(null);
-            }
-            return;
-          }
-
-          // Point cloud: .las/.laz/.ply/.pcd/.rwi/.rwp
-          // Currently not working: .pcd/.rwi/.rwp
-          if (/\.(las|laz|ply|pcd|rwi|rwp)$/i.test(ext) || kind === 'pointcloud') {
-            const url = window.URL.createObjectURL(blob);
-            if (!cancelled) {
-              setPointUrl(url);
-              setPdfUrl(null);
-              setVideoUrl(null);
-              setMeshUrl(null);
-              setTable(null);
-              setTextContent(null);
-            }
-            return;
-          }
-
-          // Audio: .mp3 .wav .webm .m4a .aac .ogg
-          if (/\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(ext) || kind === 'audio' || (blob.type && /^audio\//.test(blob.type))) {
-            const url = window.URL.createObjectURL(blob);
-            if (!cancelled) {
-              setAudioUrl(url);
-              setPdfUrl(null); setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
-              setTable(null); setTextContent(null);
-            }
-            return;
-          }
-
-          // Handle text files (txt, md, json)
-          if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
+          if (ext.endsWith('.csv')) {
             const text = await blob.text();
-            setTextContent(text);
-            if (ext.endsWith('.txt')) {
-              setIsNoteFile(true);
-              const filename = (name as string) || '';
-              const titleWithoutExt = filename.endsWith('.txt') ? filename.slice(0, -4) : filename;
-              setOriginalTitle(titleWithoutExt);
-              setEditableTitle(titleWithoutExt);
-            }
+            const parsed = Papa.parse(text, { skipEmptyLines: true });
+            if (parsed?.data) setTable(parsed.data as any);
+            else setTextContent(text);
+          } else if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+            const arrayBuffer = await blob.arrayBuffer();
+            const wb = XLSX.read(arrayBuffer, { type: 'array' });
+            const firstSheet = wb.SheetNames[0];
+            const ws = wb.Sheets[firstSheet];
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+            setTable(json as string[][]);
           } else {
-            // Handle CSV/Excel files
-            if (!Papa) Papa = (await import('papaparse')).default || (await import('papaparse'));
-            if (!XLSX) XLSX = await import('xlsx');
-            if (!AutoSizer) AutoSizer = (await import('react-virtualized-auto-sizer')).default;
-            if (!VariableSizeGrid) VariableSizeGrid = (await import('react-window')).VariableSizeGrid;
-            setGridReady(true);
-
-            // (moved markdown preloading to the txt/md branch above)
-
-            if (ext.endsWith('.csv')) {
+            // Try CSV by MIME fallback
+            try {
               const text = await blob.text();
               const parsed = Papa.parse(text, { skipEmptyLines: true });
               if (parsed?.data) setTable(parsed.data as any);
               else setTextContent(text);
-            } else if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
-              const arrayBuffer = await blob.arrayBuffer();
-              const wb = XLSX.read(arrayBuffer, { type: 'array' });
-              const firstSheet = wb.SheetNames[0];
-              const ws = wb.Sheets[firstSheet];
-              const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
-              setTable(json as string[][]);
-            } else {
-              // Try CSV by MIME fallback
-              try {
-                const text = await blob.text();
-                const parsed = Papa.parse(text, { skipEmptyLines: true });
-                if (parsed?.data) setTable(parsed.data as any);
-                else setTextContent(text);
-              } catch {
-                setError('Unsupported format for preview');
-              }
+            } catch {
+              setError('Unsupported format for preview');
             }
           }
         }
       } catch (e) {
         console.error(e);
-        setError('Failed to load file');
+        if (!cancelled) setError('Failed to load file');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -428,9 +418,11 @@ export default function DataPreviewScreen() {
   }, [name, kind]);
 
   const isVideo = useMemo(() => {
+    if (kind === 'audio') return false;
     const ext = (name as string)?.toLowerCase() || '';
-    return ext.endsWith('.mp4') || ext.endsWith('.webm') || ext.endsWith('.ogg') || ext.endsWith('.mov') || kind === 'video';
-  }, [name, kind]);
+    if (/\.(mp4|webm|ogg|mov)$/i.test(ext) && audioUrl == null) return true;
+    return kind === 'video';
+  }, [name, kind, audioUrl]);
 
   const isPoint = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';

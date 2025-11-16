@@ -24,7 +24,7 @@ export const noteService = {
   // Create a new note
   createNote: async (data) => {
     try {
-      const response = await api.post('/notes', {
+      const response = await api.post('/notes/', {
         title: data.title,
         content: data.content,
         project_id: data.project_id,
@@ -90,13 +90,13 @@ export const noteService = {
   },
 
   // Upload audio to a note
-  uploadAudio: async (noteId, audioUri) => {
+  uploadAudio: async (noteId, audioUri, filename = 'voice-note.mp3') => {
     try {
       const formData = new FormData();
       formData.append('file', {
         uri: audioUri,
         type: 'audio/mpeg',
-        name: 'voice-note.mp3',
+        name: filename,
       });
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },

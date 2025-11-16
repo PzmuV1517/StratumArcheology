@@ -35,7 +35,7 @@ async def create_note(
         title=note_data.title,
         content=note_data.content or '',
         project_id=note_data.project_id,
-        owner_id=current_user.id,
+        author_id=current_user.id,
     )
     db.add(note)
     db.commit()
@@ -78,13 +78,14 @@ async def create_note(
         )
         db.add(note_node)
         db.commit()
+        db.refresh(note_node)
 
-    return {
-        "id": note.id,
-        "title": note.title,
-        "content": note.content,
-        "project_id": note.project_id,
-    }
+        # Link note to its txt FileNode for future sync/update
+        link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
+        db.add(link)
+        db.commit()
+    # Return full ORM object so response_model includes all fields (author_id, timestamps, attachments)
+    return note
 
 
 @router.get("/project/{project_id}", response_model=List[NoteResponse])

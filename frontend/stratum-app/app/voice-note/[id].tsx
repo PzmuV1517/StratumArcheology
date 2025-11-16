@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { noteService } from '../../src/services/noteService';
-import AudioPanel from '../../src/components/data/AudioPanel.web';
+import AudioPanel from '../../src/components/data/AudioPanel'; // platform auto-resolution
 
 export default function VoiceNoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,9 +13,10 @@ export default function VoiceNoteScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const n = await noteService.getNote(id as string);
+        if (!id) return;
+        const n = await noteService.getNote(id);
         setNote(n);
-        const att = (n.attachments || []).find((a: any) => a.mime_type?.startsWith('audio/'));
+        const att = (n.attachments || []).find((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
         setAudioUrl(att?.url || null);
       } finally {
         setLoading(false);
@@ -33,6 +34,7 @@ export default function VoiceNoteScreen() {
           <Text style={styles.title}>{note?.title}</Text>
           <View style={{ flex: 1, marginTop: 16 }}>
             <AudioPanel src={audioUrl} name={note?.title} />
+            {!audioUrl && <Text style={{ color: '#9A9A9A', marginTop: 12 }}>No audio attachment found.</Text>}
           </View>
         </View>
       )}

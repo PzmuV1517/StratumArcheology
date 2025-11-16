@@ -135,6 +135,10 @@ export default function CreateNoteScreen() {
       Alert.alert('Error', 'Content required');
       return;
     }
+    if (isVoiceNote && isRecording) {
+      Alert.alert('Finish recording', 'Finish creating audio before saving');
+      return;
+    }
     if (isVoiceNote && !recordedUri) {
       Alert.alert('Error', 'Record audio before saving');
       return;
@@ -150,12 +154,13 @@ export default function CreateNoteScreen() {
       });
       if (isVoiceNote && recordedUri) {
         try {
+          const safeBase = (title.trim() || 'audio').replace(/[^a-z0-9_\-\.]/gi, '_');
           if (Platform.OS === 'web') {
             const response = await fetch(recordedUri);
             const blob = await response.blob();
-            await noteService.uploadAudioBlob(note.id, blob, 'voice-note.webm');
+            await noteService.uploadAudioBlob(note.id, blob, `${safeBase}.webm`);
           } else {
-            await noteService.uploadAudio(note.id, recordedUri);
+            await noteService.uploadAudio(note.id, recordedUri, `${safeBase}.mp3`);
           }
         } catch (e) {
           console.error('Audio upload failed', e);

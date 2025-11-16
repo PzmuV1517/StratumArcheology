@@ -10,7 +10,7 @@ interface Note {
 
 export default function NotesSection({ notes, onCreateNote, onNotePress }: { notes: any[]; onCreateNote: () => void; onNotePress: (id: string) => void; }) {
   const renderNote = ({ item }: { item: Note }) => {
-    const isVoice = (!item.content || item.content.trim() === '') && (item.attachments || []).some((a: any) => a.mime_type?.startsWith('audio/'));
+    const isVoice = (!item.content || item.content.trim() === '') && (item.attachments || []).some((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
 
     return (
       <TouchableOpacity style={styles.noteCard} onPress={() => onNotePress(item.id)}>

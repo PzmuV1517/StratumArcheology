@@ -147,7 +147,8 @@ export default function NoteDetailScreen() {
     );
   }
 
-  const isAudioNote = note && (!note.content || note.content.trim() === '') && (note.attachments || []).some((a: any) => a.mime_type?.startsWith('audio/'));
+  const isAudioNote = note && (!note.content || note.content.trim() === '') &&
+    (note.attachments || []).some((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
 
   return (
     <View style={styles.container}>
@@ -193,11 +194,13 @@ export default function NoteDetailScreen() {
           {isAudioNote ? (
             <View style={styles.voiceNoteWrapper}>
               <Text style={styles.sectionTitle}>Voice Note</Text>
-              {note.attachments.filter((a: any) => a.mime_type?.startsWith('audio/')).map((att: any) => (
-                <View key={att.id} style={styles.voicePlayback}>
-                  <AudioAttachmentPlayer url={att.url} />
-                </View>
-              ))}
+              {note.attachments
+                .filter((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'))
+                .map((att: any) => (
+                  <View key={att.id} style={styles.voicePlayback}>
+                    <AudioAttachmentPlayer url={att.url} />
+                  </View>
+                ))}
             </View>
           ) : (
             <View style={styles.noteContentWrapper}>
@@ -207,25 +210,20 @@ export default function NoteDetailScreen() {
 
           {/* Attachments section */}
           {note.attachments && note.attachments.length > 0 && (
-            <View style={{ marginTop: 24 }}>
-              <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
-              {note.attachments.map((att: any) => {
-                const isAudio = att.mime_type?.startsWith('audio/');
-                if (isAudio) {
-                  return (
-                    <View key={att.id} style={{ marginBottom: 16, padding: 12, borderWidth: 1, borderColor: '#2A2A2A', borderRadius: 12, backgroundColor: '#1A1A1A' }}>
-                      <Text style={{ color: '#F5F5F5', marginBottom: 6 }}>{att.filename || 'audio'}</Text>
-                      <AudioAttachmentPlayer url={att.url} />
+            (() => {
+              const nonAudio = note.attachments.filter((a: any) => !(a.mime_type || a.file_type)?.startsWith('audio/'));
+              if (isAudioNote && nonAudio.length === 0) return null;
+              return (
+                <View style={{ marginTop: 24 }}>
+                  <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
+                  {nonAudio.map((att: any) => (
+                    <View key={att.id} style={{ marginBottom: 12 }}>
+                      <Text style={{ color: '#9A9A9A' }}>{att.filename}</Text>
                     </View>
-                  );
-                }
-                return (
-                  <View key={att.id} style={{ marginBottom: 12 }}>
-                    <Text style={{ color: '#9A9A9A' }}>{att.filename}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                  ))}
+                </View>
+              );
+            })()
           )}
         </View>
       </ScrollView>
@@ -265,41 +263,71 @@ export default function NoteDetailScreen() {
 const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = React.useRef<AudioContext | null>(null);
+  const analyserRef = React.useRef<AnalyserNode | null>(null);
+  const rafRef = React.useRef<number>(0);
+
   React.useEffect(() => {
-    if (typeof window === 'undefined') return;
+    cleanup();
     if (!url || !audioRef.current || !canvasRef.current) return;
-    let ctx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let raf = 0;
     try {
-      ctx = new AudioContext();
+      const ctx = new AudioContext();
+      ctxRef.current = ctx;
       const src = ctx.createMediaElementSource(audioRef.current);
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 128;
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
       src.connect(analyser);
       analyser.connect(ctx.destination);
-      const data = new Uint8Array(analyser.frequencyBinCount);
+      analyserRef.current = analyser;
+      const data = new Uint8Array(analyser.fftSize);
       const g = canvasRef.current.getContext('2d')!;
       const draw = () => {
-        raf = requestAnimationFrame(draw);
-        analyser!.getByteFrequencyData(data);
+        rafRef.current = requestAnimationFrame(draw);
+        analyser.getByteTimeDomainData(data);
         g.clearRect(0,0,canvasRef.current!.width,canvasRef.current!.height);
-        const w = canvasRef.current!.width / data.length;
+        g.strokeStyle = '#FF2A2A';
+        g.lineWidth = 2;
+        g.beginPath();
+        const slice = canvasRef.current!.width / data.length;
         for (let i=0;i<data.length;i++){
-          const v = data[i]/255;
-          const h = v * canvasRef.current!.height;
-          g.fillStyle = '#FF2A2A';
-          g.fillRect(i*w, canvasRef.current!.height - h, w-1, h);
+          const v = data[i] / 128.0 - 1.0;
+          const y = (v * canvasRef.current!.height)/2 + canvasRef.current!.height/2;
+          if (i===0) g.moveTo(0,y); else g.lineTo(i*slice,y);
         }
+        g.stroke();
       };
       draw();
     } catch {}
-    return () => { if (raf) cancelAnimationFrame(raf); try { ctx?.close(); } catch {} };
+    return cleanup;
   }, [url]);
+
+  const cleanup = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    try { ctxRef.current?.close(); } catch {}
+  };
+
+  React.useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const onMeta = () => { try { el.currentTime = 0; } catch {} };
+    const onInteract = () => {
+      const ctx = ctxRef.current;
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+    };
+    el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('play', onInteract);
+    el.addEventListener('click', onInteract);
+    return () => {
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('play', onInteract);
+      el.removeEventListener('click', onInteract);
+    };
+  }, [url]);
+
   return (
     <View style={{ gap: 8 }}>
-      {/* @ts-ignore web-only controls */}
-      <audio ref={audioRef as any} src={url} controls style={{ width: '100%' }} />
+      {/* @ts-ignore */}
+      <audio ref={audioRef as any} src={url} controls style={{ width: '100%' }} preload="metadata" />
       <canvas ref={canvasRef as any} width={600} height={60} style={{ width: '100%', height: 60, backgroundColor: '#111', borderRadius: 6 }} />
     </View>
   );
