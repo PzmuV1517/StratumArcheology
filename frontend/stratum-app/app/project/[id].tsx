@@ -340,15 +340,37 @@ export default function ProjectDetailScreen() {
     });
   };
 
+  const loadNotes = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await noteService.getNotes(id as string);
+      setNotes(data || []);
+    } catch (e) {
+      console.error('Failed to load notes', e);
+    }
+  }, [id]);
+
+  useEffect(() => { loadNotes(); }, [loadNotes]);
+
   const handleNotePress = (noteId: string) => {
     const n: any = (notes as any[]).find((x: any) => x.id === noteId);
-    const hasAudio = (n?.attachments || []).some((a: any) => a?.mime_type?.startsWith('audio/'));
-    const isVoice = (!n?.content || n?.content.trim() === '') && hasAudio;
+    if (!n) return;
+    const hasAudio = (n.attachments || []).some((a: any) => (a?.mime_type || a?.file_type || '').startsWith('audio/'));
+    const isVoice = (!n.content || n.content.trim() === '') && hasAudio;
     if (isVoice) {
-      router.push({ pathname: '/voice-note/[id]', params: { id: noteId } });
+      // Do not navigate; inline preview stays
       return;
     }
-    router.push({ pathname: '/note-detail', params: { noteId, projectId: project?.id } });
+    router.push({ pathname: '/note-detail', params: { noteId, projectId: id as string } });
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await noteService.deleteNote(noteId);
+      await loadNotes();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete note');
+    }
   };
 
   const handleManageMembers = () => {
@@ -530,7 +552,12 @@ export default function ProjectDetailScreen() {
           ) : activeTab === 'artefacts' ? (
             <ArtefactsTab projectId={project?.id as string} />
           ) : activeTab === 'notes' ? (
-            <NotesSection notes={notes as any} onCreateNote={handleCreateNote} onNotePress={handleNotePress} />
+            <NotesSection
+              notes={notes as any}
+              onCreateNote={handleCreateNote}
+              onNotePress={handleNotePress}
+              onDeleteNote={handleDeleteNote}
+            />
           ) : activeTab === 'gps' ? (
             <View
               style={

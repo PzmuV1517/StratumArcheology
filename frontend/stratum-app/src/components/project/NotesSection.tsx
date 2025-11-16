@@ -13,11 +13,19 @@ interface Note {
   id: string;
   title: string;
   content?: string | null;
+  created_at: string;
   updated_at: string;
   attachments?: NoteAttachment[];
 }
 
-export default function NotesSection({ notes, onCreateNote, onNotePress }: { notes: Note[]; onCreateNote: () => void; onNotePress: (id: string) => void; }) {
+interface Props {
+  notes: Note[];
+  onCreateNote: () => void;
+  onNotePress: (id: string) => void;
+  onDeleteNote: (id: string) => void;
+}
+
+export default function NotesSection({ notes, onCreateNote, onNotePress, onDeleteNote }: Props) {
 
   const MiniAudio = ({ url }: { url?: string }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -51,17 +59,15 @@ export default function NotesSection({ notes, onCreateNote, onNotePress }: { not
           g.lineWidth = 2;
           g.beginPath();
           const slice = canvasRef.current!.width / data.length;
-            for (let i=0;i<data.length;i++){
-              const v = data[i]/128 - 1;
-              const y = (v * canvasRef.current!.height)/2 + canvasRef.current!.height/2;
-              if (i===0) g.moveTo(0,y); else g.lineTo(i*slice,y);
-            }
+          for (let i=0;i<data.length;i++){
+            const v = data[i]/128 - 1;
+            const y = (v * canvasRef.current!.height)/2 + canvasRef.current!.height/2;
+            if (i===0) g.moveTo(0,y); else g.lineTo(i*slice,y);
+          }
           g.stroke();
         };
         draw();
-      } catch (e) {
-        // silent
-      }
+      } catch {}
       return () => {
         mounted = false;
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -70,12 +76,12 @@ export default function NotesSection({ notes, onCreateNote, onNotePress }: { not
     }, [url]);
 
     if (Platform.OS !== 'web') {
-      return <Text style={{ color: '#9A9A9A', fontSize: 12 }}>Audio (open to play)</Text>;
+      return <Text style={{ color: '#9A9A9A', fontSize: 12 }}>Audio (open note to play)</Text>;
     }
 
     return (
       <View style={styles.audioPreviewWrapper}>
-        {/* @ts-ignore web only */}
+        {/* @ts-ignore */}
         <audio
           ref={audioRef as any}
           src={url}
@@ -99,18 +105,30 @@ export default function NotesSection({ notes, onCreateNote, onNotePress }: { not
     const audioAtt = attachments.find((a) => (a.mime_type || a.file_type || '').startsWith('audio/'));
 
     return (
-      <TouchableOpacity style={styles.noteCard} onPress={() => onNotePress(item.id)}>
-        <View style={styles.noteHeader}>
-          <Text style={styles.noteTitle} numberOfLines={1}>{item.title}{isVoice ? ' 🔊' : ''}</Text>
-          <Text style={styles.noteDate}>{new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
-        </View>
-        {!isVoice && !!item.content && (
-          <Text style={styles.notePreview} numberOfLines={2}>{item.content}</Text>
+      <View style={styles.noteCard}>
+        <TouchableOpacity onPress={() => !isVoice && onNotePress(item.id)} activeOpacity={isVoice ? 1 : 0.7}>
+          <View style={styles.noteHeader}>
+            <Text style={styles.noteTitle} numberOfLines={1}>{item.title}{isVoice ? ' 🔊' : ''}</Text>
+            <Text style={styles.noteDate}>{new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
+          </View>
+          {!isVoice && !!item.content && (
+            <Text style={styles.notePreview} numberOfLines={2}>{item.content}</Text>
+          )}
+          {isVoice && audioAtt?.url && (
+            <MiniAudio url={audioAtt.url} />
+          )}
+        </TouchableOpacity>
+        {isVoice && (
+          <View style={styles.voiceActions}>
+            <TouchableOpacity style={styles.metaBtn} onPress={() => { /* could expand details later */ }}>
+              <Text style={styles.metaBtnText}>Created {new Date(item.created_at).toLocaleDateString()}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.metaBtn, styles.deleteBtn]} onPress={() => onDeleteNote(item.id)}>
+              <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         )}
-        {isVoice && audioAtt?.url && (
-          <MiniAudio url={audioAtt.url} />
-        )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -125,7 +143,7 @@ export default function NotesSection({ notes, onCreateNote, onNotePress }: { not
       {notes.length > 0 ? (
         <FlatList
           data={notes}
-            renderItem={renderNote}
+          renderItem={renderNote}
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
         />
@@ -160,4 +178,9 @@ const styles = StyleSheet.create({
   audioPreviewWrapper: { marginTop: 6, gap: 6 },
   audioTag: { width: '100%' },
   audioCanvas: { width: '100%', height: 40, backgroundColor: '#111', borderRadius: 6 },
+  voiceActions: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  metaBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#333' },
+  metaBtnText: { color: '#CFCFCF', fontSize: 12, fontWeight: '600' },
+  deleteBtn: { borderColor: '#3A0C0C', backgroundColor: '#2A1414' },
+  deleteBtnText: { color: '#FF4444' },
 });
