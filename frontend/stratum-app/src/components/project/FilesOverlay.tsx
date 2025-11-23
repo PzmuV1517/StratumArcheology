@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Platform, Alert } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Platform, Alert, TextInput } from 'react-native';
 import { fileService } from '../../services/fileService';
 
 interface FileNode {
@@ -43,6 +43,14 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [showInfoTip, setShowInfoTip] = useState(false);
+  // Search & filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [exactOnly, setExactOnly] = useState(false);
+  const [extensionFilters, setExtensionFilters] = useState<string[]>([]);
+  const [showExtensionFilter, setShowExtensionFilter] = useState(false);
+  const [customExtInput, setCustomExtInput] = useState('');
   const rootRef = useRef<any>(null);
   const warnedMissingProject = useRef(false);
 
@@ -129,8 +137,59 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     };
   }, [handleFilesUpload, isDragging]);
 
-  // Compute selectable (non-locked) ids for select-all behavior
-  const selectableIds = fileNodes.filter(n => !n.is_locked).map(n => n.id);
+  const getExtension = (name: string) => {
+    const idx = name.lastIndexOf('.');
+    return idx === -1 ? '' : name.substring(idx + 1).toLowerCase();
+  };
+
+  // Collect existing extensions for suggestions (files only)
+  const availableExtensions = useMemo(() => {
+    const exts = new Set<string>();
+    fileNodes.forEach(n => {
+      if (n.type === 'file') {
+        const ext = getExtension(n.name);
+        if (ext) exts.add(ext);
+      }
+    });
+    return Array.from(exts).sort();
+  }, [fileNodes]);
+
+  // Ranking & filtering
+  const filteredNodes = useMemo(() => {
+    let nodes = fileNodes;
+    // Extension filter: if active, only include file nodes with matching extension
+    if (extensionFilters.length > 0) {
+      nodes = nodes.filter(n => {
+        if (n.type !== 'file') return false; // hide folders/notes when filtering by extensions
+        const ext = getExtension(n.name);
+        return extensionFilters.includes(ext);
+      });
+    }
+    if (!searchQuery.trim()) return nodes;
+    const q = searchQuery.toLowerCase();
+    return nodes
+      .map(n => {
+        const nameLower = n.name.toLowerCase();
+        let rank = 999;
+        if (exactOnly) {
+          rank = nameLower === q ? 0 : 999;
+        } else {
+          if (nameLower === q) rank = 0; // exact
+          else if (nameLower.startsWith(q)) rank = 1; // startsWith
+          else if (nameLower.includes(q)) rank = 2; // contains
+        }
+        return { node: n, rank };
+      })
+      .filter(r => r.rank !== 999)
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        return a.node.name.localeCompare(b.node.name);
+      })
+      .map(r => r.node);
+  }, [fileNodes, extensionFilters, searchQuery, exactOnly]);
+
+  // Compute selectable (non-locked) ids for select-all behavior respecting filtered list
+  const selectableIds = filteredNodes.filter(n => !n.is_locked).map(n => n.id);
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
 
   return (
@@ -140,7 +199,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
           <Text style={{ color: '#FF2A2A', fontSize: 18 }}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={{ color: '#F5F5F5', fontSize: 18, fontWeight: '700' }}>{title}</Text>
-        {selectedIds.size > 0 && (
+        {multiSelect && selectedIds.size > 0 && (
           <View style={styles.bulkBar}>
             <Text style={styles.bulkText}>{selectedIds.size} selected</Text>
             <TouchableOpacity
@@ -212,8 +271,105 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
             <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
               <Text style={styles.actionButtonText}>+ Upload</Text>
             </TouchableOpacity>
+            {!multiSelect ? (
+              <TouchableOpacity
+                style={styles.multiToggle}
+                onPress={() => {
+                  setMultiSelect(true);
+                }}
+              >
+                <Text style={styles.multiToggleText}>Select multiple files/folders?</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.multiToggleActive}
+                onPress={() => {
+                  setMultiSelect(false);
+                  setSelectedIds(new Set());
+                  setShowInfoTip(false);
+                }}
+              >
+                <Text style={styles.multiToggleText}>Done</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
+        {/* Search & filter row */}
+        <View style={styles.searchRow}>
+          <TextInput
+            value={searchQuery}
+            placeholder="Search by name..."
+            placeholderTextColor="#666"
+            onChangeText={setSearchQuery}
+            style={styles.searchInput}
+          />
+          <TouchableOpacity
+            style={styles.filterToggle}
+            onPress={() => setShowExtensionFilter(v => !v)}
+          >
+            <Text style={{ color: '#F5F5F5', fontSize: 12 }}>{showExtensionFilter ? 'Hide Extensions' : 'Filter by extension'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setExactOnly(e => !e)}
+            style={styles.exactToggle}
+          >
+            <View style={[styles.exactBox, exactOnly && styles.exactBoxChecked]}>
+              {exactOnly && <Text style={styles.exactBoxTick}>✓</Text>}
+            </View>
+            <Text style={{ color: '#9A9A9A', fontSize: 12 }}>Only exact matches</Text>
+          </TouchableOpacity>
+        </View>
+        {showExtensionFilter && (
+          <View style={styles.filterPanel}>
+            <View style={styles.extChipRow}>
+              {availableExtensions.map(ext => {
+                const active = extensionFilters.includes(ext);
+                return (
+                  <TouchableOpacity
+                    key={ext}
+                    onPress={() => {
+                      setExtensionFilters(prev => {
+                        const next = active ? prev.filter(e => e !== ext) : [...prev, ext];
+                        return next;
+                      });
+                    }}
+                    style={[styles.extChip, active && styles.extChipActive]}
+                  >
+                    <Text style={styles.extChipText}>.{ext}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {extensionFilters.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearFilterBtn}
+                  onPress={() => setExtensionFilters([])}
+                >
+                  <Text style={styles.addExtText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.customExtRow}>
+              <TextInput
+                value={customExtInput}
+                onChangeText={setCustomExtInput}
+                placeholder="Add custom extension (e.g. csv)"
+                placeholderTextColor="#666"
+                style={styles.customExtInput}
+              />
+              <TouchableOpacity
+                style={styles.addExtBtn}
+                onPress={() => {
+                  const ext = customExtInput.trim().replace(/^\./,'').toLowerCase();
+                  if (!ext) return;
+                  setExtensionFilters(prev => prev.includes(ext) ? prev : [...prev, ext]);
+                  setCustomExtInput('');
+                }}
+              >
+                <Text style={styles.addExtText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         {fileLoading ? (
           <ActivityIndicator color="#FF2A2A" />
         ) : (
@@ -239,47 +395,68 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
 
             {fileNodes.length > 0 ? (
               <View>
-                <View style={styles.listHeader}>
-                  <TouchableOpacity
-                    disabled={selectableIds.length === 0}
-                    onPress={() => {
-                      if (selectableIds.length === 0) return;
-                      if (allSelected) setSelectedIds(new Set());
-                      else setSelectedIds(new Set(selectableIds));
-                    }}
-                  >
-                    <View style={[
-                      styles.checkbox,
-                      selectableIds.length === 0 && styles.checkboxDisabled,
-                      allSelected && styles.checkboxChecked,
-                    ]}>
-                      {allSelected && <Text style={styles.checkboxTick}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                  <Text style={{ color: '#9A9A9A', marginLeft: 8 }}>Select All</Text>
-                </View>
-                {fileNodes.map((node) => (
-                  <View key={node.id} style={[styles.fileRow, selectedIds.has(node.id) && styles.fileRowSelected]}>
+                {multiSelect && (
+                  <View style={styles.listHeader}>
                     <TouchableOpacity
-                      disabled={!!node.is_locked}
+                      disabled={selectableIds.length === 0}
                       onPress={() => {
-                        if (node.is_locked) return;
-                        const next = new Set(selectedIds);
-                        if (next.has(node.id)) next.delete(node.id); else next.add(node.id);
-                        setSelectedIds(next);
+                        if (selectableIds.length === 0) return;
+                        if (allSelected) setSelectedIds(new Set());
+                        else setSelectedIds(new Set(selectableIds));
                       }}
                     >
                       <View style={[
                         styles.checkbox,
-                        node.is_locked && styles.checkboxDisabled,
-                        selectedIds.has(node.id) && styles.checkboxChecked,
+                        selectableIds.length === 0 && styles.checkboxDisabled,
+                        allSelected && styles.checkboxChecked,
                       ]}>
-                        {selectedIds.has(node.id) && !node.is_locked && <Text style={styles.checkboxTick}>✓</Text>}
+                        {allSelected && <Text style={styles.checkboxTick}>✓</Text>}
                       </View>
                     </TouchableOpacity>
+                    <Text style={{ color: '#9A9A9A', marginLeft: 8 }}>Select All</Text>
+                    {fileNodes.some(n => n.is_locked) && (
+                      <View style={styles.infoWrapper}
+                        {...(Platform.OS === 'web'
+                          ? { onMouseEnter: () => setShowInfoTip(true), onMouseLeave: () => setShowInfoTip(false) }
+                          : {})}
+                      >
+                        <View style={styles.infoIcon}><Text style={styles.infoIconText}>i</Text></View>
+                        {Platform.OS === 'web' && showInfoTip && (
+                          <View style={styles.infoTooltip}>
+                            <Text style={styles.infoTooltipText}>Locked items can’t be selected</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+                {filteredNodes.map((node) => (
+                  <View key={node.id} style={[styles.fileRow, selectedIds.has(node.id) && styles.fileRowSelected]}>
+                    {multiSelect ? (
+                      node.is_locked ? (
+                        <View style={styles.checkboxSpacer} />
+                      ) : (
+                        <TouchableOpacity
+                          onPress={() => {
+                            const next = new Set(selectedIds);
+                            if (next.has(node.id)) next.delete(node.id); else next.add(node.id);
+                            setSelectedIds(next);
+                          }}
+                        >
+                          <View style={[
+                            styles.checkbox,
+                            selectedIds.has(node.id) && styles.checkboxChecked,
+                          ]}>
+                            {selectedIds.has(node.id) && <Text style={styles.checkboxTick}>✓</Text>}
+                          </View>
+                        </TouchableOpacity>
+                      )
+                    ) : (
+                      <View style={styles.checkboxSpacer} />
+                    )}
                     <Text style={styles.fileIcon}>{node.type === 'folder' ? '📁' : node.type === 'note' ? '📝' : '📄'}</Text>
                     <TouchableOpacity style={{ flex: 1 }} onPress={() => node.type === 'folder' ? onOpenFolder(node) : onOpenFile(node)}>
-                      <Text style={styles.fileName}>{node.name}</Text>
+                      <Text style={styles.fileName}>{renderHighlightedName(node.name, searchQuery, exactOnly)}</Text>
                     </TouchableOpacity>
                     {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
                     <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
@@ -318,6 +495,26 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   );
 }
 
+// Helper to highlight matched substring
+function renderHighlightedName(name: string, query: string, exactOnly: boolean) {
+  if (!query.trim()) return name;
+  const q = query.toLowerCase();
+  const lower = name.toLowerCase();
+  let startIndex = lower.indexOf(q);
+  if (startIndex === -1) return name;
+  const endIndex = startIndex + q.length;
+  const before = name.slice(0, startIndex);
+  const match = name.slice(startIndex, endIndex);
+  const after = name.slice(endIndex);
+  return (
+    <Text>
+      {before}
+      <Text style={styles.matchHighlight}>{match}</Text>
+      {after}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#111111', position: 'relative' },
   header: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2A2A2A', flexDirection: 'row', alignItems: 'center' },
@@ -331,13 +528,40 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
   actionButton: { backgroundColor: '#FF2A2A', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   actionButtonText: { fontSize: 12, color: '#F5F5F5', fontWeight: '600', letterSpacing: 0.5 },
+  multiToggle: { backgroundColor: '#222', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
+  multiToggleActive: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
+  multiToggleText: { color: '#F5F5F5', fontSize: 12, fontWeight: '600' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' },
+  searchInput: { flexGrow: 1, minWidth: 200, backgroundColor: '#1A1A1A', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, color: '#F5F5F5', borderWidth: 1, borderColor: '#2A2A2A', fontSize: 14 },
+  exactToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  exactBox: { width: 18, height: 18, borderWidth: 1, borderColor: '#555', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  exactBoxChecked: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
+  exactBoxTick: { color: '#111', fontSize: 12, fontWeight: '700' },
+  filterToggle: { backgroundColor: '#222', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#2A2A2A' },
+  filterPanel: { backgroundColor: '#141414', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', marginBottom: 12 },
+  extChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  extChip: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#222', borderRadius: 8, borderWidth: 1, borderColor: '#333' },
+  extChipActive: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
+  extChipText: { color: '#F5F5F5', fontSize: 12 },
+  customExtRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  customExtInput: { flexGrow: 1, minWidth: 120, backgroundColor: '#1A1A1A', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, color: '#F5F5F5', borderWidth: 1, borderColor: '#2A2A2A', fontSize: 12 },
+  addExtBtn: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  clearFilterBtn: { backgroundColor: '#444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 'auto' },
+  addExtText: { color: '#F5F5F5', fontSize: 12 },
+  matchHighlight: { backgroundColor: '#FF2A2A', color: '#111111', fontWeight: '700', paddingHorizontal: 2, borderRadius: 4 },
   listHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   fileRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#2A2A2A' },
   fileRowSelected: { borderColor: '#FF2A2A', backgroundColor: '#1A1A1A' },
   checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1, borderColor: '#555', marginRight: 10, alignItems: 'center', justifyContent: 'center' },
   checkboxDisabled: { borderColor: '#333', backgroundColor: '#222' },
+  checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
   checkboxChecked: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
   checkboxTick: { color: '#111111', fontSize: 14, fontWeight: '700' },
+  infoWrapper: { marginLeft: 10, position: 'relative' },
+  infoIcon: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#444' },
+  infoIconText: { color: '#F5F5F5', fontSize: 12, fontWeight: '700' },
+  infoTooltip: { position: 'absolute', bottom: 22, left: 0, backgroundColor: '#1A1A1A', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#2A2A2A', maxWidth: 220 },
+  infoTooltipText: { color: '#F5F5F5', fontSize: 12 },
   fileIcon: { fontSize: 18, marginRight: 10, color: '#F5F5F5' },
   fileName: { flex: 1, color: '#F5F5F5', fontSize: 16, letterSpacing: 0.3 },
   lockBadge: { color: '#FF4444', fontSize: 12, fontWeight: '700' },
