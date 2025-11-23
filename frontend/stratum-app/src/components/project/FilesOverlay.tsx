@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Platform, Alert } from 'react-native';
 import { fileService } from '../../services/fileService';
 
@@ -37,24 +37,19 @@ interface Props {
 export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles }: Props) {
   if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const rootRef = useRef<any>(null);
 
-  const handleDrop = useCallback(async (e: any) => {
-    if (Platform.OS !== 'web') return; // web-only
-    e.preventDefault();
-    setIsDragging(false);
-    const dt = e.dataTransfer;
-    if (!dt || !dt.files || dt.files.length === 0) return;
-    const dropped: File[] = Array.from(dt.files);
-    // Allow parent override
+  const handleFilesUpload = useCallback(async (dropped: File[]) => {
     if (onDropFiles) {
       await onDropFiles(dropped);
       return;
     }
     if (!projectId) {
-      // Fallback: trigger normal upload flow
       if (onUpload) onUpload();
       return;
     }
+    setIsUploading(true);
     for (const f of dropped) {
       const fd = new FormData();
       fd.append('file', f);
@@ -66,30 +61,49 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         Alert.alert('Upload failed', f.name);
       }
     }
+    setIsUploading(false);
     if (onRefreshAfterUpload) onRefreshAfterUpload();
   }, [projectId, currentFolder, onRefreshAfterUpload, onUpload, onDropFiles]);
 
+  // Native DOM drag events for web (RN Web does not map drag events reliably)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = rootRef.current;
+    if (!el) return;
+    const onDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (!isDragging) setIsDragging(true);
+    };
+    const onDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      // Only hide if leaving the overlay root completely
+      if (e.target === el) setIsDragging(false);
+    };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      if (!e.dataTransfer || !e.dataTransfer.files?.length) return;
+      const files = Array.from(e.dataTransfer.files);
+      void handleFilesUpload(files);
+    };
+    el.addEventListener('dragenter', onDragEnter);
+    el.addEventListener('dragover', onDragOver);
+    el.addEventListener('dragleave', onDragLeave);
+    el.addEventListener('drop', onDrop);
+    return () => {
+      el.removeEventListener('dragenter', onDragEnter);
+      el.removeEventListener('dragover', onDragOver);
+      el.removeEventListener('dragleave', onDragLeave);
+      el.removeEventListener('drop', onDrop);
+    };
+  }, [handleFilesUpload, isDragging]);
+
   return (
-    <View
-      style={styles.root}
-      {...(Platform.OS === 'web'
-        ? {
-            onDragEnter: (e: any) => {
-              e.preventDefault();
-              setIsDragging(true);
-            },
-            onDragOver: (e: any) => {
-              e.preventDefault();
-              if (!isDragging) setIsDragging(true);
-            },
-            onDragLeave: (e: any) => {
-              e.preventDefault();
-              setIsDragging(false);
-            },
-            onDrop: handleDrop,
-          }
-        : {})}
-    >
+    <View ref={rootRef} style={styles.root}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
           <Text style={{ color: '#FF2A2A', fontSize: 18 }}>‹ Back</Text>
@@ -97,9 +111,17 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         <Text style={{ color: '#F5F5F5', fontSize: 18, fontWeight: '700' }}>{title}</Text>
       </View>
       {Platform.OS === 'web' && isDragging && (
-        <View pointerEvents="none" style={styles.dropOverlay}>
-          <Text style={styles.dropOverlayText}>Drop files to upload</Text>
-          <Text style={styles.dropOverlaySub}>Release mouse to start upload</Text>
+        <View pointerEvents="none" style={styles.dropMask}>
+          <View style={styles.dropBox}>
+            <Text style={styles.dropBoxTitle}>Drop file here</Text>
+            <Text style={styles.dropBoxSub}>Release to upload</Text>
+          </View>
+        </View>
+      )}
+      {Platform.OS === 'web' && isUploading && (
+        <View pointerEvents="none" style={styles.uploadingBanner}>
+          <ActivityIndicator color="#FF2A2A" />
+          <Text style={styles.uploadingText}>Uploading…</Text>
         </View>
       )}
       <ScrollView style={{ flex: 1, padding: 24 }}>
@@ -196,20 +218,47 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 48 },
   emptyStateText: { fontSize: 18, fontWeight: '600', color: '#F5F5F5', marginBottom: 8, letterSpacing: 0.5 },
   emptyStateSubtext: { fontSize: 14, color: '#9A9A9A', marginBottom: 24, letterSpacing: 0.5 },
-  dropOverlay: {
+  dropMask: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,42,42,0.12)',
-    borderWidth: 3,
-    borderColor: '#FF2A2A',
-    borderStyle: 'dashed',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 50,
+    zIndex: 60,
   },
-  dropOverlayText: { color: '#FF2A2A', fontSize: 28, fontWeight: '700', marginBottom: 8, letterSpacing: 0.5 },
-  dropOverlaySub: { color: '#F5F5F5', fontSize: 14, opacity: 0.9 },
+  dropBox: {
+    width: 320,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#FF2A2A',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+  },
+  dropBoxTitle: { color: '#FF2A2A', fontSize: 22, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
+  dropBoxSub: { color: '#F5F5F5', fontSize: 14, opacity: 0.9 },
+  uploadingBanner: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    zIndex: 70,
+  },
+  uploadingText: { color: '#F5F5F5', fontSize: 14 },
 });
