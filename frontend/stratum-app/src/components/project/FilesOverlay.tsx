@@ -141,6 +141,10 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     const idx = name.lastIndexOf('.');
     return idx === -1 ? '' : name.substring(idx + 1).toLowerCase();
   };
+  const getBaseName = (name: string) => {
+    const idx = name.lastIndexOf('.');
+    return idx === -1 ? name : name.substring(0, idx);
+  };
 
   // Collect existing extensions for suggestions (files only)
   const availableExtensions = useMemo(() => {
@@ -157,28 +161,28 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   // Ranking & filtering
   const filteredNodes = useMemo(() => {
     let nodes = fileNodes;
-    // Extension filter: if active, only include file nodes with matching extension
     if (extensionFilters.length > 0) {
       nodes = nodes.filter(n => {
-        if (n.type !== 'file') return false; // hide folders/notes when filtering by extensions
+        if (n.type !== 'file') return false;
         const ext = getExtension(n.name);
         return extensionFilters.includes(ext);
       });
     }
-    if (!searchQuery.trim()) return nodes;
-    const q = searchQuery.toLowerCase();
+    const qRaw = searchQuery.trim();
+    if (!qRaw) return nodes;
+    const q = qRaw.toLowerCase();
     return nodes
       .map(n => {
-        const nameLower = n.name.toLowerCase();
+        const baseLower = getBaseName(n.name).toLowerCase();
         let rank = 999;
         if (exactOnly) {
-          rank = nameLower === q ? 0 : 999;
+          rank = baseLower === q ? 0 : 999;
         } else {
-          if (nameLower === q) rank = 0; // exact
-          else if (nameLower.startsWith(q)) rank = 1; // startsWith
-          else if (nameLower.includes(q)) rank = 2; // contains
+          if (baseLower === q) rank = 0;
+          else if (baseLower.startsWith(q)) rank = 1;
+          else if (baseLower.includes(q)) rank = 2;
         }
-        return { node: n, rank };
+        return { node: n, rank, baseLower };
       })
       .filter(r => r.rank !== 999)
       .sort((a, b) => {
@@ -368,6 +372,11 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                 <Text style={styles.addExtText}>Add</Text>
               </TouchableOpacity>
             </View>
+            {customExtInput.trim().length > 0 && (
+              <Text style={styles.extPreviewText}>
+                Will filter: .{customExtInput.trim().replace(/^\./,'').toLowerCase()} {customExtInput.startsWith('.') ? '(dot normalized)' : '(no dot needed)'}
+              </Text>
+            )}
           </View>
         )}
         {fileLoading ? (
@@ -456,7 +465,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                     )}
                     <Text style={styles.fileIcon}>{node.type === 'folder' ? '📁' : node.type === 'note' ? '📝' : '📄'}</Text>
                     <TouchableOpacity style={{ flex: 1 }} onPress={() => node.type === 'folder' ? onOpenFolder(node) : onOpenFile(node)}>
-                      <Text style={styles.fileName}>{renderHighlightedName(node.name, searchQuery, exactOnly)}</Text>
+                      {renderNameWithExtension(node.name, searchQuery, exactOnly)}
                     </TouchableOpacity>
                     {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
                     <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
@@ -496,16 +505,31 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
 }
 
 // Helper to highlight matched substring
-function renderHighlightedName(name: string, query: string, exactOnly: boolean) {
-  if (!query.trim()) return name;
-  const q = query.toLowerCase();
-  const lower = name.toLowerCase();
-  let startIndex = lower.indexOf(q);
-  if (startIndex === -1) return name;
-  const endIndex = startIndex + q.length;
-  const before = name.slice(0, startIndex);
-  const match = name.slice(startIndex, endIndex);
-  const after = name.slice(endIndex);
+function renderNameWithExtension(name: string, query: string, exactOnly: boolean) {
+  const idx = name.lastIndexOf('.');
+  const hasExt = idx !== -1;
+  const base = hasExt ? name.substring(0, idx) : name;
+  const ext = hasExt ? name.substring(idx) : '';
+  const highlightedBase = highlightBase(base, query, exactOnly);
+  return (
+    <Text style={styles.fileName}>
+      {highlightedBase}
+      {hasExt && <Text style={styles.fileExt}>{ext}</Text>}
+    </Text>
+  );
+}
+
+function highlightBase(base: string, query: string, exactOnly: boolean) {
+  const qRaw = query.trim();
+  if (!qRaw) return base;
+  const q = qRaw.toLowerCase();
+  const lower = base.toLowerCase();
+  if (exactOnly && lower !== q) return base;
+  const matchIndex = lower.indexOf(q);
+  if (matchIndex === -1) return base;
+  const before = base.slice(0, matchIndex);
+  const match = base.slice(matchIndex, matchIndex + q.length);
+  const after = base.slice(matchIndex + q.length);
   return (
     <Text>
       {before}
@@ -549,6 +573,8 @@ const styles = StyleSheet.create({
   clearFilterBtn: { backgroundColor: '#444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, marginLeft: 'auto' },
   addExtText: { color: '#F5F5F5', fontSize: 12 },
   matchHighlight: { backgroundColor: '#FF2A2A', color: '#111111', fontWeight: '700', paddingHorizontal: 2, borderRadius: 4 },
+  fileExt: { color: '#9A9A9A', fontSize: 12, marginLeft: 4 },
+  extPreviewText: { color: '#9A9A9A', fontSize: 11, marginTop: 4 },
   listHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   fileRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A1A', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#2A2A2A' },
   fileRowSelected: { borderColor: '#FF2A2A', backgroundColor: '#1A1A1A' },
