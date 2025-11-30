@@ -40,6 +40,8 @@ interface Props {
 export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload }: Props) {
   if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
+  const [dragDepth, setDragDepth] = useState(0);
+  const lastDragEvent = useRef<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -94,46 +96,73 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     if (onRefreshAfterUpload) onRefreshAfterUpload();
   }, [projectId, currentFolder, onRefreshAfterUpload, onDropFiles]);
 
-  // Global document-level drag events for reliability
+  // Robust drag-and-drop handling (depth + timeout + ESC)
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const onDocDragOver = (e: DragEvent) => {
-      if (e.dataTransfer?.types?.includes('Files')) {
-        e.preventDefault();
-        if (!isDragging) setIsDragging(true);
-      }
-    };
-    const onDocDragEnter = (e: DragEvent) => {
-      if (e.dataTransfer?.types?.includes('Files')) {
-        e.preventDefault();
+
+    const onDragEnter = (e: DragEvent) => {
+      if (!e.dataTransfer) return;
+      if ([...e.dataTransfer.types].includes('Files')) {
+        setDragDepth(d => d + 1);
         setIsDragging(true);
+        lastDragEvent.current = Date.now();
       }
     };
-    const clearDrag = () => setIsDragging(false);
-    const onDocDrop = (e: DragEvent) => {
-      if (!e.dataTransfer) { clearDrag(); return; }
-      if (e.dataTransfer.types?.includes('Files')) {
+    const onDragOver = (e: DragEvent) => {
+      if (!e.dataTransfer) return;
+      if ([...e.dataTransfer.types].includes('Files')) {
+        e.preventDefault();
+        lastDragEvent.current = Date.now();
+      }
+    };
+    const onDragLeave = (e: DragEvent) => {
+      if (!e.dataTransfer) return;
+      if ([...e.dataTransfer.types].includes('Files')) {
+        setDragDepth(d => {
+          const next = Math.max(0, d - 1);
+          if (next === 0) setIsDragging(false);
+          return next;
+        });
+      }
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!e.dataTransfer) { resetDragState(); return; }
+      if ([...e.dataTransfer.types].includes('Files')) {
         e.preventDefault();
         const files = Array.from(e.dataTransfer.files || []);
         if (files.length) void handleFilesUpload(files);
       }
-      clearDrag();
+      resetDragState();
     };
-    const onMouseOut = (e: MouseEvent) => {
-      // If leaving window entirely
-      if (!e.relatedTarget && isDragging) clearDrag();
+    const onDragEnd = () => { resetDragState(); };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') resetDragState();
     };
-    document.addEventListener('dragover', onDocDragOver);
-    document.addEventListener('dragenter', onDocDragEnter);
-    document.addEventListener('drop', onDocDrop);
-    document.addEventListener('dragend', clearDrag);
-    window.addEventListener('mouseout', onMouseOut);
+    const resetDragState = () => {
+      setDragDepth(0);
+      setIsDragging(false);
+    };
+    const inactivityInterval = window.setInterval(() => {
+      if (isDragging && Date.now() - lastDragEvent.current > 1200) {
+        // No dragover recently -> reset
+        resetDragState();
+      }
+    }, 1500);
+
+    window.addEventListener('dragenter', onDragEnter);
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+    window.addEventListener('dragend', onDragEnd);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener('dragover', onDocDragOver);
-      document.removeEventListener('dragenter', onDocDragEnter);
-      document.removeEventListener('drop', onDocDrop);
-      document.removeEventListener('dragend', clearDrag);
-      window.removeEventListener('mouseout', onMouseOut);
+      window.removeEventListener('dragenter', onDragEnter);
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+      window.removeEventListener('dragend', onDragEnd);
+      window.removeEventListener('keydown', onKeyDown);
+      window.clearInterval(inactivityInterval);
     };
   }, [handleFilesUpload, isDragging]);
 
@@ -252,10 +281,23 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         )}
       </View>
       {Platform.OS === 'web' && isDragging && (
-        <View pointerEvents="none" style={styles.dropMask}>
+        <View style={styles.dropMask}
+          onDragOver={(e: any) => { e.preventDefault(); lastDragEvent.current = Date.now(); }}
+          onDrop={(e: any) => {
+            if (e.nativeEvent?.dataTransfer) {
+              const dt = e.nativeEvent.dataTransfer;
+              const files = Array.from(dt.files || []);
+              if (files.length) {
+                void handleFilesUpload(files);
+              }
+            }
+            setIsDragging(false);
+            setDragDepth(0);
+          }}
+        >
           <View style={styles.dropBox}>
             <Text style={styles.dropBoxTitle}>Drop file here</Text>
-            <Text style={styles.dropBoxSub}>Release to upload</Text>
+            <Text style={styles.dropBoxSub}>Release or press ESC to cancel</Text>
           </View>
         </View>
       )}

@@ -778,6 +778,19 @@ export default function ProjectDetailScreen() {
             }
             Alert.alert('Preview', 'This file type is not yet supported.');
           }}
+          projectId={id as string}
+          onRefreshAfterUpload={async () => {
+            try {
+              if (currentFolder?.id) {
+                const children = await fileService.listChildren(currentFolder.id);
+                setFileNodes(children);
+              } else {
+                await loadRootFiles();
+              }
+            } catch (e) {
+              console.error('Refresh after upload failed:', e);
+            }
+          }}
         />
       </Modal>
 
