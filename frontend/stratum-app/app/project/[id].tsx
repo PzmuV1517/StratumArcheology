@@ -22,7 +22,6 @@ import { Image } from 'react-native';
 import { useRef } from 'react';
 import MembersModal from '../../src/components/project/MembersModal';
 import FilesOverlay from '../../src/components/project/FilesOverlay';
-import ProjectHeader from '../../src/components/project/ProjectHeader';
 import NotesSection from '../../src/components/project/NotesSection';
 import FileGallery from '../../src/components/project/FileGallery';
 import ArtefactsTab from '../../src/components/project/ArtefactsTab';
@@ -38,6 +37,7 @@ interface Project {
   id: string;
   name: string;
   description?: string;
+  ran_lmi_id?: string;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -69,7 +69,7 @@ export default function ProjectDetailScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix'>('gallery');
+  const [activeTab, setActiveTab] = useState<'overview' | 'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix'>('overview');
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string | null; name: string }>>([{ id: null, name: 'Root' }]);
@@ -112,7 +112,8 @@ export default function ProjectDetailScreen() {
   // Sync UI with route param when available
   useEffect(() => {
     const tabParam = (globalParams?.tab as string) || '';
-  if (tabParam === 'notes') setActiveTab('notes');
+  if (tabParam === 'overview') setActiveTab('overview');
+  else if (tabParam === 'notes') setActiveTab('notes');
   else if (tabParam === 'artefacts') setActiveTab('artefacts');
   else if (tabParam === 'gallery') setActiveTab('gallery');
   else if (tabParam === 'matrix') setActiveTab('matrix');
@@ -511,56 +512,70 @@ export default function ProjectDetailScreen() {
         style={styles.content}
         scrollEnabled={activeTab !== 'matrix'}
       >
-        {/* Project Header */}
-        <ProjectHeader project={project as any} />
-
-        {/* Tab Navigation: File Gallery + Artefacts + Notes + GPS */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'gallery' && styles.activeTab]}
-            onPress={() => setActiveTab('gallery')}
-          >
-            <Text style={[styles.tabText, activeTab === 'gallery' && styles.activeTabText]}>
-              File Gallery
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'artefacts' && styles.activeTab]}
-            onPress={() => setActiveTab('artefacts')}
-          >
-            <Text style={[styles.tabText, activeTab === 'artefacts' && styles.activeTabText]}>
-              Artefacts
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'notes' && styles.activeTab]}
-            onPress={() => setActiveTab('notes')}
-          >
-            <Text style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>
-              Notes ({notes.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'gps' && styles.activeTab]}
-            onPress={() => setActiveTab('gps')}
-          >
-            <Text style={[styles.tabText, activeTab === 'gps' && styles.activeTabText]}>
-              GPS
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'matrix' && styles.activeTab]}
-            onPress={() => setActiveTab('matrix')}
-          >
-            <Text style={[styles.tabText, activeTab === 'matrix' && styles.activeTabText]}>
-              Matrix
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Tab Content */}
         <View style={styles.tabContent}>
-          {activeTab === 'gallery' ? (
+          {activeTab === 'overview' ? (
+            <View style={styles.overviewContainer}>
+              {/* Hero Section */}
+              <View style={styles.overviewHero}>
+                <Text style={styles.overviewTitle}>{project.name}</Text>
+                {!!project.ran_lmi_id && (
+                  <View style={styles.overviewBadge}>
+                    <Text style={styles.overviewBadgeText}>RAN/LMI: {project.ran_lmi_id}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Stats Grid */}
+              <View style={styles.overviewStatsGrid}>
+                <View style={styles.overviewStatCard}>
+                  <Text style={styles.overviewStatValue}>{members.length}</Text>
+                  <Text style={styles.overviewStatLabel}>Team Members</Text>
+                </View>
+                <View style={styles.overviewStatCard}>
+                  <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                  <Text style={styles.overviewStatLabel}>Notes</Text>
+                </View>
+              </View>
+
+              {/* Description */}
+              {!!project.description && (
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewCardHeader}>
+                    <View style={styles.overviewIconCircle}>
+                      <Text style={styles.overviewIcon}>📝</Text>
+                    </View>
+                    <Text style={styles.overviewCardTitle}>About</Text>
+                  </View>
+                  <Text style={styles.overviewDescription}>{project.description}</Text>
+                </View>
+              )}
+
+              {/* Timeline */}
+              <View style={styles.overviewCard}>
+                <View style={styles.overviewCardHeader}>
+                  <View style={styles.overviewIconCircle}>
+                    <Text style={styles.overviewIcon}>📅</Text>
+                  </View>
+                  <Text style={styles.overviewCardTitle}>Timeline</Text>
+                </View>
+                <View style={styles.overviewTimelineItem}>
+                  <View style={styles.overviewTimelineDot} />
+                  <View style={styles.overviewTimelineContent}>
+                    <Text style={styles.overviewTimelineLabel}>Project Created</Text>
+                    <Text style={styles.overviewTimelineDate}>{new Date(project.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</Text>
+                  </View>
+                </View>
+                <View style={styles.overviewTimelineItem}>
+                  <View style={styles.overviewTimelineDot} />
+                  <View style={styles.overviewTimelineContent}>
+                    <Text style={styles.overviewTimelineLabel}>Last Updated</Text>
+                    <Text style={styles.overviewTimelineDate}>{new Date(project.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : activeTab === 'gallery' ? (
             <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
           ) : activeTab === 'artefacts' ? (
             <ArtefactsTab projectId={project?.id as string} />
@@ -628,6 +643,58 @@ export default function ProjectDetailScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      {/* Bottom Tab Navigation: Overview + Gallery + Artefacts + Notes + GPS + Matrix */}
+      <View style={styles.bottomTabContainer}>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'overview' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('overview')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'overview' && styles.activeBottomTabText]}>
+            Overview
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'gallery' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('gallery')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'gallery' && styles.activeBottomTabText]}>
+            Gallery
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'artefacts' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('artefacts')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'artefacts' && styles.activeBottomTabText]}>
+            Artefacts
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'notes' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('notes')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'notes' && styles.activeBottomTabText]}>
+            Notes
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'gps' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('gps')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'gps' && styles.activeBottomTabText]}>
+            GPS
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'matrix' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('matrix')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'matrix' && styles.activeBottomTabText]}>
+            Matrix
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Burger menu modal */}
       <ProjectMenuModal
@@ -896,6 +963,194 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#F5F5F5',
+  },
+  bottomTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  bottomTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  activeBottomTab: {
+    backgroundColor: '#FF2A2A',
+  },
+  bottomTabText: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  activeBottomTabText: {
+    color: '#F5F5F5',
+  },
+  overviewContainer: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  overviewHero: {
+    marginBottom: 24,
+    paddingTop: 8,
+  },
+  overviewTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#F5F5F5',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  overviewBadge: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#FF2A2A',
+  },
+  overviewBadgeText: {
+    color: '#FF2A2A',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  overviewStatsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  overviewStatCard: {
+    flex: 1,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  overviewStatValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FF2A2A',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  overviewStatLabel: {
+    fontSize: 13,
+    color: '#9A9A9A',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  overviewCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  overviewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  overviewIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  overviewIcon: {
+    fontSize: 20,
+  },
+  overviewCardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    letterSpacing: 0.5,
+  },
+  overviewDescription: {
+    fontSize: 15,
+    color: '#CFCFCF',
+    lineHeight: 24,
+    letterSpacing: 0.3,
+  },
+  overviewTimelineItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  overviewTimelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF2A2A',
+    marginRight: 16,
+    marginTop: 4,
+  },
+  overviewTimelineContent: {
+    flex: 1,
+  },
+  overviewTimelineLabel: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  overviewTimelineDate: {
+    fontSize: 16,
+    color: '#F5F5F5',
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  overviewSection: {
+    marginBottom: 24,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  overviewSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF2A2A',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  overviewText: {
+    fontSize: 15,
+    color: '#F5F5F5',
+    letterSpacing: 0.3,
+  },
+  overviewMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  overviewLabel: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    letterSpacing: 0.3,
+  },
+  overviewValue: {
+    fontSize: 14,
+    color: '#F5F5F5',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   tabContent: {
     paddingHorizontal: 24,
