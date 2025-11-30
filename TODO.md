@@ -45,7 +45,7 @@ Template for tasks:
 
 - [x] [P0] Multi-select in FilesOverlay (bulk move/delete/download)
 	- Notes: Keyboard modifiers on web; long-press on mobile; server batch endpoints
-- [ ] [P1] File search/filter within current folder
+- [x] [P1] File search/filter within current folder
 	- Notes: Client-side first; se 
 - [ ] [P1] Persist breadcrumbs and last-opened folder across sessions
 	- Notes: AsyncStorage key per project
