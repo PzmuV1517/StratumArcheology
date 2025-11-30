@@ -6,6 +6,7 @@ import { projectService } from '../src/services/projectService';
 export default function CreateProjectModal() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [ranLmiId, setRanLmiId] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -15,11 +16,17 @@ export default function CreateProjectModal() {
       return;
     }
 
+    if (!ranLmiId.trim()) {
+      Alert.alert('Error', 'Please enter a RAN/LMI ID');
+      return;
+    }
+
     setLoading(true);
     try {
       await projectService.createProject({
         name: name.trim(),
         description: description.trim() || null,
+        ran_lmi_id: ranLmiId.trim(),
       });
       // Close modal immediately, the projects list will refresh automatically
       router.back();
@@ -42,6 +49,15 @@ export default function CreateProjectModal() {
           placeholderTextColor="#666"
           value={name}
           onChangeText={setName}
+        />
+
+        <Text style={styles.label}>RAN/LMI ID *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter RAN/LMI ID"
+          placeholderTextColor="#666"
+          value={ranLmiId}
+          onChangeText={setRanLmiId}
         />
 
         <Text style={styles.label}>Description</Text>
