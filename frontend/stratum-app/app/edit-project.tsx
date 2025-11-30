@@ -18,6 +18,7 @@ interface Project {
   id: string;
   name: string;
   description: string;
+  ran_lmi_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -27,6 +28,7 @@ export default function EditProjectScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [ranLmiId, setRanLmiId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -44,6 +46,7 @@ export default function EditProjectScreen() {
       const projectData: Project = await projectService.getProject(projectId as string);
       setName(projectData.name);
       setDescription(projectData.description || '');
+      setRanLmiId(projectData.ran_lmi_id || '');
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Error', 'Failed to load project', [
@@ -65,6 +68,7 @@ export default function EditProjectScreen() {
       await projectService.updateProject(projectId as string, {
         name: name.trim(),
         description: description.trim() || null,
+        ran_lmi_id: ranLmiId.trim() || null,
       });
       Alert.alert('Success', 'Project updated successfully', [
         { text: 'OK', onPress: () => router.back() },
@@ -148,6 +152,15 @@ export default function EditProjectScreen() {
             placeholderTextColor="#666"
             value={name}
             onChangeText={setName}
+          />
+
+          <Text style={styles.label}>RAN/LMI ID</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter RAN/LMI ID"
+            placeholderTextColor="#666"
+            value={ranLmiId}
+            onChangeText={setRanLmiId}
           />
 
           <Text style={styles.label}>Description</Text>

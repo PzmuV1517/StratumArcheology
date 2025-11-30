@@ -23,6 +23,7 @@ async def create_project(
     project = Project(
         name=project_data.name,
         description=project_data.description,
+        ran_lmi_id=project_data.ran_lmi_id,
         owner_id=current_user.id
     )
     
@@ -115,6 +116,7 @@ async def update_project(
     
     project.name = project_data.name
     project.description = project_data.description
+    project.ran_lmi_id = project_data.ran_lmi_id
     
     db.commit()
     db.refresh(project)

@@ -5,3 +5,5 @@ docker run --hostname=20a96dbb8db1 --mac-address=72:19:98:c0:04:01 --env=POSTGRE
 python -m uvicorn app.main:app --reload --port 8000
 
 npx -y eas-cli build -p android --profile production --non-interactive --no-wait
+
+npx expo start

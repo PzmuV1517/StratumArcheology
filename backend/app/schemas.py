@@ -57,6 +57,7 @@ class UserResponse(UserBase):
 class ProjectBase(BaseModel):
     name: str
     description: Optional[str] = None
+    ran_lmi_id: Optional[str] = None
 
 
 class ProjectCreate(ProjectBase):
