@@ -356,7 +356,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
               <TextInput
                 value={customExtInput}
                 onChangeText={setCustomExtInput}
-                placeholder="Add custom extension (e.g. csv)"
+                placeholder="Search custom extension (e.g. csv)"
                 placeholderTextColor="#666"
                 style={styles.customExtInput}
               />
@@ -369,7 +369,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                   setCustomExtInput('');
                 }}
               >
-                <Text style={styles.addExtText}>Add</Text>
+                <Text style={styles.addExtText}>Search</Text>
               </TouchableOpacity>
             </View>
             {customExtInput.trim().length > 0 && (
