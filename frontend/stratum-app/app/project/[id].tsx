@@ -591,7 +591,7 @@ export default function ProjectDetailScreen() {
               style={
                 Platform.OS === 'web'
                   ? ({
-                      height: 'calc(100vh - 220px)',
+                      height: 'calc(100vh - 280px)',
                       borderRadius: 12,
                       overflow: 'hidden',
                       borderWidth: 1,
@@ -613,7 +613,7 @@ export default function ProjectDetailScreen() {
               style={
                 Platform.OS === 'web'
                   ? ({
-                      height: 'calc(100vh - 220px)',
+                      height: 'calc(100vh - 280px)',
                       borderRadius: 12,
                       overflow: 'hidden',
                       borderWidth: 1,
@@ -1154,6 +1154,8 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 0,
   },
   fileRow: {
     flexDirection: 'row',
