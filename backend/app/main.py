@@ -17,6 +17,8 @@ with engine.connect() as conn:
     try:
         # Add storage_path column to file_nodes if it's missing
         conn.execute(text("ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS storage_path VARCHAR"))
+        # Add ran_lmi_id column to projects if it's missing
+        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ran_lmi_id VARCHAR"))
         conn.commit()
     except Exception as e:
         # Don't crash app if migration fails; it will log and continue
