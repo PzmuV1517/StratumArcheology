@@ -5,6 +5,9 @@
 :root {
   color-scheme: dark;
 }
+.stratum-light-theme {
+  color-scheme: light;
+}
 
 html, body, #root {
   min-height: 100%;
@@ -12,6 +15,7 @@ html, body, #root {
 }
 /* Ensure dark base behind fixed overlays */
 body { background-color: #000; }
+.stratum-light-theme body { background-color: #ffffff; }
 
 /* Hide scrollbars on web while keeping scrolling functional */
 /* Firefox */
@@ -39,6 +43,7 @@ body::-webkit-scrollbar-thumb { background: transparent; }
   /* Fade from transparent to the page bg (#000) */
   background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #000 100%);
 }
+.stratum-light-theme .colorbends-fade-bottom { background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, #ffffff 100%); }
 
 /* Fade the top of the DotGrid into black so it blends into the hero area */
 .dotgrid-fade-top {
@@ -51,3 +56,4 @@ body::-webkit-scrollbar-thumb { background: transparent; }
   z-index: 1; /* above DotGrid (z=0), below content (z>=2) and hero (z=10) */
   background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0) 100%);
 }
+.stratum-light-theme .dotgrid-fade-top { background: linear-gradient(to bottom, #ffffff 0%, rgba(255,255,255,0) 100%); }

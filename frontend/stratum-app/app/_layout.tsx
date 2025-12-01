@@ -2,8 +2,9 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import UniversalNavbar from '../src/components/UniversalNavbar';
 
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 
@@ -69,14 +70,38 @@ function RootLayoutNav() {
     document.head.appendChild(style);
   }, []);
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Apply CSS variables for light theme on web
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const cls = 'stratum-light-theme';
+    const root = document.documentElement;
+    if (theme === 'light') root.classList.add(cls); else root.classList.remove(cls);
+  }, [theme]);
+
+  const navTheme = theme === 'dark' ? StratumDarkTheme : {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: '#79b8ff',
+      background: '#ffffff',
+      card: '#f7fbff',
+      text: '#0b1e2d',
+      border: '#cde7ff',
+      notification: '#79b8ff',
+    },
+  };
+
   return (
-    <ThemeProvider value={StratumDarkTheme}>
+    <ThemeProvider value={navTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <UniversalNavbar theme={theme} onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} />
     </ThemeProvider>
   );
 }
