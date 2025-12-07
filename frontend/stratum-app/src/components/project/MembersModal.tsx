@@ -33,11 +33,20 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [generatedExpiresAt, setGeneratedExpiresAt] = useState<string | null>(null);
+  const [isManaging, setIsManaging] = useState(false);
 
   const changeRole = async (userId: string, role: 'RESEARCHER' | 'GUEST') => {
     try {
       setManageError(null);
+      const member = members.find(m => m.id === userId);
+      const currentRole = (member?.role || '').toString().toUpperCase();
+      const newRole = role.toUpperCase();
+      if (currentRole === newRole) {
+        setManageError(`User is already a ${role.toLowerCase()}`);
+        return;
+      }
       await projectService.updateMemberRole(projectId, userId, role.toLowerCase());
+      setIsManaging(false);
       onManage();
     } catch (e: any) {
       setManageError(e?.message || 'Failed to update role');
@@ -76,8 +85,8 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
         <View style={[styles.modalCard, { maxHeight: '85%' }]}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <Text style={styles.sectionTitle}>Team Members</Text>
-            <TouchableOpacity style={styles.actionButton} onPress={onManage}>
-              <Text style={styles.actionButtonText}>+ Manage</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => setIsManaging(!isManaging)}>
+              <Text style={styles.actionButtonText}>{isManaging ? '✓ Done' : '+ Manage'}</Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: '75%' }}>
@@ -85,7 +94,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               members.map((m) => (
                 <View key={m.id} style={{ marginBottom: 10 }}>
                   {renderMember(m)}
-                  {isOwner && m.id !== ownerId && (
+                  {isOwner && m.id !== ownerId && isManaging && (
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                       <TouchableOpacity style={styles.smallBtn} onPress={() => changeRole(m.id, 'RESEARCHER')}>
                         <Text style={styles.smallBtnText}>Make Researcher</Text>

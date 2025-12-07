@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function MapEditor({ projectId }: { projectId: string }) {
+export default function MapEditor({ projectId, canEdit = true }: { projectId: string; canEdit?: boolean }) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.text}>GPS editor is available on Web for now. Open this screen in a browser to draw and edit polygons.</Text>

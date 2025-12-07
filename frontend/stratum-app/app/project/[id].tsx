@@ -134,6 +134,26 @@ export default function ProjectDetailScreen() {
     }
   }, [id]);
 
+  // Get current user's role in this project
+  const getCurrentUserRole = useCallback(() => {
+    const userId = currentUser?.id || project?.owner_id;
+    if (!userId) return null;
+    if (userId === project?.owner_id) return 'LEADER';
+    const member = members.find(m => m.id === userId);
+    return member ? (member.role || '').toString().toUpperCase() : null;
+  }, [currentUser?.id, project?.owner_id, members]);
+
+  // Permission helpers
+  const isGuest = getCurrentUserRole() === 'GUEST';
+  const isResearcher = getCurrentUserRole() === 'RESEARCHER';
+  const isOwner = getCurrentUserRole() === 'LEADER';
+  const canEdit = !isGuest;
+  const canChangeSettings = isOwner;
+  const canDownload = !isGuest;
+  const canEditFiles = !isGuest;
+  const canEditMatrix = !isGuest;
+  const canEditMap = !isGuest;
+
   // Sync UI with route param when available
   useEffect(() => {
     const tabParam = (globalParams?.tab as string) || '';
@@ -222,6 +242,12 @@ export default function ProjectDetailScreen() {
   };
 
   const uploadIntoCurrent = async () => {
+    // Permission check: guests cannot upload files
+    if (isGuest) {
+      Alert.alert('Permission Denied', 'Guests can only view files. Upload is not permitted.');
+      return;
+    }
+    
     try {
       const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: '*/*' });
       if (res.canceled) return;
@@ -362,6 +388,12 @@ export default function ProjectDetailScreen() {
   };
 
   const handleCreateNote = () => {
+    // Permission check: guests cannot create notes
+    if (isGuest) {
+      Alert.alert('Permission Denied', 'Guests can only view notes. Creating notes is not permitted.');
+      return;
+    }
+    
     router.push({
       pathname: '/create-note',
       params: { projectId: project?.id }
@@ -393,6 +425,12 @@ export default function ProjectDetailScreen() {
   };
 
   const handleDeleteNote = async (noteId: string) => {
+    // Permission check: guests cannot delete notes
+    if (isGuest) {
+      Alert.alert('Permission Denied', 'Guests can only view notes. Deleting notes is not permitted.');
+      return;
+    }
+    
     try {
       await noteService.deleteNote(noteId);
       await loadNotes();
@@ -404,6 +442,13 @@ export default function ProjectDetailScreen() {
   
 
   const handleProjectSettings = () => {
+    // Permission check: only owners can change project settings
+    if (!canChangeSettings) {
+      const role = getCurrentUserRole() || 'GUEST';
+      Alert.alert('Permission Denied', `${role}s cannot modify project settings. Only the project owner can change settings.`);
+      return;
+    }
+    
     // Directly navigate to the Edit Project screen
     if (project?.id) {
       router.push({
@@ -600,7 +645,7 @@ export default function ProjectDetailScreen() {
           ) : activeTab === 'gallery' ? (
             <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
           ) : activeTab === 'artefacts' ? (
-            <ArtefactsTab projectId={project?.id as string} />
+            <ArtefactsTab projectId={project?.id as string} canEdit={canEditFiles} />
           ) : activeTab === 'notes' ? (
             <NotesSection
               notes={notes as any}
@@ -628,7 +673,7 @@ export default function ProjectDetailScreen() {
                     }
               }
             >
-              <MapEditor projectId={project?.id as string} />
+              <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
             </View>
           ) : activeTab === 'matrix' ? (
             <View
@@ -730,10 +775,10 @@ export default function ProjectDetailScreen() {
       {/* Members modal (component) */}
       <MembersModal
         visible={showMembersModal}
-        members={members}
+        members={members.map(m => ({ ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' }))}
         onClose={() => setShowMembersModal(false)}
         onManage={handleManageMembers}
-        renderMember={(m) => renderMember({ item: m })}
+        renderMember={(m) => renderMember({ item: { ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' } })}
         projectId={id as string}
         currentUserId={currentUser?.id || project?.owner_id}
         projectOwnerId={project?.owner_id}
@@ -816,12 +861,7 @@ export default function ProjectDetailScreen() {
               console.error('Refresh after upload failed:', e);
             }
           }}
-          canEdit={(() => {
-            const meId = currentUser?.id;
-            const me = members.find(m => m.id === meId);
-            const role = (me?.role || '').toString().toUpperCase();
-            return me ? role !== 'GUEST' : true;
-          })()}
+          canEdit={canEditFiles}
         />
       </Modal>
 
@@ -830,6 +870,12 @@ export default function ProjectDetailScreen() {
         visible={showNewFolderModal}
         onCancel={() => setShowNewFolderModal(false)}
         onCreate={async (name) => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Creating folders is not permitted.');
+            setShowNewFolderModal(false);
+            return;
+          }
+          
           if (!name) return;
           try {
             const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : undefined;
@@ -851,6 +897,12 @@ export default function ProjectDetailScreen() {
         isDeleting={isDeleting}
         onCancel={() => setDeleteNodeTarget(null)}
         onConfirm={async () => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Deleting is not permitted.');
+            setDeleteNodeTarget(null);
+            return;
+          }
+          
           if (!deleteNodeTarget) return;
           try {
             setIsDeleting(true);
@@ -873,6 +925,12 @@ export default function ProjectDetailScreen() {
         isFile={renameNode?.type === 'file'}
         onCancel={() => setRenameNode(null)}
         onRename={async (newBaseName) => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Renaming is not permitted.');
+            setRenameNode(null);
+            return;
+          }
+          
           if (!renameNode) return;
           try {
             let finalName = newBaseName.trim();
@@ -895,6 +953,12 @@ export default function ProjectDetailScreen() {
         visible={!!moveMode?.node}
         itemName={moveMode?.node?.name || ''}
         onMoveHere={async () => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Moving is not permitted.');
+            setMoveMode(null);
+            return;
+          }
+          
           if (!moveMode?.node) return;
           try {
             const destParentId = currentFolder?.id || null;
