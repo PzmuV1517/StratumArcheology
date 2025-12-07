@@ -51,26 +51,31 @@ export const projectService = {
   },
 
   // Invite a user to a project
-  inviteUser: async (projectId, email, role) => {
+  createInvite: async (projectId, role, ttlHours) => {
     try {
-      const response = await api.post(`/projects/${projectId}/invite`, {
-        email,
+      const response = await api.post(`/projects/${projectId}/invites`, {
         role,
+        ttl_hours: ttlHours,
       });
+      return response.data; // { token, project_id, role, expires_at, accept_path }
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  acceptInvite: async (token) => {
+    try {
+      const response = await api.post(`/invites/accept`, { token });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // Get project members
+  // Get project members: use getProject which includes members
   getProjectMembers: async (projectId) => {
-    try {
-      const response = await api.get(`/projects/${projectId}/members`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
+    const project = await projectService.getProject(projectId);
+    return project.members || [];
   },
 
   // Remove a member from a project
@@ -85,7 +90,7 @@ export const projectService = {
   // Update member role
   updateMemberRole: async (projectId, userId, role) => {
     try {
-      const response = await api.put(`/projects/${projectId}/members/${userId}`, {
+      const response = await api.put(`/projects/${projectId}/members/${userId}/role`, {
         role,
       });
       return response.data;

@@ -6,10 +6,11 @@ import { config } from '../config/config';
 const resolveBaseUrl = async () => {
   try {
     const override = await AsyncStorage.getItem('apiBaseUrlOverride');
-    const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-    let base = override || (isWeb ? `${window.location.origin}/api` : config.apiBaseUrl);
+    // Prefer explicit config apiBaseUrl for both web and native; allow runtime override via storage
+    let base = override || config.apiBaseUrl;
 
     // Prevent mixed content on HTTPS pages by upgrading scheme when pointing to same host
+    const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
     if (isWeb && window.location.protocol === 'https:' && base.startsWith('http://')) {
       try {
         const target = new URL(base);

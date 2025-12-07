@@ -182,3 +182,27 @@ class FileNodeRenameRequest(BaseModel):
 
 class FileNodeMoveRequest(BaseModel):
     new_parent_id: Optional[str] = None
+
+
+# Invite Schemas
+class InviteCreateRequest(BaseModel):
+    role: UserRole = UserRole.GUEST
+    ttl_hours: Optional[int] = None  # optional time-to-live in hours, default 14 days
+
+
+class InviteResponse(BaseModel):
+    token: str
+    project_id: str
+    role: str
+    expires_at: Optional[datetime] = None
+    accept_path: str  # client path such as /invite?token=...
+
+
+class InviteAcceptRequest(BaseModel):
+    token: str
+
+
+class InviteAcceptResponse(BaseModel):
+    project_id: str
+    user_id: str
+    role: str

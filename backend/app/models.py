@@ -149,3 +149,20 @@ class ProjectGPS(Base):
 
     # Relationship not strictly needed, but can be useful
     project = relationship('Project', backref=backref('gps', uselist=False, cascade='all, delete-orphan'))
+
+
+class ProjectInvite(Base):
+    __tablename__ = 'project_invites'
+
+    token = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(String, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.GUEST)
+    created_by = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+    redeemed_by = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    redeemed_at = Column(DateTime, nullable=True)
+    used = Column(Boolean, default=False)
+
+    # Relationships (optional)
+    project = relationship('Project', backref=backref('invites', cascade='all, delete-orphan'))

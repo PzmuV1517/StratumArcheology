@@ -90,6 +90,7 @@ export default function ProjectDetailScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [LuFilesIcon, setLuFilesIcon] = useState<any>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
   const [GiHamburger, setGiHamburger] = useState<any>(null);
   const reopenFilesOnReturnRef = useRef(false);
 
@@ -106,7 +107,31 @@ export default function ProjectDetailScreen() {
   }, []);
 
   useEffect(() => {
+    // Load current user from storage
+    (async () => {
+      try {
+        const { authService } = await import('../../src/services/authService');
+        const user = await authService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     loadProjectData();
+  }, [id]);
+
+  const handleManageMembers = useCallback(async () => {
+    try {
+      if (!id) return;
+      const updated = await projectService.getProject(id as string);
+      setProject(updated);
+      setMembers(updated?.members || []);
+    } catch (e) {
+      console.error('Failed to refresh members after manage action:', e);
+    }
   }, [id]);
 
   // Sync UI with route param when available
@@ -376,10 +401,7 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  const handleManageMembers = () => {
-    // For now, show an alert since we haven't created the member management screen yet
-    Alert.alert('Coming Soon', 'Member management screen will be available soon');
-  };
+  
 
   const handleProjectSettings = () => {
     // Directly navigate to the Edit Project screen
@@ -712,6 +734,9 @@ export default function ProjectDetailScreen() {
         onClose={() => setShowMembersModal(false)}
         onManage={handleManageMembers}
         renderMember={(m) => renderMember({ item: m })}
+        projectId={id as string}
+        currentUserId={currentUser?.id || project?.owner_id}
+        projectOwnerId={project?.owner_id}
       />
 
       {/* Files overlay full-screen (component) */}
@@ -791,6 +816,12 @@ export default function ProjectDetailScreen() {
               console.error('Refresh after upload failed:', e);
             }
           }}
+          canEdit={(() => {
+            const meId = currentUser?.id;
+            const me = members.find(m => m.id === meId);
+            const role = (me?.role || '').toString().toUpperCase();
+            return me ? role !== 'GUEST' : true;
+          })()}
         />
       </Modal>
 

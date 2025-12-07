@@ -35,9 +35,10 @@ interface Props {
   onBulkMove?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk move
   onBulkDelete?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk delete
   onBulkDownload?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk download
+  canEdit?: boolean; // Permissions: disable editing for guests
 }
 
-export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload }: Props) {
+export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
   if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
@@ -311,10 +312,10 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
+            <TouchableOpacity style={[styles.actionButton, !canEdit && { opacity: 0.4 }]} disabled={!canEdit} onPress={onCreateFolder}>
               <Text style={styles.actionButtonText}>+ Folder</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
+            <TouchableOpacity style={[styles.actionButton, !canEdit && { opacity: 0.4 }]} disabled={!canEdit} onPress={onUpload}>
               <Text style={styles.actionButtonText}>+ Upload</Text>
             </TouchableOpacity>
             {!multiSelect ? (
@@ -516,7 +517,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                           <Text style={{ color: '#9A9A9A' }}>Download</Text>
                         </TouchableOpacity>
                       )}
-                      {!node.is_locked && (
+                      {!node.is_locked && canEdit && (
                         <>
                           <TouchableOpacity onPress={() => onRename(node)}>
                             <Text style={{ color: '#9A9A9A' }}>Rename</Text>
