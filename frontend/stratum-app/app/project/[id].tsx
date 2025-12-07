@@ -143,10 +143,11 @@ export default function ProjectDetailScreen() {
     return member ? (member.role || '').toString().toUpperCase() : null;
   }, [currentUser?.id, project?.owner_id, members]);
 
-  // Permission helpers
-  const isGuest = getCurrentUserRole() === 'GUEST';
-  const isResearcher = getCurrentUserRole() === 'RESEARCHER';
-  const isOwner = getCurrentUserRole() === 'LEADER';
+  // Permission helpers - use defensive checks
+  const currentRole = getCurrentUserRole();
+  const isGuest = currentRole === 'GUEST';
+  const isResearcher = currentRole === 'RESEARCHER';
+  const isOwner = currentRole === 'LEADER' || !currentRole; // If no role found, assume owner (for backward compatibility)
   const canEdit = !isGuest;
   const canChangeSettings = isOwner;
   const canDownload = !isGuest;

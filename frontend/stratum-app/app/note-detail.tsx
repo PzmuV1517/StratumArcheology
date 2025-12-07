@@ -194,7 +194,7 @@ export default function NoteDetailScreen() {
           {isAudioNote ? (
             <View style={styles.voiceNoteWrapper}>
               <Text style={styles.sectionTitle}>Voice Note</Text>
-              {note.attachments
+              {(note?.attachments || [])
                 .filter((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'))
                 .map((att: any) => (
                   <View key={att.id} style={styles.voicePlayback}>

@@ -282,12 +282,12 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         )}
       </View>
       {Platform.OS === 'web' && isDragging && (
-        <View style={styles.dropMask}
+        <div style={{position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, display: 'flex'}}
           onDragOver={(e: any) => { e.preventDefault(); lastDragEvent.current = Date.now(); }}
           onDrop={(e: any) => {
             if (e.nativeEvent?.dataTransfer) {
               const dt = e.nativeEvent.dataTransfer;
-              const files = Array.from(dt.files || []);
+              const files = Array.from(dt.files || []) as File[];
               if (files.length) {
                 void handleFilesUpload(files);
               }
@@ -296,11 +296,11 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
             setDragDepth(0);
           }}
         >
-          <View style={styles.dropBox}>
-            <Text style={styles.dropBoxTitle}>Drop file here</Text>
-            <Text style={styles.dropBoxSub}>Release or press ESC to cancel</Text>
-          </View>
-        </View>
+          <div style={{backgroundColor: '#1A1A1A', borderRadius: 12, border: '2px dashed #FF2A2A', padding: 40, textAlign: 'center'}}>
+            <Text style={{color: '#FF2A2A', fontSize: 20, fontWeight: '700', marginBottom: 8}}>Drop file here</Text>
+            <Text style={{color: '#9A9A9A', fontSize: 14}}>Release or press ESC to cancel</Text>
+          </div>
+        </div>
       )}
       {Platform.OS === 'web' && isUploading && (
         <View pointerEvents="none" style={styles.uploadingBanner}>

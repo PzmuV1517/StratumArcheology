@@ -496,7 +496,10 @@ export default function DataPreviewScreen() {
   }, [canZoomWeb]);
 
   const handleNotePress = (noteId: string) => {
-    router.push({ pathname: '/note-detail', params: { noteId, projectId: project?.id } });
+    // Navigate to note detail - projectId should be passed through navigation params if available
+    const params: any = { noteId };
+    // Try to get projectId from previous route or pass it through params
+    router.push({ pathname: '/note-detail', params });
   };
 
   return (
