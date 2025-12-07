@@ -244,6 +244,7 @@ export default function ProjectDetailScreen() {
   const uploadIntoCurrent = async () => {
     // Permission check: guests cannot upload files
     if (isGuest) {
+      console.log('Upload blocked: user is guest, isGuest=', isGuest);
       Alert.alert('Permission Denied', 'Guests can only view files. Upload is not permitted.');
       return;
     }
