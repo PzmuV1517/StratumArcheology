@@ -72,6 +72,16 @@ export const projectService = {
     }
   },
 
+  // Join project by short code
+  joinByCode: async (code) => {
+    try {
+      const response = await api.post(`/invites/join-by-code`, { code });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   // Get project members: use getProject which includes members
   getProjectMembers: async (projectId) => {
     const project = await projectService.getProject(projectId);
@@ -93,6 +103,16 @@ export const projectService = {
       const response = await api.put(`/projects/${projectId}/members/${userId}/role`, {
         role,
       });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Transfer project ownership to another member
+  transferOwnership: async (projectId, newOwnerId) => {
+    try {
+      const response = await api.post(`/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

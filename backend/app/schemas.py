@@ -192,6 +192,7 @@ class InviteCreateRequest(BaseModel):
 
 class InviteResponse(BaseModel):
     token: str
+    code: str  # Short code like "PRJ-ABC123"
     project_id: str
     role: str
     expires_at: Optional[datetime] = None
@@ -200,6 +201,10 @@ class InviteResponse(BaseModel):
 
 class InviteAcceptRequest(BaseModel):
     token: str
+
+
+class InviteJoinByCodeRequest(BaseModel):
+    code: str
 
 
 class InviteAcceptResponse(BaseModel):

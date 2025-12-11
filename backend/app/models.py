@@ -155,6 +155,7 @@ class ProjectInvite(Base):
     __tablename__ = 'project_invites'
 
     token = Column(String, primary_key=True, default=generate_uuid)
+    code = Column(String, unique=True, nullable=True, index=True)  # Short code like "PRJ-ABC123"
     project_id = Column(String, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.GUEST)
     created_by = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)

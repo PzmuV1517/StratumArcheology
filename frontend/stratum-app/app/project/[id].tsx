@@ -123,6 +123,28 @@ export default function ProjectDetailScreen() {
     loadProjectData();
   }, [id]);
 
+  // Check if user still has access to the project (detect kicks)
+  useEffect(() => {
+    if (!id || !currentUser?.id) return;
+    
+    const checkAccess = async () => {
+      try {
+        await projectService.getProject(id as string);
+      } catch (e: any) {
+        // If we get a 403 or 404, user was kicked or project deleted
+        if (e?.status === 403 || e?.status === 404 || e?.detail?.includes('access')) {
+          // Redirect to home immediately
+          router.replace('/(tabs)');
+        }
+      }
+    };
+    
+    // Check every 10 seconds
+    const interval = setInterval(checkAccess, 10000);
+    
+    return () => clearInterval(interval);
+  }, [id, currentUser?.id, router]);
+
   const handleManageMembers = useCallback(async () => {
     try {
       if (!id) return;
@@ -508,10 +530,23 @@ export default function ProjectDetailScreen() {
   if (!project) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen options={{ title: 'Project Not Found' }} />
+        <Stack.Screen 
+          options={{ 
+            title: 'Project Not Found',
+            headerStyle: { backgroundColor: '#111111' },
+            headerTintColor: '#FF2A2A',
+            headerTitleStyle: { 
+              color: '#F5F5F5',
+              fontSize: 18,
+              fontWeight: '600'
+            },
+            headerShown: true,
+          }} 
+        />
         <Text style={styles.errorText}>Project not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+        <Text style={styles.errorSubtext}>You may have been removed from this project or it no longer exists.</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(tabs)')}>
+          <Text style={styles.backButtonText}>Go to Projects</Text>
         </TouchableOpacity>
       </View>
     );
@@ -772,6 +807,7 @@ export default function ProjectDetailScreen() {
         onClose={() => setShowMenu(false)}
         onOpenMembers={() => setShowMembersModal(true)}
         onOpenSettings={handleProjectSettings}
+        canChangeSettings={canChangeSettings}
       />
 
       {/* Members modal (component) */}
@@ -784,6 +820,11 @@ export default function ProjectDetailScreen() {
         projectId={id as string}
         currentUserId={currentUser?.id || project?.owner_id}
         projectOwnerId={project?.owner_id}
+        onKicked={async () => {
+          // User was kicked from the project - redirect to home immediately
+          setShowMembersModal(false);
+          router.replace('/(tabs)');
+        }}
       />
 
       {/* Files overlay full-screen (component) */}
@@ -1004,8 +1045,15 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     color: '#F5F5F5',
-    marginBottom: 24,
+    marginBottom: 12,
     fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    marginBottom: 24,
+    textAlign: 'center',
     letterSpacing: 0.5,
   },
   backButton: {

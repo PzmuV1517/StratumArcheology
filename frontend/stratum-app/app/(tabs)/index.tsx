@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
+import { ProjectActionModal } from '../../src/components/project/modals/ProjectActionModal';
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,9 +70,16 @@ export default function ProjectsScreen() {
       ) : (
         <FlatList data={projects} renderItem={renderProject} keyExtractor={(item: any) => item.id} refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.listContainer} />
       )}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/modal')}>
+      <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
+      <ProjectActionModal
+        visible={showActionModal}
+        onClose={() => setShowActionModal(false)}
+        onCreateProject={() => router.push('/modal')}
+        onJoinProject={() => router.push('/join-project')}
+      />
     </View>
   );
 }
