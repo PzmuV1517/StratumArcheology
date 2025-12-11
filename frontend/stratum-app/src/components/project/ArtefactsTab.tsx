@@ -170,9 +170,12 @@ export default function ArtefactsTab({ projectId, canEdit = true }: { projectId:
       setPickedImages([]);
       setNotes(['']);
       setPreviewIndex(0);
+      Alert.alert('Success', 'Artefact created successfully!');
       await load();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to create artefact', e);
+      const message = e?.detail || e?.message || 'Failed to create artefact. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setCreating(false);
     }

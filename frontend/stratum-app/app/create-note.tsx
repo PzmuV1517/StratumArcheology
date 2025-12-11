@@ -167,11 +167,14 @@ export default function CreateNoteScreen() {
           Alert.alert('Warning', 'Note saved but audio upload failed');
         }
       }
-      // Refresh notes after audio upload finishes by delaying navigation slightly
-      setTimeout(() => navigateBackToNotes(), 150);
-    } catch (error) {
+      // Show success and navigate back
+      Alert.alert('Success', 'Note created successfully!', [
+        { text: 'OK', onPress: () => setTimeout(() => navigateBackToNotes(), 100) }
+      ]);
+    } catch (error: any) {
       console.error('Failed to create note:', error);
-      Alert.alert('Error', 'Failed to create note');
+      const message = error?.detail || error?.message || 'Failed to create note. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }

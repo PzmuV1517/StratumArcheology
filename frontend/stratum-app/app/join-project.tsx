@@ -56,12 +56,22 @@ export default function JoinProjectScreen() {
 
     try {
       await projectService.acceptInvite(token);
-      Alert.alert('Success', 'You have joined the project!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') }
+      Alert.alert('Welcome!', 'You have successfully joined the project. You can now view and contribute based on your assigned role.', [
+        { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
       ]);
     } catch (error: any) {
-      const message = error?.detail || error?.message || 'Failed to join project';
-      Alert.alert('Error', message);
+      let message = error?.detail || error?.message || 'Failed to join project';
+      // Provide more helpful error messages
+      if (message.includes('already a member')) {
+        message = 'You are already a member of this project. Check your projects list.';
+      } else if (message.includes('expired')) {
+        message = 'This invite link has expired. Please ask the project leader for a new one.';
+      } else if (message.includes('used')) {
+        message = 'This invite link has already been used. Please ask for a new invite.';
+      } else if (message.includes('not found')) {
+        message = 'Invalid invite link. Please check the link and try again.';
+      }
+      Alert.alert('Cannot Join Project', message);
     } finally {
       setLoading(false);
     }
@@ -78,12 +88,22 @@ export default function JoinProjectScreen() {
 
     try {
       await projectService.joinByCode(codeInput.trim().toUpperCase());
-      Alert.alert('Success', 'You have joined the project!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') }
+      Alert.alert('Welcome!', 'You have successfully joined the project. You can now view and contribute based on your assigned role.', [
+        { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
       ]);
     } catch (error: any) {
-      const message = error?.detail || error?.message || 'Invalid or expired invite code';
-      Alert.alert('Error', message);
+      let message = error?.detail || error?.message || 'Invalid or expired invite code';
+      // Provide more helpful error messages
+      if (message.includes('already a member')) {
+        message = 'You are already a member of this project. Check your projects list.';
+      } else if (message.includes('expired')) {
+        message = 'This invite code has expired. Please ask the project leader for a new one.';
+      } else if (message.includes('used')) {
+        message = 'This invite code has already been used. Please ask for a new invite.';
+      } else if (message.includes('Invalid') || message.includes('not found')) {
+        message = 'Invalid invite code. Please check the code and try again.';
+      }
+      Alert.alert('Cannot Join Project', message);
     } finally {
       setLoading(false);
     }

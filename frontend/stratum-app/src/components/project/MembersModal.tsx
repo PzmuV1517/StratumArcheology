@@ -254,11 +254,13 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                     <TouchableOpacity 
                       style={styles.memberRow}
                       onPress={() => {
+                        console.log('Member pressed:', m.id, 'isManaging:', isManaging, 'canManageThis:', canManageThis);
                         if (isManaging && canManageThis) {
                           toggleMemberExpand(m.id);
                         }
                       }}
-                      activeOpacity={isManaging && canManageThis ? 0.7 : 1}
+                      activeOpacity={0.7}
+                      disabled={!isManaging || !canManageThis}
                     >
                       <View style={styles.memberInfo}>
                         {renderMember(m)}
@@ -275,7 +277,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                     {isExpanded && (
                       <View style={styles.memberActions}>
                         {/* Role change buttons */}
-                        {canChangeRoleOf(m) && getAvailableRoles(m).map(role => (
+                        {canChangeRoleOf(m) && getAvailableRoles(m).length > 0 && getAvailableRoles(m).map(role => (
                           <TouchableOpacity 
                             key={role}
                             style={styles.actionBtn}
@@ -288,7 +290,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                         ))}
                         
                         {/* Transfer ownership button (leader only) */}
-                        {isOwner && m.id !== ownerId && (
+                        {isOwner && (
                           <TouchableOpacity 
                             style={[styles.actionBtn, styles.transferBtn]}
                             onPress={() => setShowTransferConfirm(m.id)}
@@ -303,9 +305,16 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                             style={[styles.actionBtn, styles.dangerBtn]}
                             onPress={() => removeMember(m.id)}
                           >
-                            <Text style={styles.actionBtnText}>Remove</Text>
+                            <Text style={styles.actionBtnText}>Remove from Project</Text>
                           </TouchableOpacity>
                         )}
+                        
+                        {/* If no actions available, show info */}
+                        {!canChangeRoleOf(m) && !isOwner && !canKickMember(m) && (
+                          <Text style={styles.noActionsText}>No actions available</Text>
+                        )}
+                      </View>
+                    )}
                       </View>
                     )}
                   </View>
@@ -382,6 +391,20 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               
               {generatedLink && (
                 <View style={styles.linkContainer}>
+                  {/* Close button */}
+                  <TouchableOpacity 
+                    style={styles.inviteCloseBtn} 
+                    onPress={() => {
+                      setGeneratedLink(null);
+                      setGeneratedCode(null);
+                      setGeneratedExpiresAt(null);
+                      setCopiedLink(false);
+                      setCopiedCode(false);
+                    }}
+                  >
+                    <Text style={styles.inviteCloseBtnText}>✕</Text>
+                  </TouchableOpacity>
+                  
                   {/* Invite Code Section */}
                   {generatedCode && (
                     <View style={styles.codeSection}>
@@ -542,6 +565,11 @@ const styles = StyleSheet.create({
   dangerBtn: {
     backgroundColor: '#8B0000',
   },
+  noActionsText: {
+    color: '#666',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
@@ -672,6 +700,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
+    position: 'relative',
+  },
+  inviteCloseBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  inviteCloseBtnText: {
+    color: '#999',
+    fontSize: 16,
+    fontWeight: '600',
   },
   codeSection: {
     width: '100%',

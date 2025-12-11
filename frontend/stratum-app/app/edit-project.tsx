@@ -73,9 +73,10 @@ export default function EditProjectScreen() {
       Alert.alert('Success', 'Project updated successfully', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update project:', error);
-      Alert.alert('Error', 'Failed to update project');
+      const message = error?.detail || error?.message || 'Failed to save changes. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }
@@ -93,9 +94,10 @@ export default function EditProjectScreen() {
       setShowDeleteModal(false);
       // Navigate directly to root; RootLayout will redirect based on auth
       router.replace('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete project:', error);
-      Alert.alert('Error', 'Failed to delete project');
+      const message = error?.detail || error?.message || 'Failed to delete project. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setDeleting(false);
     }

@@ -104,16 +104,18 @@ async def accept_invite(
     )
     existing = db.execute(stmt).first()
 
-    if not existing:
-        # Add membership
-        role_value = invite.role.value if hasattr(invite.role, 'value') else str(invite.role)
-        db.execute(
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already a member of this project")
+
+    # Add membership
+    role_value = invite.role.value if hasattr(invite.role, 'value') else str(invite.role)
+    db.execute(
             project_members.insert().values(
-                project_id=invite.project_id,
-                user_id=current_user.id,
-                role=role_value
-            )
+            project_id=invite.project_id,
+            user_id=current_user.id,
+            role=role_value
         )
+    )
 
     # Mark invite as used
     invite.used = True

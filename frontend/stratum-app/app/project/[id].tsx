@@ -327,9 +327,10 @@ export default function ProjectDetailScreen() {
       
       if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
       else await loadRootFiles();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Upload error:', e);
-      Alert.alert('Upload failed', 'Could not upload file');
+      const message = e?.detail || e?.message || 'Could not upload file. Please check your connection and try again.';
+      Alert.alert('Upload Failed', message);
     }
   };
 
@@ -457,9 +458,11 @@ export default function ProjectDetailScreen() {
     
     try {
       await noteService.deleteNote(noteId);
+      Alert.alert('Deleted', 'Note has been removed.');
       await loadNotes();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to delete note');
+    } catch (e: any) {
+      const message = e?.detail || e?.message || 'Failed to delete note. Please try again.';
+      Alert.alert('Error', message);
     }
   };
 

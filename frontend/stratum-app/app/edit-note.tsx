@@ -41,9 +41,10 @@ export default function EditNoteScreen() {
       const noteData: Note = await noteService.getNote(noteId as string);
       setTitle(noteData.title);
       setContent(noteData.content || '');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading note:', error);
-      Alert.alert('Error', 'Failed to load note', [
+      const message = error?.detail || error?.message || 'Failed to load note. It may have been deleted.';
+      Alert.alert('Error', message, [
         { text: 'OK', onPress: () => router.back() }
       ]);
     } finally {
@@ -53,7 +54,7 @@ export default function EditNoteScreen() {
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Missing Fields', 'Please enter both a title and content for the note.');
       return;
     }
 
@@ -63,12 +64,13 @@ export default function EditNoteScreen() {
         title: title.trim(),
         content: content.trim(),
       });
-      Alert.alert('Success', 'Note updated successfully', [
+      Alert.alert('Saved', 'Your changes have been saved.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update note:', error);
-      Alert.alert('Error', 'Failed to update note');
+      const message = error?.detail || error?.message || 'Failed to save changes. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }

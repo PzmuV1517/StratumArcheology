@@ -28,10 +28,12 @@ export default function CreateProjectModal() {
         description: description.trim() || null,
         ran_lmi_id: ranLmiId.trim(),
       });
-      // Close modal immediately, the projects list will refresh automatically
-      router.back();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create project');
+      Alert.alert('Success', 'Project created successfully! You are now the project leader.', [
+        { text: 'View Project', onPress: () => router.back() }
+      ]);
+    } catch (error: any) {
+      const message = error?.detail || error?.message || 'Failed to create project. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
