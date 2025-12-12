@@ -93,6 +93,7 @@ export default function ProjectDetailScreen() {
     const [currentUser, setCurrentUser] = useState<any>(null);
   const [GiHamburger, setGiHamburger] = useState<any>(null);
   const reopenFilesOnReturnRef = useRef(false);
+  const kickedAlertShownRef = useRef(false);
 
   useEffect(() => {
     // Load web-only icon lazily to avoid native bundling issues
@@ -123,24 +124,38 @@ export default function ProjectDetailScreen() {
     loadProjectData();
   }, [id]);
 
-  // Check if user still has access to the project (detect kicks)
+  // Check if user still has access to the project and refresh role (detect kicks and demotions)
   useEffect(() => {
     if (!id || !currentUser?.id) return;
     
-    const checkAccess = async () => {
+    const checkAccessAndRole = async () => {
+      // Skip if we've already shown the kicked alert
+      if (kickedAlertShownRef.current) return;
+      
       try {
-        await projectService.getProject(id as string);
+        const updated = await projectService.getProject(id as string);
+        // Update members to reflect any role changes immediately
+        setMembers(updated.members || []);
+        setProject(updated);
       } catch (e: any) {
         // If we get a 403 or 404, user was kicked or project deleted
-        if (e?.status === 403 || e?.status === 404 || e?.detail?.includes('access')) {
-          // Redirect to home immediately
-          router.replace('/(tabs)');
+        if (e?.status === 403 || e?.status === 404 || e?.detail?.includes('access') || e?.detail?.includes('not a member')) {
+          // Prevent multiple alerts
+          if (kickedAlertShownRef.current) return;
+          kickedAlertShownRef.current = true;
+          
+          // Show alert and redirect to home immediately
+          Alert.alert(
+            'Removed from Project',
+            'You have been removed from this project.',
+            [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+          );
         }
       }
     };
     
-    // Check every 10 seconds
-    const interval = setInterval(checkAccess, 10000);
+    // Check every 3 seconds for faster response to role changes and kicks
+    const interval = setInterval(checkAccessAndRole, 3000);
     
     return () => clearInterval(interval);
   }, [id, currentUser?.id, router]);

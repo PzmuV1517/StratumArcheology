@@ -17,7 +17,12 @@ export const projectService = {
       const response = await api.get(`/projects/${projectId}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      // Preserve status code for access control checks
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
     }
   },
 
