@@ -92,9 +92,14 @@ export default function JoinProjectScreen() {
         { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
       ]);
     } catch (error: any) {
+      console.error('Join by code error:', error);
       let message = error?.detail || error?.message || 'Invalid or expired invite code';
       // Provide more helpful error messages
-      if (message.includes('already a member')) {
+      if (error?.status === 401) {
+        message = 'You need to be logged in to join a project. Please log in and try again.';
+      } else if (error?.status === 403) {
+        message = 'Access denied. You may need to log in again.';
+      } else if (message.includes('already a member')) {
         message = 'You are already a member of this project. Check your projects list.';
       } else if (message.includes('expired')) {
         message = 'This invite code has expired. Please ask the project leader for a new one.';

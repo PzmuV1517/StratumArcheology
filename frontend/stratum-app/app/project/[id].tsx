@@ -752,7 +752,7 @@ export default function ProjectDetailScreen() {
             >
               {Platform.OS === 'web' ? (
                 <div style={{ height: '100%', width: '100%' }}>
-                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string })}
+                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })}
                 </div>
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

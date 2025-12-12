@@ -64,7 +64,9 @@ async def create_invite(
         code=short_code,
         role=body.role,
         created_by=current_user.id,
-        expires_at=expires_at
+        expires_at=expires_at,
+        max_uses=body.max_uses,  # None = unlimited
+        use_count=0
     )
     db.add(invite)
     db.commit()
@@ -76,6 +78,8 @@ async def create_invite(
         project_id=project_id,
         role=invite.role.value if hasattr(invite.role, 'value') else str(invite.role),
         expires_at=invite.expires_at,
+        max_uses=invite.max_uses,
+        use_count=invite.use_count,
         accept_path=f"/invite?token={invite.token}"
     )
 
@@ -92,7 +96,12 @@ async def accept_invite(
     invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.token == token).first()
     if not invite:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
-    if invite.used:
+    
+    # Check if invite has reached max uses (if max_uses is set)
+    if invite.max_uses is not None and invite.use_count >= invite.max_uses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses")
+    # Legacy support: also check used flag for old single-use invites
+    if invite.used and invite.max_uses is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already used")
     if invite.expires_at and invite.expires_at < datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite expired")
@@ -117,10 +126,16 @@ async def accept_invite(
         )
     )
 
-    # Mark invite as used
-    invite.used = True
+    # Update invite usage
+    invite.use_count = (invite.use_count or 0) + 1
     invite.redeemed_by = current_user.id
     invite.redeemed_at = datetime.utcnow()
+    # Mark as fully used if max_uses reached (or if single-use legacy)
+    if invite.max_uses is not None and invite.use_count >= invite.max_uses:
+        invite.used = True
+    elif invite.max_uses is None:
+        # Single-use behavior for legacy invites without max_uses
+        invite.used = True
     db.commit()
 
     return InviteAcceptResponse(
@@ -142,7 +157,12 @@ async def join_by_code(
     invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.code == code).first()
     if not invite:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite code")
-    if invite.used:
+    
+    # Check if invite has reached max uses (if max_uses is set)
+    if invite.max_uses is not None and invite.use_count >= invite.max_uses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses")
+    # Legacy support: also check used flag for old single-use invites
+    if invite.used and invite.max_uses is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used")
     if invite.expires_at and invite.expires_at < datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code expired")
@@ -167,10 +187,16 @@ async def join_by_code(
         )
     )
 
-    # Mark invite as used
-    invite.used = True
+    # Update invite usage
+    invite.use_count = (invite.use_count or 0) + 1
     invite.redeemed_by = current_user.id
     invite.redeemed_at = datetime.utcnow()
+    # Mark as fully used if max_uses reached (or if single-use legacy)
+    if invite.max_uses is not None and invite.use_count >= invite.max_uses:
+        invite.used = True
+    elif invite.max_uses is None:
+        # Single-use behavior for legacy invites without max_uses
+        invite.used = True
     db.commit()
 
     return InviteAcceptResponse(

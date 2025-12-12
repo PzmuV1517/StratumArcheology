@@ -141,22 +141,40 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    console.log('[Login] handleLogin called, email:', email);
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      if (Platform.OS === 'web') {
+        window.alert('Please fill in all fields');
+      } else {
+        Alert.alert('Error', 'Please fill in all fields');
+      }
       return;
     }
 
     if (!isValidEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address (e.g., user@example.com)');
+      if (Platform.OS === 'web') {
+        window.alert('Please enter a valid email address (e.g., user@example.com)');
+      } else {
+        Alert.alert('Invalid Email', 'Please enter a valid email address (e.g., user@example.com)');
+      }
       return;
     }
 
     setLoading(true);
+    console.log('[Login] Calling login...');
     const result = await login(email, password);
+    console.log('[Login] Result:', result);
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert('Login Failed', result.error);
+      console.log('[Login] Login failed:', result.error);
+      if (Platform.OS === 'web') {
+        window.alert('Login Failed: ' + (result.error || 'Unknown error'));
+      } else {
+        Alert.alert('Login Failed', result.error);
+      }
+    } else {
+      console.log('[Login] Login successful, user should be set in context');
     }
   };
 

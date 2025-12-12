@@ -200,6 +200,7 @@ class FileNodeMoveRequest(BaseModel):
 class InviteCreateRequest(BaseModel):
     role: UserRole = UserRole.GUEST
     ttl_hours: Optional[int] = None  # optional time-to-live in hours, default 14 days
+    max_uses: Optional[int] = None  # None = unlimited uses, otherwise limit to this many redemptions
 
 
 class InviteResponse(BaseModel):
@@ -208,6 +209,8 @@ class InviteResponse(BaseModel):
     project_id: str
     role: str
     expires_at: Optional[datetime] = None
+    max_uses: Optional[int] = None  # None = unlimited
+    use_count: int = 0  # How many times used
     accept_path: str  # client path such as /invite?token=...
 
 

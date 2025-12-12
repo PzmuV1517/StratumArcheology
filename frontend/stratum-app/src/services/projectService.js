@@ -73,7 +73,12 @@ export const projectService = {
       const response = await api.post(`/invites/accept`, { token });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      // Preserve status code for debugging
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
     }
   },
 
@@ -83,7 +88,12 @@ export const projectService = {
       const response = await api.post(`/invites/join-by-code`, { code });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      // Preserve status code for debugging
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
     }
   },
 

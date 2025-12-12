@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Table, Enum as SQLEnum, Boolean, Text, UniqueConstraint, Index
+from sqlalchemy import Column, String, DateTime, ForeignKey, Table, Enum as SQLEnum, Boolean, Text, UniqueConstraint, Index, Integer
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 import uuid
@@ -164,6 +164,9 @@ class ProjectInvite(Base):
     redeemed_by = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     redeemed_at = Column(DateTime, nullable=True)
     used = Column(Boolean, default=False)
+    # Multi-use invite support
+    max_uses = Column(Integer, nullable=True)  # None = unlimited uses
+    use_count = Column(Integer, default=0)  # How many times redeemed
 
     # Relationships (optional)
     project = relationship('Project', backref=backref('invites', cascade='all, delete-orphan'))
