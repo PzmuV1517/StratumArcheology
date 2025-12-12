@@ -97,9 +97,11 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     if (onRefreshAfterUpload) onRefreshAfterUpload();
   }, [projectId, currentFolder, onRefreshAfterUpload, onDropFiles]);
 
-  // Robust drag-and-drop handling (depth + timeout + ESC)
+  // Robust drag-and-drop handling (depth + timeout + ESC) - only for users with edit permission
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    // Don't set up drag-drop handlers if user can't edit
+    if (!canEdit) return;
 
     const onDragEnter = (e: DragEvent) => {
       if (!e.dataTransfer) return;
@@ -165,7 +167,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       window.removeEventListener('keydown', onKeyDown);
       window.clearInterval(inactivityInterval);
     };
-  }, [handleFilesUpload, isDragging]);
+  }, [handleFilesUpload, isDragging, canEdit]);
 
   const getExtension = (name: string) => {
     const idx = name.lastIndexOf('.');
@@ -281,7 +283,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
           </View>
         )}
       </View>
-      {Platform.OS === 'web' && isDragging && (
+      {Platform.OS === 'web' && isDragging && canEdit && (
         <div style={{position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, display: 'flex'}}
           onDragOver={(e: any) => { e.preventDefault(); lastDragEvent.current = Date.now(); }}
           onDrop={(e: any) => {
@@ -312,13 +314,17 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={[styles.actionButton, !canEdit && { opacity: 0.4 }]} disabled={!canEdit} onPress={onCreateFolder}>
-              <Text style={styles.actionButtonText}>+ Folder</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, !canEdit && { opacity: 0.4 }]} disabled={!canEdit} onPress={onUpload}>
-              <Text style={styles.actionButtonText}>+ Upload</Text>
-            </TouchableOpacity>
-            {!multiSelect ? (
+            {canEdit && (
+              <>
+                <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
+                  <Text style={styles.actionButtonText}>+ Folder</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
+                  <Text style={styles.actionButtonText}>+ Upload</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {canEdit && !multiSelect ? (
               <TouchableOpacity
                 style={styles.multiToggle}
                 onPress={() => {
@@ -327,7 +333,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
               >
                 <Text style={styles.multiToggleText}>Select multiple files/folders?</Text>
               </TouchableOpacity>
-            ) : (
+            ) : canEdit && multiSelect ? (
               <TouchableOpacity
                 style={styles.multiToggleActive}
                 onPress={() => {
@@ -338,7 +344,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
               >
                 <Text style={styles.multiToggleText}>Done</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </View>
         {/* Search & filter row */}

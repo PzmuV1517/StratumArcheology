@@ -192,9 +192,11 @@ export default function ArtefactsTab({ projectId, canEdit = true }: { projectId:
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Text style={{ color: '#F5F5F5', fontWeight: '700', fontSize: 16 }}>Artefacts</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowCreate(true)}>
-          <Text style={styles.primaryBtnText}>New Artefact</Text>
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowCreate(true)}>
+            <Text style={styles.primaryBtnText}>New Artefact</Text>
+          </TouchableOpacity>
+        )}
       </View>
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>

@@ -689,6 +689,7 @@ export default function ProjectDetailScreen() {
               onCreateNote={handleCreateNote}
               onNotePress={handleNotePress}
               onDeleteNote={handleDeleteNote}
+              canEdit={!isGuest}
             />
           ) : activeTab === 'gps' ? (
             <View

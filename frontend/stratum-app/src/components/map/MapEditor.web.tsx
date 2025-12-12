@@ -132,6 +132,9 @@ export default function MapEditor({ projectId, canEdit = true }: { projectId: st
     });
 
     const onClick = (e: any) => {
+      // Permission check: guests cannot edit the map
+      if (!canEdit) return;
+      
       const ll = e.latlng.wrap();
       const curWork = workRef.current;
       const curSites = sitesRef.current;
@@ -345,17 +348,19 @@ export default function MapEditor({ projectId, canEdit = true }: { projectId: st
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.toolbox}>
-        <TouchableOpacity style={[styles.btn, mode === 'work' && styles.btnActive]} onPress={() => setMode('work')}>
-          <Text style={[styles.btnText, mode === 'work' && styles.btnTextActive]}>Zonă lucru</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, mode === 'site' && styles.btnActive]} onPress={() => setMode('site')}>
-          <Text style={[styles.btnText, mode === 'site' && styles.btnTextActive]}>Sit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.btn} onPress={resetAll}>
-          <Text style={styles.btnText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
+      {canEdit && (
+        <View style={styles.toolbox}>
+          <TouchableOpacity style={[styles.btn, mode === 'work' && styles.btnActive]} onPress={() => setMode('work')}>
+            <Text style={[styles.btnText, mode === 'work' && styles.btnTextActive]}>Zonă lucru</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, mode === 'site' && styles.btnActive]} onPress={() => setMode('site')}>
+            <Text style={[styles.btnText, mode === 'site' && styles.btnTextActive]}>Sit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btn} onPress={resetAll}>
+            <Text style={styles.btnText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
     </View>
   );
