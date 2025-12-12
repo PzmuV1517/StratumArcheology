@@ -76,12 +76,12 @@ async def get_project(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get project details with members"""
+    """Get project details with members and their roles"""
     from sqlalchemy.orm import joinedload
     
     check_project_permission(project_id, current_user, db)
     
-    project = db.query(Project).options(joinedload(Project.members)).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id).first()
     
     if not project:
         raise HTTPException(
@@ -89,7 +89,38 @@ async def get_project(
             detail="Project not found"
         )
     
-    return project
+    # Fetch members with their roles from the join table
+    members_with_roles = db.execute(
+        select(User, project_members.c.role)
+        .join(project_members, User.id == project_members.c.user_id)
+        .where(project_members.c.project_id == project_id)
+    ).all()
+    
+    # Build response with members including roles
+    members_list = []
+    for user, role in members_with_roles:
+        # Owner always has LEADER role
+        member_role = "leader" if user.id == project.owner_id else (role.value if role else "guest")
+        members_list.append({
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "photo_url": user.photo_url,
+            "role": member_role
+        })
+    
+    # Return project with properly formatted members
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "ran_lmi_id": project.ran_lmi_id,
+        "owner_id": project.owner_id,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+        "is_active": project.is_active,
+        "members": members_list
+    }
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)

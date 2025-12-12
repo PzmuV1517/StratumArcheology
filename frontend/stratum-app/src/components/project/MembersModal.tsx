@@ -47,6 +47,8 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
   const [isManaging, setIsManaging] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState<string | null>(null);
+  const [showRoleChangeConfirm, setShowRoleChangeConfirm] = useState<{ userId: string; newRole: 'RESEARCHER' | 'GUEST' } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -108,22 +110,37 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
     return [];
   };
 
-  const changeRole = async (userId: string, role: 'RESEARCHER' | 'GUEST') => {
+  const confirmRoleChange = (userId: string, role: 'RESEARCHER' | 'GUEST') => {
+    setShowRoleChangeConfirm({ userId, newRole: role });
+  };
+
+  const executeRoleChange = async () => {
+    if (!showRoleChangeConfirm) return;
+    const { userId, newRole } = showRoleChangeConfirm;
     try {
       setManageError(null);
-      await projectService.updateMemberRole(projectId, userId, role.toLowerCase());
+      await projectService.updateMemberRole(projectId, userId, newRole.toLowerCase());
       setExpandedMemberId(null);
+      setShowRoleChangeConfirm(null);
       onManage();
     } catch (e: any) {
       setManageError(e?.detail || e?.message || 'Failed to update role');
+      setShowRoleChangeConfirm(null);
     }
   };
 
-  const removeMember = async (userId: string) => {
+  const confirmRemoveMember = (userId: string) => {
+    setShowRemoveConfirm(userId);
+  };
+
+  const executeRemoveMember = async () => {
+    if (!showRemoveConfirm) return;
+    const userId = showRemoveConfirm;
     try {
       setManageError(null);
       await projectService.removeMember(projectId, userId);
       setExpandedMemberId(null);
+      setShowRemoveConfirm(null);
       
       // If the current user was kicked, trigger the callback
       if (userId === currentUserId && onKicked) {
@@ -133,6 +150,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
       onManage();
     } catch (e: any) {
       setManageError(e?.detail || e?.message || 'Failed to remove member');
+      setShowRemoveConfirm(null);
     }
   };
 
@@ -254,7 +272,6 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                     <TouchableOpacity 
                       style={styles.memberRow}
                       onPress={() => {
-                        console.log('Member pressed:', m.id, 'isManaging:', isManaging, 'canManageThis:', canManageThis);
                         if (isManaging && canManageThis) {
                           toggleMemberExpand(m.id);
                         }
@@ -281,7 +298,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                           <TouchableOpacity 
                             key={role}
                             style={styles.actionBtn}
-                            onPress={() => changeRole(m.id, role as 'RESEARCHER' | 'GUEST')}
+                            onPress={() => confirmRoleChange(m.id, role as 'RESEARCHER' | 'GUEST')}
                           >
                             <Text style={styles.actionBtnText}>
                               Make {role.charAt(0) + role.slice(1).toLowerCase()}
@@ -303,7 +320,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                         {canKickMember(m) && (
                           <TouchableOpacity 
                             style={[styles.actionBtn, styles.dangerBtn]}
-                            onPress={() => removeMember(m.id)}
+                            onPress={() => confirmRemoveMember(m.id)}
                           >
                             <Text style={styles.actionBtnText}>Remove from Project</Text>
                           </TouchableOpacity>
@@ -313,8 +330,6 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                         {!canChangeRoleOf(m) && !isOwner && !canKickMember(m) && (
                           <Text style={styles.noActionsText}>No actions available</Text>
                         )}
-                      </View>
-                    )}
                       </View>
                     )}
                   </View>
@@ -354,6 +369,72 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                     onPress={() => handleTransferOwnership(showTransferConfirm)}
                   >
                     <Text style={styles.confirmBtnText}>Confirm Transfer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+          
+          {/* Remove member confirmation modal */}
+          {showRemoveConfirm && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.confirmCard}>
+                <Text style={styles.confirmTitle}>⚠️ Remove Member</Text>
+                <Text style={styles.confirmText}>
+                  Are you sure you want to remove{' '}
+                  <Text style={styles.confirmHighlight}>
+                    {members.find(m => m.id === showRemoveConfirm)?.display_name || 'this member'}
+                  </Text>{' '}
+                  from the project?
+                </Text>
+                <Text style={styles.confirmWarning}>
+                  They will lose access to all project data.
+                </Text>
+                <View style={styles.confirmButtons}>
+                  <TouchableOpacity 
+                    style={[styles.confirmBtn, styles.cancelBtn]}
+                    onPress={() => setShowRemoveConfirm(null)}
+                  >
+                    <Text style={styles.confirmBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.confirmBtn, styles.dangerBtn]}
+                    onPress={executeRemoveMember}
+                  >
+                    <Text style={styles.confirmBtnText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+          
+          {/* Role change confirmation modal */}
+          {showRoleChangeConfirm && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.confirmCard}>
+                <Text style={styles.confirmTitle}>Change Role</Text>
+                <Text style={styles.confirmText}>
+                  Change{' '}
+                  <Text style={styles.confirmHighlight}>
+                    {members.find(m => m.id === showRoleChangeConfirm.userId)?.display_name || 'this member'}
+                  </Text>
+                  's role to{' '}
+                  <Text style={styles.confirmHighlight}>
+                    {showRoleChangeConfirm.newRole.charAt(0) + showRoleChangeConfirm.newRole.slice(1).toLowerCase()}
+                  </Text>?
+                </Text>
+                <View style={styles.confirmButtons}>
+                  <TouchableOpacity 
+                    style={[styles.confirmBtn, styles.cancelBtn]}
+                    onPress={() => setShowRoleChangeConfirm(null)}
+                  >
+                    <Text style={styles.confirmBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.confirmBtn, { backgroundColor: '#2A7FFF' }]}
+                    onPress={executeRoleChange}
+                  >
+                    <Text style={styles.confirmBtnText}>Confirm</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -543,7 +624,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     padding: 12,
-    paddingTop: 0,
+    marginTop: 4,
     borderTopWidth: 1,
     borderTopColor: '#333',
     backgroundColor: '#1E1E1C',

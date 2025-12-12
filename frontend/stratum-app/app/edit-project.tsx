@@ -13,12 +13,22 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { projectService } from '../src/services/projectService';
+import { authService } from '../src/services/authService';
+
+interface Member {
+  id: string;
+  display_name: string;
+  email: string;
+  role: 'LEADER' | 'RESEARCHER' | 'GUEST';
+}
 
 interface Project {
   id: string;
   name: string;
   description: string;
   ran_lmi_id?: string;
+  owner_id: string;
+  members?: Member[];
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +44,7 @@ export default function EditProjectScreen() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState('');
+  const [isOwner, setIsOwner] = useState(false);
   const isNameMatch = confirmText.trim() === name.trim();
 
   useEffect(() => {
@@ -43,10 +54,17 @@ export default function EditProjectScreen() {
   const loadProject = async () => {
     try {
       setLoading(true);
-      const projectData: Project = await projectService.getProject(projectId as string);
+      const [projectData, currentUser] = await Promise.all([
+        projectService.getProject(projectId as string),
+        authService.getCurrentUser()
+      ]);
       setName(projectData.name);
       setDescription(projectData.description || '');
       setRanLmiId(projectData.ran_lmi_id || '');
+      
+      // Check if current user is the owner
+      const userId = currentUser?.id;
+      setIsOwner(userId === projectData.owner_id);
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Error', 'Failed to load project', [
@@ -60,6 +78,12 @@ export default function EditProjectScreen() {
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a project name');
+      return;
+    }
+
+    // Only the owner can update project settings
+    if (!isOwner) {
+      Alert.alert('Permission Denied', 'Only the project leader can modify project settings.');
       return;
     }
 
@@ -189,13 +213,20 @@ export default function EditProjectScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.deleteButton]}
-            onPress={handleDelete}
-            disabled={saving || deleting}
-          >
-            <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Delete Project'}</Text>
-          </TouchableOpacity>
+          {isOwner ? (
+            <TouchableOpacity
+              style={[styles.deleteButton]}
+              onPress={handleDelete}
+              disabled={saving || deleting}
+            >
+              <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Delete Project'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.deleteButton, styles.disabledButton]}>
+              <Text style={styles.disabledButtonText}>Delete Project</Text>
+              <Text style={styles.permissionHint}>Only the project leader can delete this project</Text>
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.cancelButton}
@@ -330,6 +361,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  disabledButton: {
+    borderColor: '#555',
+    opacity: 0.6,
+  },
+  disabledButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  permissionHint: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   buttonText: {
     color: '#F5F5F5',

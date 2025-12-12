@@ -504,18 +504,15 @@ export default function ProjectDetailScreen() {
   );
 
   const renderMember = ({ item }: { item: Member }) => (
-    <View style={styles.memberCard}>
+    <View style={styles.memberCardInner}>
       <View style={styles.memberAvatar}>
         <Text style={styles.memberAvatarText}>
           {item.display_name?.charAt(0).toUpperCase() || 'U'}
         </Text>
       </View>
-      <View style={styles.memberInfo}>
+      <View style={styles.memberDetails}>
         <Text style={styles.memberName}>{item.display_name}</Text>
         <Text style={styles.memberEmail}>{item.email}</Text>
-      </View>
-      <View style={styles.memberRole}>
-        <Text style={styles.memberRoleText}>{item.role}</Text>
       </View>
     </View>
   );
@@ -1621,6 +1618,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9A9A9A',
     letterSpacing: 0.5,
+  },
+  memberCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberDetails: {
+    flex: 1,
   },
   memberRole: {
     backgroundColor: '#2A2A2A',

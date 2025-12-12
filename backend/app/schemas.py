@@ -53,6 +53,18 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+# Project Member Response (includes role from join table)
+class ProjectMemberResponse(BaseModel):
+    id: str
+    email: str
+    display_name: Optional[str] = None
+    photo_url: Optional[str] = None
+    role: UserRole
+    
+    class Config:
+        from_attributes = True
+
+
 # Project Schemas
 class ProjectBase(BaseModel):
     name: str
@@ -76,7 +88,7 @@ class ProjectResponse(ProjectBase):
 
 
 class ProjectWithMembers(ProjectResponse):
-    members: List[UserResponse] = []
+    members: List[ProjectMemberResponse] = []
 
 
 # Project Member Schemas
