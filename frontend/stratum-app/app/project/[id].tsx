@@ -95,7 +95,6 @@ export default function ProjectDetailScreen() {
   const [GiHamburger, setGiHamburger] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
-  const kickedAlertShownRef = useRef(false);
 
   useEffect(() => {
     // Load web-only icon lazily to avoid native bundling issues
@@ -165,7 +164,16 @@ export default function ProjectDetailScreen() {
     const handleMembersUpdated = (data: any) => {
       console.log('[Project] Received members_updated event:', data);
       if (data.project_id === id) {
-        // Refresh members list
+        // Refresh only members list, not entire project
+        loadProjectData();
+      }
+    };
+    
+    // Listen for content updates (notes, files, artefacts)
+    const handleContentUpdated = (data: any) => {
+      console.log('[Project] Received content_updated event:', data);
+      if (data.project_id === id) {
+        // Refresh project data when content changes
         loadProjectData();
       }
     };
@@ -173,6 +181,7 @@ export default function ProjectDetailScreen() {
     socket.on('member_kicked', handleMemberKicked);
     socket.on('role_changed', handleRoleChanged);
     socket.on('members_updated', handleMembersUpdated);
+    socket.on('content_updated', handleContentUpdated);
     
     // Cleanup listeners on unmount
     return () => {
@@ -181,6 +190,7 @@ export default function ProjectDetailScreen() {
       socket.off('member_kicked', handleMemberKicked);
       socket.off('role_changed', handleRoleChanged);
       socket.off('members_updated', handleMembersUpdated);
+      socket.off('content_updated', handleContentUpdated);
     };
   }, [id, currentUser?.id, socket, isConnected]);
 
