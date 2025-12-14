@@ -195,6 +195,31 @@ async def emit_member_update(project_id: str):
         logger.error(f"Error emitting member_update: {e}")
 
 
+async def emit_content_update(project_id: str, content_type: str = 'general'):
+    """
+    Notify all users in a project that content has been updated.
+    This is for notes, files, artefacts, etc.
+    
+    Args:
+        project_id: The project UUID
+        content_type: Type of content updated (notes, files, artefacts, general)
+    """
+    try:
+        room = f"project_{project_id}"
+        await sio.emit(
+            'content_updated',
+            {
+                'project_id': project_id,
+                'content_type': content_type,
+                'message': f'Project {content_type} have been updated'
+            },
+            room=room
+        )
+        logger.info(f"Emitted content_updated ({content_type}) for project {project_id}")
+    except Exception as e:
+        logger.error(f"Error emitting content_update: {e}")
+
+
 # Create ASGI app wrapper for Socket.IO
 sio_app = socketio.ASGIApp(
     sio,

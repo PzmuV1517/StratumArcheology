@@ -6,6 +6,7 @@ from app.dependencies import get_current_user, check_project_permission
 from app.models import User, Note, NoteAttachment, FileNode, FileNodeType, NoteFileLink
 from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 from app.minio_client import minio_client
+from app.websocket import emit_content_update
 from datetime import datetime
 import uuid
 from pydantic import BaseModel
@@ -84,6 +85,10 @@ async def create_note(
         link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
         db.add(link)
         db.commit()
+    
+    # Notify all users in project that notes have been updated
+    await emit_content_update(note.project_id, 'notes')
+    
     # Return full ORM object so response_model includes all fields (author_id, timestamps, attachments)
     return note
 
@@ -193,6 +198,9 @@ async def update_note(
     db.commit()
     db.refresh(note)
     
+    # Notify all users in project that notes have been updated
+    await emit_content_update(note.project_id, 'notes')
+    
     return note
 
 
@@ -276,8 +284,12 @@ async def delete_note(
     for attachment in note.attachments:
         await minio_client.delete_file(attachment.file_path)
     
+    project_id = note.project_id  # Store before deletion
     db.delete(note)
     db.commit()
+    
+    # Notify all users in project that notes have been updated (note deleted)
+    await emit_content_update(project_id, 'notes')
     
     return None
 
@@ -373,6 +385,9 @@ async def add_note_attachment(
     db.commit()
     db.refresh(attachment)
 
+    # Notify all users in project that notes have been updated (attachment added)
+    await emit_content_update(note.project_id, 'notes')
+
     return {
         "id": attachment.id,
         "filename": attachment.filename,
@@ -418,5 +433,8 @@ async def delete_note_attachment(
     # Delete from database
     db.delete(attachment)
     db.commit()
+    
+    # Notify all users in project that notes have been updated (attachment deleted)
+    await emit_content_update(note.project_id, 'notes')
     
     return None

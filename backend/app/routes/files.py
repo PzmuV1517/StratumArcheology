@@ -7,6 +7,7 @@ from app.dependencies import get_current_user, check_project_permission
 from app.models import User, Project, FileNode, FileNodeType, Note, NoteFileLink
 from app.schemas import FileNodeBase, FileNodeCreateFolder, FileNodeMoveRequest, FileNodeRenameRequest
 from app.minio_client import minio_client
+from app.websocket import emit_content_update
 from datetime import datetime
 import uuid
 
@@ -64,6 +65,10 @@ async def create_folder(
     db.add(node)
     db.commit()
     db.refresh(node)
+    
+    # Notify all users in project that files have been updated (folder created)
+    await emit_content_update(project_id, 'files')
+    
     return node
 
 
@@ -93,6 +98,10 @@ async def move_node(
     node.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(node)
+    
+    # Notify all users in project that files have been updated (file/folder moved)
+    await emit_content_update(node.project_id, 'files')
+    
     return node
 
 
@@ -142,6 +151,10 @@ async def rename_node(
     node.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(node)
+    
+    # Notify all users in project that files have been updated (file/folder renamed)
+    await emit_content_update(node.project_id, 'files')
+    
     return node
 
 
@@ -169,8 +182,13 @@ async def delete_node(
             await minio_client.delete_file(n.storage_path)
         db.delete(n)
 
+    project_id = node.project_id  # Store before deletion
     await _delete_subtree(node)
     db.commit()
+    
+    # Notify all users in project that files have been updated (file/folder deleted)
+    await emit_content_update(project_id, 'files')
+    
     return None
 
 
@@ -225,6 +243,10 @@ async def upload_file(
     db.add(node)
     db.commit()
     db.refresh(node)
+    
+    # Notify all users in project that files have been updated (file uploaded)
+    await emit_content_update(project_id, 'files')
+    
     return node
 
 
@@ -336,4 +358,8 @@ async def replace_file_content(
     
     db.commit()
     db.refresh(node)
+    
+    # Notify all users in project that files have been updated (file content replaced)
+    await emit_content_update(node.project_id, 'files')
+    
     return node

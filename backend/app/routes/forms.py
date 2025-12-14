@@ -5,6 +5,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, check_project_permission
 from app.models import User, FileNode, FileNodeType
 from app.minio_client import minio_client
+from app.websocket import emit_content_update
 from datetime import datetime
 import io
 import csv
@@ -228,6 +229,10 @@ async def append_context_feature(
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
+    
+    # Notify all users in project that forms have been updated (context feature added)
+    await emit_content_update(project_id, 'forms')
+    
     return {"status": "ok"}
 
 
@@ -338,6 +343,10 @@ async def append_stratigraphic_unit(
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
+    
+    # Notify all users in project that forms have been updated (stratigraphic unit added)
+    await emit_content_update(project_id, 'forms')
+    
     return {"status": "ok"}
 
 
@@ -384,4 +393,8 @@ async def append_artefact(
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
+    
+    # Notify all users in project that forms have been updated (artefact added)
+    await emit_content_update(project_id, 'forms')
+    
     return {"status": "ok"}
