@@ -55,10 +55,18 @@ export default function JoinProjectScreen() {
     Keyboard.dismiss();
 
     try {
-      await projectService.acceptInvite(token);
-      Alert.alert('Welcome!', 'You have successfully joined the project. You can now view and contribute based on your assigned role.', [
-        { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
-      ]);
+      const result = await projectService.acceptInvite(token);
+      const projectId = result?.project_id;
+      
+      if (projectId) {
+        // Navigate directly to the project
+        router.replace(`/project/${projectId}`);
+      } else {
+        // Fallback if no project ID returned
+        Alert.alert('Welcome!', 'You have successfully joined the project.', [
+          { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
+        ]);
+      }
     } catch (error: any) {
       let message = error?.detail || error?.message || 'Failed to join project';
       // Provide more helpful error messages
@@ -87,10 +95,18 @@ export default function JoinProjectScreen() {
     Keyboard.dismiss();
 
     try {
-      await projectService.joinByCode(codeInput.trim().toUpperCase());
-      Alert.alert('Welcome!', 'You have successfully joined the project. You can now view and contribute based on your assigned role.', [
-        { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
-      ]);
+      const result = await projectService.joinByCode(codeInput.trim().toUpperCase());
+      const projectId = result?.project_id;
+      
+      if (projectId) {
+        // Navigate directly to the project
+        router.replace(`/project/${projectId}`);
+      } else {
+        // Fallback if no project ID returned
+        Alert.alert('Welcome!', 'You have successfully joined the project.', [
+          { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
+        ]);
+      }
     } catch (error: any) {
       console.error('Join by code error:', error);
       let message = error?.detail || error?.message || 'Invalid or expired invite code';
