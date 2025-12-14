@@ -32,6 +32,7 @@ import NewFolderModal from '../../src/components/project/modals/NewFolderModal';
 import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfirmModal';
 import RenameModal from '../../src/components/project/modals/RenameModal';
 import MoveBanner from '../../src/components/project/MoveBanner';
+import { useWebSocket } from '../../src/contexts/WebSocketContext';
 
 interface Project {
   id: string;
@@ -90,8 +91,9 @@ export default function ProjectDetailScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [LuFilesIcon, setLuFilesIcon] = useState<any>(null);
-    const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [GiHamburger, setGiHamburger] = useState<any>(null);
+  const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
   const kickedAlertShownRef = useRef(false);
 
@@ -124,41 +126,63 @@ export default function ProjectDetailScreen() {
     loadProjectData();
   }, [id]);
 
-  // Check if user still has access to the project and refresh role (detect kicks and demotions)
+  // WebSocket: Join project room and listen for real-time updates
   useEffect(() => {
-    if (!id || !currentUser?.id) return;
+    if (!id || !currentUser?.id || !socket) return;
     
-    const checkAccessAndRole = async () => {
-      // Skip if we've already shown the kicked alert
-      if (kickedAlertShownRef.current) return;
-      
-      try {
-        const updated = await projectService.getProject(id as string);
-        // Update members to reflect any role changes immediately
-        setMembers(updated.members || []);
-        setProject(updated);
-      } catch (e: any) {
-        // If we get a 403 or 404, user was kicked or project deleted
-        if (e?.status === 403 || e?.status === 404 || e?.detail?.includes('access') || e?.detail?.includes('not a member')) {
-          // Prevent multiple alerts
-          if (kickedAlertShownRef.current) return;
-          kickedAlertShownRef.current = true;
-          
-          // Show alert and redirect to home immediately
-          Alert.alert(
-            'Removed from Project',
-            'You have been removed from this project.',
-            [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-          );
-        }
+    console.log('[Project] Joining WebSocket room for project:', id);
+    
+    // Join the project room
+    joinProject(id as string, currentUser.id);
+    
+    // Listen for member kicked events
+    const handleMemberKicked = (data: any) => {
+      console.log('[Project] Received member_kicked event:', data);
+      if (data.user_id === currentUser.id && data.project_id === id) {
+        Alert.alert(
+          'Removed from Project',
+          'You have been removed from this project.',
+          [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+        );
       }
     };
     
-    // Check every 3 seconds for faster response to role changes and kicks
-    const interval = setInterval(checkAccessAndRole, 3000);
+    // Listen for role changed events
+    const handleRoleChanged = (data: any) => {
+      console.log('[Project] Received role_changed event:', data);
+      if (data.user_id === currentUser.id && data.project_id === id) {
+        // Refresh project data to get updated role
+        loadProjectData();
+        Alert.alert(
+          'Role Updated',
+          `Your role has been changed to ${data.new_role}.`,
+          [{ text: 'OK' }]
+        );
+      }
+    };
     
-    return () => clearInterval(interval);
-  }, [id, currentUser?.id, router]);
+    // Listen for general member updates
+    const handleMembersUpdated = (data: any) => {
+      console.log('[Project] Received members_updated event:', data);
+      if (data.project_id === id) {
+        // Refresh members list
+        loadProjectData();
+      }
+    };
+    
+    socket.on('member_kicked', handleMemberKicked);
+    socket.on('role_changed', handleRoleChanged);
+    socket.on('members_updated', handleMembersUpdated);
+    
+    // Cleanup listeners on unmount
+    return () => {
+      console.log('[Project] Leaving WebSocket room for project:', id);
+      leaveProject(id as string, currentUser.id);
+      socket.off('member_kicked', handleMemberKicked);
+      socket.off('role_changed', handleRoleChanged);
+      socket.off('members_updated', handleMembersUpdated);
+    };
+  }, [id, currentUser?.id, socket, isConnected]);
 
   const handleManageMembers = useCallback(async () => {
     try {

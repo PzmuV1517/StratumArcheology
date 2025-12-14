@@ -5,6 +5,7 @@ from sqlalchemy import text
 from app.database import engine, Base
 from app.firebase_config import initialize_firebase
 from app.routes import auth, projects, notes, files, convert, gps, forms
+from app.websocket import sio_app, sio
 from sqlalchemy import text
 
 # Initialize Firebase
@@ -97,3 +98,9 @@ if __name__ == "__main__":
         port=settings.APP_PORT,
         reload=settings.APP_DEBUG
     )
+
+
+# Mount Socket.IO app
+# This must be done after all routes are registered
+from starlette.routing import Mount
+app.mount("/ws", sio_app)

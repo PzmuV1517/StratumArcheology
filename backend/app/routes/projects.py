@@ -9,6 +9,7 @@ from app.schemas import (
     ProjectMemberAdd, ProjectMemberUpdate, UserResponse
 )
 from sqlalchemy import select
+from app.websocket import emit_member_kicked, emit_role_changed, emit_member_update
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -280,6 +281,12 @@ async def remove_project_member(
     db.execute(stmt)
     db.commit()
     
+    # Emit WebSocket event to notify the kicked user
+    await emit_member_kicked(project_id, user_id)
+    
+    # Notify all other members that the member list updated
+    await emit_member_update(project_id)
+    
     return None
 
 
@@ -358,6 +365,12 @@ async def update_member_role(
     
     db.execute(stmt)
     db.commit()
+    
+    # Emit WebSocket event to notify the user their role changed
+    await emit_role_changed(project_id, user_id, new_role)
+    
+    # Notify all members that the member list updated
+    await emit_member_update(project_id)
     
     return {"message": "Role updated successfully"}
 
