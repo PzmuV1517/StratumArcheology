@@ -9,7 +9,7 @@ from app.schemas import (
     ProjectMemberAdd, ProjectMemberUpdate, UserResponse
 )
 from sqlalchemy import select
-from app.websocket import emit_member_kicked, emit_role_changed, emit_member_update
+from app.websocket import emit_member_kicked, emit_role_changed, emit_member_update, log_activity
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -46,6 +46,16 @@ async def create_project(
     )
     db.add(notes_folder)
     db.commit()
+    
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project.id,
+        activity_type='project_created',
+        description=f'Project "{project.name}" was created',
+        user_id=current_user.id,
+        metadata={'project_name': project.name}
+    )
     
     return project
 
@@ -223,6 +233,16 @@ async def add_project_member(
     db.execute(stmt)
     db.commit()
     
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='member_joined',
+        description=f'{user.display_name} joined the project as {member_data.role}',
+        user_id=current_user.id,
+        metadata={'new_member_id': user.id, 'role': str(member_data.role)}
+    )
+    
     return user
 
 
@@ -280,6 +300,17 @@ async def remove_project_member(
     )
     db.execute(stmt)
     db.commit()
+    
+    # Log activity for timeline
+    removed_user = db.query(User).filter(User.id == user_id).first()
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='member_left',
+        description=f'{removed_user.display_name if removed_user else "User"} was removed from the project',
+        user_id=current_user.id,
+        metadata={'removed_member_id': user_id}
+    )
     
     # Emit WebSocket event to notify the kicked user
     await emit_member_kicked(project_id, user_id)
@@ -365,6 +396,17 @@ async def update_member_role(
     
     db.execute(stmt)
     db.commit()
+    
+    # Log activity for timeline
+    target_user = db.query(User).filter(User.id == user_id).first()
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='member_role_changed',
+        description=f'{target_user.display_name if target_user else "User"} role changed from {target_current_role} to {new_role}',
+        user_id=current_user.id,
+        metadata={'member_id': user_id, 'old_role': target_current_role, 'new_role': new_role}
+    )
     
     # Emit WebSocket event to notify the user their role changed
     await emit_role_changed(project_id, user_id, new_role)

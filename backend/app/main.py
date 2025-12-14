@@ -4,7 +4,7 @@ from app.config import settings
 from sqlalchemy import text
 from app.database import engine, Base
 from app.firebase_config import initialize_firebase
-from app.routes import auth, projects, notes, files, convert, gps, forms
+from app.routes import auth, projects, notes, files, convert, gps, forms, activities
 from app.websocket import sio_app, sio
 from sqlalchemy import text
 
@@ -35,6 +35,27 @@ with engine.connect() as conn:
                 redeemed_at TIMESTAMP WITHOUT TIME ZONE NULL,
                 used BOOLEAN DEFAULT FALSE
             );
+            """
+        ))
+        # Create project activities table if it doesn't exist
+        conn.execute(text(
+            """
+            CREATE TABLE IF NOT EXISTS project_activities (
+                id VARCHAR PRIMARY KEY,
+                project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                user_id VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
+                activity_type VARCHAR NOT NULL,
+                description TEXT NOT NULL,
+                extra_data TEXT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+            );
+            """
+        ))
+        # Create index on project_id and created_at for efficient queries
+        conn.execute(text(
+            """
+            CREATE INDEX IF NOT EXISTS ix_project_activities_project_created 
+            ON project_activities(project_id, created_at DESC);
             """
         ))
         conn.commit()
@@ -68,6 +89,7 @@ app.include_router(gps.router, prefix="/api")
 from app.routes import invites as invites_routes
 app.include_router(forms.router, prefix="/api")
 app.include_router(invites_routes.router, prefix="/api")
+app.include_router(activities.router, prefix="/api")
 
 
 @app.get("/")

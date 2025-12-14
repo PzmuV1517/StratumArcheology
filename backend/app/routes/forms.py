@@ -233,6 +233,16 @@ async def append_context_feature(
     # Notify all users in project that forms have been updated (context feature added)
     await emit_content_update(project_id, 'forms')
     
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='context_feature_added',
+        description=f'Added context feature: {payload.get("feature_type", payload.get("name", "unknown"))}',
+        user_id=current_user.id,
+        metadata={'form_data': payload}
+    )
+    
     return {"status": "ok"}
 
 
@@ -347,6 +357,16 @@ async def append_stratigraphic_unit(
     # Notify all users in project that forms have been updated (stratigraphic unit added)
     await emit_content_update(project_id, 'forms')
     
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='stratigraphic_unit_added',
+        description=f'Added stratigraphic unit: {payload.get("id", payload.get("sector", "unknown"))}',
+        user_id=current_user.id,
+        metadata={'form_data': payload}
+    )
+    
     return {"status": "ok"}
 
 
@@ -396,5 +416,15 @@ async def append_artefact(
     
     # Notify all users in project that forms have been updated (artefact added)
     await emit_content_update(project_id, 'forms')
+    
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='artefact_added',
+        description=f'Added artefact: {data.get("artefact_id", data.get("name", data.get("type", "unknown")))}',
+        user_id=current_user.id,
+        metadata={'form_data': data}
+    )
     
     return {"status": "ok"}

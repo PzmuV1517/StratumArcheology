@@ -16,6 +16,41 @@ class UserRole(str, enum.Enum):
     GUEST = "guest"
 
 
+class ActivityType(str, enum.Enum):
+    # Project activities
+    PROJECT_CREATED = "project_created"
+    PROJECT_UPDATED = "project_updated"
+    
+    # Member activities
+    MEMBER_JOINED = "member_joined"
+    MEMBER_LEFT = "member_left"
+    MEMBER_ROLE_CHANGED = "member_role_changed"
+    
+    # Note activities
+    NOTE_CREATED = "note_created"
+    NOTE_UPDATED = "note_updated"
+    NOTE_DELETED = "note_deleted"
+    NOTE_ATTACHMENT_ADDED = "note_attachment_added"
+    NOTE_ATTACHMENT_DELETED = "note_attachment_deleted"
+    
+    # File activities
+    FILE_UPLOADED = "file_uploaded"
+    FILE_UPDATED = "file_updated"
+    FILE_DELETED = "file_deleted"
+    FOLDER_CREATED = "folder_created"
+    FOLDER_DELETED = "folder_deleted"
+    FILE_MOVED = "file_moved"
+    FILE_RENAMED = "file_renamed"
+    
+    # Form activities
+    CONTEXT_FEATURE_ADDED = "context_feature_added"
+    STRATIGRAPHIC_UNIT_ADDED = "stratigraphic_unit_added"
+    ARTEFACT_ADDED = "artefact_added"
+    
+    # GPS activities
+    GPS_UPDATED = "gps_updated"
+
+
 # Association table for project members
 project_members = Table(
     'project_members',
@@ -170,3 +205,23 @@ class ProjectInvite(Base):
 
     # Relationships (optional)
     project = relationship('Project', backref=backref('invites', cascade='all, delete-orphan'))
+
+
+class ProjectActivity(Base):
+    __tablename__ = 'project_activities'
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(String, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)  # Can be null if user deleted
+    activity_type = Column(SQLEnum(ActivityType), nullable=False)
+    description = Column(Text, nullable=False)  # Human-readable description
+    extra_data = Column(Text, nullable=True)  # JSON blob for additional data
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    # Relationships
+    project = relationship('Project', backref=backref('activities', cascade='all, delete-orphan'))
+    user = relationship('User')
+    
+    __table_args__ = (
+        Index('ix_project_activities_project_created', 'project_id', 'created_at'),
+    )
