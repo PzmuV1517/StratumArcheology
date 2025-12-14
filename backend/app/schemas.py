@@ -53,6 +53,18 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+# Project Member Response (includes role from join table)
+class ProjectMemberResponse(BaseModel):
+    id: str
+    email: str
+    display_name: Optional[str] = None
+    photo_url: Optional[str] = None
+    role: UserRole
+    
+    class Config:
+        from_attributes = True
+
+
 # Project Schemas
 class ProjectBase(BaseModel):
     name: str
@@ -76,7 +88,7 @@ class ProjectResponse(ProjectBase):
 
 
 class ProjectWithMembers(ProjectResponse):
-    members: List[UserResponse] = []
+    members: List[ProjectMemberResponse] = []
 
 
 # Project Member Schemas
@@ -182,3 +194,35 @@ class FileNodeRenameRequest(BaseModel):
 
 class FileNodeMoveRequest(BaseModel):
     new_parent_id: Optional[str] = None
+
+
+# Invite Schemas
+class InviteCreateRequest(BaseModel):
+    role: UserRole = UserRole.GUEST
+    ttl_hours: Optional[int] = None  # optional time-to-live in hours, default 14 days
+    max_uses: Optional[int] = None  # None = unlimited uses, otherwise limit to this many redemptions
+
+
+class InviteResponse(BaseModel):
+    token: str
+    code: str  # Short code like "PRJ-ABC123"
+    project_id: str
+    role: str
+    expires_at: Optional[datetime] = None
+    max_uses: Optional[int] = None  # None = unlimited
+    use_count: int = 0  # How many times used
+    accept_path: str  # client path such as /invite?token=...
+
+
+class InviteAcceptRequest(BaseModel):
+    token: str
+
+
+class InviteJoinByCodeRequest(BaseModel):
+    code: str
+
+
+class InviteAcceptResponse(BaseModel):
+    project_id: str
+    user_id: str
+    role: str

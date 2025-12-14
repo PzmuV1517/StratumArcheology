@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
+import { WebSocketProvider } from '../src/contexts/WebSocketContext';
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -84,7 +85,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <WebSocketProvider>
+        <RootLayoutNav />
+      </WebSocketProvider>
     </AuthProvider>
   );
 }

@@ -84,15 +84,23 @@ export default function NoteDetailScreen() {
       setIsDeleting(true);
       await noteService.deleteNote(noteId as string);
       setShowDeleteModal(false);
-      // Navigate back to the project detail page reliably
-      if (projectId) {
-        router.replace({ pathname: '/project/[id]', params: { id: String(projectId) } });
-      } else {
-        router.back();
-      }
-    } catch (error) {
+      Alert.alert('Deleted', 'Note has been deleted.', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            // Navigate back to the project detail page reliably
+            if (projectId) {
+              router.replace({ pathname: '/project/[id]', params: { id: String(projectId) } });
+            } else {
+              router.back();
+            }
+          }
+        }
+      ]);
+    } catch (error: any) {
       console.error('Error deleting note:', error);
-      Alert.alert('Error', 'Failed to delete note');
+      const message = error?.detail || error?.message || 'Failed to delete note. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setIsDeleting(false);
     }
@@ -194,7 +202,7 @@ export default function NoteDetailScreen() {
           {isAudioNote ? (
             <View style={styles.voiceNoteWrapper}>
               <Text style={styles.sectionTitle}>Voice Note</Text>
-              {note.attachments
+              {(note?.attachments || [])
                 .filter((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'))
                 .map((att: any) => (
                   <View key={att.id} style={styles.voicePlayback}>

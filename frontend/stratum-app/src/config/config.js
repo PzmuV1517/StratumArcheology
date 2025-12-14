@@ -1,7 +1,8 @@
 import Constants from 'expo-constants';
 
 export const config = {
-  apiBaseUrl: Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:8000/api',
+  // Default to backend on port 3000; can be overridden via app.json/eas.json (extra.apiBaseUrl)
+  apiBaseUrl: Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api',
   firebase: {
     apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
     authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,

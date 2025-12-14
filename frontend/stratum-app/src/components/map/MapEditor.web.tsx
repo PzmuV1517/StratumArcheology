@@ -35,7 +35,7 @@ function pixelDist(a: any, b: any) {
 
 import { projectService } from '../../services/projectService';
 
-export default function MapEditor({ projectId }: { projectId: string }) {
+export default function MapEditor({ projectId, canEdit = true }: { projectId: string; canEdit?: boolean }) {
   useInjectLeafletCss();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -63,7 +63,7 @@ export default function MapEditor({ projectId }: { projectId: string }) {
   // Debounced save handling
   const saveTimer = useRef<any>(null);
   const saveNow = async () => {
-    if (!projectId) return;
+    if (!projectId || !canEdit) return; // Permission check: don't save if guest
     const curWork = workRef.current;
     const curSites = sitesRef.current || [];
     // Persist only CLOSED site polygons per requirement; work area can be saved open or closed
@@ -132,6 +132,9 @@ export default function MapEditor({ projectId }: { projectId: string }) {
     });
 
     const onClick = (e: any) => {
+      // Permission check: guests cannot edit the map
+      if (!canEdit) return;
+      
       const ll = e.latlng.wrap();
       const curWork = workRef.current;
       const curSites = sitesRef.current;
@@ -345,17 +348,19 @@ export default function MapEditor({ projectId }: { projectId: string }) {
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.toolbox}>
-        <TouchableOpacity style={[styles.btn, mode === 'work' && styles.btnActive]} onPress={() => setMode('work')}>
-          <Text style={[styles.btnText, mode === 'work' && styles.btnTextActive]}>Zonă lucru</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, mode === 'site' && styles.btnActive]} onPress={() => setMode('site')}>
-          <Text style={[styles.btnText, mode === 'site' && styles.btnTextActive]}>Sit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.btn} onPress={resetAll}>
-          <Text style={styles.btnText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
+      {canEdit && (
+        <View style={styles.toolbox}>
+          <TouchableOpacity style={[styles.btn, mode === 'work' && styles.btnActive]} onPress={() => setMode('work')}>
+            <Text style={[styles.btnText, mode === 'work' && styles.btnTextActive]}>Zonă lucru</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, mode === 'site' && styles.btnActive]} onPress={() => setMode('site')}>
+            <Text style={[styles.btnText, mode === 'site' && styles.btnTextActive]}>Sit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btn} onPress={resetAll}>
+            <Text style={styles.btnText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
     </View>
   );

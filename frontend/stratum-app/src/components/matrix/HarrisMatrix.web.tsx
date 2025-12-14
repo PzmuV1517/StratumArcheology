@@ -66,12 +66,15 @@ interface GroupOverlayData {
   contexts: GroupOverlayContext[];
 }
 
-interface HarrisMatrixProps { projectId: string }
+interface HarrisMatrixProps { projectId: string; canEdit?: boolean }
 
-export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
+export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit = true }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const canEditRef = useRef(canEdit);
+  // Keep canEditRef in sync with prop
+  canEditRef.current = canEdit;
   const [activeTab, setActiveTab] = useState<'hierarchy' | 'conflicts' | 'relationships' | 'records' | 'featureForm' | 'suForm' | 'artefacts' | 'export'>('hierarchy');
   const [sidebarView, setSidebarView] = useState<'default' | 'featureForm' | 'suForm' | 'artefacts'>('default');
   const [toolMenuOpen, setToolMenuOpen] = useState(false);
@@ -143,6 +146,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         }
 
         function openGroupModal(options: GroupModalOptions) {
+          if (!canEditRef.current) return; // Guests cannot create/edit groups
           const modal = document.getElementById('groupModal') as HTMLElement | null; if (!modal) return;
           const titleEl = document.getElementById('groupModalTitle') as HTMLElement | null;
           const nameInput = document.getElementById('groupName') as HTMLInputElement | null;
@@ -904,15 +908,23 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       // Event Handlers & Modals
       let wasDragged = false;
       function handleCanvasClick(event: any) {
+        if (!canEditRef.current) return; // Guests cannot add nodes
         if ((event?.target as Element)?.closest('.context-node-group')) return;
         const [x, y] = d3.pointer(event, g.node());
         const snappedX = Math.round(x / GRID_CELL_SIZE) * GRID_CELL_SIZE;
         const snappedY = Math.round(y / GRID_CELL_SIZE) * GRID_CELL_SIZE;
         showContextModal(snappedX, snappedY);
       }
-      function dragstarted(this: any, event: any) { event.sourceEvent.stopPropagation(); d3.select(this).raise().classed('dragging', true); wasDragged = false; }
-      function dragged(this: any, event: any) { wasDragged = true; d3.select(this).attr('transform', `translate(${event.x}, ${event.y})`); }
+      function dragstarted(this: any, event: any) {
+        if (!canEditRef.current) return; // Guests cannot drag
+        event.sourceEvent.stopPropagation(); d3.select(this).raise().classed('dragging', true); wasDragged = false;
+      }
+      function dragged(this: any, event: any) {
+        if (!canEditRef.current) return; // Guests cannot drag
+        wasDragged = true; d3.select(this).attr('transform', `translate(${event.x}, ${event.y})`);
+      }
       function dragended(this: any, event: any, d: any) {
+        if (!canEditRef.current) return; // Guests cannot drag
         d3.select(this).classed('dragging', false);
         if (wasDragged) {
           const sourceId = d; let targetId: string | null = null;
@@ -1030,6 +1042,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const saveBtn = document.getElementById('cf_saveBtn') as HTMLButtonElement | null;
         const clearBtn = document.getElementById('cf_clearBtn') as HTMLButtonElement | null;
         if (saveBtn) saveBtn.onclick = async () => {
+          if (!canEditRef.current) { alert('You do not have permission to save records.'); return; }
           const id = readInputValue('cf_id').trim().toUpperCase();
           if (!id) { alert('Context ID is required for saving the feature record.'); return; }
           // Gather record
@@ -1090,6 +1103,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         const saveBtn = document.getElementById('su_saveBtn') as HTMLButtonElement | null;
         const clearBtn = document.getElementById('su_clearBtn') as HTMLButtonElement | null;
         if (saveBtn) saveBtn.onclick = async () => {
+          if (!canEditRef.current) { alert('You do not have permission to save records.'); return; }
           const id = readInputValue('su_id').trim();
           if (!id) { alert('SU ID is required.'); return; }
           const earlierThan = readInputValue('su_earlierThan').split(',').map(s => s.trim()).filter(Boolean);
@@ -1231,6 +1245,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       function formatDateForDisplay(internalYear: number | null) { if (internalYear === null || internalYear === 0) return { year: '', era: 'CE' }; return internalYear < 0 ? { year: Math.abs(internalYear), era: 'BCE' } : { year: internalYear, era: 'CE' }; }
 
       function showContextModal(x: number, y: number) {
+        if (!canEditRef.current) return; // Guests cannot create contexts
         const modal = document.getElementById('contextModal') as HTMLElement | null; if (!modal) return;
         modal.style.display = 'flex';
         const input = document.getElementById('newContextId') as HTMLInputElement;
@@ -1261,6 +1276,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function showEditNodeModal(contextId: string) {
+        if (!canEditRef.current) return; // Guests cannot edit contexts
         const modal = document.getElementById('editNodeModal') as HTMLElement | null; if (!modal) return;
         modal.style.display = 'flex';
         const context = contexts.get(contextId);
@@ -1287,6 +1303,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function saveNodeChanges(oldId: string) {
+        if (!canEditRef.current) return; // Guests cannot save changes
         const newId = (document.getElementById('editNodeIdInput') as HTMLInputElement).value.trim().toUpperCase();
         if (!newId || (newId !== oldId && contexts.has(newId))) { alert('Context ID is invalid or already exists.'); return; }
         const context = contexts.get(oldId);
@@ -1318,6 +1335,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function showRelationshipModal(sourceId: string, targetId: string) {
+        if (!canEditRef.current) return; // Guests cannot create relationships
         const modal = document.getElementById('relationshipModal') as HTMLElement | null; if (!modal) return;
         modal.style.display = 'flex';
         (document.getElementById('relationshipModalTitle') as HTMLElement).innerText = `Define Relationship: ${sourceId} → ${targetId}`;
@@ -1350,6 +1368,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function deleteContext(contextId: string) {
+        if (!canEditRef.current) return; // Guests cannot delete contexts
         if (!window.confirm(`Delete context "${contextId}" and all its relationships?`)) return;
         const context = contexts.get(contextId);
         if (context?.groupId) groups.get(context.groupId)?.contexts.delete(contextId);
@@ -1362,9 +1381,13 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
         hideModals(); updateUI();
       }
 
-      function removeRelationship(index: number) { relationships.splice(index, 1); forceAutoLayoutNext = true; updateUI(); }
+      function removeRelationship(index: number) {
+        if (!canEditRef.current) return; // Guests cannot remove relationships
+        relationships.splice(index, 1); forceAutoLayoutNext = true; updateUI();
+      }
       // Placeholder API for artefact addition (will be surfaced via UI later)
       function addArtefact(category: keyof ArtefactRegistries, partial: Omit<ArtefactRecord, 'id' | 'category'>) {
+        if (!canEditRef.current) { alert('You do not have permission to add artefacts.'); return; }
         const id = `art_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
         const record: ArtefactRecord = { id, category, ...partial } as ArtefactRecord;
         artefactRegistries[category].push(record);
@@ -1372,6 +1395,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
       }
 
       function deleteArtefact(id: string) {
+        if (!canEditRef.current) { alert('You do not have permission to delete artefacts.'); return; }
         const cats = Object.keys(artefactRegistries) as (keyof ArtefactRegistries)[];
         for (const cat of cats) {
           const idx = artefactRegistries[cat].findIndex((r: any) => r.id === id);
@@ -1767,18 +1791,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               ref={toolMenuRef}
               className={`tool-menu ${toolMenuOpen ? 'open' : ''}`}
             >
-              <button
-                type="button"
-                className="tool-menu-toggle"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setToolMenuOpen((prev) => !prev);
-                  (event.currentTarget as HTMLButtonElement).blur();
-                }}
-                aria-label="Management tools"
-              >
-                <FaWrench size={16} />
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  className="tool-menu-toggle"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setToolMenuOpen((prev) => !prev);
+                    (event.currentTarget as HTMLButtonElement).blur();
+                  }}
+                  aria-label="Management tools"
+                >
+                  <FaWrench size={16} />
+                </button>
+              )}
               <button
                 type="button"
                 className="tool-menu-toggle"
@@ -1797,7 +1823,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
               >
                 <FaArrowRotateRight size={14} />
               </button>
-              {toolMenuOpen && (
+              {canEdit && toolMenuOpen && (
                 <div className="tool-menu-dropdown">
                   <button className="btn-warning" onClick={(e) => { apiRef.current.createGroup(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Create Group</button>
                   <button className="btn-warning" onClick={(e) => { apiRef.current.createSubGroup(); setToolMenuOpen(false); (e.currentTarget as HTMLButtonElement).blur(); }}>Create Sub-Group</button>
@@ -2113,17 +2139,19 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId }) => {
                 </div>
               </div>
               <div className="group-overlay-actions">
-                <button
-                  type="button"
-                  className="group-edit-button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    openGroupModalRef.current?.(overlayData.type, 'edit', overlayData.id);
-                  }}
-                  aria-label="Edit group"
-                >
-                  <HiDotsHorizontal size={18} />
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="group-edit-button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openGroupModalRef.current?.(overlayData.type, 'edit', overlayData.id);
+                    }}
+                    aria-label="Edit group"
+                  >
+                    <HiDotsHorizontal size={18} />
+                  </button>
+                )}
                 <button type="button" className="group-overlay-close" onClick={handleOverlayClose} aria-label="Close">×</button>
               </div>
             </div>

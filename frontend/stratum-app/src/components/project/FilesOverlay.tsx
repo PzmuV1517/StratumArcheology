@@ -35,9 +35,10 @@ interface Props {
   onBulkMove?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk move
   onBulkDelete?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk delete
   onBulkDownload?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk download
+  canEdit?: boolean; // Permissions: disable editing for guests
 }
 
-export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload }: Props) {
+export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
   if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
@@ -96,9 +97,11 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     if (onRefreshAfterUpload) onRefreshAfterUpload();
   }, [projectId, currentFolder, onRefreshAfterUpload, onDropFiles]);
 
-  // Robust drag-and-drop handling (depth + timeout + ESC)
+  // Robust drag-and-drop handling (depth + timeout + ESC) - only for users with edit permission
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    // Don't set up drag-drop handlers if user can't edit
+    if (!canEdit) return;
 
     const onDragEnter = (e: DragEvent) => {
       if (!e.dataTransfer) return;
@@ -164,7 +167,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       window.removeEventListener('keydown', onKeyDown);
       window.clearInterval(inactivityInterval);
     };
-  }, [handleFilesUpload, isDragging]);
+  }, [handleFilesUpload, isDragging, canEdit]);
 
   const getExtension = (name: string) => {
     const idx = name.lastIndexOf('.');
@@ -280,13 +283,13 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
           </View>
         )}
       </View>
-      {Platform.OS === 'web' && isDragging && (
-        <View style={styles.dropMask}
+      {Platform.OS === 'web' && isDragging && canEdit && (
+        <div style={{position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, display: 'flex'}}
           onDragOver={(e: any) => { e.preventDefault(); lastDragEvent.current = Date.now(); }}
           onDrop={(e: any) => {
             if (e.nativeEvent?.dataTransfer) {
               const dt = e.nativeEvent.dataTransfer;
-              const files = Array.from(dt.files || []);
+              const files = Array.from(dt.files || []) as File[];
               if (files.length) {
                 void handleFilesUpload(files);
               }
@@ -295,11 +298,11 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
             setDragDepth(0);
           }}
         >
-          <View style={styles.dropBox}>
-            <Text style={styles.dropBoxTitle}>Drop file here</Text>
-            <Text style={styles.dropBoxSub}>Release or press ESC to cancel</Text>
-          </View>
-        </View>
+          <div style={{backgroundColor: '#1A1A1A', borderRadius: 12, border: '2px dashed #FF2A2A', padding: 40, textAlign: 'center'}}>
+            <Text style={{color: '#FF2A2A', fontSize: 20, fontWeight: '700', marginBottom: 8}}>Drop file here</Text>
+            <Text style={{color: '#9A9A9A', fontSize: 14}}>Release or press ESC to cancel</Text>
+          </div>
+        </div>
       )}
       {Platform.OS === 'web' && isUploading && (
         <View pointerEvents="none" style={styles.uploadingBanner}>
@@ -311,13 +314,17 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
-              <Text style={styles.actionButtonText}>+ Folder</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
-              <Text style={styles.actionButtonText}>+ Upload</Text>
-            </TouchableOpacity>
-            {!multiSelect ? (
+            {canEdit && (
+              <>
+                <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
+                  <Text style={styles.actionButtonText}>+ Folder</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
+                  <Text style={styles.actionButtonText}>+ Upload</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {canEdit && !multiSelect ? (
               <TouchableOpacity
                 style={styles.multiToggle}
                 onPress={() => {
@@ -326,7 +333,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
               >
                 <Text style={styles.multiToggleText}>Select multiple files/folders?</Text>
               </TouchableOpacity>
-            ) : (
+            ) : canEdit && multiSelect ? (
               <TouchableOpacity
                 style={styles.multiToggleActive}
                 onPress={() => {
@@ -337,7 +344,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
               >
                 <Text style={styles.multiToggleText}>Done</Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         </View>
         {/* Search & filter row */}
@@ -516,7 +523,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                           <Text style={{ color: '#9A9A9A' }}>Download</Text>
                         </TouchableOpacity>
                       )}
-                      {!node.is_locked && (
+                      {!node.is_locked && canEdit && (
                         <>
                           <TouchableOpacity onPress={() => onRename(node)}>
                             <Text style={{ color: '#9A9A9A' }}>Rename</Text>

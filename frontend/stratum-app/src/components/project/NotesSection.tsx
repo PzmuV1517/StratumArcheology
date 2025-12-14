@@ -23,9 +23,10 @@ interface Props {
   onCreateNote: () => void;
   onNotePress: (id: string) => void;
   onDeleteNote: (id: string) => void;
+  canEdit?: boolean;
 }
 
-export default function NotesSection({ notes, onCreateNote, onNotePress, onDeleteNote }: Props) {
+export default function NotesSection({ notes, onCreateNote, onNotePress, onDeleteNote, canEdit = true }: Props) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const MiniAudio = ({ url }: { url?: string }) => {
@@ -119,7 +120,7 @@ export default function NotesSection({ notes, onCreateNote, onNotePress, onDelet
             <MiniAudio url={audioAtt.url} />
           )}
         </TouchableOpacity>
-        {isVoice && (
+        {isVoice && canEdit && (
           <View style={styles.voiceActions}>
             {pendingDeleteId === item.id ? (
               <View style={styles.inlineConfirm}>
@@ -171,9 +172,11 @@ export default function NotesSection({ notes, onCreateNote, onNotePress, onDelet
     <View>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Notes</Text>
-        <TouchableOpacity style={styles.addButton} onPress={onCreateNote}>
-          <Text style={styles.addButtonText}>+ Add Note</Text>
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity style={styles.addButton} onPress={onCreateNote}>
+            <Text style={styles.addButtonText}>+ Add Note</Text>
+          </TouchableOpacity>
+        )}
       </View>
       {notes.length > 0 ? (
         <FlatList
@@ -185,10 +188,16 @@ export default function NotesSection({ notes, onCreateNote, onNotePress, onDelet
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No notes yet</Text>
-          <Text style={styles.emptyStateSubtext}>Create your first note to get started</Text>
-          <TouchableOpacity style={styles.createButton} onPress={onCreateNote}>
-            <Text style={styles.createButtonText}>CREATE FIRST NOTE</Text>
-          </TouchableOpacity>
+          {canEdit ? (
+            <>
+              <Text style={styles.emptyStateSubtext}>Create your first note to get started</Text>
+              <TouchableOpacity style={styles.createButton} onPress={onCreateNote}>
+                <Text style={styles.createButtonText}>CREATE FIRST NOTE</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={styles.emptyStateSubtext}>No notes have been added to this project yet</Text>
+          )}
         </View>
       )}
     </View>

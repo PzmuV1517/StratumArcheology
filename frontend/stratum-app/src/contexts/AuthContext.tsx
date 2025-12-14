@@ -44,14 +44,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('[AuthContext] login called with email:', email);
       const result = await authService.login(email, password);
+      console.log('[AuthContext] authService.login result:', result);
       if (result.success) {
+        console.log('[AuthContext] Setting user:', result.user);
         setUser(result.user);
         return { success: true };
       } else {
+        console.log('[AuthContext] Login failed:', result.error);
         return { success: false, error: result.error };
       }
     } catch (error: any) {
+      console.error('[AuthContext] Login exception:', error);
       return { success: false, error: error.message || 'Login failed' };
     }
   };

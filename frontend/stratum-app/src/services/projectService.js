@@ -17,7 +17,12 @@ export const projectService = {
       const response = await api.get(`/projects/${projectId}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      // Preserve status code for access control checks
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
     }
   },
 
@@ -51,26 +56,51 @@ export const projectService = {
   },
 
   // Invite a user to a project
-  inviteUser: async (projectId, email, role) => {
+  createInvite: async (projectId, role, ttlHours) => {
     try {
-      const response = await api.post(`/projects/${projectId}/invite`, {
-        email,
+      const response = await api.post(`/projects/${projectId}/invites`, {
         role,
+        ttl_hours: ttlHours,
       });
-      return response.data;
+      return response.data; // { token, project_id, role, expires_at, accept_path }
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  // Get project members
-  getProjectMembers: async (projectId) => {
+  acceptInvite: async (token) => {
     try {
-      const response = await api.get(`/projects/${projectId}/members`);
+      const response = await api.post(`/invites/accept`, { token });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      // Preserve status code for debugging
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
     }
+  },
+
+  // Join project by short code
+  joinByCode: async (code) => {
+    try {
+      const response = await api.post(`/invites/join-by-code`, { code });
+      return response.data;
+    } catch (error) {
+      // Preserve status code for debugging
+      const err = error.response?.data || error;
+      if (error.response?.status) {
+        err.status = error.response.status;
+      }
+      throw err;
+    }
+  },
+
+  // Get project members: use getProject which includes members
+  getProjectMembers: async (projectId) => {
+    const project = await projectService.getProject(projectId);
+    return project.members || [];
   },
 
   // Remove a member from a project
@@ -85,9 +115,19 @@ export const projectService = {
   // Update member role
   updateMemberRole: async (projectId, userId, role) => {
     try {
-      const response = await api.put(`/projects/${projectId}/members/${userId}`, {
+      const response = await api.put(`/projects/${projectId}/members/${userId}/role`, {
         role,
       });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Transfer project ownership to another member
+  transferOwnership: async (projectId, newOwnerId) => {
+    try {
+      const response = await api.post(`/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

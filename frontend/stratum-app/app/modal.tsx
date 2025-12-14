@@ -23,15 +23,24 @@ export default function CreateProjectModal() {
 
     setLoading(true);
     try {
-      await projectService.createProject({
+      const newProject = await projectService.createProject({
         name: name.trim(),
         description: description.trim() || null,
         ran_lmi_id: ranLmiId.trim(),
       });
-      // Close modal immediately, the projects list will refresh automatically
-      router.back();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create project');
+      
+      // Navigate directly to the newly created project
+      if (newProject?.id) {
+        router.replace(`/project/${newProject.id}`);
+      } else {
+        // Fallback if no project ID returned
+        Alert.alert('Success', 'Project created successfully!', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
+      }
+    } catch (error: any) {
+      const message = error?.detail || error?.message || 'Failed to create project. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ from app.schemas import (
     ProjectMemberAdd, ProjectMemberUpdate, UserResponse
 )
 from sqlalchemy import select
+from app.websocket import emit_member_kicked, emit_role_changed, emit_member_update
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -76,12 +77,12 @@ async def get_project(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get project details with members"""
+    """Get project details with members and their roles"""
     from sqlalchemy.orm import joinedload
     
     check_project_permission(project_id, current_user, db)
     
-    project = db.query(Project).options(joinedload(Project.members)).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id).first()
     
     if not project:
         raise HTTPException(
@@ -89,7 +90,38 @@ async def get_project(
             detail="Project not found"
         )
     
-    return project
+    # Fetch members with their roles from the join table
+    members_with_roles = db.execute(
+        select(User, project_members.c.role)
+        .join(project_members, User.id == project_members.c.user_id)
+        .where(project_members.c.project_id == project_id)
+    ).all()
+    
+    # Build response with members including roles
+    members_list = []
+    for user, role in members_with_roles:
+        # Owner always has LEADER role
+        member_role = "leader" if user.id == project.owner_id else (role.value if role else "guest")
+        members_list.append({
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "photo_url": user.photo_url,
+            "role": member_role
+        })
+    
+    # Return project with properly formatted members
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "ran_lmi_id": project.ran_lmi_id,
+        "owner_id": project.owner_id,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+        "is_active": project.is_active,
+        "members": members_list
+    }
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
@@ -201,21 +233,59 @@ async def remove_project_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Remove a member from the project (leader/owner only)"""
-    check_project_permission(project_id, current_user, db, required_role="leader")
+    """Remove a member from the project (leader can remove anyone, researcher can remove guests only)"""
+    # First check basic project access
+    check_project_permission(project_id, current_user, db)
+    
+    project = db.query(Project).filter(Project.id == project_id).first()
+    
+    # Get current user's role
+    if project.owner_id == current_user.id:
+        current_user_role = "leader"
+    else:
+        stmt = select(project_members).where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == current_user.id
+        )
+        result = db.execute(stmt).first()
+        current_user_role = result.role.value if result else "guest"
+    
+    # Get target user's role
+    target_stmt = select(project_members).where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == user_id
+    )
+    target_result = db.execute(target_stmt).first()
+    
+    if not target_result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found in project"
+        )
+    
+    target_role = target_result.role.value
+    
+    # Role hierarchy check: can only remove members with lower roles
+    role_hierarchy = {'leader': 3, 'researcher': 2, 'guest': 1}
+    
+    if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(target_role, 0):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only remove members with lower roles than yours"
+        )
     
     stmt = project_members.delete().where(
         project_members.c.project_id == project_id,
         project_members.c.user_id == user_id
     )
-    result = db.execute(stmt)
+    db.execute(stmt)
     db.commit()
     
-    if result.rowcount == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Member not found in project"
-        )
+    # Emit WebSocket event to notify the kicked user
+    await emit_member_kicked(project_id, user_id)
+    
+    # Notify all other members that the member list updated
+    await emit_member_update(project_id)
     
     return None
 
@@ -228,21 +298,144 @@ async def update_member_role(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update a member's role (leader/owner only)"""
-    check_project_permission(project_id, current_user, db, required_role="leader")
+    """Update a member's role (leader can change any role, researcher can promote guests to researcher)"""
+    # First check basic project access
+    check_project_permission(project_id, current_user, db)
     
-    stmt = project_members.update().where(
+    project = db.query(Project).filter(Project.id == project_id).first()
+    
+    # Get current user's role
+    if project.owner_id == current_user.id:
+        current_user_role = "leader"
+    else:
+        stmt = select(project_members).where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == current_user.id
+        )
+        result = db.execute(stmt).first()
+        current_user_role = result.role.value if result else "guest"
+    
+    # Get target user's current role
+    target_stmt = select(project_members).where(
         project_members.c.project_id == project_id,
         project_members.c.user_id == user_id
-    ).values(role=role_data.role)
+    )
+    target_result = db.execute(target_stmt).first()
     
-    result = db.execute(stmt)
-    db.commit()
-    
-    if result.rowcount == 0:
+    if not target_result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Member not found in project"
         )
     
+    target_current_role = target_result.role.value
+    new_role = role_data.role.lower() if isinstance(role_data.role, str) else role_data.role.value
+    
+    role_hierarchy = {'leader': 3, 'researcher': 2, 'guest': 1}
+    
+    # Leaders can do anything (except promote to leader, that's transfer)
+    if current_user_role == "leader":
+        if new_role == "leader":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Use the transfer ownership endpoint to transfer leadership"
+            )
+    # Researchers can only promote guests to researcher
+    elif current_user_role == "researcher":
+        if target_current_role != "guest":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Researchers can only modify guest roles"
+            )
+        if new_role not in ["guest", "researcher"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Researchers can only promote guests to researcher"
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Guests cannot modify member roles"
+        )
+    
+    stmt = project_members.update().where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == user_id
+    ).values(role=new_role)
+    
+    db.execute(stmt)
+    db.commit()
+    
+    # Emit WebSocket event to notify the user their role changed
+    await emit_role_changed(project_id, user_id, new_role)
+    
+    # Notify all members that the member list updated
+    await emit_member_update(project_id)
+    
     return {"message": "Role updated successfully"}
+
+
+@router.post("/{project_id}/transfer-ownership")
+async def transfer_ownership(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    new_owner_id: str = None
+):
+    """Transfer project ownership to another member (owner only)"""
+    from pydantic import BaseModel
+    
+    project = db.query(Project).filter(Project.id == project_id).first()
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    if project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can transfer ownership"
+        )
+    
+    if not new_owner_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New owner ID is required"
+        )
+    
+    # Check if new owner is a member
+    stmt = select(project_members).where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == new_owner_id
+    )
+    new_owner_membership = db.execute(stmt).first()
+    
+    if not new_owner_membership:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New owner must be a project member"
+        )
+    
+    # Update project owner
+    old_owner_id = project.owner_id
+    project.owner_id = new_owner_id
+    
+    # Update new owner's role to leader
+    stmt = project_members.update().where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == new_owner_id
+    ).values(role="leader")
+    db.execute(stmt)
+    
+    # Update old owner's role to researcher
+    stmt = project_members.update().where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == old_owner_id
+    ).values(role="researcher")
+    db.execute(stmt)
+    
+    db.commit()
+    
+    return {"message": "Ownership transferred successfully", "new_owner_id": new_owner_id}

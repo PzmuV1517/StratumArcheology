@@ -32,6 +32,7 @@ import NewFolderModal from '../../src/components/project/modals/NewFolderModal';
 import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfirmModal';
 import RenameModal from '../../src/components/project/modals/RenameModal';
 import MoveBanner from '../../src/components/project/MoveBanner';
+import { useWebSocket } from '../../src/contexts/WebSocketContext';
 
 interface Project {
   id: string;
@@ -90,8 +91,11 @@ export default function ProjectDetailScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [LuFilesIcon, setLuFilesIcon] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [GiHamburger, setGiHamburger] = useState<any>(null);
+  const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
+  const kickedAlertShownRef = useRef(false);
 
   useEffect(() => {
     // Load web-only icon lazily to avoid native bundling issues
@@ -106,8 +110,111 @@ export default function ProjectDetailScreen() {
   }, []);
 
   useEffect(() => {
+    // Load current user from storage
+    (async () => {
+      try {
+        const { authService } = await import('../../src/services/authService');
+        const user = await authService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     loadProjectData();
   }, [id]);
+
+  // WebSocket: Join project room and listen for real-time updates
+  useEffect(() => {
+    if (!id || !currentUser?.id || !socket) return;
+    
+    console.log('[Project] Joining WebSocket room for project:', id);
+    
+    // Join the project room
+    joinProject(id as string, currentUser.id);
+    
+    // Listen for member kicked events
+    const handleMemberKicked = (data: any) => {
+      console.log('[Project] Received member_kicked event:', data);
+      if (data.user_id === currentUser.id && data.project_id === id) {
+        Alert.alert(
+          'Removed from Project',
+          'You have been removed from this project.',
+          [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+        );
+      }
+    };
+    
+    // Listen for role changed events
+    const handleRoleChanged = (data: any) => {
+      console.log('[Project] Received role_changed event:', data);
+      if (data.user_id === currentUser.id && data.project_id === id) {
+        // Refresh project data to get updated role
+        loadProjectData();
+        Alert.alert(
+          'Role Updated',
+          `Your role has been changed to ${data.new_role}.`,
+          [{ text: 'OK' }]
+        );
+      }
+    };
+    
+    // Listen for general member updates
+    const handleMembersUpdated = (data: any) => {
+      console.log('[Project] Received members_updated event:', data);
+      if (data.project_id === id) {
+        // Refresh members list
+        loadProjectData();
+      }
+    };
+    
+    socket.on('member_kicked', handleMemberKicked);
+    socket.on('role_changed', handleRoleChanged);
+    socket.on('members_updated', handleMembersUpdated);
+    
+    // Cleanup listeners on unmount
+    return () => {
+      console.log('[Project] Leaving WebSocket room for project:', id);
+      leaveProject(id as string, currentUser.id);
+      socket.off('member_kicked', handleMemberKicked);
+      socket.off('role_changed', handleRoleChanged);
+      socket.off('members_updated', handleMembersUpdated);
+    };
+  }, [id, currentUser?.id, socket, isConnected]);
+
+  const handleManageMembers = useCallback(async () => {
+    try {
+      if (!id) return;
+      const updated = await projectService.getProject(id as string);
+      setProject(updated);
+      setMembers(updated?.members || []);
+    } catch (e) {
+      console.error('Failed to refresh members after manage action:', e);
+    }
+  }, [id]);
+
+  // Get current user's role in this project
+  const getCurrentUserRole = useCallback(() => {
+    const userId = currentUser?.id || project?.owner_id;
+    if (!userId) return null;
+    if (userId === project?.owner_id) return 'LEADER';
+    const member = members.find(m => m.id === userId);
+    return member ? (member.role || '').toString().toUpperCase() : null;
+  }, [currentUser?.id, project?.owner_id, members]);
+
+  // Permission helpers - use defensive checks
+  const currentRole = getCurrentUserRole();
+  const isGuest = currentRole === 'GUEST';
+  const isResearcher = currentRole === 'RESEARCHER';
+  const isOwner = currentRole === 'LEADER' || !currentRole; // If no role found, assume owner (for backward compatibility)
+  const canEdit = !isGuest;
+  const canChangeSettings = isOwner;
+  const canDownload = !isGuest;
+  const canEditFiles = !isGuest;
+  const canEditMatrix = !isGuest;
+  const canEditMap = !isGuest;
 
   // Sync UI with route param when available
   useEffect(() => {
@@ -197,6 +304,13 @@ export default function ProjectDetailScreen() {
   };
 
   const uploadIntoCurrent = async () => {
+    // Permission check: guests cannot upload files
+    if (isGuest) {
+      console.log('Upload blocked: user is guest, isGuest=', isGuest);
+      Alert.alert('Permission Denied', 'Guests can only view files. Upload is not permitted.');
+      return;
+    }
+    
     try {
       const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: '*/*' });
       if (res.canceled) return;
@@ -252,9 +366,10 @@ export default function ProjectDetailScreen() {
       
       if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
       else await loadRootFiles();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Upload error:', e);
-      Alert.alert('Upload failed', 'Could not upload file');
+      const message = e?.detail || e?.message || 'Could not upload file. Please check your connection and try again.';
+      Alert.alert('Upload Failed', message);
     }
   };
 
@@ -337,6 +452,12 @@ export default function ProjectDetailScreen() {
   };
 
   const handleCreateNote = () => {
+    // Permission check: guests cannot create notes
+    if (isGuest) {
+      Alert.alert('Permission Denied', 'Guests can only view notes. Creating notes is not permitted.');
+      return;
+    }
+    
     router.push({
       pathname: '/create-note',
       params: { projectId: project?.id }
@@ -368,20 +489,32 @@ export default function ProjectDetailScreen() {
   };
 
   const handleDeleteNote = async (noteId: string) => {
+    // Permission check: guests cannot delete notes
+    if (isGuest) {
+      Alert.alert('Permission Denied', 'Guests can only view notes. Deleting notes is not permitted.');
+      return;
+    }
+    
     try {
       await noteService.deleteNote(noteId);
+      Alert.alert('Deleted', 'Note has been removed.');
       await loadNotes();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to delete note');
+    } catch (e: any) {
+      const message = e?.detail || e?.message || 'Failed to delete note. Please try again.';
+      Alert.alert('Error', message);
     }
   };
 
-  const handleManageMembers = () => {
-    // For now, show an alert since we haven't created the member management screen yet
-    Alert.alert('Coming Soon', 'Member management screen will be available soon');
-  };
+  
 
   const handleProjectSettings = () => {
+    // Permission check: only owners can change project settings
+    if (!canChangeSettings) {
+      const role = getCurrentUserRole() || 'GUEST';
+      Alert.alert('Permission Denied', `${role}s cannot modify project settings. Only the project owner can change settings.`);
+      return;
+    }
+    
     // Directly navigate to the Edit Project screen
     if (project?.id) {
       router.push({
@@ -410,18 +543,15 @@ export default function ProjectDetailScreen() {
   );
 
   const renderMember = ({ item }: { item: Member }) => (
-    <View style={styles.memberCard}>
+    <View style={styles.memberCardInner}>
       <View style={styles.memberAvatar}>
         <Text style={styles.memberAvatarText}>
           {item.display_name?.charAt(0).toUpperCase() || 'U'}
         </Text>
       </View>
-      <View style={styles.memberInfo}>
+      <View style={styles.memberDetails}>
         <Text style={styles.memberName}>{item.display_name}</Text>
         <Text style={styles.memberEmail}>{item.email}</Text>
-      </View>
-      <View style={styles.memberRole}>
-        <Text style={styles.memberRoleText}>{item.role}</Text>
       </View>
     </View>
   );
@@ -439,10 +569,23 @@ export default function ProjectDetailScreen() {
   if (!project) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen options={{ title: 'Project Not Found' }} />
+        <Stack.Screen 
+          options={{ 
+            title: 'Project Not Found',
+            headerStyle: { backgroundColor: '#111111' },
+            headerTintColor: '#FF2A2A',
+            headerTitleStyle: { 
+              color: '#F5F5F5',
+              fontSize: 18,
+              fontWeight: '600'
+            },
+            headerShown: true,
+          }} 
+        />
         <Text style={styles.errorText}>Project not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+        <Text style={styles.errorSubtext}>You may have been removed from this project or it no longer exists.</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(tabs)')}>
+          <Text style={styles.backButtonText}>Go to Projects</Text>
         </TouchableOpacity>
       </View>
     );
@@ -578,13 +721,14 @@ export default function ProjectDetailScreen() {
           ) : activeTab === 'gallery' ? (
             <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
           ) : activeTab === 'artefacts' ? (
-            <ArtefactsTab projectId={project?.id as string} />
+            <ArtefactsTab projectId={project?.id as string} canEdit={canEditFiles} />
           ) : activeTab === 'notes' ? (
             <NotesSection
               notes={notes as any}
               onCreateNote={handleCreateNote}
               onNotePress={handleNotePress}
               onDeleteNote={handleDeleteNote}
+              canEdit={!isGuest}
             />
           ) : activeTab === 'gps' ? (
             <View
@@ -606,7 +750,7 @@ export default function ProjectDetailScreen() {
                     }
               }
             >
-              <MapEditor projectId={project?.id as string} />
+              <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
             </View>
           ) : activeTab === 'matrix' ? (
             <View
@@ -632,7 +776,7 @@ export default function ProjectDetailScreen() {
             >
               {Platform.OS === 'web' ? (
                 <div style={{ height: '100%', width: '100%' }}>
-                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string })}
+                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })}
                 </div>
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -703,15 +847,24 @@ export default function ProjectDetailScreen() {
         onClose={() => setShowMenu(false)}
         onOpenMembers={() => setShowMembersModal(true)}
         onOpenSettings={handleProjectSettings}
+        canChangeSettings={canChangeSettings}
       />
 
       {/* Members modal (component) */}
       <MembersModal
         visible={showMembersModal}
-        members={members}
+        members={members.map(m => ({ ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' }))}
         onClose={() => setShowMembersModal(false)}
         onManage={handleManageMembers}
-        renderMember={(m) => renderMember({ item: m })}
+        renderMember={(m) => renderMember({ item: { ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' } })}
+        projectId={id as string}
+        currentUserId={currentUser?.id || project?.owner_id}
+        projectOwnerId={project?.owner_id}
+        onKicked={async () => {
+          // User was kicked from the project - redirect to home immediately
+          setShowMembersModal(false);
+          router.replace('/(tabs)');
+        }}
       />
 
       {/* Files overlay full-screen (component) */}
@@ -791,6 +944,7 @@ export default function ProjectDetailScreen() {
               console.error('Refresh after upload failed:', e);
             }
           }}
+          canEdit={canEditFiles}
         />
       </Modal>
 
@@ -799,6 +953,12 @@ export default function ProjectDetailScreen() {
         visible={showNewFolderModal}
         onCancel={() => setShowNewFolderModal(false)}
         onCreate={async (name) => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Creating folders is not permitted.');
+            setShowNewFolderModal(false);
+            return;
+          }
+          
           if (!name) return;
           try {
             const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : undefined;
@@ -820,6 +980,12 @@ export default function ProjectDetailScreen() {
         isDeleting={isDeleting}
         onCancel={() => setDeleteNodeTarget(null)}
         onConfirm={async () => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Deleting is not permitted.');
+            setDeleteNodeTarget(null);
+            return;
+          }
+          
           if (!deleteNodeTarget) return;
           try {
             setIsDeleting(true);
@@ -842,6 +1008,12 @@ export default function ProjectDetailScreen() {
         isFile={renameNode?.type === 'file'}
         onCancel={() => setRenameNode(null)}
         onRename={async (newBaseName) => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Renaming is not permitted.');
+            setRenameNode(null);
+            return;
+          }
+          
           if (!renameNode) return;
           try {
             let finalName = newBaseName.trim();
@@ -864,6 +1036,12 @@ export default function ProjectDetailScreen() {
         visible={!!moveMode?.node}
         itemName={moveMode?.node?.name || ''}
         onMoveHere={async () => {
+          if (!canEditFiles) {
+            Alert.alert('Permission Denied', 'Guests can only view files. Moving is not permitted.');
+            setMoveMode(null);
+            return;
+          }
+          
           if (!moveMode?.node) return;
           try {
             const destParentId = currentFolder?.id || null;
@@ -907,8 +1085,15 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     color: '#F5F5F5',
-    marginBottom: 24,
+    marginBottom: 12,
     fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    marginBottom: 24,
+    textAlign: 'center',
     letterSpacing: 0.5,
   },
   backButton: {
@@ -1473,6 +1658,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9A9A9A',
     letterSpacing: 0.5,
+  },
+  memberCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberDetails: {
+    flex: 1,
   },
   memberRole: {
     backgroundColor: '#2A2A2A',

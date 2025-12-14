@@ -5,6 +5,8 @@ from sqlalchemy import text
 from app.database import engine, Base
 from app.firebase_config import initialize_firebase
 from app.routes import auth, projects, notes, files, convert, gps, forms
+from app.websocket import sio_app, sio
+from sqlalchemy import text
 
 # Initialize Firebase
 initialize_firebase()
@@ -19,6 +21,22 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS storage_path VARCHAR"))
         # Add ran_lmi_id column to projects if it's missing
         conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ran_lmi_id VARCHAR"))
+        # Create invites table if it doesn't exist
+        conn.execute(text(
+            """
+            CREATE TABLE IF NOT EXISTS project_invites (
+                token VARCHAR PRIMARY KEY,
+                project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                role VARCHAR NOT NULL,
+                created_by VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                expires_at TIMESTAMP WITHOUT TIME ZONE NULL,
+                redeemed_by VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
+                redeemed_at TIMESTAMP WITHOUT TIME ZONE NULL,
+                used BOOLEAN DEFAULT FALSE
+            );
+            """
+        ))
         conn.commit()
     except Exception as e:
         # Don't crash app if migration fails; it will log and continue
@@ -47,7 +65,9 @@ app.include_router(notes.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
 app.include_router(convert.router, prefix="/api")
 app.include_router(gps.router, prefix="/api")
+from app.routes import invites as invites_routes
 app.include_router(forms.router, prefix="/api")
+app.include_router(invites_routes.router, prefix="/api")
 
 
 @app.get("/")
@@ -78,3 +98,9 @@ if __name__ == "__main__":
         port=settings.APP_PORT,
         reload=settings.APP_DEBUG
     )
+
+
+# Mount Socket.IO app
+# This must be done after all routes are registered
+from starlette.routing import Mount
+app.mount("/ws", sio_app)

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput, Platform, ScrollView, Image, Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { fileService } from '../../services/fileService';
@@ -10,7 +10,7 @@ import { buildManifestFromChildren } from '../../utils/artefactManifest';
 interface FileNode { id: string; name: string; type: 'file' | 'folder' | 'note'; mime_type?: string; }
 interface ArtefactMeta { id: string; name: string; number: number; previewFileId?: string; createdAt?: string; }
 
-export default function ArtefactsTab({ projectId }: { projectId: string }) {
+export default function ArtefactsTab({ projectId, canEdit = true }: { projectId: string; canEdit?: boolean }) {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -74,6 +74,11 @@ export default function ArtefactsTab({ projectId }: { projectId: string }) {
   };
 
   const pickImages = async () => {
+    if (!canEdit) {
+      Alert.alert('Permission Denied', 'Guests can only view artefacts. Creating artefacts is not permitted.');
+      return;
+    }
+    
     const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: true, type: 'image/*' });
     if (res.canceled) return;
     const items = res.assets.map((a) => ({ uri: a.uri, name: a.name || 'image', mime: a.mimeType || 'image/jpeg' }));
@@ -83,6 +88,11 @@ export default function ArtefactsTab({ projectId }: { projectId: string }) {
   const addNoteField = () => setNotes((n) => [...n, '']);
 
   const createArtefact = async () => {
+    if (!canEdit) {
+      Alert.alert('Permission Denied', 'Guests can only view artefacts. Creating artefacts is not permitted.');
+      return;
+    }
+    
     if (!artefactFolder) return;
     if (!newName.trim()) return;
     try {
@@ -160,9 +170,12 @@ export default function ArtefactsTab({ projectId }: { projectId: string }) {
       setPickedImages([]);
       setNotes(['']);
       setPreviewIndex(0);
+      Alert.alert('Success', 'Artefact created successfully!');
       await load();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to create artefact', e);
+      const message = e?.detail || e?.message || 'Failed to create artefact. Please try again.';
+      Alert.alert('Error', message);
     } finally {
       setCreating(false);
     }
@@ -179,9 +192,11 @@ export default function ArtefactsTab({ projectId }: { projectId: string }) {
     <View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <Text style={{ color: '#F5F5F5', fontWeight: '700', fontSize: 16 }}>Artefacts</Text>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowCreate(true)}>
-          <Text style={styles.primaryBtnText}>New Artefact</Text>
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowCreate(true)}>
+            <Text style={styles.primaryBtnText}>New Artefact</Text>
+          </TouchableOpacity>
+        )}
       </View>
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
