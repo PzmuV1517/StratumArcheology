@@ -9,6 +9,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, check_project_permission
 from app.models import User, Project, ProjectInvite, project_members, UserRole
 from app.schemas import InviteCreateRequest, InviteResponse, InviteAcceptRequest, InviteAcceptResponse, InviteJoinByCodeRequest
+from app.websocket import log_activity
 from sqlalchemy import select
 
 router = APIRouter(tags=["invites"])
@@ -137,6 +138,16 @@ async def accept_invite(
         # Single-use behavior for legacy invites without max_uses
         invite.used = True
     db.commit()
+    
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=invite.project_id,
+        activity_type='member_joined',
+        description=f'{current_user.display_name} joined the project via invite as {role_value}',
+        user_id=current_user.id,
+        metadata={'role': role_value}
+    )
 
     return InviteAcceptResponse(
         project_id=invite.project_id,
@@ -198,6 +209,16 @@ async def join_by_code(
         # Single-use behavior for legacy invites without max_uses
         invite.used = True
     db.commit()
+    
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=invite.project_id,
+        activity_type='member_joined',
+        description=f'{current_user.display_name} joined the project via invite code as {role_value}',
+        user_id=current_user.id,
+        metadata={'role': role_value}
+    )
 
     return InviteAcceptResponse(
         project_id=invite.project_id,

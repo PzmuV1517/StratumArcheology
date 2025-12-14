@@ -95,6 +95,8 @@ export default function ProjectDetailScreen() {
   const [GiHamburger, setGiHamburger] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
 
   useEffect(() => {
     // Load web-only icon lazily to avoid native bundling issues
@@ -178,10 +180,20 @@ export default function ProjectDetailScreen() {
       }
     };
     
+    // Listen for timeline updates
+    const handleTimelineUpdated = (data: any) => {
+      console.log('[Project] Received timeline_updated event:', data);
+      if (data.project_id === id) {
+        // Refresh timeline
+        loadTimeline();
+      }
+    };
+    
     socket.on('member_kicked', handleMemberKicked);
     socket.on('role_changed', handleRoleChanged);
     socket.on('members_updated', handleMembersUpdated);
     socket.on('content_updated', handleContentUpdated);
+    socket.on('timeline_updated', handleTimelineUpdated);
     
     // Cleanup listeners on unmount
     return () => {
@@ -191,6 +203,7 @@ export default function ProjectDetailScreen() {
       socket.off('role_changed', handleRoleChanged);
       socket.off('members_updated', handleMembersUpdated);
       socket.off('content_updated', handleContentUpdated);
+      socket.off('timeline_updated', handleTimelineUpdated);
     };
   }, [id, currentUser?.id, socket, isConnected]);
 
@@ -251,11 +264,40 @@ export default function ProjectDetailScreen() {
       setNotes(notesData);
       // Members are now included in projectData
       setMembers(projectData.members || []);
+      
+      // Also load timeline when loading project
+      loadTimeline();
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Error', 'Failed to load project details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTimeline = async () => {
+    if (!id) return;
+    try {
+      setTimelineLoading(true);
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const token = await AsyncStorage.getItem('authToken');
+      const { config } = await import('../../src/config/config');
+      const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
+      
+      const response = await fetch(`${apiBaseUrl}/api/activities/project/${id}?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data);
+      }
+    } catch (error) {
+      console.error('Error loading timeline:', error);
+    } finally {
+      setTimelineLoading(false);
     }
   };
 
@@ -712,20 +754,55 @@ export default function ProjectDetailScreen() {
                   </View>
                   <Text style={styles.overviewCardTitle}>Timeline</Text>
                 </View>
-                <View style={styles.overviewTimelineItem}>
-                  <View style={styles.overviewTimelineDot} />
-                  <View style={styles.overviewTimelineContent}>
-                    <Text style={styles.overviewTimelineLabel}>Project Created</Text>
-                    <Text style={styles.overviewTimelineDate}>{new Date(project.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</Text>
+                {timelineLoading ? (
+                  <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 16 }} />
+                ) : activities.length === 0 ? (
+                  <View style={styles.overviewTimelineItem}>
+                    <View style={styles.overviewTimelineDot} />
+                    <View style={styles.overviewTimelineContent}>
+                      <Text style={styles.overviewTimelineLabel}>Project Created</Text>
+                      <Text style={styles.overviewTimelineDate}>
+                        {new Date(project.created_at).toLocaleDateString(undefined, { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric', 
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'UTC' 
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.overviewTimelineItem}>
-                  <View style={styles.overviewTimelineDot} />
-                  <View style={styles.overviewTimelineContent}>
-                    <Text style={styles.overviewTimelineLabel}>Last Updated</Text>
-                    <Text style={styles.overviewTimelineDate}>{new Date(project.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}</Text>
-                  </View>
-                </View>
+                ) : (
+                  <FlatList
+                    data={activities}
+                    keyExtractor={(item) => item.id}
+                    style={styles.timelineList}
+                    contentContainerStyle={styles.timelineListContent}
+                    showsVerticalScrollIndicator={true}
+                    nestedScrollEnabled={true}
+                    renderItem={({ item }) => (
+                      <View style={styles.overviewTimelineItem}>
+                        <View style={styles.overviewTimelineDot} />
+                        <View style={styles.overviewTimelineContent}>
+                          <Text style={styles.overviewTimelineLabel}>{item.description}</Text>
+                          {item.user_name && (
+                            <Text style={styles.overviewTimelineUser}>by {item.user_name}</Text>
+                          )}
+                          <Text style={styles.overviewTimelineDate}>
+                            {new Date(item.created_at).toLocaleDateString(undefined, { 
+                              year: 'numeric', 
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  />
+                )}
               </View>
             </View>
           ) : activeTab === 'gallery' ? (
@@ -1314,15 +1391,27 @@ const styles = StyleSheet.create({
   },
   overviewTimelineLabel: {
     fontSize: 14,
-    color: '#9A9A9A',
-    marginBottom: 4,
+    fontWeight: '600',
+    color: '#F5F5F5',
+    marginBottom: 2,
     letterSpacing: 0.3,
   },
+  overviewTimelineUser: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
   overviewTimelineDate: {
-    fontSize: 16,
-    color: '#F5F5F5',
-    fontWeight: '600',
+    fontSize: 13,
+    color: '#9A9A9A',
     letterSpacing: 0.3,
+  },
+  timelineList: {
+    maxHeight: 400,
+  },
+  timelineListContent: {
+    paddingBottom: 8,
   },
   overviewSection: {
     marginBottom: 24,

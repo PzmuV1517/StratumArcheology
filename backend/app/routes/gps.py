@@ -5,7 +5,9 @@ from typing import List, Optional, Any, Dict
 import json
 
 from app.database import get_db
-from app.models import Project, ProjectGPS
+from app.models import Project, ProjectGPS, User
+from app.dependencies import get_current_user
+from app.websocket import log_activity
 
 router = APIRouter()
 
@@ -44,7 +46,12 @@ def get_project_gps(project_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/projects/{project_id}/gps", response_model=GPSState)
-def put_project_gps(project_id: str, state: GPSState, db: Session = Depends(get_db)):
+async def put_project_gps(
+    project_id: str,
+    state: GPSState,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     # Validate project exists
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -59,4 +66,15 @@ def put_project_gps(project_id: str, state: GPSState, db: Session = Depends(get_
         row = ProjectGPS(project_id=project_id, data=data_str)
         db.add(row)
     db.commit()
+    
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='gps_updated',
+        description='Updated GPS coordinates',
+        user_id=current_user.id,
+        metadata={'has_work_area': state.work is not None, 'sites_count': len(state.sites)}
+    )
+    
     return state

@@ -3,8 +3,9 @@ WebSocket manager for real-time project updates.
 Handles member kicks, role changes, and other real-time events.
 """
 import socketio
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 import logging
+import json
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -218,6 +219,87 @@ async def emit_content_update(project_id: str, content_type: str = 'general'):
         logger.info(f"Emitted content_updated ({content_type}) for project {project_id}")
     except Exception as e:
         logger.error(f"Error emitting content_update: {e}")
+
+
+async def log_activity(
+    db,
+    project_id: str,
+    activity_type: str,
+    description: str,
+    user_id: Optional[str] = None,
+    metadata: Optional[dict] = None
+):
+    """
+    Log an activity to the project timeline.
+    
+    Args:
+        db: Database session
+        project_id: The project UUID
+        activity_type: Type from ActivityType enum (name like 'FILE_UPLOADED' or value like 'file_uploaded')
+        description: Human-readable description
+        user_id: Optional user who performed the action
+        metadata: Optional dict with additional data
+    """
+    try:
+        from app.models import ProjectActivity, ActivityType
+        
+        # Validate activity type - try both name and value lookups
+        activity_enum = None
+        
+        # Try to get by name first (e.g., 'FILE_UPLOADED')
+        if hasattr(ActivityType, activity_type):
+            activity_enum = getattr(ActivityType, activity_type)
+        else:
+            # Try to get by value (e.g., 'file_uploaded')
+            try:
+                activity_enum = ActivityType(activity_type.lower())
+            except ValueError:
+                logger.error(f"Invalid activity type: {activity_type}")
+                return
+        
+        activity = ProjectActivity(
+            project_id=project_id,
+            user_id=user_id,
+            activity_type=activity_enum,
+            description=description,
+            extra_data=json.dumps(metadata) if metadata else None
+        )
+        
+        db.add(activity)
+        db.commit()
+        
+        # Emit timeline update via WebSocket
+        await emit_timeline_update(project_id)
+        
+        logger.info(f"Logged activity: {activity_type} for project {project_id}")
+        
+    except Exception as e:
+        logger.error(f"Error logging activity: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+
+
+async def emit_timeline_update(project_id: str):
+    """
+    Notify all users in a project that the timeline has been updated.
+    
+    Args:
+        project_id: The project UUID
+    """
+    try:
+        room = f"project_{project_id}"
+        await sio.emit(
+            'timeline_updated',
+            {
+                'project_id': project_id,
+                'message': 'Project timeline has been updated'
+            },
+            room=room
+        )
+        logger.info(f"Emitted timeline_updated for project {project_id}")
+    except Exception as e:
+        logger.error(f"Error emitting timeline_update: {e}")
 
 
 # Create ASGI app wrapper for Socket.IO

@@ -7,7 +7,7 @@ from app.dependencies import get_current_user, check_project_permission
 from app.models import User, Project, FileNode, FileNodeType, Note, NoteFileLink
 from app.schemas import FileNodeBase, FileNodeCreateFolder, FileNodeMoveRequest, FileNodeRenameRequest
 from app.minio_client import minio_client
-from app.websocket import emit_content_update
+from app.websocket import emit_content_update, log_activity
 from datetime import datetime
 import uuid
 
@@ -66,6 +66,16 @@ async def create_folder(
     db.commit()
     db.refresh(node)
     
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='FOLDER_CREATED',
+        description=f'Created folder "{node.name}"',
+        user_id=current_user.id,
+        metadata={'folder_id': node.id, 'folder_name': node.name}
+    )
+    
     # Notify all users in project that files have been updated (folder created)
     await emit_content_update(project_id, 'files')
     
@@ -98,6 +108,16 @@ async def move_node(
     node.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(node)
+    
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=node.project_id,
+        activity_type='FILE_MOVED',
+        description=f'Moved "{node.name}"',
+        user_id=current_user.id,
+        metadata={'node_id': node.id, 'node_name': node.name}
+    )
     
     # Notify all users in project that files have been updated (file/folder moved)
     await emit_content_update(node.project_id, 'files')
@@ -152,6 +172,16 @@ async def rename_node(
     db.commit()
     db.refresh(node)
     
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=node.project_id,
+        activity_type='FILE_RENAMED',
+        description=f'Renamed to "{node.name}"',
+        user_id=current_user.id,
+        metadata={'node_id': node.id, 'new_name': node.name}
+    )
+    
     # Notify all users in project that files have been updated (file/folder renamed)
     await emit_content_update(node.project_id, 'files')
     
@@ -183,8 +213,20 @@ async def delete_node(
         db.delete(n)
 
     project_id = node.project_id  # Store before deletion
+    node_name = node.name  # Store before deletion
+    node_type = node.type  # Store before deletion
     await _delete_subtree(node)
     db.commit()
+    
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='FILE_DELETED' if node_type == FileNodeType.FILE else 'FOLDER_DELETED',
+        description=f'Deleted {"file" if node_type == FileNodeType.FILE else "folder"} "{node_name}"',
+        user_id=current_user.id,
+        metadata={'node_name': node_name}
+    )
     
     # Notify all users in project that files have been updated (file/folder deleted)
     await emit_content_update(project_id, 'files')
@@ -243,6 +285,16 @@ async def upload_file(
     db.add(node)
     db.commit()
     db.refresh(node)
+    
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='FILE_UPLOADED',
+        description=f'Uploaded file "{node.name}"',
+        user_id=current_user.id,
+        metadata={'file_id': node.id, 'file_name': node.name, 'file_size': node.size}
+    )
     
     # Notify all users in project that files have been updated (file uploaded)
     await emit_content_update(project_id, 'files')

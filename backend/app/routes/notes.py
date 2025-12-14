@@ -6,7 +6,7 @@ from app.dependencies import get_current_user, check_project_permission
 from app.models import User, Note, NoteAttachment, FileNode, FileNodeType, NoteFileLink
 from app.schemas import NoteCreate, NoteUpdate, NoteResponse
 from app.minio_client import minio_client
-from app.websocket import emit_content_update
+from app.websocket import emit_content_update, log_activity
 from datetime import datetime
 import uuid
 from pydantic import BaseModel
@@ -85,6 +85,16 @@ async def create_note(
         link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
         db.add(link)
         db.commit()
+    
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=note.project_id,
+        activity_type='NOTE_CREATED',
+        description=f'Created note "{note.title}"',
+        user_id=current_user.id,
+        metadata={'note_id': note.id, 'note_title': note.title}
+    )
     
     # Notify all users in project that notes have been updated
     await emit_content_update(note.project_id, 'notes')
@@ -198,6 +208,16 @@ async def update_note(
     db.commit()
     db.refresh(note)
     
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=note.project_id,
+        activity_type='NOTE_UPDATED',
+        description=f'Updated note "{note.title}"',
+        user_id=current_user.id,
+        metadata={'note_id': note.id, 'note_title': note.title}
+    )
+    
     # Notify all users in project that notes have been updated
     await emit_content_update(note.project_id, 'notes')
     
@@ -285,8 +305,19 @@ async def delete_note(
         await minio_client.delete_file(attachment.file_path)
     
     project_id = note.project_id  # Store before deletion
+    note_title = note.title  # Store before deletion
     db.delete(note)
     db.commit()
+    
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='NOTE_DELETED',
+        description=f'Deleted note "{note_title}"',
+        user_id=current_user.id,
+        metadata={'note_title': note_title}
+    )
     
     # Notify all users in project that notes have been updated (note deleted)
     await emit_content_update(project_id, 'notes')
@@ -385,6 +416,16 @@ async def add_note_attachment(
     db.commit()
     db.refresh(attachment)
 
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=note.project_id,
+        activity_type='NOTE_ATTACHMENT_ADDED',
+        description=f'Added attachment "{attachment.filename}" to note "{note.title}"',
+        user_id=current_user.id,
+        metadata={'note_id': note.id, 'attachment_name': attachment.filename}
+    )
+
     # Notify all users in project that notes have been updated (attachment added)
     await emit_content_update(note.project_id, 'notes')
 
@@ -430,11 +471,26 @@ async def delete_note_attachment(
     # Delete from MinIO
     await minio_client.delete_file(attachment.file_path)
     
+    # Store info before deletion
+    attachment_filename = attachment.filename
+    note_title = note.title
+    project_id = note.project_id
+    
     # Delete from database
     db.delete(attachment)
     db.commit()
     
+    # Log activity
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='NOTE_ATTACHMENT_DELETED',
+        description=f'Deleted attachment "{attachment_filename}" from note "{note_title}"',
+        user_id=current_user.id,
+        metadata={'note_title': note_title, 'attachment_name': attachment_filename}
+    )
+    
     # Notify all users in project that notes have been updated (attachment deleted)
-    await emit_content_update(note.project_id, 'notes')
+    await emit_content_update(project_id, 'notes')
     
     return None
