@@ -10,9 +10,10 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # Create Socket.IO server instance with CORS support
+# Socket.IO requires '*' or explicit origins list
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=settings.allowed_origins_list,
+    cors_allowed_origins='*',  # Allow all origins for development
     logger=True,
     engineio_logger=True
 )
