@@ -58,6 +58,9 @@ api.interceptors.request.use(
     // Ensure baseURL honors override on every request
     const base = await resolveBaseUrl();
     axiosConfig.baseURL = base;
+    
+    // Debug logging
+    console.log('[API] Request to:', base + axiosConfig.url);
 
     // Attach auth token if available
     const token = await AsyncStorage.getItem('authToken');

@@ -47,7 +47,6 @@
       "reactCompiler": true
     },
     "extra": {
-      "apiBaseUrl": "http://localhost:8000/api",
       "firebaseApiKey": "AIzaSyBU1hDR7aqFn2Bs_VU69pk1flJ7fWu6sBk",
       "firebaseAuthDomain": "stratum-quantumbits.firebaseapp.com",
       "firebaseProjectId": "stratum-quantumbits",
