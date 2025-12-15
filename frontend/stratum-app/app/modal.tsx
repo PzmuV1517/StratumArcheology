@@ -25,7 +25,7 @@ export default function CreateProjectModal() {
     try {
       const newProject = await projectService.createProject({
         name: name.trim(),
-        description: description.trim() || null,
+        description: description.trim() || undefined,
         ran_lmi_id: ranLmiId.trim(),
       });
       

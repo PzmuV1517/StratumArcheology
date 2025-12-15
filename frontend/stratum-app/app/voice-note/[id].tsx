@@ -33,7 +33,7 @@ export default function VoiceNoteScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{note?.title}</Text>
           <View style={{ flex: 1, marginTop: 16 }}>
-            <AudioPanel src={audioUrl} name={note?.title} />
+            <AudioPanel audioUrl={audioUrl || ''} />
             {!audioUrl && <Text style={{ color: '#9A9A9A', marginTop: 12 }}>No audio attachment found.</Text>}
           </View>
         </View>

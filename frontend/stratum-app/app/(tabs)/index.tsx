@@ -3,9 +3,10 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndi
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
 import { ProjectActionModal } from '../../src/components/project/modals/ProjectActionModal';
+import type { Project } from '../../src/services/projectService.types';
 
 export default function ProjectsScreen() {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);

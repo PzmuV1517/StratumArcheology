@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('[AuthContext] authService.login result:', result);
       if (result.success) {
         console.log('[AuthContext] Setting user:', result.user);
-        setUser(result.user);
+        setUser(result.user || null);
         return { success: true };
       } else {
         console.log('[AuthContext] Login failed:', result.error);
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const result = await authService.register(email, password, displayName);
       if (result.success) {
-        setUser(result.user);
+        setUser(result.user || null);
         return { success: true };
       } else {
         return { success: false, error: result.error };

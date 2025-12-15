@@ -1,11 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function AudioPanel({ name }: { src?: string | null; name?: string }) {
+export interface AudioPanelProps {
+  audioUrl: string;
+}
+
+export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.info}>Audio playback not supported yet on this platform.</Text>
-      {!!name && <Text style={styles.name}>{name}</Text>}
+      {!!audioUrl && <Text style={styles.name}>Audio: {audioUrl.split('/').pop()}</Text>}
     </View>
   );
 }

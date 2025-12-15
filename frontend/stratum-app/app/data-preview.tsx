@@ -546,7 +546,7 @@ export default function DataPreviewScreen() {
                 }
               >
                 {isAudio ? (
-                  <AudioPanel src={audioUrl} name={name as string} />
+                  <AudioPanel audioUrl={audioUrl || ''} />
                 ) : isPdf ? (
                   <PdfPanel src={pdfUrl} />
                 ) : isVideo ? (

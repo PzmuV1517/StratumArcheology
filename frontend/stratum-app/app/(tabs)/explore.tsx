@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
+import type { Project } from '../../src/services/projectService.types';
 
 export default function ExploreScreen() {
-  const [recentProjects, setRecentProjects] = useState([]);
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 

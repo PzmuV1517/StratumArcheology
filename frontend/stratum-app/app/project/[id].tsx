@@ -33,18 +33,12 @@ import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfir
 import RenameModal from '../../src/components/project/modals/RenameModal';
 import MoveBanner from '../../src/components/project/MoveBanner';
 import { useWebSocket } from '../../src/contexts/WebSocketContext';
+import type { Project as ServiceProject, ProjectMember as ServiceMember } from '../../src/services/projectService.types';
 
-interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  ran_lmi_id?: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-  is_active: boolean;
+// Use types from service with local aliases
+type Project = ServiceProject & {
   members?: Member[];
-}
+};
 
 interface Note {
   id: string;
@@ -52,14 +46,15 @@ interface Note {
   content?: string;
   author_id: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 interface Member {
-  id: string;
+  id?: string;
+  user_id?: string;
   display_name: string;
   email: string;
-  role: 'LEADER' | 'RESEARCHER' | 'GUEST';
+  role: string;
 }
 
 export default function ProjectDetailScreen() {
@@ -583,7 +578,7 @@ export default function ProjectDetailScreen() {
       <View style={styles.noteHeader}>
         <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.noteDate}>
-          {new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+          {item.updated_at ? new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' }) : ''}
         </Text>
       </View>
       {item.content && (
@@ -940,7 +935,12 @@ export default function ProjectDetailScreen() {
       {/* Members modal (component) */}
       <MembersModal
         visible={showMembersModal}
-        members={members.map(m => ({ ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' }))}
+        members={members.map(m => ({ 
+          id: m.id || m.user_id || '', 
+          display_name: m.display_name, 
+          email: m.email, 
+          role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' 
+        }))}
         onClose={() => setShowMembersModal(false)}
         onManage={handleManageMembers}
         renderMember={(m) => renderMember({ item: { ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' } })}

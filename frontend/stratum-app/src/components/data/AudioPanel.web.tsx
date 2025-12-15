@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function AudioPanel({ src, name }: { src: string | null; name?: string }) {
+export interface AudioPanelProps {
+  audioUrl: string;
+}
+
+export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!src || !audioRef.current || !canvasRef.current) return;
+    if (!audioUrl || !audioRef.current || !canvasRef.current) return;
     let ctx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let raf = 0;
@@ -41,15 +45,14 @@ export default function AudioPanel({ src, name }: { src: string | null; name?: s
       if (raf) cancelAnimationFrame(raf);
       try { ctx?.close(); } catch {}
     };
-  }, [src]);
+  }, [audioUrl]);
 
   return (
     <View style={styles.wrapper}>
-      {src ? (
+      {audioUrl ? (
         <>
-          <audio ref={audioRef} src={src} controls style={styles.audio} />
+          <audio ref={audioRef} src={audioUrl} controls style={styles.audio} />
           <canvas ref={canvasRef} width={800} height={120} style={styles.canvas} />
-          {!!name && <Text style={styles.name}>{name}</Text>}
           {error && <Text style={styles.err}>{error}</Text>}
         </>
       ) : (
