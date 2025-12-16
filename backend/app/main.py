@@ -1,67 +1,50 @@
+"""
+STRATUM API - Archaeological Site Management Platform
+
+Main FastAPI application entry point with:
+- Error handling middleware
+- Structured logging
+- CORS configuration
+- Route registration
+
+IMPORTANT: Database migrations are handled by Alembic, NOT create_all().
+Run migrations with: alembic upgrade head
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from sqlalchemy import text
-from app.database import engine, Base
 from app.firebase_config import initialize_firebase
 from app.routes import auth, projects, notes, files, convert, gps, forms, activities
 from app.websocket import sio_app, sio
-from sqlalchemy import text
+from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
+from app.minio_client import minio_client
+
+# Configure structured logging based on environment
+configure_logging(debug=settings.APP_DEBUG)
+logger = get_logger(__name__)
 
 # Initialize Firebase
 initialize_firebase()
+logger.info("Firebase initialized")
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
-
-# Lightweight migrations for schema updates (no Alembic yet)
-with engine.connect() as conn:
-    try:
-        # Add storage_path column to file_nodes if it's missing
-        conn.execute(text("ALTER TABLE file_nodes ADD COLUMN IF NOT EXISTS storage_path VARCHAR"))
-        # Add ran_lmi_id column to projects if it's missing
-        conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS ran_lmi_id VARCHAR"))
-        # Create invites table if it doesn't exist
-        conn.execute(text(
-            """
-            CREATE TABLE IF NOT EXISTS project_invites (
-                token VARCHAR PRIMARY KEY,
-                project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                role VARCHAR NOT NULL,
-                created_by VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
-                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
-                expires_at TIMESTAMP WITHOUT TIME ZONE NULL,
-                redeemed_by VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
-                redeemed_at TIMESTAMP WITHOUT TIME ZONE NULL,
-                used BOOLEAN DEFAULT FALSE
-            );
-            """
-        ))
-        # Create project activities table if it doesn't exist
-        conn.execute(text(
-            """
-            CREATE TABLE IF NOT EXISTS project_activities (
-                id VARCHAR PRIMARY KEY,
-                project_id VARCHAR NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-                user_id VARCHAR NULL REFERENCES users(id) ON DELETE SET NULL,
-                activity_type VARCHAR NOT NULL,
-                description TEXT NOT NULL,
-                extra_data TEXT NULL,
-                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
-            );
-            """
-        ))
-        # Create index on project_id and created_at for efficient queries
-        conn.execute(text(
-            """
-            CREATE INDEX IF NOT EXISTS ix_project_activities_project_created 
-            ON project_activities(project_id, created_at DESC);
-            """
-        ))
-        conn.commit()
-    except Exception as e:
-        # Don't crash app if migration fails; it will log and continue
-        print(f"Schema migration warning: {e}")
+# =============================================================================
+# DATABASE MIGRATIONS
+# =============================================================================
+# REMOVED: Base.metadata.create_all(bind=engine)
+# 
+# Database schema is now managed by Alembic migrations.
+# 
+# To apply migrations:
+#   cd backend
+#   alembic upgrade head
+#
+# To create a new migration after model changes:
+#   alembic revision --autogenerate -m "description of changes"
+#
+# To downgrade:
+#   alembic downgrade -1  (one step back)
+#   alembic downgrade base  (all the way back)
+# =============================================================================
 
 # Create FastAPI app
 app = FastAPI(
@@ -69,6 +52,14 @@ app = FastAPI(
     description="Archaeological site management and collaboration platform",
     version="1.0.0"
 )
+
+# Add error handling middleware (must be first to catch all errors)
+# This provides:
+# - Structured error logging with request context
+# - Database transaction rollback on errors
+# - MinIO upload cleanup on errors
+# - User-friendly error responses
+app.add_middleware(ErrorHandlingMiddleware, minio_client=minio_client)
 
 # Configure CORS
 app.add_middleware(
@@ -90,6 +81,14 @@ from app.routes import invites as invites_routes
 app.include_router(forms.router, prefix="/api")
 app.include_router(invites_routes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
+
+logger.info(
+    "STRATUM API started",
+    environment=settings.ENVIRONMENT,
+    debug=settings.APP_DEBUG,
+    host=settings.APP_HOST,
+    port=settings.APP_PORT
+)
 
 
 @app.get("/")
