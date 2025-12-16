@@ -37,6 +37,12 @@
 - [x] Fix JSX fragment bug in project screen file rows
 - [x] TypeScript error fixes across frontend (UUID string IDs, type safety)
 - [x] Android emulator network configuration (10.0.2.2:8000)
+- [x] **Database Migrations with Alembic** - Removed `create_all()`, created baseline migration with Alembic ([`alembic/env.py`](backend/alembic/env.py), [`001_baseline_initial_schema.py`](backend/alembic/versions/001_baseline_initial_schema.py))
+- [x] **Backend Error Handling & Logging** - Structured logging with structlog, ErrorHandlingMiddleware with DB rollback and MinIO cleanup ([`middleware/logging_config.py`](backend/app/middleware/logging_config.py), [`middleware/error_handler.py`](backend/app/middleware/error_handler.py))
+- [x] **Data Validation Layer** - GPS validation, magic bytes file detection, string sanitization, SQL injection helpers ([`validation.py`](backend/app/validation.py))
+- [x] **Offline-First Architecture** - SQLite local DB (expo-sqlite), request queue, sync service, conflict detection, network monitoring ([`src/db/`](frontend/stratum-app/src/db/), [`syncService.ts`](frontend/stratum-app/src/services/syncService.ts), [`networkService.ts`](frontend/stratum-app/src/services/networkService.ts))
+- [x] **Auto-Save for All Forms** - useAutoSave hook with 30s interval, draft recovery, visual status indicator ([`useAutoSave.ts`](frontend/stratum-app/src/hooks/useAutoSave.ts), [`DraftStatusIndicator.tsx`](frontend/stratum-app/src/components/common/DraftStatusIndicator.tsx))
+- [x] Backend tests (56 pytest tests) and Frontend tests (42 Jest tests) for new features
 
 ---
 
@@ -44,47 +50,47 @@
 
 ### Backend Stability & Data Safety
 
-- [ ] **[P0] Database Migrations with Alembic**
-  - Remove dangerous `create_all()` bootstrap in main.py
-  - Create initial baseline migration from current schema
+- [x] **[P0] Database Migrations with Alembic** ✅ COMPLETED
+  - ~~Remove dangerous `create_all()` bootstrap in main.py~~
+  - ~~Create initial baseline migration from current schema~~
   - Document migration workflow for team (upgrade/downgrade)
   - Add migration tests to CI pipeline
   - **Why**: Prevents accidental data loss and schema corruption in production
-  - **Files**: `backend/app/database.py`, `backend/app/main.py`, `alembic/versions/`
+  - **Files**: [`alembic/env.py`](backend/alembic/env.py), [`001_baseline_initial_schema.py`](backend/alembic/versions/001_baseline_initial_schema.py)
 
-- [ ] **[P0] Backend Error Handling & Logging**
-  - Structured logging with context (user_id, project_id, action)
-  - Error tracking middleware (capture stack traces)
-  - Database transaction rollback on failures
-  - File upload cleanup on errors (prevent orphaned MinIO objects)
+- [x] **[P0] Backend Error Handling & Logging** ✅ COMPLETED
+  - ~~Structured logging with context (user_id, project_id, action)~~
+  - ~~Error tracking middleware (capture stack traces)~~
+  - ~~Database transaction rollback on failures~~
+  - ~~File upload cleanup on errors (prevent orphaned MinIO objects)~~
   - **Why**: Field data is irreplaceable - must ensure no silent failures
-  - **Files**: `backend/app/main.py`, new `backend/app/middleware/`
+  - **Files**: [`middleware/logging_config.py`](backend/app/middleware/logging_config.py), [`middleware/error_handler.py`](backend/app/middleware/error_handler.py)
 
-- [ ] **[P0] Data Validation Layer**
-  - Pydantic schemas for all inputs (strict mode)
-  - SQL injection prevention audit (parametrized queries)
-  - File type validation before upload (magic bytes check)
-  - GPS coordinate validation (lat: -90 to 90, lon: -180 to 180)
+- [x] **[P0] Data Validation Layer** ✅ COMPLETED
+  - ~~Pydantic schemas for all inputs (strict mode)~~
+  - ~~SQL injection prevention audit (parametrized queries)~~
+  - ~~File type validation before upload (magic bytes check)~~
+  - ~~GPS coordinate validation (lat: -90 to 90, lon: -180 to 180)~~
   - **Why**: Garbage data undermines scientific credibility
-  - **Files**: `backend/app/schemas.py`, `backend/app/routes/*.py`
+  - **Files**: [`validation.py`](backend/app/validation.py) - 400+ lines of validation utilities
 
 ### Offline Capability (Critical for Field Work)
 
-- [ ] **[P0] Offline-First Architecture - Phase 1**
-  - Local SQLite database for mobile app (expo-sqlite)
-  - Queue system for API requests (AsyncStorage-based queue)
-  - Conflict detection on sync (timestamp-based last-write-wins with warnings)
-  - Network status detection (online/offline indicator)
+- [x] **[P0] Offline-First Architecture - Phase 1** ✅ COMPLETED
+  - ~~Local SQLite database for mobile app (expo-sqlite)~~
+  - ~~Queue system for API requests (AsyncStorage-based queue)~~
+  - ~~Conflict detection on sync (timestamp-based last-write-wins with warnings)~~
+  - ~~Network status detection (online/offline indicator)~~
   - **Why**: Excavation sites rarely have reliable internet
-  - **Files**: New `frontend/stratum-app/src/db/`, `src/services/syncService.ts`
+  - **Files**: [`src/db/database.ts`](frontend/stratum-app/src/db/database.ts), [`syncService.ts`](frontend/stratum-app/src/services/syncService.ts), [`networkService.ts`](frontend/stratum-app/src/services/networkService.ts)
 
-- [ ] **[P0] Auto-Save for All Forms**
-  - Draft saving every 30 seconds (debounced)
-  - Restore drafts on app crash/close (check AsyncStorage on mount)
-  - Clear draft after successful submission
-  - Visual indicator for "Draft Saved" status
+- [x] **[P0] Auto-Save for All Forms** ✅ COMPLETED
+  - ~~Draft saving every 30 seconds (debounced)~~
+  - ~~Restore drafts on app crash/close (check AsyncStorage on mount)~~
+  - ~~Clear draft after successful submission~~
+  - ~~Visual indicator for "Draft Saved" status~~
   - **Why**: Losing field notes due to battery death is catastrophic
-  - **Files**: All form screens (`create-note.tsx`, context recording forms)
+  - **Files**: [`useAutoSave.ts`](frontend/stratum-app/src/hooks/useAutoSave.ts), [`DraftStatusIndicator.tsx`](frontend/stratum-app/src/components/common/DraftStatusIndicator.tsx)
 
 ---
 
