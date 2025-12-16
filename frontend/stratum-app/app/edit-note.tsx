@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
+import { useAutoSave, SaveStatus } from '../src/hooks/useAutoSave';
 
 interface Note {
   id: string;
@@ -30,6 +32,54 @@ export default function EditNoteScreen() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [originalDataLoaded, setOriginalDataLoaded] = useState(false);
+
+  // Form data for auto-save
+  const formData = useMemo(() => ({ title, content }), [title, content]);
+  const initialData = useMemo(() => ({ title: '', content: '' }), []);
+
+  // Auto-save hook
+  const {
+    saveStatus,
+    hasDraft,
+    saveDraft,
+    restoreDraft,
+    clearDraft,
+    markSubmitted,
+  } = useAutoSave<{ title: string; content: string }>({
+    formId: `edit-note-${noteId}`,
+    initialData,
+    onRestore: (data) => {
+      setTitle(data.title);
+      setContent(data.content);
+    },
+    skipRestore: true, // We handle restoration manually via modal
+  });
+
+  // Check for draft after original data loads
+  useEffect(() => {
+    if (originalDataLoaded && hasDraft()) {
+      setShowDraftModal(true);
+    }
+  }, [originalDataLoaded]);
+
+  // Auto-save when form data changes (only after original data loaded)
+  useEffect(() => {
+    if (originalDataLoaded && (title || content)) {
+      saveDraft(formData);
+    }
+  }, [formData, originalDataLoaded]);
+
+  const handleRestoreDraft = () => {
+    restoreDraft();
+    setShowDraftModal(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+  };
 
   useEffect(() => {
     loadNote();
@@ -41,6 +91,7 @@ export default function EditNoteScreen() {
       const noteData: Note = await noteService.getNote(noteId as string);
       setTitle(noteData.title);
       setContent(noteData.content || '');
+      setOriginalDataLoaded(true);
     } catch (error: any) {
       console.error('Error loading note:', error);
       const message = error?.detail || error?.message || 'Failed to load note. It may have been deleted.';
@@ -64,6 +115,7 @@ export default function EditNoteScreen() {
         title: title.trim(),
         content: content.trim(),
       });
+      markSubmitted(); // Clear draft on successful save
       Alert.alert('Saved', 'Your changes have been saved.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
@@ -101,6 +153,37 @@ export default function EditNoteScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Draft Recovery Modal */}
+      <Modal
+        visible={showDraftModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDraftModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Unsaved Draft Found</Text>
+            <Text style={styles.modalText}>
+              You have an unsaved draft from a previous editing session. Would you like to restore it or discard it?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButtonSecondary}
+                onPress={handleDiscardDraft}
+              >
+                <Text style={styles.modalButtonSecondaryText}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButtonPrimary}
+                onPress={handleRestoreDraft}
+              >
+                <Text style={styles.modalButtonPrimaryText}>Restore</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Stack.Screen 
         options={{
           title: 'Edit Note',
@@ -116,6 +199,17 @@ export default function EditNoteScreen() {
         }} 
       />
       
+      {/* Save Status Indicator */}
+      {saveStatus !== 'idle' && (
+        <View style={styles.saveStatusBar}>
+          <Text style={styles.saveStatusText}>
+            {saveStatus === 'saving' && '⏳ Saving draft...'}
+            {saveStatus === 'saved' && '✓ Draft saved'}
+            {saveStatus === 'error' && '⚠ Failed to save draft'}
+          </Text>
+        </View>
+      )}
+
       <ScrollView style={styles.content}>
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Edit Note</Text>
@@ -248,5 +342,76 @@ const styles = StyleSheet.create({
     color: '#9A9A9A',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  // Auto-save modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 24,
+    maxWidth: 400,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalTitle: {
+    color: '#F5F5F5',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  modalText: {
+    color: '#9A9A9A',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#FF2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  modalButtonPrimaryText: {
+    color: '#F5F5F5',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  modalButtonSecondaryText: {
+    color: '#9A9A9A',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  // Save status bar
+  saveStatusBar: {
+    backgroundColor: '#1E1E1E',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  saveStatusText: {
+    color: '#9A9A9A',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

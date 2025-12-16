@@ -8,11 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
 import { Platform } from 'react-native';
+import { useAutoSave } from '../src/hooks/useAutoSave';
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
 if (Platform.OS !== 'web') {
@@ -35,6 +37,61 @@ export default function CreateNoteScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+
+  // Auto-save hook for draft recovery
+  const {
+    saveStatus,
+    wasRestored,
+    saveDraft,
+    clearDraft,
+    hasDraft,
+    getDraft,
+    markSubmitted,
+    scheduleAutoSave,
+  } = useAutoSave<{ title: string; content: string; isVoiceNote: boolean }>({
+    formId: `create-note-${projectId}`,
+    initialData: { title: '', content: '', isVoiceNote: false },
+    onRestore: (draft) => {
+      setTitle(draft.title);
+      setContent(draft.content);
+      setIsVoiceNote(draft.isVoiceNote);
+    },
+    skipRestore: true, // We'll handle restore manually with a modal
+  });
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    const checkDraft = async () => {
+      const exists = await hasDraft();
+      if (exists) {
+        setShowDraftModal(true);
+      }
+    };
+    checkDraft();
+  }, []);
+
+  // Auto-save when form data changes
+  useEffect(() => {
+    if (title || content) {
+      scheduleAutoSave({ title, content, isVoiceNote });
+    }
+  }, [title, content, isVoiceNote]);
+
+  const handleRestoreDraft = async () => {
+    const draft = await getDraft();
+    if (draft) {
+      setTitle(draft.title);
+      setContent(draft.content);
+      setIsVoiceNote(draft.isVoiceNote);
+    }
+    setShowDraftModal(false);
+  };
+
+  const handleDiscardDraft = async () => {
+    await clearDraft();
+    setShowDraftModal(false);
+  };
 
   const startRecording = async () => {
     try {
@@ -167,6 +224,8 @@ export default function CreateNoteScreen() {
           Alert.alert('Warning', 'Note saved but audio upload failed');
         }
       }
+      // Clear the draft after successful creation
+      await markSubmitted();
       // Show success and navigate back
       Alert.alert('Success', 'Note created successfully!', [
         { text: 'OK', onPress: () => setTimeout(() => navigateBackToNotes(), 100) }
@@ -196,6 +255,42 @@ export default function CreateNoteScreen() {
           headerShown: true,
         }} 
       />
+
+      {/* Draft Recovery Modal */}
+      <Modal
+        visible={showDraftModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDraftModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Restore Draft?</Text>
+            <Text style={styles.modalText}>
+              You have an unsaved draft from a previous session. Would you like to restore it?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalButtonSecondary} onPress={handleDiscardDraft}>
+                <Text style={styles.modalButtonSecondaryText}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButtonPrimary} onPress={handleRestoreDraft}>
+                <Text style={styles.modalButtonPrimaryText}>Restore</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Auto-save status indicator */}
+      {saveStatus !== 'idle' && (
+        <View style={styles.saveStatusBar}>
+          <Text style={styles.saveStatusText}>
+            {saveStatus === 'saving' ? '💾 Saving draft...' : 
+             saveStatus === 'saved' ? '✓ Draft saved' : 
+             saveStatus === 'error' ? '⚠ Save failed' : ''}
+          </Text>
+        </View>
+      )}
       
       <ScrollView style={styles.content}>
         <View style={styles.form}>
@@ -433,4 +528,75 @@ const styles = StyleSheet.create({
   clearAudio: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' },
   clearAudioText: { color: '#CFCFCF', fontSize: 12 },
   errorText: { color: '#FF5555', fontSize: 12, marginTop: 4 },
+  // Auto-save modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 16,
+    padding: 24,
+    maxWidth: 400,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalTitle: {
+    color: '#F5F5F5',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  modalText: {
+    color: '#9A9A9A',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalButtonPrimary: {
+    backgroundColor: '#FF2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  modalButtonPrimaryText: {
+    color: '#F5F5F5',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modalButtonSecondary: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  modalButtonSecondaryText: {
+    color: '#9A9A9A',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  // Save status bar
+  saveStatusBar: {
+    backgroundColor: '#1E1E1E',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  saveStatusText: {
+    color: '#9A9A9A',
+    fontSize: 12,
+    textAlign: 'center',
+  },
 });
