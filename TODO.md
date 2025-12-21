@@ -111,15 +111,14 @@
   - **Why**: Foundation of all archaeological excavation - Harris Matrix compliance
   - **Files**: New `backend/app/models.py` (Context model), `routes/contexts.py`, frontend context recording form
 
-- [ ] **[P1] Harris Matrix Visualization**
-  - Auto-generate matrix from context relationships (topological sort)
-  - Interactive diagram (zoom, pan, highlight path)
-  - Validation: detect loops and temporal contradictions
-  - Export to SVG/PDF for reports
-  - Phasing overlay (color-code contexts by period)
-  - **Why**: Required for publication and interpretation
-  - **Libraries**: D3.js or dagre for layout, react-svg-pan-zoom for interaction
-  - **Files**: New `frontend/components/harris-matrix/`
+- [x] **[P1] Harris Matrix Visualization** ✅ INTEGRATED
+  - ~~Auto-generate matrix from context relationships (topological sort)~~
+  - ~~Interactive diagram (zoom, pan, highlight path)~~
+  - ~~Validation: detect loops and temporal contradictions~~
+  - ~~Export to SVG/PDF for reports~~
+  - ~~Phasing overlay (color-code contexts by period)~~
+  - **Completed**: D3.js-based visualization in project tab (web), placeholder on native
+  - **Files**: [`HarrisMatrix.web.tsx`](frontend/stratum-app/src/components/matrix/HarrisMatrix.web.tsx), [`HarrisMatrix.native.tsx`](frontend/stratum-app/src/components/matrix/HarrisMatrix.native.tsx), [`project/[id].tsx`](frontend/stratum-app/app/project/%5Bid%5D.tsx#L861)
 
 - [ ] **[P1] Stratigraphic Phasing**
   - Group contexts into periods/phases (Early Medieval, Roman, etc.)
@@ -239,6 +238,24 @@
   - **Libraries**: PDFKit or Puppeteer for PDF generation
   - **Files**: New report generation service
 
+- [ ] **[P1] File privacy and permissions**
+  - In root folder, a "users" subfolder that contains per-user folders.
+  - Each user can only see and access their own folder and files within it.
+  - Project leader can see all user folders and files.
+  - By default, if you look into the users\[username] folder, you see "This user does not have any files in this folder or they haven't shared any with you."
+  - Members can opt to have one or more files/folders "shared" to one or more members or to the whole team.
+  - **Optional but recommended**: 
+    - Shared with me" view that shows all files shared to the logged-in user by others.
+    - "Shared by me" view that shows all files the logged-in user has shared to others.
+    - This would also rework the Notes section/Note Folder tab. Notes section would only show notes that the logged-in user has access to (their own, shared notes, or public notes that have no privacy settings). The Note folder would have 2 sub-folders: Public notes and user notes (same system as the root user folder). Privacy can be set both from within the note editor and from within the Note Folder tab (multi-select notes and set privacy/share settings in bulk). 
+    - There would be also a "Shared with me" and "Shared by me" view for notes.
+    - You can select default privacy settings for new notes/files in your settings. (can be global or project specific)
+
+  - **Why**: Sensitive data may require restricted access. This also solves the issue of "cluttered" file systems in large teams, where some members upload many files that are not relevant to others. 
+  - **Files**: Update file model to include owner and shared_with fields, update file access logic in routes and frontend.
+  - **Support**: Web & Native (platform-specific UI patterns for sharing settings)
+
+
 ### Team Collaboration (Field-Specific)
 
 - [ ] **[P1] Daily Log System**
@@ -290,6 +307,14 @@
   - **Why**: Faster note-taking when hands are dirty/gloved
   - **Libraries**: expo-speech-recognition or Web Speech API
   - **Files**: Voice input component, integrate into text fields
+
+- [ ] **[P2] Metadata Management**
+  - Custom tags for contexts/finds (user-defined key-value pairs)
+  - Filter/search by tags
+  - Bulk tag assignment (select multiple contexts, add tag)
+  - Tag color-coding for quick visual ID
+  - **Why**: Flexible organization beyond fixed schema
+  - **Files**: Tag model, tagging UI components
 
 - [ ] **[P2] Photo Annotation Tools**
   - Draw on photos to indicate features (arrows, circles, text)
@@ -561,6 +586,50 @@
   - Historical weather data (correlate with productivity)
   - **Why**: Weather affects excavation decisions and team safety
   - **Files**: Weather service, weather API integration
+
+### UX/UI Enhancements
+
+- [ ] **[P3] Advanced Map Features**
+  - Heatmap overlay for find density (visualize artifact concentrations)
+  - Custom map styles (satellite, terrain, dark mode)
+  - Offline map tiles (download area for offline use)
+  - Measure tool (distance and area measurement on map)
+  - **Why**: Enhanced spatial analysis tools
+  - **Libraries**: Mapbox GL or Leaflet with plugins
+  - **Files**: Map enhancements in map component
+
+- [ ] **[P3] Enhanced Photo Gallery**
+  - Tag photos with keywords (e.g., "context marker", "feature", "find")
+  - Filter gallery by tags, date, context
+  - Fullscreen slideshow mode
+  - Photo rating system (star ratings for quality)
+  - **Why**: Easier photo management and retrieval
+  - **Files**: Photo gallery component updates
+
+- [ ] **[P3] Custom Report Templates**
+  - User-defined report sections (choose what to include)
+  - Customizable cover page (project logo, title, authors)
+  - Save report templates for reuse
+  - Export to Word/ODT formats
+  - **Why**: Different clients/researchers have different reporting needs
+  - **Libraries**: docx or similar for Word generation
+  - **Files**: Report template manager, export service
+
+- [ ] **[P3] Mobile App Enhancements**
+  - Offline map with GPS tracking (show location on offline map)
+  - Quick-add buttons for common records (add context, add find)
+  - Swipe gestures for navigation (left/right to switch tabs)
+  - Haptic feedback on actions (vibration on save, error)
+  - **Why**: Improve mobile user experience in the field
+  - **Files**: Mobile app UI/UX improvements
+
+- [ ] **[P3] Dark + Light Theme Customization**
+  - Allow users to customize colors of the app
+  - Save custom themes and switch between them
+  - Share themes with team members
+  - **Why**: Personalization improves user satisfaction. Different conditions may demand different app themes.
+  - **Files**: Theme customization component, theme storage
+  - **Integration**: Native and optionally web.
 
 ### Integration & Interoperability
 
