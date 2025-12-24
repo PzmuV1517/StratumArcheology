@@ -228,6 +228,15 @@ export function isOnline(): boolean {
 }
 
 /**
+ * 
+ * Check if currently connected to backend (in case backend is down but network is up)
+ */
+
+export function isConnectedToBackend(): boolean {
+  return currentState.isConnected && currentState.isInternetReachable === true
+}
+
+/**
  * Check if currently offline
  */
 export function isOffline(): boolean {
