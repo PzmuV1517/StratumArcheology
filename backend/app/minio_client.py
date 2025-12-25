@@ -7,17 +7,33 @@ from typing import Optional
 
 class MinIOClient:
     def __init__(self):
-        self.client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_USE_SSL
-        )
-        self.bucket_name = settings.MINIO_BUCKET_NAME
-        self._ensure_bucket_exists()
+        try:
+            self.client = Minio(
+                settings.MINIO_ENDPOINT,
+                access_key=settings.MINIO_ACCESS_KEY,
+                secret_key=settings.MINIO_SECRET_KEY,
+                secure=settings.MINIO_USE_SSL
+            )
+            self.bucket_name = settings.MINIO_BUCKET_NAME
+            self.available = True
+        except Exception as e:
+            print(f"✗ MinIO init error: {e}")
+            self.client = None
+            self.bucket_name = settings.MINIO_BUCKET_NAME
+            self.available = False
+            return
+
+        try:
+            self._ensure_bucket_exists()
+        except Exception as e:
+            print(f"✗ MinIO bucket ensure failed: {e}")
+            self.available = False
     
     def _ensure_bucket_exists(self):
         """Create bucket if it doesn't exist"""
+        if not self.client:
+            raise RuntimeError("MinIO client is not initialized")
+
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
@@ -35,6 +51,9 @@ class MinIOClient:
         content_type: str = "application/octet-stream"
     ) -> str:
         """Upload file to MinIO"""
+        if not self.client:
+            raise RuntimeError("MinIO client unavailable")
+
         try:
             file_stream = BytesIO(file_data)
             self.client.put_object(
@@ -51,6 +70,9 @@ class MinIOClient:
     
     async def get_file(self, object_name: str) -> Optional[bytes]:
         """Get file from MinIO"""
+        if not self.client:
+            return None
+
         try:
             response = self.client.get_object(self.bucket_name, object_name)
             data = response.read()
@@ -63,6 +85,9 @@ class MinIOClient:
     
     async def delete_file(self, object_name: str) -> bool:
         """Delete file from MinIO"""
+        if not self.client:
+            return False
+
         try:
             self.client.remove_object(self.bucket_name, object_name)
             return True
@@ -72,6 +97,9 @@ class MinIOClient:
     
     def get_presigned_url(self, object_name: str, expiry: int = 3600) -> str:
         """Get presigned URL for file access"""
+        if not self.client:
+            raise RuntimeError("MinIO client unavailable")
+
         try:
             from datetime import timedelta
             url = self.client.presigned_get_object(
