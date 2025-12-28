@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -36,93 +36,70 @@ export default function LandingPage() {
   const { width } = useWindowDimensions();
   const isNarrow = width < 900;
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      router.replace('/(auth)/login');
+    }
+  }, [router]);
+
+  if (Platform.OS !== 'web') {
+    // Native: don't render anything, just redirect
+    return null;
+  }
+
+  // Web: render landing page
   return (
-
-<section style={{position: 'relative',overflow: 'hidden'}}>
-    {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
-
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', inset: 0 }}>
-            {React.createElement(DotGrid, {
-            dotSize: 5,
-            gap: 15,
-            baseColor: '#000000ff',
-            activeColor: '#ff0000',
-            proximity: 120,
-            shockRadius: 250,
-            shockStrength: 5,
-            resistance: 750,
-            returnDuration: 1.5,
-              style: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' },
-          })}
-        </div>
-      </div>
-
-    {/* Fixed top fade to blend DotGrid into hero */}
-    {Platform.OS === 'web' ? <div className="dotgrid-fade-top" /> : null}
-
-    <div style={{ height: '100%',overflowY: 'auto'}}>
-
-            <View style={styles.container}>
-      <View style={[styles.hero, Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : null]}>
-                {/* Animated background */}
-                <View style={styles.bg}>
-        <ColorBends
-                    colors={["#ff0000", "#ff1717ff", "#9d0000ff"]}
-                    rotation={19}
-                    autoRotate={0}
-                    speed={0.35}
-                    scale={1}
-                    frequency={1}
-                    warpStrength={1}
-                    mouseInfluence={1}
-                    parallax={0.5}
-                    noise={0.1}
-          transparent={false}
-                />
-                </View>
-
-        {/* Web-only bottom fade to blend ColorBends into page background */}
-        {Platform.OS === 'web' ? <div className="colorbends-fade-bottom" /> : null}
-
-                {/* Content overlay */}
-                <View style={styles.center}>
-                <Text style={styles.logo}>STRATUM</Text>
-                <Text style={styles.title}>Organize research. Share results.</Text>
-                <Text style={styles.subtitle}>Projects, artefacts, and notes in one streamlined workspace.</Text>
-                <View style={{ marginTop: 24 }}>
-                    <StarBorder
-                    as="button"
-                    color="white"
-                    speed="5s"
-                    className="thin-border"
-                    thickness={1}
-                    onClick={() => router.push('/(auth)/login')}
-                    onPress={() => router.push('/(auth)/login')}
-                    >
-                    Begin
-                    </StarBorder>
-                </View>
-                </View>
-
+    <>
+      <div className="main-landing" style={{ minHeight: '100vh', width: '100vw', overflow: 'hidden', position: 'relative', background: 'var(--background)' }}>
+        <section style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
+          <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              {React.createElement(DotGrid, {
+                dotSize: 5,
+                gap: 15,
+                baseColor: '#000000ff',
+                activeColor: '#ff0000',
+              })}
+            </div>
+          </div>
+          {/* Hero section */}
+          <section className="hero-section" style={{ position: 'relative', zIndex: 2 }}>
+            <View style={styles.hero}>
+              <Text style={styles.title}>Organize research. Share results.</Text>
+              <Text style={styles.subtitle}>Projects, artefacts, and notes in one streamlined workspace.</Text>
+              <View style={{ marginTop: 24 }}>
+                <StarBorder
+                  as="button"
+                  color="white"
+                  speed="5s"
+                  className="thin-border"
+                  thickness={1}
+                  onClick={() => router.push('/(auth)/login')}
+                  onPress={() => router.push('/(auth)/login')}
+                >
+                  <Text>Begin</Text>
+                </StarBorder>
+              </View>
             </View>
-            {/* Informational section */}
-            <View style={styles.infoSection}>
+          </section>
+          {/* Informational section */}
+          <View style={styles.infoSection}>
                 <Text style={styles.sectionHeading}>Why STRATUM?</Text>
-                <View style={styles.cards}>
+              <View style={styles.cards}>
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Artefacts, not files</Text>
-                    <Text style={styles.cardBody}>Group results, notes, and assets with a living manifest that stays in sync.</Text>
-                </View>
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Collaborate safely</Text>
-                    <Text style={styles.cardBody}>Role-based access, history, and site-styled confirmations prevent mistakes.</Text>
+                  <Text style={styles.cardTitle}>Artefacts, not files</Text>
+                  <Text style={styles.cardBody}>Group results, notes, and assets with a living manifest that stays in sync.</Text>
                 </View>
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Edit anything</Text>
-                    <Text style={styles.cardBody}>CSV, Excel, Markdown, and JSON with a unified preview and quick saves.</Text>
+                  <Text style={styles.cardTitle}>Collaborate safely</Text>
+                  <Text style={styles.cardBody}>Role-based access, history, and site-styled confirmations prevent mistakes.</Text>
                 </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Edit anything</Text>
+                  <Text style={styles.cardBody}>CSV, Excel, Markdown, and JSON with a unified preview and quick saves.</Text>
                 </View>
+              </View>
             </View>
 
             {/* Mosaic highlights (visual variety) */}
@@ -154,8 +131,8 @@ export default function LandingPage() {
             </View>
 
             {/* Stats row */}
-            <View style={[styles.sectionBlock, { paddingTop: 20, paddingBottom: 0 }]}>
-              <View style={[styles.statsRow, isNarrow ? { flexDirection: 'column' } : null]}>
+            <View style={[styles.sectionBlock, { paddingTop: 20, paddingBottom: 0 }]}> 
+              <View style={[styles.statsRow, isNarrow ? { flexDirection: 'column' } : null]}> 
                 <View style={styles.statCard}><Text style={styles.statNumber}>10×</Text><Text style={styles.statLabel}>Faster setup</Text></View>
                 <View style={styles.statCard}><Text style={styles.statNumber}>1 place</Text><Text style={styles.statLabel}>for notes & data</Text></View>
                 <View style={styles.statCard}><Text style={styles.statNumber}>Zero</Text><Text style={styles.statLabel}>context loss</Text></View>
@@ -163,12 +140,12 @@ export default function LandingPage() {
             </View>
 
             {/* CardSwap row */}
-            <View style={[styles.sectionBlock, { paddingTop: 0, paddingBottom: 150 }]}>
-              <View style={[styles.cardSwapRow, isNarrow ? { flexDirection: 'column' } : null]}>
-                <View style={styles.cardSwapLeft}>
-                  <Text style={styles.sectionHeading}>Intuitive at every step</Text>
-                </View>
-                <View style={styles.cardSwapRight}>
+            <View style={[styles.sectionBlock, { paddingTop: 0, paddingBottom: 150 }]}> 
+              <View style={[styles.cardSwapRow, isNarrow ? { flexDirection: 'column' } : null]}> 
+                <View style={styles.cardSwapLeft}> 
+                  <Text style={styles.sectionHeading}>Intuitive at every step</Text> 
+                </View> 
+                <View style={styles.cardSwapRight}> 
                   {Platform.OS === 'web' ? (
                     <div style={{ height: '600px', position: 'relative' }}>
                       {React.createElement(CardSwap, {
@@ -188,98 +165,32 @@ export default function LandingPage() {
               </View>
             </View>
 
-                        {/* Comparison */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionHeading}>Why teams switch</Text>
-              <View style={[styles.compareRow, isNarrow ? { flexDirection: 'column' } : null]}>
-                <View style={[styles.card, styles.compareHalf]}>
-                  <Text style={styles.cardTitle}>Without STRATUM</Text>
-                  <Text style={styles.cardBody}>• Files scattered across drives{"\n"}• Unclear provenance{"\n"}• Manual previews & copy-paste notes</Text>
-                </View>
-                <View style={[styles.cardAccent, styles.compareHalf]}>
-                  <Text style={styles.cardTitle}>With STRATUM</Text>
-                  <Text style={styles.cardBody}>• Artefacts with manifests{"\n"}• Linked notes and previews{"\n"}• Safer actions and quick sharing</Text>
-                </View>
-              </View>
-            </View>   
 
-            {/* How it works */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionHeading}>How it works</Text>
-              <View style={styles.stepList}>
-                <View style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>1</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>Create a project</Text>
-                    <Text style={styles.cardBody}>Spin up a new workspace for your experiment or investigation.</Text>
-                  </View>
-                </View>
-                <View style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>2</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>Add artefacts and notes</Text>
-                    <Text style={styles.cardBody}>Upload datasets, results, and images. Keep notes close to the data they describe.</Text>
-                  </View>
-                </View>
-                <View style={styles.stepItem}>
-                  <Text style={styles.stepNumber}>3</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardTitle}>Share and iterate</Text>
-                    <Text style={styles.cardBody}>Invite collaborators, review history, and iterate safely with tracked changes.</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Closing CTA */}
-            <View style={[styles.ctaSection, { paddingTop: 20, paddingBottom: 400 }]}>
-              <Text style={styles.ctaHeading}>Start your next discovery</Text>
-              <Text style={styles.ctaSub}>Spin up a project and ship your first artefact in minutes.</Text>
-              <View style={{ marginTop: 20 }}>
-                <StarBorder
-                  as="button"
-                  color="white"
-                  speed="5s"
-                  className="thin-border"
-                  thickness={1}
-                  onClick={() => router.push('/(auth)/register')}
-                  onPress={() => router.push('/(auth)/register')}
-                >
-                  Create an account
-                </StarBorder>
-              </View>
-            </View>
-            </View>
-
-
-    </div>
-<GradualBlur
-    target="screen"
-    position="bottom"
-    height="6rem"
-    strength={5}
-    divCount={10}
-    curve="bezier"
-    exponential={true}
-    opacity={1}
-    reactive={true}
-  />
-  <GradualBlur
-    target="screen"
-    position="top"
-    height="3rem"
-    strength={2}
-    divCount={5}
-    curve="bezier"
-    exponential={true}
-    opacity={1}
-    reactive={true}
-  />
-    
-
-</section>
-
-
+        </section>
+      </div>
+      <GradualBlur
+        target="screen"
+        position="bottom"
+        height="6rem"
+        strength={5}
+        divCount={10}
+        curve="bezier"
+        exponential={true}
+        opacity={1}
+        reactive={true}
+      />
+      <GradualBlur
+        target="screen"
+        position="top"
+        height="3rem"
+        strength={2}
+        divCount={5}
+        curve="bezier"
+        exponential={true}
+        opacity={1}
+        reactive={true}
+      />
+    </>
   );
 }
 

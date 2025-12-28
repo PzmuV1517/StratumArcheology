@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import './ColorBends.css';
+import { Platform } from 'react-native';
 
 const MAX_COLORS = 8;
 
@@ -289,5 +290,9 @@ export default function ColorBends({
     };
   }, []);
 
-  return <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />;
+  return (
+    Platform.OS === 'web'
+      ? <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />
+      : null
+  );
 }

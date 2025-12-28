@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { Platform, View } from 'react-native';
 import * as math from 'mathjs';
 
 import './GradualBlur.css';
@@ -158,7 +159,12 @@ function GradualBlur(props) {
             : undefined
       };
 
-      divs.push(<div key={i} style={divStyle} />);
+      if (Platform.OS === 'web') {
+        divs.push(<div key={i} style={divStyle} />);
+      } else {
+        // Native: use View for blur overlays (no maskImage/backdropFilter)
+        divs.push(<View key={i} style={{ ...divStyle, maskImage: undefined, WebkitMaskImage: undefined, backdropFilter: undefined, WebkitBackdropFilter: undefined }} />);
+      }
     }
 
     return divs;
@@ -205,26 +211,35 @@ function GradualBlur(props) {
     }
   }, [isVisible, animated, onAnimationComplete, duration]);
 
-  return (
-    <div
-      ref={containerRef}
-      className={`gradual-blur ${config.target === 'page' ? 'gradual-blur-page' : 'gradual-blur-parent'} ${config.className}`}
-      style={containerStyle}
-      onMouseEnter={hoverIntensity ? () => setIsHovered(true) : undefined}
-      onMouseLeave={hoverIntensity ? () => setIsHovered(false) : undefined}
-    >
+  if (Platform.OS === 'web') {
+    return (
       <div
-        className="gradual-blur-inner"
-        style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%'
-        }}
+        ref={containerRef}
+        className={`gradual-blur ${config.target === 'page' ? 'gradual-blur-page' : 'gradual-blur-parent'} ${config.className}`}
+        style={containerStyle}
+        onMouseEnter={hoverIntensity ? () => setIsHovered(true) : undefined}
+        onMouseLeave={hoverIntensity ? () => setIsHovered(false) : undefined}
       >
-        {blurDivs}
+        <div
+          className="gradual-blur-inner"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          {blurDivs}
+        </div>
       </div>
-    </div>
-  );
+    );
+  } else {
+    // Native: use View only
+    return (
+      <View style={[containerStyle, { position: 'absolute', width: '100%', height: '100%' }]}>
+        {blurDivs}
+      </View>
+    );
+  }
 }
 
 const GradualBlurMemo = React.memo(GradualBlur);

@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { InertiaPlugin } from 'gsap/InertiaPlugin';
 
 import './DotGrid.css';
+import { Platform } from 'react-native';
 
 gsap.registerPlugin(InertiaPlugin);
 
@@ -257,11 +258,13 @@ const DotGrid = ({
   }, [maxSpeed, speedTrigger, proximity, resistance, returnDuration, shockRadius, shockStrength]);
 
   return (
-    <section className={`dot-grid ${className}`} style={style}>
-      <div ref={wrapperRef} className="dot-grid__wrap">
-        <canvas ref={canvasRef} className="dot-grid__canvas" />
-      </div>
-    </section>
+    Platform.OS === 'web' ? (
+      <section className={`dot-grid ${className}`} style={style}>
+        <div ref={wrapperRef} className="dot-grid__wrap">
+          <canvas ref={canvasRef} className="dot-grid__canvas" />
+        </div>
+      </section>
+    ) : null
   );
 };
 
