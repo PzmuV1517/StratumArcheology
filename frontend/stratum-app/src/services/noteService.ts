@@ -3,10 +3,20 @@ import { isConnectedToBackend, refreshNetworkStatus } from './networkService';
 export * from './noteService.core';
 
 /**
+ * Define the expected service methods for TypeScript
+ */
+export interface NoteServiceMethods {
+  getNote: (...args: any[]) => Promise<any>;
+  createNote: (...args: any[]) => Promise<any>;
+  deleteNote: (...args: any[]) => Promise<void>;
+  // Add any other service functions here if needed
+}
+
+/**
  * Helper to dynamically import the correct platform-specific module.
  * Lazy-loads the module to avoid executing API calls on import.
  */
-async function getService() {
+async function getService(): Promise<NoteServiceMethods> {
   await refreshNetworkStatus();
 
   const isOnline = isConnectedToBackend();
@@ -31,18 +41,16 @@ async function getService() {
 /**
  * Proxy that intercepts calls and delegates to the correct service
  */
-export const noteService = new Proxy(
-  {},
+export const noteService: NoteServiceMethods = new Proxy(
+  {} as NoteServiceMethods,
   {
-    get(_, prop: string) {
+    get(_, prop: keyof NoteServiceMethods) {
       return async (...args: any[]) => {
         const service = await getService();
-        // Type assertion to fix TS error: prop as keyof typeof service
-        const fn = service[prop as keyof typeof service];
+        const fn = service[prop];
         if (typeof fn !== 'function') {
-          throw new Error(`Property ${prop} is not a function on noteService`);
+          throw new Error(`Property ${String(prop)} is not a function on noteService`);
         }
-        // Use apply to avoid TS spread argument error
         return (fn as (...args: any[]) => any).apply(service, args);
       };
     },
