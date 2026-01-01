@@ -40,10 +40,16 @@ const resolveBaseUrl = async (): Promise<string> => {
  * - Auto-attaches auth token from AsyncStorage
  * - Handles JSON and FormData content types
  * - Auto-clears auth on 401 responses
+ * - Manually handles 307 redirects to preserve Authorization header
  */
 const api: AxiosInstance = axios.create({
   baseURL: config.apiBaseUrl,
-  timeout: 10000,
+  timeout: 30000,
+  maxRedirects: 0, // Disable auto-redirects to handle them manually with auth header
+  validateStatus: (status) => {
+    // Accept 2xx and 307 (we'll handle 307 manually in interceptor)
+    return (status >= 200 && status < 300) || status === 307;
+  },
 });
 
 // Initialize baseURL from saved override ASAP
@@ -92,9 +98,33 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor to handle 307 redirects and auth errors
 api.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    // Handle 307 Temporary Redirect - retry with the redirected URL
+    // This is needed because 307 redirects lose Authorization headers on iOS
+    if (response.status === 307) {
+      const redirectUrl = response.headers?.location;
+      
+      if (redirectUrl) {
+        const originalRequest = response.config;
+        // Update the URL and retry with auth header
+        originalRequest.url = redirectUrl;
+        originalRequest.baseURL = ''; // Clear baseURL since redirectUrl is absolute
+        
+        // Re-attach the token
+        const token = await AsyncStorage.getItem('authToken');
+        if (token) {
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        console.log('[API] Following 307 redirect to:', redirectUrl);
+        return api.request(originalRequest);
+      }
+    }
+    return response;
+  },
   async (error) => {
     if (error.response?.status === 401) {
       // Token expired, clear storage

@@ -149,8 +149,16 @@ function handleAppStateChange(nextAppState: AppStateStatus): void {
 
 /**
  * Trigger sync when reconnecting
+ * 
+ * Note: Mobile-only. Web is always online and doesn't use offline queues.
  */
 async function triggerReconnectSync(): Promise<void> {
+  // Web is online-only - skip sync trigger
+  if (Platform.OS === 'web') {
+    console.log('[NetworkService] Web platform - reconnect sync skipped');
+    return;
+  }
+  
   try {
     // Dynamically import to avoid circular dependency
     const { processQueue } = await import('./syncService');

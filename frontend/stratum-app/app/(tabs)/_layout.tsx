@@ -3,9 +3,11 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
+/**
+ * TabLayout - Main navigation tabs
+ * Auth is handled by AuthRedirector at the root level
+ */
 export default function TabLayout() {
   return (
     <Tabs
@@ -26,22 +28,26 @@ export default function TabLayout() {
           fontWeight: '600',
           letterSpacing: 0.5,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Projects',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="folder.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="person.fill" color={color} />
+          ),
         }}
       />
-      {/** GPS moved to per-project screen */}
     </Tabs>
   );
 }

@@ -1,5 +1,6 @@
 import { Renderer, Program, Mesh, Color, Triangle } from 'ogl';
 import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { Platform } from 'react-native';
 import './FaultyTerminal.css';
 
 const vertexShader = `
@@ -395,6 +396,11 @@ export default function FaultyTerminal({
     brightness,
     handleMouseMove
   ]);
+
+  // Only render on web - uses WebGL and HTML elements
+  if (Platform.OS !== 'web') {
+    return null;
+  }
 
   return <div ref={containerRef} className={`faulty-terminal-container ${className}`} style={style} {...rest} />;
 }

@@ -1,10 +1,17 @@
 import React, { Children, cloneElement, forwardRef, isValidElement, useEffect, useMemo, useRef } from 'react';
+import { Platform, View } from 'react-native';
 import gsap from 'gsap';
 import './CardSwap.css';
 
-export const Card = forwardRef(({ customClass, ...rest }, ref) => (
-  <div ref={ref} {...rest} className={`card ${customClass ?? ''} ${rest.className ?? ''}`.trim()} />
-));
+// Web-only Card component
+export const Card = forwardRef(({ customClass, ...rest }, ref) => {
+  if (Platform.OS !== 'web') {
+    return <View ref={ref} {...rest} />;
+  }
+  return (
+    <div ref={ref} {...rest} className={`card ${customClass ?? ''} ${rest.className ?? ''}`.trim()} />
+  );
+});
 Card.displayName = 'Card';
 
 const makeSlot = (i, distX, distY, total) => ({
@@ -170,6 +177,11 @@ const CardSwap = ({
         })
       : child
   );
+
+  // Only render on web - uses HTML div and gsap animations
+  if (Platform.OS !== 'web') {
+    return null;
+  }
 
   return (
     <div ref={container} className="card-swap-container" style={{ width, height }}>

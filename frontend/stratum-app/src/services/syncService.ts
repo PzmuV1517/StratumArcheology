@@ -84,13 +84,22 @@ function updateSyncStatus(updates: Partial<SyncStatus>): void {
 /**
  * Initialize the sync service
  * Call this when the app starts
+ * 
+ * Note: On web, sync service is minimal since web is online-only.
+ * Full offline queue support is mobile-only.
  */
 export async function initSyncService(): Promise<void> {
   try {
     await initDatabase();
     console.log('[SyncService] Database initialized');
     
-    // Update initial status
+    // On web, we don't use the offline queue - web is online-only
+    if (Platform.OS === 'web') {
+      console.log('[SyncService] Web platform - offline queue disabled');
+      return;
+    }
+    
+    // Update initial status (mobile only)
     const stats = await getQueueStats();
     updateSyncStatus({
       pendingCount: stats.pending,
@@ -105,8 +114,16 @@ export async function initSyncService(): Promise<void> {
 /**
  * Process the request queue
  * Call this when network is restored or periodically
+ * 
+ * Note: This is mobile-only. Web is always online and doesn't use offline queues.
  */
 export async function processQueue(): Promise<void> {
+  // Web is online-only - skip queue processing
+  if (Platform.OS === 'web') {
+    console.log('[SyncService] Web platform - queue processing skipped');
+    return;
+  }
+  
   // Prevent concurrent syncs
   if (currentStatus.isSyncing) {
     console.log('[SyncService] Sync already in progress');

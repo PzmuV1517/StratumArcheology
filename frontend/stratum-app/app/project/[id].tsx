@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  FlatList,
   TextInput,
   Modal,
 } from 'react-native';
@@ -769,15 +768,9 @@ export default function ProjectDetailScreen() {
                     </View>
                   </View>
                 ) : (
-                  <FlatList
-                    data={activities}
-                    keyExtractor={(item) => item.id}
-                    style={styles.timelineList}
-                    contentContainerStyle={styles.timelineListContent}
-                    showsVerticalScrollIndicator={true}
-                    nestedScrollEnabled={true}
-                    renderItem={({ item }) => (
-                      <View style={styles.overviewTimelineItem}>
+                  <View style={styles.timelineList}>
+                    {activities.map((item) => (
+                      <View key={item.id} style={styles.overviewTimelineItem}>
                         <View style={styles.overviewTimelineDot} />
                         <View style={styles.overviewTimelineContent}>
                           <Text style={styles.overviewTimelineLabel}>{item.description}</Text>
@@ -795,8 +788,8 @@ export default function ProjectDetailScreen() {
                           </Text>
                         </View>
                       </View>
-                    )}
-                  />
+                    ))}
+                  </View>
                 )}
               </View>
             </View>
@@ -861,9 +854,7 @@ export default function ProjectDetailScreen() {
                   {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })}
                 </div>
               ) : (
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#9A9A9A' }}>Harris Matrix is available on web only.</Text>
-                </View>
+                React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })
               )}
             </View>
           ) : null}

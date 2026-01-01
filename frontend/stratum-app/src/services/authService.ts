@@ -118,3 +118,11 @@ export const authService = {
 };
 
 export type { User, AuthResult } from './authService.types';
+
+// Standalone exports for convenience
+export const isAuthenticated = authService.isAuthenticated;
+export const getToken = authService.getToken;
+export const getCurrentUser = authService.getCurrentUser;
+export const login = authService.login;
+export const register = authService.register;
+export const logout = authService.logout;

@@ -1,47 +1,32 @@
-import React, { useEffect } from 'react';
-import { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 // Use React Bits components directly (no wrappers)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const ColorBends = require('../components/ColorBends.jsx').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const StarBorder = require('../components/StarBorder.jsx').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const DotGrid = require('../components/DotGrid.jsx').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const GradualBlur = require('../components/GradualBlur.jsx').default;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const CardSwapModule = require('../components/CardSwap.jsx');
+import StarBorder from '../components/StarBorder.jsx';
+import DotGrid from '../components/DotGrid.jsx';
+import GradualBlur from '../components/GradualBlur.jsx';
+import * as CardSwapModule from '../components/CardSwap.jsx';
+
 const CardSwap = CardSwapModule.default || CardSwapModule;
 const Card = CardSwapModule.Card;
 
-
 // Load component CSS only on web to avoid native errors
 if (Platform.OS === 'web') {
-  // @ts-ignore - CSS handled by web bundler
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../components/ColorBends.css');
-  // @ts-ignore - CSS handled by web bundler
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../components/DotGrid.css');
-  // @ts-ignore - CSS handled by web bundler
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../components/StarBorder.css');
-  // @ts-ignore - CSS handled by web bundler
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('../components/CardSwap.css');
 }
 
 export default function LandingPage() {
   const router = useRouter();
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const toggleFaq = (idx: number) => setOpenFaq(prev => (prev === idx ? null : idx));
   const { width } = useWindowDimensions();
   const isNarrow = width < 900;
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      router.replace('/(auth)/login');
-    }
-  }, [router]);
-
+  
   if (Platform.OS !== 'web') {
     // Native: don't render anything, just redirect
     return null;
@@ -55,12 +40,13 @@ export default function LandingPage() {
           {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
           <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', inset: 0 }}>
-              {React.createElement(DotGrid, {
-                dotSize: 5,
-                gap: 15,
-                baseColor: '#000000ff',
-                activeColor: '#ff0000',
-              })}
+              {/* @ts-expect-error - DotGrid is a JSX component with flexible props */}
+              <DotGrid
+                dotSize={5}
+                gap={15}
+                baseColor="#000000ff"
+                activeColor="#ff0000"
+              />
             </div>
           </div>
           {/* Hero section */}
@@ -96,8 +82,20 @@ export default function LandingPage() {
                   <Text style={styles.cardBody}>Role-based access, history, and site-styled confirmations prevent mistakes.</Text>
                 </View>
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Edit anything</Text>
-                  <Text style={styles.cardBody}>CSV, Excel, Markdown, and JSON with a unified preview and quick saves.</Text>
+                  <Text style={styles.cardTitle}>Edit or view anything</Text>
+                  <Text style={styles.cardBody}>CSV, Excel, Markdown, PNG, text files, Pointcloud, Mesh and JSON with a unified preview and quick saves.</Text>
+                </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Harris Matrix</Text>
+                  <Text style={styles.cardBody}>Visualize and manage complex stratigraphic relationships with our built-in Harris Matrix tool.</Text>
+                </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Cross-platform</Text>
+                  <Text style={styles.cardBody}>Access your projects from both web and mobile with a consistent experience.</Text>
+                </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>Offline support</Text>
+                  <Text style={styles.cardBody}>Work seamlessly without an internet connection, with automatic syncing when you&apos;re back online.</Text>
                 </View>
               </View>
             </View>
@@ -148,17 +146,17 @@ export default function LandingPage() {
                 <View style={styles.cardSwapRight}> 
                   {Platform.OS === 'web' ? (
                     <div style={{ height: '600px', position: 'relative' }}>
-                      {React.createElement(CardSwap, {
-                        cardDistance: 60,
-                        verticalDistance: 70,
-                        delay: 5000,
-                        pauseOnHover: false,
-                        children: [
-                          React.createElement(Card, { key: 0 }),
-                          React.createElement(Card, { key: 1 }),
-                          React.createElement(Card, { key: 2 }),
-                        ],
-                      })}
+                      <CardSwap
+                        cardDistance={60}
+                        verticalDistance={70}
+                        delay={5000}
+                        pauseOnHover={false}
+                        onCardClick={() => {}}
+                      >
+                        <Card key={0} />
+                        <Card key={1} />
+                        <Card key={2} />
+                      </CardSwap>
                     </div>
                   ) : null}
                 </View>

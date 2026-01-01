@@ -15,6 +15,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 @router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
@@ -61,6 +62,7 @@ async def create_project(
 
 
 @router.get("/", response_model=List[ProjectResponse])
+@router.get("", response_model=List[ProjectResponse], include_in_schema=False)
 async def get_projects(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -192,7 +192,7 @@ async def verify_firebase_token(
             "exp": datetime.utcnow().timestamp() + (24 * 60 * 60)  # 24 hours
         }
         
-        access_token = jwt.encode(jwt_payload, settings.APP_SECRET_KEY, algorithm="HS256")
+        access_token = jwt.encode(jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
         return AuthResponse(
             access_token=access_token,

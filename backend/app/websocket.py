@@ -303,7 +303,8 @@ async def emit_timeline_update(project_id: str):
 
 
 # Create ASGI app wrapper for Socket.IO
+# socketio_path='' because we mount this at /ws in main.py
 sio_app = socketio.ASGIApp(
     sio,
-    socketio_path='/socket.io'
+    socketio_path=''
 )
