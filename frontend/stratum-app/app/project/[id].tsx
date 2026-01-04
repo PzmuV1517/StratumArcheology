@@ -1024,31 +1024,30 @@ export default function ProjectDetailScreen() {
           }}
           canEdit={canEditFiles}
         />
+        {/* New Folder Modal - rendered inside FilesOverlay Modal for proper z-stacking */}
+        <NewFolderModal
+          visible={showNewFolderModal}
+          onCancel={() => setShowNewFolderModal(false)}
+          onCreate={async (name) => {
+            if (!canEditFiles) {
+              Alert.alert('Permission Denied', 'Guests can only view files. Creating folders is not permitted.');
+              setShowNewFolderModal(false);
+              return;
+            }
+            
+            if (!name) return;
+            try {
+              const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : undefined;
+              await fileService.createFolder(id as string, name, parentId as any);
+              setShowNewFolderModal(false);
+              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              else await loadRootFiles();
+            } catch {
+              Alert.alert('Error', 'Failed to create folder');
+            }
+          }}
+        />
       </Modal>
-
-      {/* New Folder Modal */}
-      <NewFolderModal
-        visible={showNewFolderModal}
-        onCancel={() => setShowNewFolderModal(false)}
-        onCreate={async (name) => {
-          if (!canEditFiles) {
-            Alert.alert('Permission Denied', 'Guests can only view files. Creating folders is not permitted.');
-            setShowNewFolderModal(false);
-            return;
-          }
-          
-          if (!name) return;
-          try {
-            const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : undefined;
-            await fileService.createFolder(id as string, name, parentId as any);
-            setShowNewFolderModal(false);
-            if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
-            else await loadRootFiles();
-          } catch {
-            Alert.alert('Error', 'Failed to create folder');
-          }
-        }}
-      />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal

@@ -45,7 +45,7 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     if (!user) {
       // Disconnect if user logs out
       if (globalSocket) {
-        console.log('[WebSocket] User logged out, disconnecting');
+        if (__DEV__) console.log('[WebSocket] User logged out, disconnecting');
         globalSocket.close();
         globalSocket = null;
         socketRef.current = null;
@@ -57,7 +57,8 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
 
     // Reuse existing connection
     if (globalSocket && globalSocket.connected) {
-      console.log('[WebSocket] Reusing existing connection');
+      // Only log in development
+      if (__DEV__) console.log('[WebSocket] Reusing existing connection');
       socketRef.current = globalSocket;
       setSocket(globalSocket);
       setIsConnected(true);
@@ -77,7 +78,7 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     // The backend mounts Socket.IO at /ws with its own /socket.io path
     const baseUrl = config.apiBaseUrl.replace('/api', '');
 
-    console.log('[WebSocket] Connecting to:', baseUrl, `(attempt ${currentCount})`);
+    if (__DEV__) console.log('[WebSocket] Connecting to:', baseUrl, `(attempt ${currentCount})`);
 
     // Create Socket.IO connection
     // Backend mounts Socket.IO at /ws with empty socketio_path
@@ -92,18 +93,19 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     });
 
     newSocket.on('connect', () => {
-      console.log('[WebSocket] Connected:', newSocket.id);
+      if (__DEV__) console.log('[WebSocket] Connected:', newSocket.id);
       setIsConnected(true);
       isConnectingRef.current = false;
     });
 
     newSocket.on('disconnect', (reason) => {
-      console.log('[WebSocket] Disconnected:', reason);
+      if (__DEV__) console.log('[WebSocket] Disconnected:', reason);
       setIsConnected(false);
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error('[WebSocket] Connection error:', error.message);
+      // Only log in development to reduce console noise
+      if (__DEV__) console.warn('[WebSocket] Connection error:', error.message);
       setIsConnected(false);
       isConnectingRef.current = false;
     });
@@ -121,16 +123,14 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
 
   const joinProject = useCallback((projectId: string, userId: string) => {
     if (socketRef.current?.connected) {
-      console.log('[WebSocket] Joining project:', projectId);
+      if (__DEV__) console.log('[WebSocket] Joining project:', projectId);
       socketRef.current.emit('join_project', { project_id: projectId, user_id: userId });
-    } else {
-      console.warn('[WebSocket] Cannot join project - not connected');
     }
   }, []);
 
   const leaveProject = useCallback((projectId: string, userId: string) => {
     if (socketRef.current?.connected) {
-      console.log('[WebSocket] Leaving project:', projectId);
+      if (__DEV__) console.log('[WebSocket] Leaving project:', projectId);
       socketRef.current.emit('leave_project', { project_id: projectId, user_id: userId });
     }
   }, []);

@@ -126,6 +126,24 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Check for network errors and provide user-friendly messages
+    if (!error.response) {
+      // No response means network error
+      const isNetworkError = error.message?.includes('Network Error') || 
+                            error.message?.includes('timeout') ||
+                            error.code === 'ECONNABORTED' ||
+                            error.code === 'ERR_NETWORK';
+      
+      if (isNetworkError) {
+        console.log('[API] Network error detected:', error.message);
+        // Create a more user-friendly error
+        const networkError = new Error('No network connection. Please check your internet and try again.');
+        (networkError as any).isNetworkError = true;
+        (networkError as any).originalError = error;
+        return Promise.reject(networkError);
+      }
+    }
+    
     if (error.response?.status === 401) {
       // Token expired, clear storage
       await AsyncStorage.removeItem('authToken');

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, ScrollView, TextInput, Modal } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fileService } from '../src/services/fileService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TextFilePanel from '../src/components/data/TextFilePanel';
 import CsvPanel from '../src/components/data/CsvPanel';
 import ExcelPanel from '../src/components/data/ExcelPanel';
+import { useAutoSave } from '../src/hooks/useAutoSave';
 
 import PdfPanel from '../src/components/data/PdfPanel.web';
 import VideoPanel from '../src/components/data/VideoPanel.web';
@@ -39,6 +40,8 @@ export default function DataPreviewScreen() {
   const [meshUrl, setMeshUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1); // web zoom for preview types
+  const [showDraftRecoveryModal, setShowDraftRecoveryModal] = useState(false);
+  const [pendingDraftData, setPendingDraftData] = useState<{ textContent?: string; table?: string[][] } | null>(null);
   const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
   const gridRef = useRef<any>(null);
@@ -48,6 +51,54 @@ export default function DataPreviewScreen() {
   const rowHeaderWidth = 28; // slimmer index column
   const rowHeightPx = 30;
   const [gridScroll, setGridScroll] = useState({ left: 0, top: 0, width: 0, height: 0 });
+
+  // Determine if file is editable (text or spreadsheet only)
+  const isEditableFile = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || '';
+    return ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json') || 
+           ext.endsWith('.csv') || ext.endsWith('.xlsx') || ext.endsWith('.xls');
+  }, [name]);
+
+  // AutoSave hook - only for editable files
+  const {
+    saveStatus,
+    wasRestored,
+    saveDraft,
+    clearDraft,
+    hasDraft,
+    getDraft,
+    scheduleAutoSave,
+  } = useAutoSave<{ textContent?: string | null; table?: string[][] | null; editableTitle?: string }>({
+    formId: `data-preview-${nodeId}`,
+    initialData: { textContent: null, table: null, editableTitle: '' },
+    skipRestore: true, // We'll handle restore manually to show confirmation
+    onRestore: (data) => {
+      if (data.textContent !== undefined && data.textContent !== null) setTextContent(data.textContent);
+      if (data.table) setTable(data.table);
+      if (data.editableTitle) setEditableTitle(data.editableTitle);
+    },
+  });
+
+  // Check for draft on mount and show recovery modal
+  useEffect(() => {
+    if (!isEditableFile || !nodeId) return;
+    (async () => {
+      const exists = await hasDraft();
+      if (exists) {
+        const draft = await getDraft();
+        if (draft && (draft.textContent || draft.table)) {
+          setPendingDraftData(draft as any);
+          setShowDraftRecoveryModal(true);
+        }
+      }
+    })();
+  }, [nodeId, isEditableFile]);
+
+  // Auto-save when content changes (debounced)
+  useEffect(() => {
+    if (!editing || !dirty || !isEditableFile) return;
+    scheduleAutoSave({ textContent, table, editableTitle });
+  }, [textContent, table, editableTitle, editing, dirty, isEditableFile, scheduleAutoSave]);
 
   // Inject global CSS for markdown rendering on web once
   useEffect(() => {
@@ -362,6 +413,8 @@ export default function DataPreviewScreen() {
       await fileService.replaceFile(nodeId as string, formData);
       // Keep current editing mode; do not force exit on save
       setDirty(false);
+      // Clear draft after successful save
+      await clearDraft();
       Alert.alert('Saved', 'File updated successfully.');
     } catch (e) {
       console.error(e);
@@ -614,6 +667,62 @@ export default function DataPreviewScreen() {
           <Text style={[styles.actionButtonText, { color: '#9A9A9A' }]}>Close</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Autosave indicator */}
+      {editing && saveStatus !== 'idle' && (
+        <View style={styles.autosaveIndicator}>
+          <Text style={styles.autosaveText}>
+            {saveStatus === 'saving' ? 'Saving draft…' : 
+             saveStatus === 'saved' ? 'Draft saved' : 
+             saveStatus === 'error' ? 'Draft save failed' : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Draft Recovery Modal */}
+      <Modal visible={showDraftRecoveryModal} transparent animationType="fade" onRequestClose={() => setShowDraftRecoveryModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Recover Unsaved Changes?</Text>
+            <Text style={styles.modalText}>
+              We found unsaved changes from a previous session. Would you like to restore them?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  // Discard draft
+                  clearDraft();
+                  setShowDraftRecoveryModal(false);
+                  setPendingDraftData(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={() => {
+                  // Restore draft
+                  if (pendingDraftData) {
+                    if (pendingDraftData.textContent !== undefined) {
+                      setTextContent(pendingDraftData.textContent || null);
+                    }
+                    if (pendingDraftData.table) {
+                      setTable(pendingDraftData.table);
+                    }
+                    setDirty(true);
+                    setEditing(true);
+                  }
+                  setShowDraftRecoveryModal(false);
+                  setPendingDraftData(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Restore</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -641,4 +750,16 @@ const styles = StyleSheet.create({
   zoomViewportWeb: { flex: 1, overflow: 'scroll' as any },
   // Inner content gets scaled
   zoomContentWeb: { minWidth: '100%', minHeight: '100%', maxWidth: "500%", maxHeight: "500%" },
+  // Autosave indicator
+  autosaveIndicator: { position: 'absolute', top: 60, right: 16, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  autosaveText: { color: '#9A9A9A', fontSize: 12 },
+  // Modal styles
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCard: { backgroundColor: '#1E1E1A', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#333', width: '100%', maxWidth: 400 },
+  modalTitle: { color: '#F5F5F5', fontWeight: '700', fontSize: 18, marginBottom: 8 },
+  modalText: { color: '#9A9A9A', marginBottom: 16, lineHeight: 22 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  modalButton: { backgroundColor: '#2A2A2A', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
+  modalButtonPrimary: { backgroundColor: '#2A2A2A', borderColor: '#FF2A2A' },
+  modalButtonText: { color: '#F5F5F5', fontWeight: '600' },
 });
