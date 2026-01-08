@@ -30,14 +30,14 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         :root {
-            --primary-bg: #f0f2f5;
-            --container-bg: #ffffff;
-            --panel-bg: #f8f9fa;
-            --header-color: #2c3e50;
-            --text-color: #34495e;
-            --border-color: #dee2e6;
-            --primary-accent: #007bff;
-            --primary-accent-hover: #0056b3;
+            --primary-bg: #111111;
+            --container-bg: #1A1A1A;
+            --panel-bg: #222222;
+            --header-color: #F5F5F5;
+            --text-color: #EAEAEA;
+            --border-color: #2A2A2A;
+            --primary-accent: #FF2A2A;
+            --primary-accent-hover: #CC2222;
             --danger-accent: #dc3545;
             --success-accent: #28a745;
             --warning-accent: #ffc107;

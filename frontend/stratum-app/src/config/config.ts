@@ -26,7 +26,7 @@ const expoExtra = Constants.expoConfig?.extra as Record<string, any> | undefined
  * - Web: uses localhost (runs in browser on same machine)
  * - Android emulator: uses 10.0.2.2 (special alias for host machine's localhost)
  * - iOS simulator: uses localhost (shares network with host)
- * - Physical devices: uses machine's local IP address
+ * - Physical devices: uses Expo dev server's host IP (same network)
  */
 const getApiBaseUrl = (): string => {
   // Allow override via app.json extra config
@@ -40,6 +40,17 @@ const getApiBaseUrl = (): string => {
   if (Platform.OS === 'web') {
     // Web runs in browser, localhost works
     return `http://localhost:${port}/api`;
+  }
+
+  // Try to get the dev server host IP from Expo manifest
+  // This works for physical devices on the same network as the dev machine
+  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+  if (debuggerHost) {
+    // Extract just the IP address (remove port if present)
+    const hostIp = debuggerHost.split(':')[0];
+    if (hostIp && hostIp !== 'localhost') {
+      return `http://${hostIp}:${port}/api`;
+    }
   }
 
   if (Platform.OS === 'android') {

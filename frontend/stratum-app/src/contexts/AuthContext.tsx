@@ -1,10 +1,12 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { authService } from '../services/authService';
+import api from '../services/api';
 
 interface User {
   id: string;
   email: string;
   display_name: string;
+  photo_url?: string;
 }
 
 interface AuthContextType {
@@ -13,6 +15,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
+  refreshUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -33,10 +37,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
+      // First check if we have stored user data
+      const storedUser = await authService.getCurrentUser();
+      const token = await authService.getToken();
+      
+      if (!storedUser || !token) {
+        // No stored session
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // Validate token with backend - this ensures the token hasn't expired
+      try {
+        const response = await api.get('/auth/me');
+        if (response.data) {
+          // Token is valid, update stored user data with fresh data from server
+          const freshUser = {
+            id: response.data.id,
+            email: response.data.email,
+            display_name: response.data.display_name,
+            photo_url: response.data.photo_url,
+          };
+          await authService.updateUserData(freshUser);
+          setUser(freshUser);
+        }
+      } catch (apiError: any) {
+        // Token is invalid or expired (401), already cleared by api interceptor
+        console.log('[AuthContext] Token validation failed, clearing session');
+        setUser(null);
+      }
     } catch (error) {
       console.error('Auth check error:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -84,6 +117,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data) {
+        const freshUser = {
+          id: response.data.id,
+          email: response.data.email,
+          display_name: response.data.display_name,
+          photo_url: response.data.photo_url,
+        };
+        await authService.updateUserData(freshUser);
+        setUser(freshUser);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -92,6 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         register,
         logout,
+        refreshUser,
       }}
     >
       {children}

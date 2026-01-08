@@ -55,7 +55,12 @@ function RootLayoutNav() {
   return (
     <AuthRedirector>
       <ThemeProvider value={StratumDarkTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ 
+          headerShown: false,
+          // Enable iOS swipe-back gesture from anywhere on screen
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+        }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

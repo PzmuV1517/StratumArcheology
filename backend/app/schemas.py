@@ -53,6 +53,11 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+class ProfileUpdateRequest(BaseModel):
+    display_name: Optional[str] = None
+    photo_url: Optional[str] = None
+
+
 # Project Member Response (includes role from join table)
 class ProjectMemberResponse(BaseModel):
     id: str

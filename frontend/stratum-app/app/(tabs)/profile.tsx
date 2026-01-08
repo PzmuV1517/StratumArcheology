@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,9 +48,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    Alert.alert('Settings', 'Settings functionality coming soon!', [
-      { text: 'OK', style: 'default' },
-    ]);
+    router.push('/settings');
   };
 
   const handleHelpSupport = () => {
@@ -124,11 +122,15 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={styles.profileSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.display_name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
+          {user?.photo_url ? (
+            <Image source={{ uri: user.photo_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+          )}
           <Text style={styles.displayName}>{user?.display_name || 'User'}</Text>
           <Text style={styles.email}>{user?.email}</Text>
         </View>
@@ -286,6 +288,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 8,
+  },
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    marginBottom: 16,
   },
   avatarText: {
     fontSize: 40,

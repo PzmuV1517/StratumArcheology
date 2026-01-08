@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet, Platform, Alert, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileService } from '../../services/fileService';
+import { offlineFilesStorage } from '../../services/offlineService';
 
 interface FileNode {
   id: string;
@@ -9,6 +11,8 @@ interface FileNode {
   mime_type?: string;
   is_locked?: boolean;
   note_id?: string;
+  updated_at?: string; // For offline sync
+  size?: number;
 }
 
 interface Props {
@@ -39,6 +43,8 @@ interface Props {
 }
 
 export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
+  // Get safe area insets for proper header spacing on iOS
+  const insets = useSafeAreaInsets();
   if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
@@ -48,6 +54,8 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [multiSelect, setMultiSelect] = useState(false);
   const [showInfoTip, setShowInfoTip] = useState(false);
+  const [isSavingOffline, setIsSavingOffline] = useState(false);
+  const [offlineFileIds, setOfflineFileIds] = useState<Set<string>>(new Set());
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [exactOnly, setExactOnly] = useState(false);
@@ -56,6 +64,15 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [customExtInput, setCustomExtInput] = useState('');
   const rootRef = useRef<any>(null);
   const warnedMissingProject = useRef(false);
+
+  // Load offline file status on mount
+  useEffect(() => {
+    if (projectId) {
+      offlineFilesStorage.getOfflineFiles(projectId).then(files => {
+        setOfflineFileIds(new Set(files.map(f => f.node_id)));
+      });
+    }
+  }, [projectId, fileNodes]);
 
   // Prune any locked selections if file list changes
   useEffect(() => {
@@ -229,15 +246,22 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
 
   return (
-    <View ref={rootRef} style={styles.root}>
+    <View ref={rootRef} style={[styles.root, { paddingTop: Platform.OS === 'ios' ? insets.top : 0 }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
           <Text style={{ color: '#FF2A2A', fontSize: 18 }}>‹ Back</Text>
         </TouchableOpacity>
-        <Text style={{ color: '#F5F5F5', fontSize: 18, fontWeight: '700' }}>{title}</Text>
-        {multiSelect && selectedIds.size > 0 && (
-          <View style={styles.bulkBar}>
-            <Text style={styles.bulkText}>{selectedIds.size} selected</Text>
+        <Text style={{ color: '#F5F5F5', fontSize: 18, fontWeight: '700', flex: 1 }} numberOfLines={1}>{title}</Text>
+      </View>
+      {/* Bulk actions bar - separate row when selections exist */}
+      {multiSelect && selectedIds.size > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bulkBarScroll}
+          style={styles.bulkBarContainer}
+        >
+          <Text style={styles.bulkText}>{selectedIds.size} selected</Text>
             <TouchableOpacity
               onPress={async () => {
                 const nodes = fileNodes.filter(n => selectedIds.has(n.id));
@@ -277,12 +301,83 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
             >
               <Text style={styles.bulkBtnText}>Download</Text>
             </TouchableOpacity>
+            {/* Save for Offline button - only on native */}
+            {Platform.OS !== 'web' && projectId && (
+              <TouchableOpacity
+                onPress={async () => {
+                  const nodes = fileNodes.filter(n => selectedIds.has(n.id) && n.type === 'file');
+                  if (nodes.length === 0) {
+                    Alert.alert('No files selected', 'Please select files to save for offline access.');
+                    return;
+                  }
+                  Alert.alert(
+                    'Save for Offline',
+                    `This will save ${nodes.length} file(s) for offline access. You can view them without an internet connection.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Save',
+                        onPress: async () => {
+                          setIsSavingOffline(true);
+                          try {
+                            const filesToSave = await Promise.all(nodes.map(async (n) => {
+                              const url = await fileService.getDownloadUrl(n.id);
+                              return {
+                                id: n.id,
+                                name: n.name,
+                                mime_type: n.mime_type,
+                                size: n.size,
+                                downloadUrl: url,
+                                updated_at: n.updated_at, // For sync tracking
+                              };
+                            }));
+                            
+                            const result = await offlineFilesStorage.saveFilesForOffline(
+                              projectId,
+                              filesToSave,
+                              (current, total, fileName) => {
+                                console.log(`[Offline] Saving ${current}/${total}: ${fileName}`);
+                              }
+                            );
+                            
+                            // Update offline file IDs
+                            setOfflineFileIds(prev => {
+                              const next = new Set(prev);
+                              nodes.forEach(n => next.add(n.id));
+                              return next;
+                            });
+                            
+                            if (result.failed > 0) {
+                              Alert.alert(
+                                'Partially Saved',
+                                `${result.success} file(s) saved, ${result.failed} failed.\n${result.errors.slice(0, 3).join('\n')}`
+                              );
+                            } else {
+                              Alert.alert('Saved for Offline', `${result.success} file(s) are now available offline.`);
+                            }
+                            setSelectedIds(new Set());
+                            setMultiSelect(false);
+                          } catch (error: any) {
+                            Alert.alert('Error', error.message || 'Failed to save files for offline.');
+                          } finally {
+                            setIsSavingOffline(false);
+                          }
+                        }
+                      }
+                    ]
+                  );
+                }}
+                style={[styles.bulkBtn, isSavingOffline && { opacity: 0.5 }]}
+                disabled={isSavingOffline}
+              >
+                <Text style={styles.bulkBtnText}>{isSavingOffline ? 'Saving...' : 'Save Offline'}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.bulkBtnClear}>
               <Text style={styles.bulkBtnText}>Clear</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
-      </View>
       {Platform.OS === 'web' && isDragging && canEdit && (
         <div style={{position: 'absolute' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 9999, display: 'flex'}}
           onDragOver={(e: any) => { e.preventDefault(); lastDragEvent.current = Date.now(); }}
@@ -313,7 +408,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       <ScrollView style={{ flex: 1, padding: 24 }}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={styles.actionRow}>
             {canEdit && (
               <>
                 <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
@@ -331,7 +426,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                   setMultiSelect(true);
                 }}
               >
-                <Text style={styles.multiToggleText}>Select multiple files/folders?</Text>
+                <Text style={styles.multiToggleText}>Select multiple items</Text>
               </TouchableOpacity>
             ) : canEdit && multiSelect ? (
               <TouchableOpacity
@@ -517,6 +612,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                       {renderNameWithExtension(node.name, searchQuery, exactOnly)}
                     </TouchableOpacity>
                     {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
+                    {offlineFileIds.has(node.id) && <Text style={styles.offlineBadge}>Downloaded</Text>}
                     <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
                       {node.type === 'file' && (
                         <TouchableOpacity onPress={() => onDownload(node)}>
@@ -591,14 +687,17 @@ function highlightBase(base: string, query: string, exactOnly: boolean) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#111111', position: 'relative' },
   header: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2A2A2A', flexDirection: 'row', alignItems: 'center' },
+  bulkBarContainer: { borderBottomWidth: 1, borderBottomColor: '#2A2A2A', maxHeight: 48 },
+  bulkBarScroll: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   bulkBar: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bulkText: { color: '#F5F5F5', marginRight: 8 },
+  bulkText: { color: '#F5F5F5', marginRight: 8, fontSize: 12 },
   bulkBtn: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   bulkBtnDanger: { backgroundColor: '#8B0000', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   bulkBtnClear: { backgroundColor: '#444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   bulkBtnText: { color: '#F5F5F5', fontSize: 12 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
+  sectionHeader: { flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: 16, gap: 12 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   actionButton: { backgroundColor: '#FF2A2A', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   actionButtonText: { fontSize: 12, color: '#F5F5F5', fontWeight: '600', letterSpacing: 0.5 },
   multiToggle: { backgroundColor: '#222', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
@@ -640,6 +739,7 @@ const styles = StyleSheet.create({
   fileIcon: { fontSize: 18, marginRight: 10, color: '#F5F5F5' },
   fileName: { flex: 1, color: '#F5F5F5', fontSize: 16, letterSpacing: 0.3 },
   lockBadge: { color: '#FF4444', fontSize: 12, fontWeight: '700' },
+  offlineBadge: { color: '#7A7A7A', fontSize: 10, fontWeight: '600', marginLeft: 6, backgroundColor: '#2A2A2A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   emptyState: { alignItems: 'center', paddingVertical: 48 },
   emptyStateText: { fontSize: 18, fontWeight: '600', color: '#F5F5F5', marginBottom: 8, letterSpacing: 0.5 },
   emptyStateSubtext: { fontSize: 14, color: '#9A9A9A', marginBottom: 24, letterSpacing: 0.5 },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  TextInput,
   Modal,
+  Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect, useGlobalSearchParams } from 'expo-router';
-import { Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, useGlobalSearchParams, Stack } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
 import { noteService } from '../../src/services/noteService';
 import { fileService } from '../../src/services/fileService';
 import * as DocumentPicker from 'expo-document-picker';
-import { Platform } from 'react-native';
-import { Image } from 'react-native';
-import { useRef } from 'react';
 import MembersModal from '../../src/components/project/MembersModal';
 import FilesOverlay from '../../src/components/project/FilesOverlay';
 import NotesSection from '../../src/components/project/NotesSection';
@@ -32,7 +28,7 @@ import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfir
 import RenameModal from '../../src/components/project/modals/RenameModal';
 import MoveBanner from '../../src/components/project/MoveBanner';
 import { useWebSocket } from '../../src/contexts/WebSocketContext';
-import type { Project as ServiceProject, ProjectMember as ServiceMember } from '../../src/services/projectService.types';
+import type { Project as ServiceProject } from '../../src/services/projectService.types';
 
 // Use types from service with local aliases
 type Project = ServiceProject & {
@@ -67,19 +63,19 @@ export default function ProjectDetailScreen() {
   const [activeTab, setActiveTab] = useState<'overview' | 'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix'>('overview');
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string | null; name: string }>>([{ id: null, name: 'Root' }]);
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Root' }]);
   const [fileLoading, setFileLoading] = useState(false);
   const [renameNode, setRenameNode] = useState<any | null>(null);
-  const [renameText, setRenameText] = useState('');
+  const [_renameText, setRenameText] = useState('');
   const [moveMode, setMoveMode] = useState<{ node: any | null } | null>(null);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [_newFolderName, setNewFolderName] = useState('');
   const [deleteNodeTarget, setDeleteNodeTarget] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [downloadingNodeId, setDownloadingNodeId] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState<number>(0); // 0..1
-  const [downloadStatus, setDownloadStatus] = useState<'in-progress' | 'finalizing' | null>(null);
-  const DOWNLOAD_FINALIZE_HOLD_MS = 1500; // keep 100% bar visible a bit longer so user sees completion
+  // Download states - used by FilesOverlay component
+  const [_downloadingNodeId, _setDownloadingNodeId] = useState<string | null>(null);
+  const [_downloadProgress, _setDownloadProgress] = useState<number>(0);
+  const [_downloadStatus, _setDownloadStatus] = useState<'in-progress' | 'finalizing' | null>(null);
   // Removed inline preview (now separate screen)
   const [showFilesOverlay, setShowFilesOverlay] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -87,6 +83,7 @@ export default function ProjectDetailScreen() {
   const [LuFilesIcon, setLuFilesIcon] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [GiHamburger, setGiHamburger] = useState<any>(null);
+  const [HarrisMatrixComponent, setHarrisMatrixComponent] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
   const [activities, setActivities] = useState<any[]>([]);
@@ -102,6 +99,10 @@ export default function ProjectDetailScreen() {
         .then((mod) => setGiHamburger(() => mod.GiHamburgerMenu))
         .catch((e) => console.warn('react-icons (gi) not available', e));
     }
+    // Load Harris Matrix component lazily
+    import('../../src/components/matrix')
+      .then((mod) => setHarrisMatrixComponent(() => mod.default))
+      .catch((e) => console.warn('HarrisMatrix component not available', e));
   }, []);
 
   useEffect(() => {
@@ -224,11 +225,11 @@ export default function ProjectDetailScreen() {
   // Permission helpers - use defensive checks
   const currentRole = getCurrentUserRole();
   const isGuest = currentRole === 'GUEST';
-  const isResearcher = currentRole === 'RESEARCHER';
+  const _isResearcher = currentRole === 'RESEARCHER'; // For future use
   const isOwner = currentRole === 'LEADER' || !currentRole; // If no role found, assume owner (for backward compatibility)
-  const canEdit = !isGuest;
+  const _canEdit = !isGuest; // For future use
   const canChangeSettings = isOwner;
-  const canDownload = !isGuest;
+  const _canDownload = !isGuest; // For future use
   const canEditFiles = !isGuest;
   const canEditMatrix = !isGuest;
   const canEditMap = !isGuest;
@@ -259,11 +260,41 @@ export default function ProjectDetailScreen() {
       // Members are now included in projectData
       setMembers(projectData.members || []);
       
+      // Cache project for offline access (last 3 projects)
+      try {
+        const { recentProjectsCache } = await import('../../src/services/offlineService');
+        await recentProjectsCache.saveRecentProject(
+          id,
+          projectData,
+          notesData,
+          projectData.members || []
+        );
+      } catch (cacheError) {
+        console.warn('[Project] Failed to cache project for offline:', cacheError);
+      }
+      
       // Also load timeline when loading project
       loadTimeline();
     } catch (error) {
       console.error('Error loading project:', error);
-      Alert.alert('Error', 'Failed to load project details');
+      
+      // Try to load from offline cache if network fails
+      try {
+        const { recentProjectsCache } = await import('../../src/services/offlineService');
+        const cached = await recentProjectsCache.getCachedProject(id);
+        if (cached) {
+          console.log('[Project] Loading from offline cache');
+          setProject(cached.project);
+          setNotes(cached.notes);
+          setMembers(cached.members);
+          Alert.alert('Offline Mode', 'Loaded cached version. Some data may be outdated.');
+        } else {
+          Alert.alert('Error', 'Failed to load project details and no offline cache available.');
+        }
+      } catch (cacheError) {
+        console.error('Error loading from cache:', cacheError);
+        Alert.alert('Error', 'Failed to load project details');
+      }
     } finally {
       setLoading(false);
     }
@@ -572,7 +603,8 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  const renderNote = ({ item }: { item: Note }) => (
+  // Note rendering is now handled by NotesSection component
+  const _renderNote = ({ item }: { item: Note }) => (
     <TouchableOpacity style={styles.noteCard} onPress={() => handleNotePress(item.id)}>
       <View style={styles.noteHeader}>
         <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
@@ -652,8 +684,8 @@ export default function ProjectDetailScreen() {
           },
           headerBackTitle: 'Projects',
           headerShown: true,
-          // Left side: Back button only
-          headerLeft: () => (
+          // On iOS, hide custom back button to avoid duplicate with native back
+          headerLeft: Platform.OS === 'ios' ? undefined : () => (
             <TouchableOpacity
               onPress={() => router.replace('/(tabs)')}
               style={styles.headerBackButton}
@@ -851,10 +883,10 @@ export default function ProjectDetailScreen() {
             >
               {Platform.OS === 'web' ? (
                 <div style={{ height: '100%', width: '100%' }}>
-                  {React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })}
+                  {HarrisMatrixComponent && React.createElement(HarrisMatrixComponent, { projectId: project?.id as string, canEdit: canEditMatrix })}
                 </div>
               ) : (
-                React.createElement(require('../../src/components/matrix/HarrisMatrix').default as any, { projectId: project?.id as string, canEdit: canEditMatrix })
+                HarrisMatrixComponent && React.createElement(HarrisMatrixComponent, { projectId: project?.id as string, canEdit: canEditMatrix })
               )}
             </View>
           ) : null}

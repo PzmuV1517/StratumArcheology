@@ -184,7 +184,8 @@ export default function NoteDetailScreen() {
             </View>
           ),
         }} 
-      />      <ScrollView style={styles.content}>
+      />
+      <ScrollView style={styles.content}>
         <View style={styles.noteContainer}>
           <Text style={styles.noteTitle}>{note.title}</Text>
           

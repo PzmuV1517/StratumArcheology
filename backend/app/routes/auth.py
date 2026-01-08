@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
-from app.schemas import UserResponse, FirebaseTokenRequest, AuthResponse, LoginRequest, RegisterRequest
+from app.schemas import UserResponse, FirebaseTokenRequest, AuthResponse, LoginRequest, RegisterRequest, ProfileUpdateRequest
 import firebase_admin.auth as firebase_auth
 from datetime import datetime, timedelta
 import uuid
@@ -217,6 +217,23 @@ async def get_current_user_info(
     current_user: User = Depends(get_current_user)
 ):
     """Get current authenticated user information"""
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    request: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user's profile information"""
+    if request.display_name is not None:
+        current_user.display_name = request.display_name
+    if request.photo_url is not None:
+        current_user.photo_url = request.photo_url
+    
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

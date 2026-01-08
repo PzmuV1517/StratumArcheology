@@ -35,22 +35,23 @@ export default function LandingPage() {
   // Web: render landing page
   return (
     <>
-      <div className="main-landing" style={{ minHeight: '100vh', width: '100vw', overflow: 'hidden', position: 'relative', background: 'var(--background)' }}>
-        <section style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="main-landing" style={{ minHeight: '100vh', width: '100vw', overflowX: 'hidden', overflowY: 'auto', position: 'relative', background: '#000000' }}>
+        <section style={{ position: 'relative' }}>
           {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
           <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', inset: 0 }}>
               {/* @ts-expect-error - DotGrid is a JSX component with flexible props */}
               <DotGrid
-                dotSize={5}
-                gap={15}
-                baseColor="#000000ff"
+                dotSize={4}
+                gap={20}
+                baseColor="#220000"
                 activeColor="#ff0000"
+                proximity={200}
               />
             </div>
           </div>
-          {/* Hero section */}
-          <section className="hero-section" style={{ position: 'relative', zIndex: 2 }}>
+          {/* Hero section - takes full viewport height on load */}
+          <section className="hero-section" style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <View style={styles.hero}>
               <Text style={styles.title}>Organize research. Share results.</Text>
               <Text style={styles.subtitle}>Projects, artefacts, and notes in one streamlined workspace.</Text>
@@ -64,7 +65,7 @@ export default function LandingPage() {
                   onClick={() => router.push('/(auth)/login')}
                   onPress={() => router.push('/(auth)/login')}
                 >
-                  <Text>Begin</Text>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Begin</Text>
                 </StarBorder>
               </View>
             </View>
@@ -200,12 +201,13 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   hero: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     zIndex: 10,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
+    paddingVertical: 80,
+    paddingHorizontal: 24,
   },
   bg: {
     ...StyleSheet.absoluteFillObject,

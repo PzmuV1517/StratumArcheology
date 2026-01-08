@@ -15,9 +15,15 @@ try {
   Sharing = null;
 }
 
-// Get cache directory with fallback
+// Get cache directory with fallback - ensure we always have a valid directory
 const getCacheDir = (): string => {
-  return FileSystem.cacheDirectory || FileSystem.documentDirectory || '';
+  // On iOS/Android, cacheDirectory is preferred; documentDirectory is always available
+  const dir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+  if (!dir) {
+    console.warn('[fileService] No cache or document directory available');
+    return '';
+  }
+  return dir;
 };
 
 // Re-export core methods
@@ -428,6 +434,13 @@ export const fileService = {
     }
   },
   
+  // Get download URL for a file (used for offline caching)
+  getDownloadUrl: async (nodeId: string): Promise<string> => {
+    const token = await AsyncStorage.getItem('authToken');
+    const baseUrl = api.defaults.baseURL || '';
+    return `${baseUrl}/files/${nodeId}/download${token ? `?token=${token}` : ''}`;
+  },
+
   // Read file content as text (for editing)
   readFileAsText: async (uri: string): Promise<string> => {
     try {

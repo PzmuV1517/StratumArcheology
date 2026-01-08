@@ -6,10 +6,11 @@ export * from './noteService.core';
  * Define the expected service methods for TypeScript
  */
 export interface NoteServiceMethods {
-  getNote: (...args: any[]) => Promise<any>;
-  createNote: (...args: any[]) => Promise<any>;
-  deleteNote: (...args: any[]) => Promise<void>;
-  // Add any other service functions here if needed
+  getNotes: (projectId: string) => Promise<any[]>;
+  getNote: (noteId: string) => Promise<any>;
+  createNote: (data: any) => Promise<any>;
+  updateNote: (noteId: string, data: any) => Promise<any>;
+  deleteNote: (noteId: string) => Promise<void>;
 }
 
 /**

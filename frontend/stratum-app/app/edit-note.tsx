@@ -401,9 +401,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  // Save status bar
+  // Save status bar - absolutely positioned to avoid layout shift
   saveStatusBar: {
-    backgroundColor: '#1E1E1E',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    backgroundColor: 'rgba(30, 30, 30, 0.95)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
