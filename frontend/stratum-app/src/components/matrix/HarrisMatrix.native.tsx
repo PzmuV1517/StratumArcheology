@@ -5,14 +5,17 @@
  * The D3-based visualization requires DOM APIs, so we use WebView to host
  * the full-featured HTML/JS implementation.
  * 
- * Data is persisted using AsyncStorage and synced with the WebView via postMessage.
+ * Data is persisted using AsyncStorage for offline access and synced with the 
+ * server when online. Uses offlineQueueService for proper sync management.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { getHarrisMatrixHTML } from './HarrisMatrixHTML';
+import api from '../../services/api';
 
 interface HarrisMatrixProps {
   projectId: string;
@@ -23,16 +26,57 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedData, setSavedData] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const webViewRef = useRef<WebView>(null);
   const storageKey = `harrisMatrixData:${projectId}`;
+  const pendingChangesKey = `harrisMatrixPending:${projectId}`;
+  const lastSyncKey = `harrisMatrixLastSync:${projectId}`;
+
+  // Subscribe to network state changes
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = !!(state.isConnected && state.isInternetReachable);
+      setIsOnline(online);
+      
+      // If we just came online and have pending changes, sync
+      if (online && hasPendingChanges) {
+        syncToServer();
+      }
+    });
+
+    // Check initial state
+    NetInfo.fetch().then((state) => {
+      setIsOnline(!!(state.isConnected && state.isInternetReachable));
+    });
+
+    return () => unsubscribe();
+  }, [hasPendingChanges]);
 
   // Load saved data from AsyncStorage on mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await AsyncStorage.getItem(storageKey);
+        const [data, pendingData, syncTimeStr] = await Promise.all([
+          AsyncStorage.getItem(storageKey),
+          AsyncStorage.getItem(pendingChangesKey),
+          AsyncStorage.getItem(lastSyncKey),
+        ]);
+        
         setSavedData(data);
+        setHasPendingChanges(pendingData === 'true');
+        if (syncTimeStr) {
+          setLastSyncTime(new Date(syncTimeStr));
+        }
         setLoading(false);
+
+        // Try to sync if we're online and have pending changes
+        const netState = await NetInfo.fetch();
+        if (netState.isConnected && netState.isInternetReachable && pendingData === 'true') {
+          syncToServer();
+        }
       } catch (err) {
         console.error('[HarrisMatrix.native] Failed to load data:', err);
         setError('Failed to load saved data');
@@ -42,6 +86,37 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
     loadData();
   }, [storageKey]);
 
+  // Sync data to server
+  const syncToServer = useCallback(async () => {
+    if (isSyncing) return;
+    
+    try {
+      setIsSyncing(true);
+      const data = await AsyncStorage.getItem(storageKey);
+      
+      if (data) {
+        // POST/PUT to the backend
+        await api.put(`/projects/${projectId}/matrix`, { data: JSON.parse(data) });
+        
+        // Clear pending changes flag
+        await AsyncStorage.setItem(pendingChangesKey, 'false');
+        setHasPendingChanges(false);
+        
+        // Update last sync time
+        const now = new Date();
+        await AsyncStorage.setItem(lastSyncKey, now.toISOString());
+        setLastSyncTime(now);
+        
+        console.log('[HarrisMatrix.native] Data synced to server');
+      }
+    } catch (err) {
+      console.error('[HarrisMatrix.native] Sync failed:', err);
+      // Keep pending changes flag set
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSyncing, storageKey, projectId]);
+
   // Handle messages from WebView (save data, errors, etc.)
   const handleMessage = useCallback(async (event: WebViewMessageEvent) => {
     try {
@@ -49,8 +124,18 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
       
       switch (message.type) {
         case 'SAVE_DATA':
+          // Always save locally first (offline-first)
           await AsyncStorage.setItem(storageKey, JSON.stringify(message.payload));
           console.log('[HarrisMatrix.native] Data saved to AsyncStorage');
+          
+          // Mark as having pending changes
+          await AsyncStorage.setItem(pendingChangesKey, 'true');
+          setHasPendingChanges(true);
+          
+          // If online, sync immediately
+          if (isOnline) {
+            syncToServer();
+          }
           break;
         
         case 'READY':
@@ -58,6 +143,13 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
           if (savedData && webViewRef.current) {
             webViewRef.current.injectJavaScript(`
               window.loadHarrisMatrixData(${savedData});
+              true;
+            `);
+          }
+          // Also notify WebView of online/offline status
+          if (webViewRef.current) {
+            webViewRef.current.injectJavaScript(`
+              window.setOfflineMode(${!isOnline});
               true;
             `);
           }
@@ -70,11 +162,20 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
         case 'ALERT':
           Alert.alert(message.payload.title || 'Harris Matrix', message.payload.message);
           break;
+        
+        case 'REQUEST_SYNC':
+          // Manual sync request from WebView
+          if (isOnline) {
+            syncToServer();
+          } else {
+            Alert.alert('Offline', 'Cannot sync while offline. Changes are saved locally.');
+          }
+          break;
       }
     } catch (err) {
       console.error('[HarrisMatrix.native] Failed to handle message:', err);
     }
-  }, [savedData, storageKey]);
+  }, [savedData, storageKey, isOnline, syncToServer]);
 
   // Handle WebView load error
   const handleError = useCallback((syntheticEvent: any) => {
@@ -107,8 +208,46 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
     initialData: savedData,
   });
 
+  // Format last sync time
+  const formatSyncTime = () => {
+    if (!lastSyncTime) return 'Never';
+    const now = new Date();
+    const diff = now.getTime() - lastSyncTime.getTime();
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return lastSyncTime.toLocaleDateString();
+  };
+
   return (
     <View style={styles.webViewContainer}>
+      {/* Status bar */}
+      <View style={styles.statusBar}>
+        <View style={styles.statusIndicator}>
+          <View style={[styles.statusDot, { backgroundColor: isOnline ? '#4CAF50' : '#FF4444' }]} />
+          <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
+        </View>
+        
+        {hasPendingChanges && (
+          <View style={styles.pendingBadge}>
+            <Text style={styles.pendingText}>Pending changes</Text>
+          </View>
+        )}
+        
+        {isSyncing ? (
+          <View style={styles.syncingIndicator}>
+            <ActivityIndicator size="small" color="#007bff" />
+            <Text style={styles.syncingText}>Syncing...</Text>
+          </View>
+        ) : isOnline && hasPendingChanges ? (
+          <TouchableOpacity style={styles.syncButton} onPress={syncToServer}>
+            <Text style={styles.syncButtonText}>Sync Now</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.lastSyncText}>Last sync: {formatSyncTime()}</Text>
+        )}
+      </View>
+
       <WebView
         ref={webViewRef}
         source={{ html }}
@@ -174,5 +313,66 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     fontSize: 16,
     textAlign: 'center',
+  },
+  // Status bar styles
+  statusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#dee2e6',
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 13,
+    color: '#34495e',
+    fontWeight: '500',
+  },
+  pendingBadge: {
+    backgroundColor: '#fff3cd',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  pendingText: {
+    fontSize: 12,
+    color: '#856404',
+    fontWeight: '500',
+  },
+  syncingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  syncingText: {
+    fontSize: 12,
+    color: '#007bff',
+  },
+  syncButton: {
+    backgroundColor: '#007bff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  syncButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  lastSyncText: {
+    fontSize: 11,
+    color: '#6c757d',
   },
 });

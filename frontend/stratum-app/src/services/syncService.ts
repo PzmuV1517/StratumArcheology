@@ -4,13 +4,15 @@
  * Handles synchronization between local database and server:
  * - Queue management for offline requests
  * - Conflict detection and resolution
- * - Background sync when connection restored
+ * - Background sync when connection restored (auto-sync)
  * - Timestamp-based last-write-wins with conflict detection
+ * - Integration with offlineQueueService for file operations
  * 
  * Cross-platform: Works on both web and native
  */
 
 import { Platform } from 'react-native';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import api from '../services/api';
 import {
   initDatabase,
@@ -27,6 +29,7 @@ import {
   LocalNote,
   LocalProject,
 } from '../db';
+import { offlineQueue, QueuedAction, conflicts } from './offlineQueueService';
 
 // Maximum number of retries for failed requests
 const MAX_RETRIES = 3;
@@ -81,6 +84,233 @@ function updateSyncStatus(updates: Partial<SyncStatus>): void {
   statusCallbacks.forEach((cb) => cb(currentStatus));
 }
 
+// Network listener cleanup
+let networkUnsubscribe: (() => void) | null = null;
+let wasOffline = false;
+
+/**
+ * Setup auto-sync on network restoration
+ * This runs in the background and syncs when connectivity is restored
+ */
+function setupNetworkListener(): void {
+  if (networkUnsubscribe) {
+    networkUnsubscribe();
+  }
+
+  networkUnsubscribe = NetInfo.addEventListener(async (state: NetInfoState) => {
+    const isOnline = state.isConnected && state.isInternetReachable;
+    
+    console.log(`[SyncService] Network state changed: connected=${state.isConnected}, reachable=${state.isInternetReachable}`);
+    
+    if (isOnline && wasOffline) {
+      // Connection restored - trigger auto-sync
+      console.log('[SyncService] Connection restored - triggering auto-sync');
+      wasOffline = false;
+      
+      // Small delay to let network stabilize
+      setTimeout(async () => {
+        try {
+          await processOfflineQueue();
+          await syncLocalChanges();
+        } catch (error) {
+          console.error('[SyncService] Auto-sync failed:', error);
+        }
+      }, 1000);
+    } else if (!isOnline) {
+      wasOffline = true;
+    }
+  });
+}
+
+/**
+ * Process the offline queue (from offlineQueueService)
+ * This handles file uploads, notes, etc. that were queued while offline
+ */
+export async function processOfflineQueue(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  
+  if (currentStatus.isSyncing) {
+    console.log('[SyncService] Already syncing, skipping offline queue');
+    return;
+  }
+
+  try {
+    const queue = await offlineQueue.getQueue();
+    const pendingActions = queue.filter(a => a.status === 'pending');
+    
+    if (pendingActions.length === 0) {
+      console.log('[SyncService] No pending offline actions');
+      return;
+    }
+
+    console.log(`[SyncService] Processing ${pendingActions.length} offline actions...`);
+    updateSyncStatus({ isSyncing: true, error: null });
+
+    for (const action of pendingActions) {
+      await processOfflineAction(action);
+    }
+
+    // Update pending count
+    const updatedQueue = await offlineQueue.getQueue();
+    const stillPending = updatedQueue.filter(a => a.status === 'pending').length;
+    const failed = updatedQueue.filter(a => a.status === 'failed').length;
+
+    updateSyncStatus({
+      isSyncing: false,
+      pendingCount: stillPending,
+      failedCount: failed,
+      lastSyncTime: new Date(),
+    });
+
+    console.log('[SyncService] Offline queue processing complete');
+  } catch (error: any) {
+    console.error('[SyncService] Offline queue processing failed:', error);
+    updateSyncStatus({
+      isSyncing: false,
+      error: error.message || 'Sync failed',
+    });
+  }
+}
+
+/**
+ * Process a single offline queued action
+ */
+async function processOfflineAction(action: QueuedAction): Promise<void> {
+  console.log(`[SyncService] Processing action: ${action.type} for ${action.entityId || 'new entity'}`);
+  
+  await offlineQueue.updateActionStatus(action.id, 'processing');
+
+  try {
+    switch (action.type) {
+      case 'CREATE_NOTE':
+        await handleCreateNote(action);
+        break;
+      case 'UPDATE_NOTE':
+        await handleUpdateNote(action);
+        break;
+      case 'DELETE_NOTE':
+        await handleDeleteNote(action);
+        break;
+      case 'UPLOAD_FILE':
+        await handleUploadFile(action);
+        break;
+      case 'UPDATE_FILE':
+        await handleUpdateFile(action);
+        break;
+      case 'DELETE_FILE':
+        await handleDeleteFile(action);
+        break;
+      case 'CREATE_FOLDER':
+        await handleCreateFolder(action);
+        break;
+      case 'MOVE_FILE':
+        await handleMoveFile(action);
+        break;
+      case 'RENAME_FILE':
+        await handleRenameFile(action);
+        break;
+      case 'UPDATE_PROFILE':
+        await handleUpdateProfile(action);
+        break;
+      default:
+        console.warn(`[SyncService] Unknown action type: ${action.type}`);
+    }
+    
+    // Success - remove from queue
+    await offlineQueue.removeFromQueue(action.id);
+    console.log(`[SyncService] Action ${action.id} completed successfully`);
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
+    console.error(`[SyncService] Action ${action.id} failed:`, errorMessage);
+
+    // Check for conflicts (409)
+    if (error.response?.status === 409) {
+      await offlineQueue.updateActionStatus(action.id, 'conflict', errorMessage);
+      // Record the conflict for user resolution
+      await conflicts.addConflict({
+        actionId: action.id,
+        entityType: action.type.includes('NOTE') ? 'note' : 'file',
+        entityId: action.entityId || '',
+        localVersion: action.data,
+        serverVersion: error.response?.data?.serverVersion,
+        localTimestamp: action.createdAt,
+        serverTimestamp: new Date().toISOString(),
+      });
+    } else if (action.retryCount < MAX_RETRIES && isRetryableError(error)) {
+      // Retry later
+      await offlineQueue.updateActionStatus(action.id, 'pending', errorMessage);
+    } else {
+      // Mark as failed
+      await offlineQueue.updateActionStatus(action.id, 'failed', errorMessage);
+    }
+  }
+}
+
+// Action handlers
+async function handleCreateNote(action: QueuedAction): Promise<void> {
+  const response = await api.post(`/projects/${action.projectId}/notes`, action.data);
+  console.log(`[SyncService] Created note: ${response.data.id}`);
+}
+
+async function handleUpdateNote(action: QueuedAction): Promise<void> {
+  await api.put(`/notes/${action.entityId}`, action.data);
+}
+
+async function handleDeleteNote(action: QueuedAction): Promise<void> {
+  await api.delete(`/notes/${action.entityId}`);
+}
+
+async function handleUploadFile(action: QueuedAction): Promise<void> {
+  // File upload requires FormData
+  const formData = new FormData();
+  formData.append('file', {
+    uri: action.localPath,
+    type: action.data.mimeType || 'application/octet-stream',
+    name: action.data.name,
+  } as any);
+  
+  if (action.data.parent_id) {
+    formData.append('parent_id', action.data.parent_id);
+  }
+
+  await api.post(`/files/project/${action.projectId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+async function handleUpdateFile(action: QueuedAction): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: action.localPath,
+    type: action.data.mimeType || 'application/octet-stream',
+    name: action.data.name,
+  } as any);
+
+  await api.put(`/files/${action.entityId}/content`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+}
+
+async function handleDeleteFile(action: QueuedAction): Promise<void> {
+  await api.delete(`/files/${action.entityId}`);
+}
+
+async function handleCreateFolder(action: QueuedAction): Promise<void> {
+  await api.post(`/files/project/${action.projectId}/folder`, action.data);
+}
+
+async function handleMoveFile(action: QueuedAction): Promise<void> {
+  await api.put(`/files/${action.entityId}/move`, action.data);
+}
+
+async function handleRenameFile(action: QueuedAction): Promise<void> {
+  await api.put(`/files/${action.entityId}/rename`, action.data);
+}
+
+async function handleUpdateProfile(action: QueuedAction): Promise<void> {
+  await api.patch('/auth/me', action.data);
+}
+
 /**
  * Initialize the sync service
  * Call this when the app starts
@@ -99,12 +329,36 @@ export async function initSyncService(): Promise<void> {
       return;
     }
     
+    // Setup network listener for auto-sync
+    setupNetworkListener();
+    console.log('[SyncService] Network listener setup for auto-sync');
+    
+    // Check initial network state
+    const netState = await NetInfo.fetch();
+    wasOffline = !netState.isConnected || !netState.isInternetReachable;
+    
     // Update initial status (mobile only)
     const stats = await getQueueStats();
+    const offlineQueueItems = await offlineQueue.getQueue();
+    const offlinePending = offlineQueueItems.filter(a => a.status === 'pending').length;
+    const offlineFailed = offlineQueueItems.filter(a => a.status === 'failed').length;
+    
     updateSyncStatus({
-      pendingCount: stats.pending,
-      failedCount: stats.failed,
+      pendingCount: stats.pending + offlinePending,
+      failedCount: stats.failed + offlineFailed,
     });
+    
+    // If we're online, sync any pending items
+    if (!wasOffline) {
+      console.log('[SyncService] Online at startup - checking for pending sync items');
+      setTimeout(async () => {
+        try {
+          await processOfflineQueue();
+        } catch (error) {
+          console.error('[SyncService] Initial sync failed:', error);
+        }
+      }, 2000);
+    }
   } catch (error) {
     console.error('[SyncService] Initialization failed:', error);
     throw error;
@@ -430,6 +684,7 @@ async function syncProject(localProject: LocalProject): Promise<void> {
  */
 export async function forceSync(): Promise<void> {
   console.log('[SyncService] Force sync requested');
+  await processOfflineQueue();
   await syncLocalChanges();
 }
 
@@ -438,4 +693,28 @@ export async function forceSync(): Promise<void> {
  */
 export function getSyncStatus(): SyncStatus {
   return { ...currentStatus };
+}
+
+/**
+ * Cleanup sync service (call when app is closing)
+ */
+export function cleanupSyncService(): void {
+  if (networkUnsubscribe) {
+    networkUnsubscribe();
+    networkUnsubscribe = null;
+  }
+  console.log('[SyncService] Cleaned up');
+}
+
+/**
+ * Check if there are pending items to sync
+ */
+export async function hasPendingSync(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  
+  const stats = await getQueueStats();
+  const offlineQueueItems = await offlineQueue.getQueue();
+  const offlinePending = offlineQueueItems.filter(a => a.status === 'pending').length;
+  
+  return stats.pending > 0 || offlinePending > 0;
 }

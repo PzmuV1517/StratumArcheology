@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -18,7 +18,9 @@ import { useAuth } from '../src/contexts/AuthContext';
 import api from '../src/services/api';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { offlineFilesStorage, recentProjectsCache } from '../src/services/offlineService';
+import { offlineQueue, getOfflineStorageStats, OfflineStorageStats } from '../src/services/offlineQueueService';
 import { OfflineFile } from '../src/db/schema';
 
 // Storage bar component
@@ -94,12 +96,17 @@ export default function SettingsScreen() {
   const [otherUsed, setOtherUsed] = useState(0);
   const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
   const [loadingStorage, setLoadingStorage] = useState(true);
+  const [offlineStorageStats, setOfflineStorageStats] = useState<OfflineStorageStats | null>(null);
   
   // Offline files
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  
+  // Network state (real-time from NetInfo)
+  const [networkState, setNetworkState] = useState<NetInfoState | null>(null);
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
   
   // Downloaded projects
   const [downloadedProjects, setDownloadedProjects] = useState<any[]>([]);
@@ -111,12 +118,48 @@ export default function SettingsScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // Subscribe to network state changes
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setNetworkState(state);
+      // Update connection status based on real connectivity
+      if (state.isConnected && state.isInternetReachable) {
+        setConnectionStatus('connected');
+      } else if (state.isConnected === false) {
+        setConnectionStatus('disconnected');
+      }
+    });
+
+    // Get initial state
+    NetInfo.fetch().then((state) => {
+      setNetworkState(state);
+      if (state.isConnected && state.isInternetReachable) {
+        setConnectionStatus('connected');
+      } else if (state.isConnected === false) {
+        setConnectionStatus('disconnected');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const loadPendingQueue = useCallback(async () => {
+    try {
+      const queue = await offlineQueue.getQueue();
+      const pendingCount = queue.filter(a => a.status === 'pending').length;
+      setPendingQueueCount(pendingCount);
+    } catch (err) {
+      console.error('Failed to load pending queue:', err);
+    }
+  }, []);
+
   // Load storage info on mount
   useEffect(() => {
     loadStorageInfo();
     loadOfflineFiles();
     loadDownloadedProjects();
-  }, []);
+    loadPendingQueue();
+  }, [loadPendingQueue]);
 
   const loadStorageInfo = async () => {
     if (Platform.OS === 'web') {
@@ -128,6 +171,14 @@ export default function SettingsScreen() {
       // Get STRATUM offline files size
       const stratumSize = await offlineFilesStorage.getOfflineStorageSize();
       setStratumUsed(stratumSize);
+      
+      // Get offline queue storage stats
+      try {
+        const queueStats = await getOfflineStorageStats();
+        setOfflineStorageStats(queueStats);
+      } catch (queueErr) {
+        console.warn('Failed to get queue storage stats:', queueErr);
+      }
       
       // Get device storage info - wrap in try-catch for Expo Go compatibility
       try {
@@ -168,17 +219,50 @@ export default function SettingsScreen() {
   const checkConnection = async () => {
     setCheckingConnection(true);
     try {
+      // First check network connectivity via NetInfo
+      const netState = await NetInfo.fetch();
+      
+      if (!netState.isConnected) {
+        setConnectionStatus('disconnected');
+        Alert.alert(
+          'No Network', 
+          'Your device is not connected to a network. Check your Wi-Fi or cellular data.'
+        );
+        setCheckingConnection(false);
+        return;
+      }
+
+      if (!netState.isInternetReachable) {
+        setConnectionStatus('disconnected');
+        Alert.alert(
+          'No Internet', 
+          'Network connected but internet is not reachable. Try again later.'
+        );
+        setCheckingConnection(false);
+        return;
+      }
+
+      // Now try to reach the STRATUM backend
       const response = await api.get('/health');
       if (response.status === 200) {
         setConnectionStatus('connected');
-        Alert.alert('Connected', 'Successfully connected to STRATUM backend.');
+        const pendingMessage = pendingQueueCount > 0 
+          ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
+          : '';
+        Alert.alert(
+          'Connected ✓', 
+          `Successfully connected to STRATUM backend.${pendingMessage}`
+        );
       } else {
         setConnectionStatus('disconnected');
         Alert.alert('Connection Failed', 'Could not reach STRATUM backend.');
       }
     } catch {
       setConnectionStatus('disconnected');
-      Alert.alert('Connection Failed', 'Could not reach STRATUM backend. Check your internet connection.');
+      Alert.alert(
+        'Connection Failed', 
+        'Could not reach STRATUM backend. The server may be temporarily unavailable.'
+      );
     } finally {
       setCheckingConnection(false);
     }
@@ -387,6 +471,56 @@ export default function SettingsScreen() {
           </View>
         )}
 
+        {/* Connection & Sync Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Connection & Sync</Text>
+          
+          <View style={styles.card}>
+            <View style={styles.connectionRow}>
+              <View style={[
+                styles.connectionIndicator,
+                { backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : 
+                                  connectionStatus === 'disconnected' ? '#FF4444' : '#666' }
+              ]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.connectionTitle}>
+                  {connectionStatus === 'connected' ? 'Online' : 
+                   connectionStatus === 'disconnected' ? 'Offline' : 'Checking...'}
+                </Text>
+                <Text style={styles.connectionSubtitle}>
+                  {networkState?.type === 'wifi' ? 'Wi-Fi' :
+                   networkState?.type === 'cellular' ? 'Cellular' :
+                   networkState?.type === 'none' ? 'No Network' : 'Unknown'}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={checkConnection}
+                disabled={checkingConnection}
+              >
+                {checkingConnection ? (
+                  <ActivityIndicator color="#FF2A2A" size="small" />
+                ) : (
+                  <Text style={styles.refreshButtonText}>Refresh</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {pendingQueueCount > 0 && (
+              <View style={styles.syncQueueInfo}>
+                <Text style={styles.syncQueueText}>
+                  {pendingQueueCount} pending action(s) waiting to sync
+                </Text>
+                {connectionStatus === 'connected' && (
+                  <Text style={styles.syncQueueHint}>
+                    Will sync automatically in the background
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+
         {/* Profile Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
@@ -456,6 +590,46 @@ export default function SettingsScreen() {
                 </>
               )}
             </TouchableOpacity>
+
+            {/* Queue Storage Stats */}
+            {offlineStorageStats && (
+              <View style={[styles.card, { marginTop: 16 }]}>
+                <Text style={styles.cardTitle}>Offline Storage Details</Text>
+                <View style={styles.storageStatRow}>
+                  <Text style={styles.storageStatLabel}>Sync Queue</Text>
+                  <Text style={styles.storageStatValue}>{offlineStorageStats.queueSize} KB</Text>
+                </View>
+                <View style={styles.storageStatRow}>
+                  <Text style={styles.storageStatLabel}>File Versions</Text>
+                  <Text style={styles.storageStatValue}>{offlineStorageStats.versionsSize} KB</Text>
+                </View>
+                <View style={styles.storageStatRow}>
+                  <Text style={styles.storageStatLabel}>Pending Edits</Text>
+                  <Text style={styles.storageStatValue}>{offlineStorageStats.pendingEditsSize} KB</Text>
+                </View>
+                <View style={styles.storageStatRow}>
+                  <Text style={styles.storageStatLabel}>Conflicts</Text>
+                  <Text style={styles.storageStatValue}>{offlineStorageStats.conflictsSize} KB</Text>
+                </View>
+                <View style={[styles.storageStatRow, { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8, marginTop: 8 }]}>
+                  <Text style={[styles.storageStatLabel, { fontWeight: '600' }]}>Total Queue Storage</Text>
+                  <Text style={[styles.storageStatValue, { color: '#FF2A2A' }]}>{offlineStorageStats.totalSize} KB</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Pending Queue Actions */}
+            {pendingQueueCount > 0 && (
+              <View style={[styles.card, { marginTop: 16 }]}>
+                <Text style={styles.cardTitle}>Pending Sync Actions</Text>
+                <Text style={styles.pendingQueueCount}>{pendingQueueCount}</Text>
+                <Text style={styles.pendingQueueDescription}>
+                  {connectionStatus === 'connected' 
+                    ? 'Actions will sync automatically in the background'
+                    : 'Will sync when connection is restored'}
+                </Text>
+              </View>
+            )}
 
             {/* Offline Files */}
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Saved Files</Text>
@@ -874,5 +1048,82 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#2A2A2A',
+  },
+  // Connection & Sync styles
+  connectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  connectionIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  connectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F5F5F5',
+  },
+  connectionSubtitle: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    marginTop: 2,
+  },
+  refreshButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FF2A2A',
+  },
+  refreshButtonText: {
+    color: '#FF2A2A',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  syncQueueInfo: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#2A2A2A',
+  },
+  syncQueueText: {
+    fontSize: 14,
+    color: '#FF9500',
+    fontWeight: '500',
+  },
+  syncQueueHint: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  // Storage stats in modal
+  storageStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  storageStatLabel: {
+    fontSize: 14,
+    color: '#9A9A9A',
+  },
+  storageStatValue: {
+    fontSize: 14,
+    color: '#F5F5F5',
+    fontWeight: '500',
+  },
+  pendingQueueCount: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#FF9500',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  pendingQueueDescription: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
   },
 });

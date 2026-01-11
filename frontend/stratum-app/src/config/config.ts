@@ -49,21 +49,21 @@ const getApiBaseUrl = (): string => {
     return url;
   }
 
-  // Try to get the dev server host IP from Expo manifest
-  // This works for physical devices on the same network as the dev machine
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-  if (debuggerHost) {
-    // Extract just the IP address (remove port if present)
-    const hostIp = debuggerHost.split(':')[0];
-    console.log('[Config] debuggerHost:', debuggerHost, '-> hostIp:', hostIp);
-    // Only use debuggerHost for actual physical devices
-    // Exclude simulator IPs (172.20.x.x is used by Expo for simulators, localhost for simulators)
-    const isSimulatorIp = hostIp.startsWith('172.20.');
-    if (hostIp && hostIp !== 'localhost' && !isSimulatorIp) {
-      const url = `http://${hostIp}:${port}/api`;
-      console.log('[Config] Using debuggerHost IP for physical device:', url);
-      return url;
-    }
+  // For iOS simulator, always use 127.0.0.1 - it shares network with host machine
+  if (Platform.OS === 'ios') {
+    // Check if we're running in a simulator vs physical device
+    // Physical iOS devices need the debuggerHost IP to reach the dev machine
+    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    const hostIp = debuggerHost?.split(':')[0];
+    
+    // If hostIp is a real network IP (not localhost/127.0.0.1), we might be on a physical device
+    // But we can't reliably detect simulator vs physical device, so we provide both options
+    // For now, default to 127.0.0.1 for iOS (works in simulator)
+    // Users on physical devices can set apiBaseUrl override in AsyncStorage
+    const url = `http://127.0.0.1:${port}/api`;
+    console.log('[Config] iOS platform (simulator), using:', url);
+    console.log('[Config] If on physical device, the app may need debuggerHost:', hostIp);
+    return url;
   }
 
   if (Platform.OS === 'android') {
@@ -73,12 +73,16 @@ const getApiBaseUrl = (): string => {
     return url;
   }
 
-  if (Platform.OS === 'ios') {
-    // iOS simulator shares network with host
-    // Use 127.0.0.1 instead of localhost for more reliable connectivity
-    const url = `http://127.0.0.1:${port}/api`;
-    console.log('[Config] iOS platform, using:', url);
-    return url;
+  // For other platforms or physical devices, try to use debuggerHost
+  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+  if (debuggerHost) {
+    const hostIp = debuggerHost.split(':')[0];
+    console.log('[Config] debuggerHost:', debuggerHost, '-> hostIp:', hostIp);
+    if (hostIp && hostIp !== 'localhost' && hostIp !== '127.0.0.1') {
+      const url = `http://${hostIp}:${port}/api`;
+      console.log('[Config] Using debuggerHost IP:', url);
+      return url;
+    }
   }
 
   // Fallback

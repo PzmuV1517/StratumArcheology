@@ -1,7 +1,7 @@
 """Add versioning and privacy to files and notes
 
 Revision ID: 002_versioning_privacy
-Revises: 001_baseline_initial_schema
+Revises: 001_baseline
 Create Date: 2026-01-11
 
 This migration adds:
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '002_versioning_privacy'
-down_revision = '001_baseline_initial_schema'
+down_revision = '001_baseline'
 branch_labels = None
 depends_on = None
 

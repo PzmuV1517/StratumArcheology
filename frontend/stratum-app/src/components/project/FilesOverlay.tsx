@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileService } from '../../services/fileService';
 import { offlineFilesStorage } from '../../services/offlineService';
+import FileUploadMenu, { SelectedFile } from '../files/FileUploadMenu';
 
 interface FileNode {
   id: string;
@@ -27,6 +28,7 @@ interface Props {
   onLoadRoot: () => void;
   onOpenFolder: (node: FileNode) => void;
   onUpload: () => void;
+  onFileSelected?: (file: SelectedFile) => void; // New: callback for file selection from menu
   onCreateFolder: () => void;
   onDownload: (node: FileNode) => void;
   onRename: (node: FileNode) => void;
@@ -42,7 +44,7 @@ interface Props {
   canEdit?: boolean; // Permissions: disable editing for guests
 }
 
-export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
+export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onFileSelected, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
   if (!visible) return null;
@@ -62,8 +64,42 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [extensionFilters, setExtensionFilters] = useState<string[]>([]);
   const [showExtensionFilter, setShowExtensionFilter] = useState(false);
   const [customExtInput, setCustomExtInput] = useState('');
+  // Upload menu state (mobile only)
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
   const rootRef = useRef<any>(null);
   const warnedMissingProject = useRef(false);
+
+  // Handle file selected from upload menu
+  const handleFileSelected = useCallback(async (file: SelectedFile) => {
+    setShowUploadMenu(false);
+    
+    // If parent provides handler, use it
+    if (onFileSelected) {
+      onFileSelected(file);
+      return;
+    }
+    
+    // Otherwise, directly upload using fileService
+    if (!projectId) {
+      Alert.alert('Error', 'Cannot upload - project context missing');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadCount(1);
+
+    try {
+      await fileService.uploadFile(projectId, file.uri, file.name, currentFolder?.id || null);
+      Alert.alert('Success', `${file.name} uploaded successfully`);
+      onRefreshAfterUpload?.();
+    } catch (error: any) {
+      console.error('File upload failed:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload file');
+    } finally {
+      setIsUploading(false);
+      setUploadCount(0);
+    }
+  }, [projectId, currentFolder, onFileSelected, onRefreshAfterUpload]);
 
   // Load offline file status on mount
   useEffect(() => {
@@ -405,6 +441,14 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
           <Text style={styles.uploadingText}>Uploading {uploadCount} file{uploadCount === 1 ? '' : 's'}…</Text>
         </View>
       )}
+      {/* File Upload Menu Modal (mobile only) */}
+      {Platform.OS !== 'web' && (
+        <FileUploadMenu
+          visible={showUploadMenu}
+          onClose={() => setShowUploadMenu(false)}
+          onFileSelected={handleFileSelected}
+        />
+      )}
       <ScrollView style={{ flex: 1, padding: 24 }}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
@@ -414,9 +458,16 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
                 <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
                   <Text style={styles.actionButtonText}>+ Folder</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
-                  <Text style={styles.actionButtonText}>+ Upload</Text>
-                </TouchableOpacity>
+                {/* On mobile, show dropdown menu; on web, use existing upload handler */}
+                {Platform.OS !== 'web' ? (
+                  <TouchableOpacity style={styles.actionButton} onPress={() => setShowUploadMenu(true)}>
+                    <Text style={styles.actionButtonText}>+ Upload ▾</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
+                    <Text style={styles.actionButtonText}>+ Upload</Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
             {canEdit && !multiSelect ? (

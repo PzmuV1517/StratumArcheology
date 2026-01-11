@@ -147,10 +147,20 @@ class NoteResponse(NoteBase):
     created_at: datetime
     updated_at: datetime
     last_synced: Optional[datetime] = None
+    version: int = 1
+    privacy: PrivacyLevel = PrivacyLevel.PROJECT
+    shared_with: Optional[List[str]] = None
     attachments: List[NoteAttachmentResponse] = []
     
     class Config:
         from_attributes = True
+
+
+class NoteUpdateWithPrivacy(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    privacy: Optional[PrivacyLevel] = None
+    shared_with: Optional[List[str]] = None
 
 
 # Sync Schemas
@@ -229,6 +239,25 @@ class FileNodeRenameRequest(BaseModel):
 
 class FileNodeMoveRequest(BaseModel):
     new_parent_id: Optional[str] = None
+
+
+class FilePrivacyUpdateRequest(BaseModel):
+    privacy: PrivacyLevel
+    shared_with: Optional[List[str]] = None  # List of user IDs for SHARED privacy
+
+
+class ShareWithUsersRequest(BaseModel):
+    user_ids: List[str]
+
+
+class SharedFilesResponse(BaseModel):
+    shared_with_me: List[FileNodeBase]
+    shared_by_me: List[FileNodeBase]
+
+
+class SharedNotesResponse(BaseModel):
+    shared_with_me: List['NoteResponse']
+    shared_by_me: List['NoteResponse']
 
 
 # Invite Schemas

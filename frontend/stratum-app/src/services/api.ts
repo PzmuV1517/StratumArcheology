@@ -132,25 +132,55 @@ api.interceptors.response.use(
       code: error.code,
       hasResponse: !!error.response,
       statusCode: error.response?.status,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL,
     });
     
     if (!error.response) {
-      // No response means network error
-      const isNetworkError = error.message?.includes('Network Error') || 
-                            error.message?.includes('timeout') ||
-                            error.code === 'ECONNABORTED' ||
-                            error.code === 'ERR_NETWORK';
+      // No response - could be network error, timeout, or server unreachable
+      // Be more specific about what's actually a "no network" vs "server down"
+      const errorMessage = error.message?.toLowerCase() || '';
+      const errorCode = error.code || '';
       
-      console.log('[API] No response from server. Is network error:', isNetworkError, 'Full error:', error);
+      // These indicate actual network/connectivity issues
+      const isNetworkConnectivityError = 
+        errorCode === 'ERR_NETWORK' ||
+        errorCode === 'ECONNREFUSED' ||
+        errorCode === 'ENOTFOUND' ||
+        errorMessage.includes('network request failed') ||
+        errorMessage.includes('network error');
       
-      if (isNetworkError) {
-        console.log('[API] Network error detected:', error.message);
-        // Create a more user-friendly error
-        const networkError = new Error('No network connection. Please check your internet and try again.');
+      // Timeout is a different issue - server might be slow, not unreachable
+      const isTimeout = 
+        errorCode === 'ECONNABORTED' || 
+        errorMessage.includes('timeout');
+      
+      console.log('[API] No response analysis:', {
+        errorMessage,
+        errorCode,
+        isNetworkConnectivityError,
+        isTimeout,
+      });
+      
+      if (isNetworkConnectivityError) {
+        console.log('[API] Network connectivity error detected');
+        // For simulator, this usually means wrong IP or server not running
+        const networkError = new Error('Cannot connect to server. Make sure the backend is running.');
         (networkError as any).isNetworkError = true;
         (networkError as any).originalError = error;
         return Promise.reject(networkError);
       }
+      
+      if (isTimeout) {
+        console.log('[API] Timeout error detected');
+        const timeoutError = new Error('Request timed out. The server may be busy.');
+        (timeoutError as any).isTimeout = true;
+        (timeoutError as any).originalError = error;
+        return Promise.reject(timeoutError);
+      }
+      
+      // For other errors without a response, provide the original message
+      console.log('[API] Unknown error without response:', error.message);
     }
     
     if (error.response?.status === 401) {

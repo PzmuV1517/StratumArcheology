@@ -547,15 +547,30 @@ export const checkConnectivity = async (): Promise<boolean> => {
 };
 
 /**
- * Calculate storage usage for STRATUM offline data
+ * Storage stats type for offline queue data
  */
-export const getOfflineStorageStats = async (): Promise<{
-  totalBytes: number;
+export interface OfflineStorageStats {
+  totalSize: number; // KB
+  queueSize: number; // KB
+  versionsSize: number; // KB
+  pendingEditsSize: number; // KB
+  conflictsSize: number; // KB
   filesBytes: number;
   editsBytes: number;
   cacheBytes: number;
-}> => {
-  const stats = {
+  totalBytes: number;
+}
+
+/**
+ * Calculate storage usage for STRATUM offline data
+ */
+export const getOfflineStorageStats = async (): Promise<OfflineStorageStats> => {
+  const stats: OfflineStorageStats = {
+    totalSize: 0,
+    queueSize: 0,
+    versionsSize: 0,
+    pendingEditsSize: 0,
+    conflictsSize: 0,
     totalBytes: 0,
     filesBytes: 0,
     editsBytes: 0,
@@ -567,6 +582,22 @@ export const getOfflineStorageStats = async (): Promise<{
   }
   
   try {
+    // Calculate AsyncStorage sizes (in KB)
+    const queueData = await AsyncStorage.getItem(QUEUE_KEY);
+    stats.queueSize = Math.round((queueData?.length || 0) / 1024);
+    
+    const versionsData = await AsyncStorage.getItem(FILE_VERSIONS_KEY);
+    stats.versionsSize = Math.round((versionsData?.length || 0) / 1024);
+    
+    const editsData = await AsyncStorage.getItem(PENDING_EDITS_KEY);
+    stats.pendingEditsSize = Math.round((editsData?.length || 0) / 1024);
+    
+    const conflictsData = await AsyncStorage.getItem(CONFLICTS_KEY);
+    stats.conflictsSize = Math.round((conflictsData?.length || 0) / 1024);
+    
+    stats.totalSize = stats.queueSize + stats.versionsSize + stats.pendingEditsSize + stats.conflictsSize;
+    
+    // Calculate file system sizes
     const baseDir = await getStratumOfflineDir();
     
     const calculateDirSize = async (dirPath: string): Promise<number> => {
