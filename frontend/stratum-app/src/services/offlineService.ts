@@ -9,7 +9,7 @@
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { OfflineFile, RecentProject } from '../db/schema';
 
 // Storage keys for web fallback
