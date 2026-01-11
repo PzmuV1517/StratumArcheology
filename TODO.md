@@ -275,7 +275,7 @@
   - **Why**: Accountability and quality control
   - **Files**: Add assignee fields to Context model, assignment UI
 
-- [ ] **[P1] Real-Time Activity Feed**
+- [x] **[P1] Real-Time Activity Feed**
   - Show recent activity: "New context CTX-045 added by Alice"
   - "Find SF-023 recorded in CTX-045 by Bob"
   - "5 photos uploaded to CTX-045"

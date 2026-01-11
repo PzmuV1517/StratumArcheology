@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Table, Enum as SQLEnum, Boolean, Text, UniqueConstraint, Index, Integer
+from sqlalchemy import Column, String, DateTime, ForeignKey, Table, Enum as SQLEnum, Boolean, Text, UniqueConstraint, Index, Integer, JSON
 from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 import uuid
@@ -14,6 +14,14 @@ class UserRole(str, enum.Enum):
     LEADER = "leader"
     RESEARCHER = "researcher"
     GUEST = "guest"
+
+
+class PrivacyLevel(str, enum.Enum):
+    """Privacy level for files and notes"""
+    PRIVATE = "private"      # Only owner can see
+    SHARED = "shared"        # Shared with specific users
+    PROJECT = "project"      # All project members can see (default)
+    PUBLIC = "public"        # Anyone with project access can see
 
 
 class ActivityType(str, enum.Enum):
@@ -111,6 +119,13 @@ class Note(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_synced = Column(DateTime, nullable=True)
     
+    # Versioning fields
+    version = Column(Integer, default=1, nullable=False)
+    
+    # Privacy fields
+    privacy = Column(SQLEnum(PrivacyLevel), default=PrivacyLevel.PROJECT, nullable=False)
+    shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
+    
     # Relationships
     project = relationship('Project', back_populates='notes')
     author = relationship('User', back_populates='notes')
@@ -135,16 +150,52 @@ class FileNode(Base):
     size = Column(String, nullable=True)
     storage_path = Column(String, nullable=True)  # object key/path in MinIO for uploaded files
     is_locked = Column(Boolean, default=False)  # for non-deletable/non-movable nodes like Notes folder or note nodes
+    
+    # Versioning fields
+    version = Column(Integer, default=1, nullable=False)  # Incremented on each update
+    checksum = Column(String, nullable=True)  # MD5/SHA256 hash for integrity checking
+    
+    # Privacy/Ownership fields
+    owner_id = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)  # File owner
+    privacy = Column(SQLEnum(PrivacyLevel), default=PrivacyLevel.PROJECT, nullable=False)
+    shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy: ["user_id_1", "user_id_2"]
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     project = relationship('Project', back_populates='files')
     parent = relationship('FileNode', remote_side='FileNode.id', backref=backref('children', cascade='all, delete-orphan'))
+    owner = relationship('User', foreign_keys=[owner_id])
+    versions = relationship('FileVersion', back_populates='file_node', cascade='all, delete-orphan')
 
     __table_args__ = (
         UniqueConstraint('project_id', 'parent_id', 'name', name='uq_file_nodes_sibling_name'),
         Index('ix_file_nodes_project_parent', 'project_id', 'parent_id'),
+        Index('ix_file_nodes_owner', 'owner_id'),
+    )
+
+
+class FileVersion(Base):
+    """Stores version history for files - keeps previous versions when files are updated"""
+    __tablename__ = 'file_versions'
+    
+    id = Column(String, primary_key=True, default=generate_uuid)
+    file_node_id = Column(String, ForeignKey('file_nodes.id', ondelete='CASCADE'), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    storage_path = Column(String, nullable=False)  # MinIO path for this version
+    size = Column(String, nullable=True)
+    checksum = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    
+    # Relationships
+    file_node = relationship('FileNode', back_populates='versions')
+    user = relationship('User', foreign_keys=[created_by])
+    
+    __table_args__ = (
+        UniqueConstraint('file_node_id', 'version', name='uq_file_version'),
+        Index('ix_file_versions_file_node', 'file_node_id'),
     )
 
 

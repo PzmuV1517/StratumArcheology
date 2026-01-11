@@ -10,6 +10,13 @@ class UserRole(str, Enum):
     GUEST = "guest"
 
 
+class PrivacyLevel(str, Enum):
+    PRIVATE = "private"      # Only owner can see
+    SHARED = "shared"        # Shared with specific users
+    PROJECT = "project"      # All project members can see (default)
+    PUBLIC = "public"        # Anyone with project access can see
+
+
 # Auth Schemas
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -181,11 +188,34 @@ class FileNodeBase(BaseModel):
     mime_type: Optional[str] = None
     size: Optional[str] = None
     is_locked: bool = False
+    version: int = 1
+    checksum: Optional[str] = None
+    owner_id: Optional[str] = None
+    privacy: PrivacyLevel = PrivacyLevel.PROJECT
+    shared_with: Optional[List[str]] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class FileVersionResponse(BaseModel):
+    id: str
+    file_node_id: str
+    version: int
+    storage_path: str
+    size: Optional[str] = None
+    checksum: Optional[str] = None
+    created_at: datetime
+    created_by: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FileNodeWithVersions(FileNodeBase):
+    versions: List[FileVersionResponse] = []
 
 
 class FileNodeCreateFolder(BaseModel):
