@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, ScrollView, TextInput, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fileService } from '../src/services/fileService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +14,7 @@ import VideoPanel from '../src/components/data/VideoPanel.web';
 import PointCloudPanel from '../src/components/data/PointCloudPanel.web';
 import MeshPanel from '../src/components/data/MeshPanel.web';
 import AudioPanel from '../src/components/data/AudioPanel.web';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
@@ -186,13 +188,15 @@ export default function DataPreviewScreen() {
     (async () => {
       try {
         if (Platform.OS !== 'web') {
-          // native fallback unchanged
-          const res = await fileService.downloadFile(nodeId);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (!cancelled) setTextContent(typeof reader.result === 'string' ? reader.result : '');
-          };
-          reader.readAsText(res.data);
+          // Native: download file and read content from local file
+          const res = await fileService.downloadFile(nodeId, name as string);
+          if (!res || !res.uri) {
+            throw new Error('Download failed - no result returned');
+          }
+          // Read the downloaded file as text
+          const content = await fileService.readFileAsText(res.uri);
+          if (!cancelled) setTextContent(content);
+          setLoading(false);
           return;
         }
         const token = await AsyncStorage.getItem('authToken');
@@ -337,15 +341,66 @@ export default function DataPreviewScreen() {
   };
 
   const handleSave = async () => {
-    if (Platform.OS !== 'web') {
-      Alert.alert('Save', 'Editing and saving is only available on web for now.');
-      return;
-    }
     try {
       setSaving(true);
       const ext = (name as string)?.toLowerCase() || '';
-      let blob: Blob;
       let finalFilename = name as string;
+
+      // Handle native platform
+      if (Platform.OS !== 'web') {
+        // For text files on native, we need to upload the content to the server
+        if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
+          if (!textContent) {
+            Alert.alert('Error', 'No content to save');
+            setSaving(false);
+            return;
+          }
+
+          // For note files, check if title changed and update filename
+          if (isNoteFile && editableTitle !== originalTitle) {
+            const newFilename = `${editableTitle}.txt`;
+            finalFilename = newFilename;
+            try {
+              await fileService.renameNode(nodeId as string, newFilename);
+              setOriginalTitle(editableTitle);
+            } catch (e) {
+              console.error('Failed to rename file:', e);
+              Alert.alert('Warning', 'Failed to rename file, but content will be saved.');
+            }
+          }
+
+          // Write content to a temp file, then upload it
+          const tempDir = FileSystemLegacy.cacheDirectory || FileSystemLegacy.documentDirectory;
+          if (!tempDir) {
+            throw new Error('No cache directory available');
+          }
+          const tempPath = `${tempDir}temp_save_${Date.now()}.txt`;
+          await FileSystemLegacy.writeAsStringAsync(tempPath, textContent);
+
+          // Upload the file using the replaceFile method
+          const mimeType = ext.endsWith('.json') ? 'application/json' : 'text/plain';
+          await fileService.replaceFile(nodeId as string, tempPath, finalFilename, mimeType);
+
+          // Clean up temp file
+          try {
+            await FileSystemLegacy.deleteAsync(tempPath, { idempotent: true });
+          } catch {
+            // Ignore cleanup errors
+          }
+
+          setDirty(false);
+          clearDraft();
+          Alert.alert('Success', 'File saved successfully');
+        } else if (table) {
+          // CSV/Excel on native - needs more complex handling
+          Alert.alert('Info', 'Spreadsheet saving on native is coming soon. Please use web for now.');
+        }
+        setSaving(false);
+        return;
+      }
+
+      // Web platform handling below
+      let blob: Blob;
 
       // Handle text files
       if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
@@ -556,7 +611,7 @@ export default function DataPreviewScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen
         options={{
           title: header,
@@ -723,7 +778,7 @@ export default function DataPreviewScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -123,7 +123,7 @@ class Note(Base):
     version = Column(Integer, default=1, nullable=False)
     
     # Privacy fields
-    privacy = Column(SQLEnum(PrivacyLevel), default=PrivacyLevel.PROJECT, nullable=False)
+    privacy = Column(SQLEnum(PrivacyLevel, values_callable=lambda x: [e.value for e in x]), default=PrivacyLevel.PROJECT, nullable=False)
     shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
     
     # Relationships
@@ -157,7 +157,7 @@ class FileNode(Base):
     
     # Privacy/Ownership fields
     owner_id = Column(String, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)  # File owner
-    privacy = Column(SQLEnum(PrivacyLevel), default=PrivacyLevel.PROJECT, nullable=False)
+    privacy = Column(SQLEnum(PrivacyLevel, values_callable=lambda x: [e.value for e in x]), default=PrivacyLevel.PROJECT, nullable=False)
     shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy: ["user_id_1", "user_id_2"]
     
     created_at = Column(DateTime, default=datetime.utcnow)

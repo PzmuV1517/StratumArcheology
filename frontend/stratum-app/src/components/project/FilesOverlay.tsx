@@ -66,8 +66,52 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [customExtInput, setCustomExtInput] = useState('');
   // Upload menu state (mobile only)
   const [showUploadMenu, setShowUploadMenu] = useState(false);
+  const [isLoadingMyFolder, setIsLoadingMyFolder] = useState(false);
+  const [myFolderId, setMyFolderId] = useState<string | null>(null); // Track user's folder ID
   const rootRef = useRef<any>(null);
   const warnedMissingProject = useRef(false);
+
+  // Check if we're already inside the user's personal folder (or a subfolder of it)
+  const isInMyFolder = useMemo(() => {
+    if (!myFolderId) return false;
+    // Check if current folder IS the user's folder
+    if (currentFolder?.id === myFolderId) return true;
+    // Check if any breadcrumb is the user's folder (meaning we're in a subfolder)
+    return breadcrumbs?.some(b => b.id === myFolderId) ?? false;
+  }, [myFolderId, currentFolder?.id, breadcrumbs]);
+
+  // Navigate to user's personal folder
+  const handleGoToMyFolder = useCallback(async () => {
+    if (!projectId) {
+      Alert.alert('Error', 'Project context missing');
+      return;
+    }
+    
+    // If we're already in our folder, don't navigate again
+    if (isInMyFolder) {
+      return;
+    }
+    
+    setIsLoadingMyFolder(true);
+    try {
+      const myFolder = await fileService.getMyFolder(projectId);
+      if (myFolder) {
+        // Store the folder ID so we can detect if we're already there
+        setMyFolderId(myFolder.id);
+        // Navigate to the folder
+        onOpenFolder({ 
+          id: myFolder.id, 
+          name: myFolder.name, 
+          type: 'folder' 
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to get My Folder:', error);
+      Alert.alert('Error', error.message || 'Failed to access your personal folder');
+    } finally {
+      setIsLoadingMyFolder(false);
+    }
+  }, [projectId, onOpenFolder, isInMyFolder]);
 
   // Handle file selected from upload menu
   const handleFileSelected = useCallback(async (file: SelectedFile) => {
@@ -453,6 +497,20 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={styles.actionRow}>
+            {/* My Folder button - disabled when already inside */}
+            <TouchableOpacity 
+              style={[
+                styles.actionButton, 
+                styles.myFolderButton, 
+                (isLoadingMyFolder || isInMyFolder) && { opacity: 0.5 }
+              ]} 
+              onPress={handleGoToMyFolder}
+              disabled={isLoadingMyFolder || isInMyFolder}
+            >
+              <Text style={styles.actionButtonText}>
+                {isLoadingMyFolder ? '...' : isInMyFolder ? '✓ My Folder' : '👤 My Folder'}
+              </Text>
+            </TouchableOpacity>
             {canEdit && (
               <>
                 <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
@@ -750,6 +808,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   actionButton: { backgroundColor: '#FF2A2A', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
+  myFolderButton: { backgroundColor: '#2A6AFF' },
   actionButtonText: { fontSize: 12, color: '#F5F5F5', fontWeight: '600', letterSpacing: 0.5 },
   multiToggle: { backgroundColor: '#222', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
   multiToggleActive: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },

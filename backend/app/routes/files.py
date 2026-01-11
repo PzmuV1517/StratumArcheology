@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
-from app.dependencies import get_current_user, check_project_permission
+from app.dependencies import get_current_user, get_current_user_or_token, check_project_permission
 from app.models import User, Project, FileNode, FileNodeType, Note, NoteFileLink, FileVersion, PrivacyLevel
 from app.schemas import (
     FileNodeBase, FileNodeCreateFolder, FileNodeMoveRequest, FileNodeRenameRequest,
@@ -316,11 +316,12 @@ async def upload_file(
 @router.get("/{node_id}/download")
 async def download_file(
     node_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_token),
     db: Session = Depends(get_db)
 ):
     """Download a file node's content.
 
+    Accepts authentication via Authorization header OR token query parameter.
     Returns a streaming response with appropriate Content-Type and Content-Disposition.
     Notes and folders are not downloadable.
     """
@@ -543,10 +544,13 @@ async def get_file_versions(
 async def download_file_version(
     node_id: str,
     version: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_token),
     db: Session = Depends(get_db)
 ):
-    """Download a specific version of a file"""
+    """Download a specific version of a file.
+    
+    Accepts authentication via Authorization header OR token query parameter.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")

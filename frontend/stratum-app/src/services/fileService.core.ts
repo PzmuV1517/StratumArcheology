@@ -57,4 +57,20 @@ export const fileServiceCore = {
     const res = await api.get(`/files/${nodeId}`);
     return res.data;
   },
+
+  // Users folder methods - access personal folder within a project
+  getMyFolder: async (projectId: string): Promise<FileNode> => {
+    const res = await api.get(`/files/project/${projectId}/my-folder`);
+    return res.data;
+  },
+
+  getSharedWithMe: async (projectId: string): Promise<FileNode[]> => {
+    const res = await api.get(`/files/project/${projectId}/shared-with-me`);
+    return res.data;
+  },
+
+  getSharedByMe: async (projectId: string): Promise<FileNode[]> => {
+    const res = await api.get(`/files/project/${projectId}/shared-by-me`);
+    return res.data;
+  },
 };
