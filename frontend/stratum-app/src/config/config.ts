@@ -31,15 +31,22 @@ const expoExtra = Constants.expoConfig?.extra as Record<string, any> | undefined
 const getApiBaseUrl = (): string => {
   // Allow override via app.json extra config
   if (expoExtra?.apiBaseUrl) {
+    console.log('[Config] Using apiBaseUrl from app.json extra:', expoExtra.apiBaseUrl);
     return expoExtra.apiBaseUrl;
   }
 
   // Default port for the backend
   const port = 8000;
 
+  console.log('[Config] Platform:', Platform.OS);
+  console.log('[Config] Constants.expoConfig?.hostUri:', Constants.expoConfig?.hostUri);
+  console.log('[Config] Constants.manifest2?.extra?.expoGo?.debuggerHost:', Constants.manifest2?.extra?.expoGo?.debuggerHost);
+
   if (Platform.OS === 'web') {
     // Web runs in browser, localhost works
-    return `http://localhost:${port}/api`;
+    const url = `http://localhost:${port}/api`;
+    console.log('[Config] Web platform, using:', url);
+    return url;
   }
 
   // Try to get the dev server host IP from Expo manifest
@@ -48,23 +55,36 @@ const getApiBaseUrl = (): string => {
   if (debuggerHost) {
     // Extract just the IP address (remove port if present)
     const hostIp = debuggerHost.split(':')[0];
-    if (hostIp && hostIp !== 'localhost') {
-      return `http://${hostIp}:${port}/api`;
+    console.log('[Config] debuggerHost:', debuggerHost, '-> hostIp:', hostIp);
+    // Only use debuggerHost for actual physical devices
+    // Exclude simulator IPs (172.20.x.x is used by Expo for simulators, localhost for simulators)
+    const isSimulatorIp = hostIp.startsWith('172.20.');
+    if (hostIp && hostIp !== 'localhost' && !isSimulatorIp) {
+      const url = `http://${hostIp}:${port}/api`;
+      console.log('[Config] Using debuggerHost IP for physical device:', url);
+      return url;
     }
   }
 
   if (Platform.OS === 'android') {
     // Android emulator uses 10.0.2.2 to reach host machine's localhost
-    return `http://10.0.2.2:${port}/api`;
+    const url = `http://10.0.2.2:${port}/api`;
+    console.log('[Config] Android platform, using:', url);
+    return url;
   }
 
   if (Platform.OS === 'ios') {
-    // iOS simulator shares network with host, localhost works
-    return `http://localhost:${port}/api`;
+    // iOS simulator shares network with host
+    // Use 127.0.0.1 instead of localhost for more reliable connectivity
+    const url = `http://127.0.0.1:${port}/api`;
+    console.log('[Config] iOS platform, using:', url);
+    return url;
   }
 
   // Fallback
-  return `http://localhost:${port}/api`;
+  const url = `http://localhost:${port}/api`;
+  console.log('[Config] Fallback, using:', url);
+  return url;
 };
 
 export const config: AppConfig = {

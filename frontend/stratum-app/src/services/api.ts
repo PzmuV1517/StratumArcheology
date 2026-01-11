@@ -127,12 +127,21 @@ api.interceptors.response.use(
   },
   async (error) => {
     // Check for network errors and provide user-friendly messages
+    console.log('[API] Error interceptor:', {
+      message: error.message,
+      code: error.code,
+      hasResponse: !!error.response,
+      statusCode: error.response?.status,
+    });
+    
     if (!error.response) {
       // No response means network error
       const isNetworkError = error.message?.includes('Network Error') || 
                             error.message?.includes('timeout') ||
                             error.code === 'ECONNABORTED' ||
                             error.code === 'ERR_NETWORK';
+      
+      console.log('[API] No response from server. Is network error:', isNetworkError, 'Full error:', error);
       
       if (isNetworkError) {
         console.log('[API] Network error detected:', error.message);
