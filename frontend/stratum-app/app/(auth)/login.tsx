@@ -204,8 +204,9 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
+            autoComplete="username"
+            textContentType="username"
+            importantForAutofill="yes"
           />
         </View>
 
@@ -219,8 +220,9 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              autoComplete="current-password"
+              autoComplete="password"
               textContentType="password"
+              importantForAutofill="yes"
             />
             <TouchableOpacity
               style={styles.passwordToggle}
