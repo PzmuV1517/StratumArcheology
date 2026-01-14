@@ -2,7 +2,7 @@
 
 **A modern archaeological documentation platform solving field data fragmentation**
 
-**may be outdated**
+**Made by (SEE CODEOWNERS)**
 
 ---
 
