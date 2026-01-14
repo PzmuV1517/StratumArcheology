@@ -35,8 +35,19 @@ jobs:
       - name: Start FastAPI (smoke test)
         run: |
           python -m uvicorn app.main:app --port 8000 &
-          sleep 5
-          curl -f http://127.0.0.1:8000/health || exit 1
+
+          # Wait for the app to become healthy (up to ~30 seconds)
+          for i in {1..30}; do
+            if curl -fs http://127.0.0.1:8000/health > /dev/null; then
+              echo "Health check succeeded"
+              exit 0
+            fi
+            echo "Waiting for app to become healthy... ($i/30)"
+            sleep 1
+          done
+
+          echo "App failed to become healthy within the expected time" >&2
+          exit 1
 
   frontend:
     name: Frontend (TypeScript / Expo Web)
