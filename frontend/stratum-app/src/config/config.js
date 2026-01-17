@@ -1,8 +1,11 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 export const config = {
-  // Default to backend on port 3000; can be overridden via app.json/eas.json (extra.apiBaseUrl)
-  apiBaseUrl: Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api',
+  apiBaseUrl:
+    Platform.OS === 'web'
+      ? 'http://127.0.0.1:8000/api' // correct backend for web
+      : Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:3000/api',
   firebase: {
     apiKey: Constants.expoConfig?.extra?.firebaseApiKey,
     authDomain: Constants.expoConfig?.extra?.firebaseAuthDomain,
