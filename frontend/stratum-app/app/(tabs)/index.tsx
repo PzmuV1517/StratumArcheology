@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { projectService } from '../../src/services/projectService';
+import { projectService, activityService } from '../../src/services/projectService';
 import { ProjectActionModal } from '../../src/components/project/modals/ProjectActionModal';
 import type { Project } from '../../src/services/projectService.types';
 
+interface Activity {
+  id: string;
+  description: string;
+  created_at: string;
+  project_id: string;
+  project_name?: string;
+  user_name?: string;
+}
+
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'projects' | 'mystuff'>('projects');
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +31,10 @@ export default function ProjectsScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadProjects();
-    }, [])
+      if (activeSubTab === 'mystuff') {
+        loadMyActivities();
+      }
+    }, [activeSubTab])
   );
 
   const loadProjects = async () => {
@@ -35,9 +49,44 @@ export default function ProjectsScreen() {
     }
   };
 
+  const loadMyActivities = async () => {
+    try {
+      // Get activities from all projects
+      const allActivities: Activity[] = [];
+      for (const project of projects) {
+        try {
+          const projectActivities = await activityService.getProjectActivities(project.id);
+          // Add project name to each activity
+          const withProjectName = projectActivities.map((a: Activity) => ({
+            ...a,
+            project_name: project.name,
+          }));
+          allActivities.push(...withProjectName);
+        } catch {
+          // ignore errors for individual projects
+        }
+      }
+      // Sort by created_at descending
+      allActivities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setActivities(allActivities.slice(0, 50)); // Limit to 50 most recent
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
     loadProjects();
+    if (activeSubTab === 'mystuff') {
+      loadMyActivities();
+    }
+  };
+
+  const handleSubTabChange = (tab: 'projects' | 'mystuff') => {
+    setActiveSubTab(tab);
+    if (tab === 'mystuff' && activities.length === 0) {
+      loadMyActivities();
+    }
   };
 
   const renderProject = ({ item }: any) => (
@@ -47,6 +96,29 @@ export default function ProjectsScreen() {
       <View style={styles.projectMeta}>
         <Text style={styles.dateText}>Created: {new Date(item.created_at).toLocaleDateString()}</Text>
       </View>
+    </TouchableOpacity>
+  );
+
+  const renderActivity = ({ item }: { item: Activity }) => (
+    <TouchableOpacity 
+      style={styles.activityCard} 
+      onPress={() => router.push(`/project/${item.project_id}`)}
+    >
+      <View style={styles.activityHeader}>
+        <Text style={styles.activityProjectName}>{item.project_name}</Text>
+        <Text style={styles.activityDate}>
+          {new Date(item.created_at).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      </View>
+      <Text style={styles.activityDescription}>{item.description}</Text>
+      {item.user_name && (
+        <Text style={styles.activityUser}>by {item.user_name}</Text>
+      )}
     </TouchableOpacity>
   );
 
@@ -63,14 +135,85 @@ export default function ProjectsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Projects</Text>
       </View>
-      {projects.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No projects yet</Text>
-          <Text style={styles.emptySubtext}>Create your first project to get started</Text>
-        </View>
+
+      {/* Sub-tab selector */}
+      <View style={styles.subTabContainer}>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === 'projects' && styles.subTabActive]}
+          onPress={() => handleSubTabChange('projects')}
+        >
+          <Text style={[styles.subTabText, activeSubTab === 'projects' && styles.subTabTextActive]}>
+            All Projects
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === 'mystuff' && styles.subTabActive]}
+          onPress={() => handleSubTabChange('mystuff')}
+        >
+          <Text style={[styles.subTabText, activeSubTab === 'mystuff' && styles.subTabTextActive]}>
+            My Stuff
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeSubTab === 'projects' ? (
+        <>
+          {projects.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No projects yet</Text>
+              <Text style={styles.emptySubtext}>Create your first project to get started</Text>
+            </View>
+          ) : (
+            <FlatList 
+              data={projects} 
+              renderItem={renderProject} 
+              keyExtractor={(item: any) => item.id} 
+              refreshing={refreshing} 
+              onRefresh={handleRefresh} 
+              contentContainerStyle={styles.listContainer} 
+            />
+          )}
+        </>
       ) : (
-        <FlatList data={projects} renderItem={renderProject} keyExtractor={(item: any) => item.id} refreshing={refreshing} onRefresh={handleRefresh} contentContainerStyle={styles.listContainer} />
+        <ScrollView style={styles.myStuffContainer} contentContainerStyle={styles.myStuffContent}>
+          {/* My Folder quick access */}
+          <TouchableOpacity 
+            style={styles.myFolderButton}
+            onPress={() => {
+              // TODO: Navigate to My Folder view when implemented
+              Alert.alert('Coming Soon', 'My Folder feature is coming soon!');
+            }}
+          >
+            <Text style={styles.myFolderIcon}>📁</Text>
+            <View style={styles.myFolderInfo}>
+              <Text style={styles.myFolderTitle}>My Folder</Text>
+              <Text style={styles.myFolderSubtitle}>Your private files across all projects</Text>
+            </View>
+            <Text style={styles.myFolderArrow}>→</Text>
+          </TouchableOpacity>
+
+          {/* Activity timeline */}
+          <View style={styles.timelineSection}>
+            <Text style={styles.timelineSectionTitle}>Recent Activity</Text>
+            {activities.length === 0 ? (
+              <View style={styles.emptyTimeline}>
+                <Text style={styles.emptyTimelineText}>No recent activity</Text>
+                <Text style={styles.emptyTimelineSubtext}>
+                  Your actions across all projects will appear here
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={activities}
+                renderItem={renderActivity}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        </ScrollView>
       )}
+
       <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
