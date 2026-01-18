@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy.orm import Session, joinedload
+from typing import List, Optional, Dict, Any
 from app.database import get_db
 from app.dependencies import get_current_user, get_current_user_or_token, check_project_permission
 from app.models import User, Project, FileNode, FileNodeType, Note, NoteFileLink, FileVersion, PrivacyLevel
@@ -12,10 +12,146 @@ from app.schemas import (
 from app.minio_client import minio_client
 from app.websocket import emit_content_update, log_activity
 from datetime import datetime
+from collections import defaultdict
 import uuid
 import hashlib
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/files", tags=["files"])
+
+
+# Response model for Time Machine
+class FileWithVersionsResponse(BaseModel):
+    """File with all its versions for Time Machine view"""
+    id: str
+    name: str
+    type: str
+    mime_type: Optional[str]
+    size: Optional[str]
+    current_version: int
+    created_at: datetime
+    updated_at: datetime
+    category: str  # computed from mime_type
+    versions: List[FileVersionResponse]
+    
+    class Config:
+        from_attributes = True
+
+
+class TimeMachineResponse(BaseModel):
+    """Project files grouped by category with versions"""
+    project_id: str
+    total_files: int
+    total_versions: int
+    categories: Dict[str, List[FileWithVersionsResponse]]
+
+
+def get_file_category(mime_type: Optional[str], name: str) -> str:
+    """Categorize files based on mime type or extension"""
+    if not mime_type:
+        # Fallback to extension
+        ext = name.lower().split('.')[-1] if '.' in name else ''
+        ext_categories = {
+            'documents': ['doc', 'docx', 'pdf', 'odt', 'rtf', 'txt', 'md'],
+            'spreadsheets': ['xls', 'xlsx', 'csv', 'ods'],
+            'images': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'tiff', 'tif'],
+            'videos': ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv'],
+            'audio': ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'],
+            '3d_models': ['obj', 'ply', 'stl', 'fbx', 'gltf', 'glb', 'xyz', 'las', 'laz', 'e57', 'pts'],
+            'archives': ['zip', 'rar', '7z', 'tar', 'gz'],
+            'code': ['py', 'js', 'ts', 'json', 'xml', 'html', 'css'],
+        }
+        for category, extensions in ext_categories.items():
+            if ext in extensions:
+                return category
+        return 'other'
+    
+    mime_categories = {
+        'documents': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats', 'text/plain', 'text/markdown'],
+        'spreadsheets': ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml', 'text/csv'],
+        'images': ['image/'],
+        'videos': ['video/'],
+        'audio': ['audio/'],
+        '3d_models': ['model/', 'application/sla', 'application/x-ply'],
+        'archives': ['application/zip', 'application/x-rar', 'application/x-7z'],
+    }
+    
+    for category, patterns in mime_categories.items():
+        for pattern in patterns:
+            if mime_type.startswith(pattern):
+                return category
+    return 'other'
+
+
+@router.get("/project/{project_id}/time-machine", response_model=TimeMachineResponse)
+async def get_project_time_machine(
+    project_id: str,
+    category: Optional[str] = Query(default=None, description="Filter by category"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all files in a project with their version history, grouped by category.
+    This is the Time Machine view for versioning and merge conflict management.
+    
+    Categories: documents, spreadsheets, images, videos, audio, 3d_models, archives, code, other
+    """
+    check_project_permission(project_id, current_user, db)
+    
+    # Get all files (not folders) in the project with their versions
+    query = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.type == FileNodeType.FILE
+    ).options(joinedload(FileNode.versions))
+    
+    files = query.all()
+    
+    # Group files by category
+    categories: Dict[str, List[Any]] = defaultdict(list)
+    total_versions = 0
+    
+    for file in files:
+        file_category = get_file_category(file.mime_type, file.name)
+        
+        # Filter by category if specified
+        if category and file_category != category:
+            continue
+        
+        # Sort versions by version number descending
+        versions = sorted(file.versions, key=lambda v: v.version, reverse=True)
+        total_versions += len(versions) + 1  # +1 for current version
+        
+        file_data = FileWithVersionsResponse(
+            id=file.id,
+            name=file.name,
+            type=file.type.value,
+            mime_type=file.mime_type,
+            size=file.size,
+            current_version=file.version,
+            created_at=file.created_at,
+            updated_at=file.updated_at,
+            category=file_category,
+            versions=[
+                FileVersionResponse(
+                    id=v.id,
+                    file_node_id=v.file_node_id,
+                    version=v.version,
+                    storage_path=v.storage_path,
+                    size=v.size,
+                    checksum=v.checksum,
+                    created_at=v.created_at,
+                    created_by=v.created_by
+                ) for v in versions
+            ]
+        )
+        categories[file_category].append(file_data)
+    
+    return TimeMachineResponse(
+        project_id=project_id,
+        total_files=len(files) if not category else sum(len(cats) for cats in categories.values()),
+        total_versions=total_versions,
+        categories=dict(categories)
+    )
 
 
 @router.get("/project/{project_id}", response_model=List[FileNodeBase])
