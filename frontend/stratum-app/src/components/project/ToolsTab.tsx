@@ -112,8 +112,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       setLocationPermission(true);
       
       // Get initial location
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
+      const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
+        accuracy: LocationModule.Accuracy.BestForNavigation,
       });
       
       setLocation({
@@ -128,7 +128,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       
       // Start heading updates for compass (mobile only)
       if (Platform.OS !== 'web') {
-        const headingSub = await Location.watchHeadingAsync((headingData) => {
+        const headingSub = await LocationModule.watchHeadingAsync((headingData: HeadingObject) => {
           setHeading(headingData.trueHeading || headingData.magHeading || 0);
         });
         headingSubscription.current = headingSub;
@@ -143,18 +143,18 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   };
 
   const startWatching = async () => {
-    if (!locationPermission) return;
+    if (!locationPermission || !LocationModule) return;
     
     try {
       setWatchingLocation(true);
       
-      locationSubscription.current = await Location.watchPositionAsync(
+      locationSubscription.current = await LocationModule.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.BestForNavigation,
+          accuracy: LocationModule.Accuracy.BestForNavigation,
           timeInterval: 1000,
           distanceInterval: 1,
         },
-        (newLocation) => {
+        (newLocation: LocationObject) => {
           setLocation({
             latitude: newLocation.coords.latitude,
             longitude: newLocation.coords.longitude,
@@ -181,10 +181,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   };
 
   const refreshLocation = async () => {
+    if (!LocationModule) return;
+    
     try {
       setLoading(true);
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
+      const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
+        accuracy: LocationModule.Accuracy.BestForNavigation,
       });
       
       setLocation({
@@ -206,10 +208,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
-      const Clipboard = await import('expo-clipboard');
-      await Clipboard.setStringAsync(text);
-      setCopyFeedback(label);
-      setTimeout(() => setCopyFeedback(null), 2000);
+      // Use dynamic import for expo-clipboard
+      const Clipboard = await import('expo-clipboard').catch(() => null);
+      if (Clipboard) {
+        await Clipboard.setStringAsync(text);
+        setCopyFeedback(label);
+        setTimeout(() => setCopyFeedback(null), 2000);
+      }
     } catch (error) {
       console.error('Error copying to clipboard:', error);
     }
