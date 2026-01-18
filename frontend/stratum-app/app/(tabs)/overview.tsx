@@ -213,7 +213,7 @@ export default function OverviewScreen() {
           Welcome back{user?.display_name ? `, ${user.display_name.split(' ')[0]}` : ''}
         </Text>
         <Text style={styles.subtitleText}>
-          Here's what's happening in your projects
+          {"Here's what's happening in your projects"}
         </Text>
       </View>
 

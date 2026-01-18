@@ -10,7 +10,21 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import * as Location from 'expo-location';
+
+// Types for expo-location (dynamically imported)
+type LocationSubscription = { remove: () => void };
+type HeadingObject = { trueHeading: number; magHeading: number };
+type LocationObject = {
+  coords: {
+    latitude: number;
+    longitude: number;
+    altitude: number | null;
+    accuracy: number | null;
+    heading: number | null;
+    speed: number | null;
+  };
+  timestamp: number;
+};
 
 interface ToolsTabProps {
   projectId: string;
@@ -26,20 +40,40 @@ interface LocationData {
   timestamp: number;
 }
 
-export default function ToolsTab({ projectId }: ToolsTabProps) {
+export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [location, setLocation] = useState<LocationData | null>(null);
   const [heading, setHeading] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [watchingLocation, setWatchingLocation] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [LocationModule, setLocationModule] = useState<any>(null);
   
   const compassRotation = useRef(new Animated.Value(0)).current;
-  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
+  const locationSubscription = useRef<LocationSubscription | null>(null);
   const headingSubscription = useRef<{ remove: () => void } | null>(null);
 
+  // Load expo-location dynamically on native only
   useEffect(() => {
-    requestPermissions();
+    if (Platform.OS !== 'web') {
+      import('expo-location')
+        .then((module) => {
+          setLocationModule(module);
+        })
+        .catch((err) => {
+          console.warn('expo-location not available:', err);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (LocationModule && Platform.OS !== 'web') {
+      requestPermissions();
+    }
     
     return () => {
       // Cleanup subscriptions
@@ -50,7 +84,8 @@ export default function ToolsTab({ projectId }: ToolsTabProps) {
         headingSubscription.current.remove();
       }
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [LocationModule]);
 
   useEffect(() => {
     // Animate compass rotation
@@ -60,11 +95,13 @@ export default function ToolsTab({ projectId }: ToolsTabProps) {
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
-  }, [heading]);
+  }, [heading, compassRotation]);
 
   const requestPermissions = async () => {
+    if (!LocationModule) return;
+    
     try {
-      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+      const { status: foregroundStatus } = await LocationModule.requestForegroundPermissionsAsync();
       
       if (foregroundStatus !== 'granted') {
         setLocationPermission(false);
