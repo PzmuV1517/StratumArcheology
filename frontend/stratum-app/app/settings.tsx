@@ -243,6 +243,7 @@ export default function SettingsScreen() {
 
   const checkConnection = async () => {
     setCheckingConnection(true);
+    connectionCheckedRef.current = true; // Mark that we've done a manual check
     try {
       // First check network connectivity via NetInfo
       const netState = await NetInfo.fetch();
@@ -463,6 +464,38 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Profile Settings Section - Moved above Storage */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile Settings</Text>
+          
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => {
+              setNewDisplayName(user?.display_name || '');
+              setNewPhotoUrl(user?.photo_url || '');
+              setSelectedImage(null);
+              setShowProfileModal(true);
+            }}
+          >
+            <View style={styles.profilePreview}>
+              {user?.photo_url ? (
+                <Image source={{ uri: user.photo_url }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profilePlaceholder}>
+                  <Text style={styles.profilePlaceholderText}>
+                    {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              )}
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.menuItemText}>Edit Profile</Text>
+                <Text style={styles.menuItemSubtext}>Change photo and display name</Text>
+              </View>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Storage Section - Mobile Only */}
         {Platform.OS !== 'web' && (
           <View style={styles.section}>
@@ -510,12 +543,12 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.connectionTitle}>
                   {connectionStatus === 'connected' ? 'Online' : 
-                   connectionStatus === 'disconnected' ? 'Offline' : 'Checking...'}
+                   connectionStatus === 'disconnected' ? 'Offline' : 'Not checked'}
                 </Text>
                 <Text style={styles.connectionSubtitle}>
                   {networkState?.type === 'wifi' ? 'Wi-Fi' :
                    networkState?.type === 'cellular' ? 'Cellular' :
-                   networkState?.type === 'none' ? 'No Network' : 'Unknown'}
+                   networkState?.type === 'none' ? 'No Network' : 'Tap Refresh to check'}
                 </Text>
               </View>
               <TouchableOpacity 
@@ -544,38 +577,6 @@ export default function SettingsScreen() {
               </View>
             )}
           </View>
-        </View>
-
-        {/* Profile Settings Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile Settings</Text>
-          
-          <TouchableOpacity 
-            style={styles.menuItem} 
-            onPress={() => {
-              setNewDisplayName(user?.display_name || '');
-              setNewPhotoUrl(user?.photo_url || '');
-              setSelectedImage(null);
-              setShowProfileModal(true);
-            }}
-          >
-            <View style={styles.profilePreview}>
-              {user?.photo_url ? (
-                <Image source={{ uri: user.photo_url }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.profilePlaceholder}>
-                  <Text style={styles.profilePlaceholderText}>
-                    {user?.display_name?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.menuItemText}>Edit Profile</Text>
-                <Text style={styles.menuItemSubtext}>Change photo and display name</Text>
-              </View>
-            </View>
-            <Text style={styles.menuItemArrow}>→</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
