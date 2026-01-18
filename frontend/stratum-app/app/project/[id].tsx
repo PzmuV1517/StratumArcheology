@@ -63,6 +63,7 @@ export default function ProjectDetailScreen() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix' | 'history' | 'tools'>('overview');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Root' }]);
@@ -952,7 +953,7 @@ export default function ProjectDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Tab Navigation: Overview + Gallery + Artefacts + Notes + GPS + Matrix */}
+      {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
       <View style={styles.bottomTabContainer}>
         <TouchableOpacity
           style={[styles.bottomTab, activeTab === 'overview' && styles.activeBottomTab]}
@@ -960,22 +961,6 @@ export default function ProjectDetailScreen() {
         >
           <Text style={[styles.bottomTabText, activeTab === 'overview' && styles.activeBottomTabText]}>
             Overview
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.bottomTab, activeTab === 'gallery' && styles.activeBottomTab]}
-          onPress={() => setActiveTab('gallery')}
-        >
-          <Text style={[styles.bottomTabText, activeTab === 'gallery' && styles.activeBottomTabText]}>
-            Gallery
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.bottomTab, activeTab === 'artefacts' && styles.activeBottomTab]}
-          onPress={() => setActiveTab('artefacts')}
-        >
-          <Text style={[styles.bottomTabText, activeTab === 'artefacts' && styles.activeBottomTabText]}>
-            Artefacts
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -987,11 +972,11 @@ export default function ProjectDetailScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.bottomTab, activeTab === 'gps' && styles.activeBottomTab]}
-          onPress={() => setActiveTab('gps')}
+          style={[styles.bottomTab, activeTab === 'artefacts' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('artefacts')}
         >
-          <Text style={[styles.bottomTabText, activeTab === 'gps' && styles.activeBottomTabText]}>
-            Map
+          <Text style={[styles.bottomTabText, activeTab === 'artefacts' && styles.activeBottomTabText]}>
+            Artefacts
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1002,25 +987,74 @@ export default function ProjectDetailScreen() {
             Matrix
           </Text>
         </TouchableOpacity>
+        {/* More dropdown button */}
         <TouchableOpacity
-          style={[styles.bottomTab, activeTab === 'history' && styles.activeBottomTab]}
-          onPress={() => setActiveTab('history')}
+          style={[
+            styles.bottomTab, 
+            styles.moreTab,
+            ['gallery', 'gps', 'history', 'tools'].includes(activeTab) && styles.activeBottomTab
+          ]}
+          onPress={() => setShowMoreMenu(!showMoreMenu)}
         >
-          <Text style={[styles.bottomTabText, activeTab === 'history' && styles.activeBottomTabText]}>
-            History
+          <Text style={[
+            styles.bottomTabText, 
+            ['gallery', 'gps', 'history', 'tools'].includes(activeTab) && styles.activeBottomTabText
+          ]}>
+            More ▾
           </Text>
         </TouchableOpacity>
-        {Platform.OS !== 'web' && (
-          <TouchableOpacity
-            style={[styles.bottomTab, activeTab === 'tools' && styles.activeBottomTab]}
-            onPress={() => setActiveTab('tools')}
-          >
-            <Text style={[styles.bottomTabText, activeTab === 'tools' && styles.activeBottomTabText]}>
-              Tools
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
+
+      {/* More menu dropdown */}
+      {showMoreMenu && (
+        <View style={styles.moreMenuOverlay}>
+          <TouchableOpacity 
+            style={styles.moreMenuBackdrop} 
+            onPress={() => setShowMoreMenu(false)}
+            activeOpacity={1}
+          />
+          <View style={styles.moreMenu}>
+            <TouchableOpacity
+              style={[styles.moreMenuItem, activeTab === 'gallery' && styles.moreMenuItemActive]}
+              onPress={() => { setActiveTab('gallery'); setShowMoreMenu(false); }}
+            >
+              <Text style={styles.moreMenuIcon}>🖼️</Text>
+              <Text style={[styles.moreMenuText, activeTab === 'gallery' && styles.moreMenuTextActive]}>
+                Gallery
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.moreMenuItem, activeTab === 'gps' && styles.moreMenuItemActive]}
+              onPress={() => { setActiveTab('gps'); setShowMoreMenu(false); }}
+            >
+              <Text style={styles.moreMenuIcon}>🗺️</Text>
+              <Text style={[styles.moreMenuText, activeTab === 'gps' && styles.moreMenuTextActive]}>
+                Map
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.moreMenuItem, activeTab === 'history' && styles.moreMenuItemActive]}
+              onPress={() => { setActiveTab('history'); setShowMoreMenu(false); }}
+            >
+              <Text style={styles.moreMenuIcon}>🕐</Text>
+              <Text style={[styles.moreMenuText, activeTab === 'history' && styles.moreMenuTextActive]}>
+                Time Machine
+              </Text>
+            </TouchableOpacity>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={[styles.moreMenuItem, activeTab === 'tools' && styles.moreMenuItemActive]}
+                onPress={() => { setActiveTab('tools'); setShowMoreMenu(false); }}
+              >
+                <Text style={styles.moreMenuIcon}>🧭</Text>
+                <Text style={[styles.moreMenuText, activeTab === 'tools' && styles.moreMenuTextActive]}>
+                  Tools
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Burger menu modal */}
       <ProjectMenuModal
@@ -2023,5 +2057,73 @@ const styles = StyleSheet.create({
   galleryName: {
     color: '#CFCFCF',
     fontSize: 12,
+  },
+  // More dropdown menu styles
+  moreTab: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#2A2A2A',
+  },
+  moreMenuOverlay: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+  moreMenuBackdrop: {
+    position: 'absolute',
+    top: -2000,
+    left: 0,
+    right: 0,
+    bottom: -60,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  moreMenu: {
+    position: 'absolute',
+    right: 12,
+    bottom: 8,
+    backgroundColor: '#1E1E1A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 8,
+    minWidth: 180,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+      },
+    }),
+  },
+  moreMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  moreMenuItemActive: {
+    backgroundColor: 'rgba(255, 42, 42, 0.15)',
+  },
+  moreMenuIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  moreMenuText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#F5F5F5',
+    letterSpacing: 0.3,
+  },
+  moreMenuTextActive: {
+    color: '#FF2A2A',
   },
 });
