@@ -42,9 +42,8 @@ export const fileService = {
   ): Promise<FileNode> => {
     // Handle FormData directly (when called from project screen)
     if (fileUriOrFormData instanceof FormData) {
-      const res = await api.post(`/files/project/${projectId}/upload`, fileUriOrFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Don't set Content-Type header - let the browser/RN set it with the correct boundary
+      const res = await api.post(`/files/project/${projectId}/upload`, fileUriOrFormData);
       return res.data;
     }
     
@@ -58,17 +57,15 @@ export const fileService = {
     if (parentId) {
       formData.append('parent_id', parentId);
     }
-    const res = await api.post(`/files/project/${projectId}/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Don't set Content-Type header - let RN set it with the correct boundary
+    const res = await api.post(`/files/project/${projectId}/upload`, formData);
     return res.data;
   },
 
   // Native-specific: upload with FormData directly
   uploadFormData: async (projectId: string, formData: FormData): Promise<FileNode> => {
-    const res = await api.post(`/files/project/${projectId}/upload`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Don't set Content-Type header - let RN set it with the correct boundary
+    const res = await api.post(`/files/project/${projectId}/upload`, formData);
     return res.data;
   },
 
