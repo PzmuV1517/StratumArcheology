@@ -176,21 +176,36 @@ export default function ProjectsScreen() {
         </>
       ) : (
         <ScrollView style={styles.myStuffContainer} contentContainerStyle={styles.myStuffContent}>
-          {/* My Folder quick access */}
-          <TouchableOpacity 
-            style={styles.myFolderButton}
-            onPress={() => {
-              // TODO: Navigate to My Folder view when implemented
-              Alert.alert('Coming Soon', 'My Folder feature is coming soon!');
-            }}
-          >
-            <Text style={styles.myFolderIcon}>📁</Text>
-            <View style={styles.myFolderInfo}>
-              <Text style={styles.myFolderTitle}>My Folder</Text>
-              <Text style={styles.myFolderSubtitle}>Your private files across all projects</Text>
-            </View>
-            <Text style={styles.myFolderArrow}>→</Text>
-          </TouchableOpacity>
+          {/* My Folder quick access - shows folders from all projects */}
+          <View style={styles.myFolderSection}>
+            <Text style={styles.myFolderSectionTitle}>My Folders</Text>
+            <Text style={styles.myFolderSectionSubtitle}>
+              Access your private folders from each project
+            </Text>
+            {projects.length === 0 ? (
+              <View style={styles.emptyTimeline}>
+                <Text style={styles.emptyTimelineText}>No projects yet</Text>
+                <Text style={styles.emptyTimelineSubtext}>
+                  Join or create a project to get your personal folder
+                </Text>
+              </View>
+            ) : (
+              projects.map((project) => (
+                <TouchableOpacity 
+                  key={project.id}
+                  style={styles.myFolderButton}
+                  onPress={() => router.push({ pathname: `/project/${project.id}`, params: { openFiles: 'myFolder' } })}
+                >
+                  <Text style={styles.myFolderIcon}>📁</Text>
+                  <View style={styles.myFolderInfo}>
+                    <Text style={styles.myFolderTitle}>{project.name}</Text>
+                    <Text style={styles.myFolderSubtitle}>Open your private folder</Text>
+                  </View>
+                  <Text style={styles.myFolderArrow}>→</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
 
           {/* Activity timeline */}
           <View style={styles.timelineSection}>
@@ -327,33 +342,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#2A2A2A',
   },
   myFolderIcon: {
-    fontSize: 32,
+    fontSize: 24,
     marginRight: 16,
   },
   myFolderInfo: {
     flex: 1,
   },
   myFolderTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#F5F5F5',
-    marginBottom: 4,
+    marginBottom: 2,
     letterSpacing: 0.5,
   },
   myFolderSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#9A9A9A',
     letterSpacing: 0.3,
   },
   myFolderArrow: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#FF2A2A',
     fontWeight: '600',
+  },
+  myFolderSection: {
+    marginBottom: 24,
+  },
+  myFolderSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  myFolderSectionSubtitle: {
+    fontSize: 13,
+    color: '#9A9A9A',
+    marginBottom: 16,
+    letterSpacing: 0.3,
   },
   timelineSection: {
     marginBottom: 16,

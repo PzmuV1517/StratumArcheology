@@ -147,8 +147,16 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     setUploadCount(1);
 
     try {
-      await fileService.uploadFile(projectId, file.uri, file.name, currentFolder?.id || null);
-      Alert.alert('Success', `${file.name} uploaded successfully`);
+      // Ensure file has proper extension based on mime type
+      let fileName = file.name;
+      if (!fileName || fileName === 'undefined' || !fileName.includes('.')) {
+        const ext = file.mimeType?.split('/')[1] || 'jpg';
+        const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
+        fileName = `photo_${Date.now()}.${cleanExt}`;
+      }
+      
+      await fileService.uploadFile(projectId, file.uri, fileName, file.mimeType, currentFolder?.id || null);
+      Alert.alert('Success', `${fileName} uploaded successfully`);
       onRefreshAfterUpload?.();
     } catch (error: any) {
       console.error('File upload failed:', error);

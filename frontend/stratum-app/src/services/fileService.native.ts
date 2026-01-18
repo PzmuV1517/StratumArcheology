@@ -105,8 +105,16 @@ export const fileService = {
                   }
                   
                   const asset = result.assets[0];
-                  const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
-                  const mimeType = asset.mimeType || (fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+                  // Generate proper filename with extension based on mime type
+                  let fileName = asset.fileName;
+                  const mimeType = asset.mimeType || 'image/jpeg';
+                  
+                  // If no filename or no extension, generate one from mime type
+                  if (!fileName || !fileName.includes('.')) {
+                    const ext = mimeType.split('/')[1] || 'jpg';
+                    const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
+                    fileName = `photo_${Date.now()}.${cleanExt}`;
+                  }
                   
                   return resolve({
                     uri: asset.uri,
@@ -134,8 +142,16 @@ export const fileService = {
                   }
                   
                   const asset = result.assets[0];
-                  const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
-                  const mimeType = asset.mimeType || (fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+                  // Generate proper filename with extension based on mime type
+                  let fileName = asset.fileName;
+                  const mimeType = asset.mimeType || 'image/jpeg';
+                  
+                  // If no filename or no extension, generate one from mime type
+                  if (!fileName || !fileName.includes('.')) {
+                    const ext = mimeType.split('/')[1] || 'jpg';
+                    const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
+                    fileName = `photo_${Date.now()}.${cleanExt}`;
+                  }
                   
                   return resolve({
                     uri: asset.uri,
