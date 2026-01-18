@@ -891,6 +891,56 @@ export default function ProjectDetailScreen() {
                 HarrisMatrixComponent && React.createElement(HarrisMatrixComponent, { projectId: project?.id as string, canEdit: canEditMatrix })
               )}
             </View>
+          ) : activeTab === 'history' ? (
+            <View
+              style={
+                Platform.OS === 'web'
+                  ? ({
+                      height: 'calc(100vh - 280px)',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    } as any)
+                  : {
+                      flex: 1,
+                      minHeight: 520,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    }
+              }
+            >
+              <TimeMachineTab projectId={project?.id as string} />
+            </View>
+          ) : activeTab === 'tools' ? (
+            <View
+              style={
+                Platform.OS === 'web'
+                  ? ({
+                      height: 'calc(100vh - 280px)',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    } as any)
+                  : {
+                      flex: 1,
+                      minHeight: 520,
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      borderWidth: 1,
+                      borderColor: '#2A2A2A',
+                      backgroundColor: '#0A0A0A',
+                    }
+              }
+            >
+              <ToolsTab projectId={project?.id as string} />
+            </View>
           ) : null}
         </View>
       </ScrollView>
@@ -934,7 +984,7 @@ export default function ProjectDetailScreen() {
           onPress={() => setActiveTab('gps')}
         >
           <Text style={[styles.bottomTabText, activeTab === 'gps' && styles.activeBottomTabText]}>
-            GPS
+            Map
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -945,6 +995,24 @@ export default function ProjectDetailScreen() {
             Matrix
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.bottomTab, activeTab === 'history' && styles.activeBottomTab]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Text style={[styles.bottomTabText, activeTab === 'history' && styles.activeBottomTabText]}>
+            History
+          </Text>
+        </TouchableOpacity>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity
+            style={[styles.bottomTab, activeTab === 'tools' && styles.activeBottomTab]}
+            onPress={() => setActiveTab('tools')}
+          >
+            <Text style={[styles.bottomTabText, activeTab === 'tools' && styles.activeBottomTabText]}>
+              Tools
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Burger menu modal */}
