@@ -101,8 +101,9 @@ export default function SettingsScreen() {
   // Offline files
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
-  const [checkingConnection, setCheckingConnection] = useState(false);
+  // Connection status - use a ref to track actual status
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const connectionCheckedRef = React.useRef(false);
   
   // Network state (real-time from NetInfo)
   const [networkState, setNetworkState] = useState<NetInfoState | null>(null);
@@ -176,6 +177,10 @@ export default function SettingsScreen() {
       try {
         const queueStats = await getOfflineStorageStats();
         setOfflineStorageStats(queueStats);
+        // Add queue storage to stratum size for more accurate total
+        if (queueStats && queueStats.totalSize) {
+          setStratumUsed(prev => prev + (queueStats.totalSize * 1024)); // Convert KB to bytes
+        }
       } catch (queueErr) {
         console.warn('Failed to get queue storage stats:', queueErr);
       }
@@ -184,17 +189,34 @@ export default function SettingsScreen() {
       try {
         if (typeof FileSystem.getFreeDiskStorageAsync === 'function') {
           const freeSpace = await FileSystem.getFreeDiskStorageAsync();
-          // Estimate total based on typical device storage (this is approximate)
-          const estimatedTotal = freeSpace + stratumSize + (32 * 1e9); // Add 32GB for "other"
-          setTotalStorage(estimatedTotal);
-          setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+          
+          // Also try to get total disk storage for more accurate calculation
+          let totalDiskSpace = freeSpace;
+          if (typeof FileSystem.getTotalDiskCapacityAsync === 'function') {
+            try {
+              totalDiskSpace = await FileSystem.getTotalDiskCapacityAsync();
+              setTotalStorage(totalDiskSpace);
+              setOtherUsed(totalDiskSpace - freeSpace - stratumSize);
+            } catch {
+              // Fallback: estimate total based on free space
+              const estimatedTotal = freeSpace + stratumSize + (20 * 1e9); // Rough estimate
+              setTotalStorage(estimatedTotal);
+              setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+            }
+          } else {
+            // Fallback: estimate total based on free space
+            const estimatedTotal = freeSpace + stratumSize + (20 * 1e9);
+            setTotalStorage(estimatedTotal);
+            setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+          }
         } else {
           // Fallback for Expo Go where this API may not be available
+          console.warn('Storage APIs not available, using fallback values');
           setTotalStorage(64 * 1e9); // Default 64GB
           setOtherUsed(32 * 1e9); // Estimate 32GB used by other
         }
       } catch (storageErr) {
-        console.warn('getFreeDiskStorageAsync not available:', storageErr);
+        console.warn('Storage API error:', storageErr);
         // Fallback values
         setTotalStorage(64 * 1e9);
         setOtherUsed(32 * 1e9);

@@ -15,6 +15,8 @@ interface Props {
 
 export default function TextFilePanel({ editing, isNoteFile, editableTitle, setEditableTitle, textContent, setTextContent, filename, onDirty }: Props) {
   const ext = (filename || '').toLowerCase();
+  const isEmpty = !textContent || textContent.length === 0;
+  
   return (
     <View style={styles.textWrapper}>
       {editing && isNoteFile && (
@@ -47,10 +49,15 @@ export default function TextFilePanel({ editing, isNoteFile, editableTitle, setE
         />
       ) : (
         <ScrollView style={styles.viewWrapper} contentContainerStyle={styles.viewContent}>
-          {ext.endsWith('.md') && Platform.OS === 'web' ? (
+          {isEmpty ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>This file is empty</Text>
+              <Text style={styles.emptyStateHint}>Click "Edit" to add content</Text>
+            </View>
+          ) : ext.endsWith('.md') && Platform.OS === 'web' ? (
             <MarkdownView content={textContent || ''} />
           ) : (
-            <Text style={styles.preText}>{textContent || 'No content to display'}</Text>
+            <Text style={styles.preText}>{textContent}</Text>
           )}
         </ScrollView>
       )}
@@ -96,5 +103,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontWeight: '500'
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    color: '#9A9A9A',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  emptyStateHint: {
+    color: '#666',
+    fontSize: 14,
   },
 });

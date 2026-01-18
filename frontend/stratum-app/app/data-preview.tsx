@@ -266,7 +266,8 @@ export default function DataPreviewScreen() {
         // Handle text files (txt, md, json)
         if (ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json')) {
           const text = await blob.text();
-          setTextContent(text);
+          // Handle empty files gracefully - set empty string instead of null
+          setTextContent(text || '');
           if (ext.endsWith('.txt')) {
             setIsNoteFile(true);
             const filename = (name as string) || '';
