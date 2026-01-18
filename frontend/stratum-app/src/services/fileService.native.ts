@@ -282,9 +282,8 @@ export const fileService = {
       name: fileName,
       type: mimeType,
     } as any);
-    const res = await api.put(`/files/${nodeId}/content`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Don't set Content-Type header - let RN set it with the correct boundary
+    const res = await api.put(`/files/${nodeId}/content`, formData);
     return res.data;
   },
 

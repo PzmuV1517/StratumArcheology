@@ -69,10 +69,17 @@ api.interceptors.request.use(
     console.log('[API] Request to:', base + axiosConfig.url);
 
     // Attach auth token if available
-    const token = await AsyncStorage.getItem('authToken');
-    if (token) {
-      axiosConfig.headers = axiosConfig.headers || {};
-      axiosConfig.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        axiosConfig.headers = axiosConfig.headers || {};
+        axiosConfig.headers.Authorization = `Bearer ${token}`;
+        console.log('[API] Auth token attached');
+      } else {
+        console.log('[API] No auth token available');
+      }
+    } catch (tokenError) {
+      console.error('[API] Failed to get auth token:', tokenError);
     }
 
     // Only set JSON Content-Type when body is NOT FormData
