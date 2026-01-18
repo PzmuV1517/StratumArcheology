@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
@@ -63,11 +62,14 @@ export default function OverviewScreen() {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load projects on mount and focus
-  useFocusEffect(loadRecentProjects);
+  useFocusEffect(
+    useCallback(() => {
+      loadRecentProjects();
+    }, [loadRecentProjects])
+  );
 
   const loadProjectActivities = async (projects: Project[]) => {
     setActivitiesLoading(true);
@@ -280,8 +282,6 @@ export default function OverviewScreen() {
     </ScrollView>
   );
 }
-
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {

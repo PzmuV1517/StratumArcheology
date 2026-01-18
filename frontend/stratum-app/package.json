@@ -24,6 +24,7 @@
     "d3": "^7.9.0",
     "expo": "~54.0.29",
     "expo-av": "^16.0.7",
+    "expo-blur": "~15.0.8",
     "expo-camera": "^17.0.8",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
