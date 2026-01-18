@@ -280,6 +280,117 @@ async def create_my_folder(
     return my_folder
 
 
+# Request model for folder permission settings
+class FolderPermissionSettings(BaseModel):
+    default_can_view: bool = True
+    default_can_edit: bool = False
+    member_permissions: List[Dict[str, Any]] = []  # [{user_id, can_view, can_edit}]
+
+
+@router.put("/project/{project_id}/my-folder/permissions")
+async def update_my_folder_permissions(
+    project_id: str,
+    settings: FolderPermissionSettings,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update permissions for the user's personal folder"""
+    check_project_permission(project_id, current_user, db)
+    
+    # Find the user's personal folder
+    my_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.owner_id == current_user.id,
+        FileNode.name.like("My Folder%"),
+        FileNode.parent_id == None,
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
+    
+    if not my_folder:
+        raise HTTPException(status_code=404, detail="Personal folder not found")
+    
+    # Build the shared_with list based on permissions
+    shared_with = []
+    for perm in settings.member_permissions:
+        if perm.get('can_view', False):
+            shared_with.append(perm['user_id'])
+    
+    # Update the folder's privacy and shared_with
+    if not settings.default_can_view and len(shared_with) == 0:
+        my_folder.privacy = PrivacyLevel.PRIVATE
+    elif settings.default_can_view:
+        # If default is view-enabled, set to PROJECT level (all can view)
+        my_folder.privacy = PrivacyLevel.PROJECT
+    else:
+        # Some specific users have access
+        my_folder.privacy = PrivacyLevel.SHARED
+    
+    my_folder.shared_with = shared_with if shared_with else None
+    
+    # Store extended permissions as metadata in the folder
+    # This includes edit permissions which we need to check separately
+    my_folder.metadata = {
+        'folder_permissions': {
+            'default_can_view': settings.default_can_view,
+            'default_can_edit': settings.default_can_edit,
+            'member_permissions': settings.member_permissions
+        }
+    }
+    
+    db.commit()
+    db.refresh(my_folder)
+    
+    await emit_content_update(project_id, 'files')
+    
+    return {"message": "Folder permissions updated", "folder_id": my_folder.id}
+
+
+@router.get("/project/{project_id}/my-folder/permissions")
+async def get_my_folder_permissions(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current permission settings for the user's personal folder"""
+    check_project_permission(project_id, current_user, db)
+    
+    my_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.owner_id == current_user.id,
+        FileNode.name.like("My Folder%"),
+        FileNode.parent_id == None,
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
+    
+    if not my_folder:
+        # Return default settings
+        return {
+            'folder_id': None,
+            'default_can_view': True,
+            'default_can_edit': False,
+            'member_permissions': []
+        }
+    
+    # Get stored permissions from metadata
+    if my_folder.metadata and 'folder_permissions' in my_folder.metadata:
+        perms = my_folder.metadata['folder_permissions']
+        return {
+            'folder_id': my_folder.id,
+            **perms
+        }
+    
+    # Return defaults based on privacy level
+    return {
+        'folder_id': my_folder.id,
+        'default_can_view': my_folder.privacy != PrivacyLevel.PRIVATE,
+        'default_can_edit': False,
+        'member_permissions': [
+            {'user_id': uid, 'can_view': True, 'can_edit': False}
+            for uid in (my_folder.shared_with or [])
+        ]
+    }
+
+
 @router.get("/project/{project_id}/my-folder", response_model=Optional[FileNodeBase])
 async def get_my_folder(
     project_id: str,

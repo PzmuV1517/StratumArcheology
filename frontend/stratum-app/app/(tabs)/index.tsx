@@ -242,6 +242,37 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2A2A2A' 
   },
   headerTitle: { fontSize: 32, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
+  
+  // Sub-tab styles
+  subTabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: '#111111',
+  },
+  subTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  subTabActive: {
+    backgroundColor: '#FF2A2A',
+    borderColor: '#FF2A2A',
+  },
+  subTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9A9A9A',
+    letterSpacing: 0.3,
+  },
+  subTabTextActive: {
+    color: '#F5F5F5',
+  },
+  
   listContainer: { padding: 16 },
   projectCard: { 
     backgroundColor: '#1A1A1A', 
@@ -280,5 +311,114 @@ const styles = StyleSheet.create({
     shadowRadius: 20, 
     elevation: 8 
   },
-  fabText: { fontSize: 32, color: '#F5F5F5', lineHeight: 36, fontWeight: '300' }
+  fabText: { fontSize: 32, color: '#F5F5F5', lineHeight: 36, fontWeight: '300' },
+  
+  // My Stuff styles
+  myStuffContainer: {
+    flex: 1,
+  },
+  myStuffContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  myFolderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  myFolderIcon: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  myFolderInfo: {
+    flex: 1,
+  },
+  myFolderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F5F5F5',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  myFolderSubtitle: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    letterSpacing: 0.3,
+  },
+  myFolderArrow: {
+    fontSize: 20,
+    color: '#FF2A2A',
+    fontWeight: '600',
+  },
+  timelineSection: {
+    marginBottom: 16,
+  },
+  timelineSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F5F5F5',
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  emptyTimeline: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  emptyTimelineText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#F5F5F5',
+    marginBottom: 8,
+  },
+  emptyTimelineSubtext: {
+    fontSize: 14,
+    color: '#9A9A9A',
+    textAlign: 'center',
+  },
+  activityCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  activityProjectName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF2A2A',
+    letterSpacing: 0.3,
+  },
+  activityDate: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    letterSpacing: 0.3,
+  },
+  activityDescription: {
+    fontSize: 15,
+    color: '#F5F5F5',
+    lineHeight: 22,
+    letterSpacing: 0.3,
+  },
+  activityUser: {
+    fontSize: 12,
+    color: '#9A9A9A',
+    marginTop: 8,
+    letterSpacing: 0.3,
+  },
 });
