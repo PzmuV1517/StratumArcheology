@@ -80,7 +80,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     return breadcrumbs?.some(b => b.id === myFolderId) ?? false;
   }, [myFolderId, currentFolder?.id, breadcrumbs]);
 
-  // Navigate to user's personal folder
+  // Navigate to user's personal folder (creates if doesn't exist)
   const handleGoToMyFolder = useCallback(async () => {
     if (!projectId) {
       Alert.alert('Error', 'Project context missing');
@@ -94,7 +94,21 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     
     setIsLoadingMyFolder(true);
     try {
-      const myFolder = await fileService.getMyFolder(projectId);
+      // First try to get existing folder
+      let myFolder = await fileService.getMyFolder(projectId);
+      
+      // If it doesn't exist, create it
+      if (!myFolder) {
+        try {
+          myFolder = await fileService.createMyFolder(projectId);
+        } catch (createError: any) {
+          // If creation fails, show error
+          console.error('Failed to create My Folder:', createError);
+          Alert.alert('Error', createError.message || 'Failed to create your personal folder');
+          return;
+        }
+      }
+      
       if (myFolder) {
         // Store the folder ID so we can detect if we're already there
         setMyFolderId(myFolder.id);
@@ -106,7 +120,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         });
       }
     } catch (error: any) {
-      console.error('Failed to get My Folder:', error);
+      console.error('Failed to access My Folder:', error);
       Alert.alert('Error', error.message || 'Failed to access your personal folder');
     } finally {
       setIsLoadingMyFolder(false);

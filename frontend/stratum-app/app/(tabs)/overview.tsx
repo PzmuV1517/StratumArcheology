@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
@@ -249,7 +250,7 @@ export default function OverviewScreen() {
 
       {/* Quick Actions Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>Quick Actions</Text>
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}
@@ -303,7 +304,8 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    paddingBottom: 8,
   },
   welcomeText: {
     fontSize: 28,

@@ -1018,7 +1018,6 @@ export default function ProjectDetailScreen() {
               style={[styles.moreMenuItem, activeTab === 'gallery' && styles.moreMenuItemActive]}
               onPress={() => { setActiveTab('gallery'); setShowMoreMenu(false); }}
             >
-              <Text style={styles.moreMenuIcon}>🖼️</Text>
               <Text style={[styles.moreMenuText, activeTab === 'gallery' && styles.moreMenuTextActive]}>
                 Gallery
               </Text>
@@ -1027,7 +1026,6 @@ export default function ProjectDetailScreen() {
               style={[styles.moreMenuItem, activeTab === 'gps' && styles.moreMenuItemActive]}
               onPress={() => { setActiveTab('gps'); setShowMoreMenu(false); }}
             >
-              <Text style={styles.moreMenuIcon}>🗺️</Text>
               <Text style={[styles.moreMenuText, activeTab === 'gps' && styles.moreMenuTextActive]}>
                 Map
               </Text>
@@ -1036,7 +1034,6 @@ export default function ProjectDetailScreen() {
               style={[styles.moreMenuItem, activeTab === 'history' && styles.moreMenuItemActive]}
               onPress={() => { setActiveTab('history'); setShowMoreMenu(false); }}
             >
-              <Text style={styles.moreMenuIcon}>🕐</Text>
               <Text style={[styles.moreMenuText, activeTab === 'history' && styles.moreMenuTextActive]}>
                 Time Machine
               </Text>
@@ -1046,7 +1043,6 @@ export default function ProjectDetailScreen() {
                 style={[styles.moreMenuItem, activeTab === 'tools' && styles.moreMenuItemActive]}
                 onPress={() => { setActiveTab('tools'); setShowMoreMenu(false); }}
               >
-                <Text style={styles.moreMenuIcon}>🧭</Text>
                 <Text style={[styles.moreMenuText, activeTab === 'tools' && styles.moreMenuTextActive]}>
                   Tools
                 </Text>

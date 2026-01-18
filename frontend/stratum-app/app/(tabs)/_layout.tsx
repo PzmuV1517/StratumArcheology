@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -10,7 +11,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
  * Tab order: Overview (landing), Projects, Profile, Settings
  * Auth is handled by AuthRedirector at the root level
  * 
- * Uses iOS-style transitions with liquid glass aesthetic
+ * Uses iOS-style liquid glass aesthetic with blur effects
  */
 export default function TabLayout() {
   return (
@@ -20,17 +21,24 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#9A9A9A',
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarBackground: () => (
+          Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={80}
+              tint="dark"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1A1A1A' }]} />
+          )
+        ),
         tabBarStyle: {
-          backgroundColor: Platform.OS === 'ios' ? 'rgba(26, 26, 26, 0.85)' : '#1A1A1A',
-          borderTopColor: '#2A2A2A',
-          borderTopWidth: 1,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+          borderTopWidth: StyleSheet.hairlineWidth,
           height: Platform.OS === 'ios' ? 88 : 60,
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-          // iOS liquid glass effect
-          ...(Platform.OS === 'ios' && {
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          }),
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -83,6 +91,20 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="gearshape.fill" color={color} />
           ),
+        }}
+      />
+
+      {/* Hide GPS and Explore tabs from navigation */}
+      <Tabs.Screen
+        name="gps"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
