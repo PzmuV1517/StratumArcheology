@@ -20,6 +20,43 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/files", tags=["files"])
 
 
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
+    """Check if a user can access a file based on privacy settings"""
+    # Project leader can always access all files
+    project = db.query(Project).filter(Project.id == file_node.project_id).first()
+    if project and project.owner_id == user.id:
+        return True
+    
+    # Owner can always access their own files
+    if file_node.owner_id == user.id:
+        return True
+    
+    # Check privacy level
+    if file_node.privacy == PrivacyLevel.PROJECT:
+        # All project members can access
+        return True
+    elif file_node.privacy == PrivacyLevel.PRIVATE:
+        # Only owner can access (already checked above)
+        return False
+    elif file_node.privacy == PrivacyLevel.SHARED:
+        # Check if user is in shared_with list
+        if file_node.shared_with and user.id in file_node.shared_with:
+            return True
+        return False
+    elif file_node.privacy == PrivacyLevel.PUBLIC:
+        return True
+    
+    return False
+
+
+# =============================================================================
+# RESPONSE MODELS
+# =============================================================================
+
 # Response model for Time Machine
 class FileWithVersionsResponse(BaseModel):
     """File with all its versions for Time Machine view"""
@@ -154,16 +191,135 @@ async def get_project_time_machine(
     )
 
 
+@router.post("/project/{project_id}/my-folder", response_model=FileNodeBase, status_code=status.HTTP_201_CREATED)
+async def create_my_folder(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a personal "My Folder" for the current user in a project.
+    
+    - Only researchers and project leaders can create their own personal folder
+    - The folder is automatically set to PRIVATE privacy
+    - Only one "My Folder" can exist per user per project
+    - The folder is owned by the creating user
+    """
+    from app.models import project_members, MemberRole
+    
+    check_project_permission(project_id, current_user, db)
+    
+    # Get project to check permissions
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check if user is researcher or owner (not a guest)
+    is_owner = project.owner_id == current_user.id
+    member_role = None
+    
+    if not is_owner:
+        # Check member role
+        from sqlalchemy import select
+        stmt = select(project_members).where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == current_user.id
+        )
+        member = db.execute(stmt).first()
+        if member:
+            member_role = member.role
+    
+    if not is_owner and member_role == MemberRole.GUEST:
+        raise HTTPException(
+            status_code=403, 
+            detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder."
+        )
+    
+    # Check if user already has a My Folder in this project
+    existing = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.owner_id == current_user.id,
+        FileNode.name == f"My Folder ({current_user.display_name or current_user.email})",
+        FileNode.parent_id == None
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail="You already have a personal folder in this project"
+        )
+    
+    # Create the personal folder
+    folder_name = f"My Folder ({current_user.display_name or current_user.email})"
+    
+    my_folder = FileNode(
+        project_id=project_id,
+        parent_id=None,  # Root level
+        name=folder_name,
+        type=FileNodeType.FOLDER,
+        owner_id=current_user.id,
+        privacy=PrivacyLevel.PRIVATE,  # Private by default
+        is_locked=False,  # Can be renamed/deleted by owner
+    )
+    
+    db.add(my_folder)
+    db.commit()
+    db.refresh(my_folder)
+    
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type='FOLDER_CREATED',
+        description=f'Created personal folder "{folder_name}"',
+        user_id=current_user.id,
+        metadata={'folder_id': my_folder.id, 'folder_name': folder_name, 'is_personal': True}
+    )
+    
+    await emit_content_update(project_id, 'files')
+    
+    return my_folder
+
+
+@router.get("/project/{project_id}/my-folder", response_model=Optional[FileNodeBase])
+async def get_my_folder(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the current user's personal folder in a project, if it exists"""
+    check_project_permission(project_id, current_user, db)
+    
+    my_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.owner_id == current_user.id,
+        FileNode.name.like("My Folder%"),
+        FileNode.parent_id == None,
+        FileNode.type == FileNodeType.FOLDER,
+        FileNode.privacy == PrivacyLevel.PRIVATE
+    ).first()
+    
+    return my_folder
+
+
 @router.get("/project/{project_id}", response_model=List[FileNodeBase])
 async def list_project_root(
     project_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """List root-level file nodes for a project"""
+    """List root-level file nodes for a project, filtering by privacy settings"""
     check_project_permission(project_id, current_user, db)
-    nodes = db.query(FileNode).filter(FileNode.project_id == project_id, FileNode.parent_id == None).order_by(FileNode.type.desc(), FileNode.name.asc()).all()
-    return nodes
+    
+    # Get all root nodes
+    nodes = db.query(FileNode).filter(
+        FileNode.project_id == project_id, 
+        FileNode.parent_id == None
+    ).order_by(FileNode.type.desc(), FileNode.name.asc()).all()
+    
+    # Filter based on privacy - use can_access_file to respect privacy settings
+    accessible_nodes = [node for node in nodes if can_access_file(node, current_user, db)]
+    
+    return accessible_nodes
 
 
 @router.get("/{node_id}/children", response_model=List[FileNodeBase])
@@ -176,8 +332,17 @@ async def list_children(
     if not node:
         raise HTTPException(status_code=404, detail="Folder not found")
     check_project_permission(node.project_id, current_user, db)
+    
+    # Check if user can access the parent folder
+    if not can_access_file(node, current_user, db):
+        raise HTTPException(status_code=403, detail="Access denied to this folder")
+    
     children = db.query(FileNode).filter(FileNode.parent_id == node_id).order_by(FileNode.type.desc(), FileNode.name.asc()).all()
-    return children
+    
+    # Filter children based on privacy
+    accessible_children = [child for child in children if can_access_file(child, current_user, db)]
+    
+    return accessible_children
 
 
 @router.post("/project/{project_id}/folders", response_model=FileNodeBase, status_code=status.HTTP_201_CREATED)
@@ -588,35 +753,6 @@ async def replace_file_content(
 # =============================================================================
 # PRIVACY & SHARING ENDPOINTS
 # =============================================================================
-
-def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
-    """Check if a user can access a file based on privacy settings"""
-    # Project leader can always access all files
-    project = db.query(Project).filter(Project.id == file_node.project_id).first()
-    if project and project.owner_id == user.id:
-        return True
-    
-    # Owner can always access their own files
-    if file_node.owner_id == user.id:
-        return True
-    
-    # Check privacy level
-    if file_node.privacy == PrivacyLevel.PROJECT:
-        # All project members can access
-        return True
-    elif file_node.privacy == PrivacyLevel.PRIVATE:
-        # Only owner can access (already checked above)
-        return False
-    elif file_node.privacy == PrivacyLevel.SHARED:
-        # Check if user is in shared_with list
-        if file_node.shared_with and user.id in file_node.shared_with:
-            return True
-        return False
-    elif file_node.privacy == PrivacyLevel.PUBLIC:
-        return True
-    
-    return False
-
 
 @router.put("/{node_id}/privacy", response_model=FileNodeBase)
 async def update_file_privacy(
