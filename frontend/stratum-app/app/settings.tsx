@@ -101,6 +101,7 @@ export default function SettingsScreen() {
   // Offline files
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(false);
   // Connection status - use a ref to track actual status
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
   const connectionCheckedRef = React.useRef(false);
@@ -123,22 +124,24 @@ export default function SettingsScreen() {
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
       setNetworkState(state);
-      // Update connection status based on real connectivity
-      if (state.isConnected && state.isInternetReachable) {
-        setConnectionStatus('connected');
-      } else if (state.isConnected === false) {
-        setConnectionStatus('disconnected');
+      // Only update connection status if we haven't done a manual check yet
+      // This prevents auto-setting to 'connected' when the user hasn't verified backend connectivity
+      if (!connectionCheckedRef.current) {
+        // Set to unknown until user manually checks - network available != backend connected
+        if (state.isConnected === false) {
+          setConnectionStatus('disconnected');
+        }
+        // Don't auto-set to connected - let user verify with the check button
       }
     });
 
     // Get initial state
     NetInfo.fetch().then((state) => {
       setNetworkState(state);
-      if (state.isConnected && state.isInternetReachable) {
-        setConnectionStatus('connected');
-      } else if (state.isConnected === false) {
+      if (state.isConnected === false) {
         setConnectionStatus('disconnected');
       }
+      // Don't auto-set to connected - keep unknown until manual check
     });
 
     return () => unsubscribe();
