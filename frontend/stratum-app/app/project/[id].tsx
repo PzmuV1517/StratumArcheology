@@ -20,6 +20,8 @@ import FilesOverlay from '../../src/components/project/FilesOverlay';
 import NotesSection from '../../src/components/project/NotesSection';
 import FileGallery from '../../src/components/project/FileGallery';
 import ArtefactsTab from '../../src/components/project/ArtefactsTab';
+import TimeMachineTab from '../../src/components/project/TimeMachineTab';
+import ToolsTab from '../../src/components/project/ToolsTab';
 import MapEditor from '../../src/components/map/MapEditor';
 // Harris Matrix (web only) dynamic require later to avoid SSR issues
 import ProjectMenuModal from '../../src/components/project/modals/ProjectMenuModal';
