@@ -239,12 +239,14 @@ export default function ProjectDetailScreen() {
   // Sync UI with route param when available
   useEffect(() => {
     const tabParam = (globalParams?.tab as string) || '';
-  if (tabParam === 'overview') setActiveTab('overview');
-  else if (tabParam === 'notes') setActiveTab('notes');
-  else if (tabParam === 'artefacts') setActiveTab('artefacts');
-  else if (tabParam === 'gallery') setActiveTab('gallery');
-  else if (tabParam === 'matrix') setActiveTab('matrix');
+    if (tabParam === 'overview') setActiveTab('overview');
+    else if (tabParam === 'notes') setActiveTab('notes');
+    else if (tabParam === 'artefacts') setActiveTab('artefacts');
+    else if (tabParam === 'gallery') setActiveTab('gallery');
+    else if (tabParam === 'matrix') setActiveTab('matrix');
     else if (tabParam === 'gps') setActiveTab('gps');
+    else if (tabParam === 'history') setActiveTab('history');
+    else if (tabParam === 'tools') setActiveTab('tools');
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
   }, [globalParams?.tab]);
@@ -802,7 +804,12 @@ export default function ProjectDetailScreen() {
                     </View>
                   </View>
                 ) : (
-                  <View style={styles.timelineList}>
+                  <ScrollView 
+                    style={styles.timelineList}
+                    contentContainerStyle={styles.timelineListContent}
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}
+                  >
                     {activities.map((item) => (
                       <View key={item.id} style={styles.overviewTimelineItem}>
                         <View style={styles.overviewTimelineDot} />
@@ -823,7 +830,7 @@ export default function ProjectDetailScreen() {
                         </View>
                       </View>
                     ))}
-                  </View>
+                  </ScrollView>
                 )}
               </View>
             </View>
