@@ -102,6 +102,26 @@ export default function Timeline({
 
   return (
     <View style={[styles.container, maxHeight ? { maxHeight } : undefined]}>
+      {/* Toggle between Project and Personal timeline */}
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          style={[styles.toggleButton, mode === 'project' && styles.toggleButtonActive]}
+          onPress={() => setMode('project')}
+        >
+          <Text style={[styles.toggleText, mode === 'project' && styles.toggleTextActive]}>
+            All Activity
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleButton, mode === 'personal' && styles.toggleButtonActive]}
+          onPress={() => setMode('personal')}
+        >
+          <Text style={[styles.toggleText, mode === 'personal' && styles.toggleTextActive]}>
+            My Activity
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={Platform.OS === 'web'}
         refreshControl={
@@ -139,6 +159,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0C0C0E',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 8,
+    padding: 4,
+    marginHorizontal: 16,
+    marginVertical: 12,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#C41E3A',
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
   },
   emptyList: {
     flexGrow: 1,

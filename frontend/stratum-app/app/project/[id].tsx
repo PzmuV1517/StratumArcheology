@@ -861,7 +861,7 @@ export default function ProjectDetailScreen() {
                   <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
                 </View>
                 <View style={{ height: 400, marginTop: 12 }}>
-                  <Timeline projectId={parseInt(project.id)} maxHeight={400} />
+                  <Timeline projectId={project.id} maxHeight={400} />
                 </View>
               </View>
             </View>
