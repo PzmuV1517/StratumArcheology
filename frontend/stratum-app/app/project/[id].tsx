@@ -600,7 +600,51 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  
+  // Handle file download
+  const handleDownloadFile = async (node: any) => {
+    if (!node || node.type !== 'file') {
+      Alert.alert('Error', 'Cannot download - not a valid file');
+      return;
+    }
+    
+    try {
+      if (Platform.OS === 'web') {
+        // Web: open download URL in new tab
+        const downloadUrl = await fileService.getDownloadUrl(node.id);
+        window.open(downloadUrl, '_blank');
+      } else {
+        // Native: download and share
+        Alert.alert(
+          'Download',
+          `Download "${node.name}"?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Download',
+              onPress: async () => {
+                try {
+                  const result = await fileService.downloadFile(node.id, node.name);
+                  if (result?.uri) {
+                    // Offer to share/open the file
+                    try {
+                      await fileService.shareFile(result.uri);
+                    } catch (_shareError) {
+                      // If sharing fails, at least tell user where file is
+                      Alert.alert('Downloaded', `File saved to: ${result.uri}`);
+                    }
+                  }
+                } catch (downloadError: any) {
+                  Alert.alert('Download Failed', downloadError.message || 'Failed to download file');
+                }
+              },
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to prepare download');
+    }
+  };
 
   const handleProjectSettings = () => {
     // Permission check: only owners can change project settings
@@ -1111,9 +1155,7 @@ export default function ProjectDetailScreen() {
           onNavigateBreadcrumb={navigateBreadcrumb}
           onUpload={uploadIntoCurrent}
           onCreateFolder={() => { setNewFolderName(''); setShowNewFolderModal(true); }}
-          onDownload={(node: any) => {
-            Alert.alert('Download', 'Use the download option in the file row.');
-          }}
+          onDownload={handleDownloadFile}
           onRename={(node: any) => { setRenameNode(node); setRenameText(node.name); }}
           onMove={(node: any) => setMoveMode({ node })}
           onDelete={(node: any) => setDeleteNodeTarget(node)}
