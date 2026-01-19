@@ -764,10 +764,15 @@ async def download_file(
 
     filename = node.name or "download"
     media_type = node.mime_type or "application/octet-stream"
+    
+    # Build headers - only include Content-Length if we have a valid size
     headers = {
         "Content-Disposition": f"attachment; filename=\"{filename}\"",
-        "Content-Length": str(getattr(stat, 'size', '') or '')
     }
+    file_size = getattr(stat, 'size', None)
+    if file_size is not None and file_size > 0:
+        headers["Content-Length"] = str(file_size)
+    
     return StreamingResponse(iterfile(), media_type=media_type, headers=headers)
 
 
@@ -1068,47 +1073,9 @@ async def ensure_users_folder(project_id: str, db: Session) -> FileNode:
     return users_folder
 
 
-async def ensure_user_folder(project_id: str, user: User, db: Session) -> FileNode:
-    """Ensure a user's personal folder exists within the users folder"""
-    users_folder = await ensure_users_folder(project_id, db)
-    
-    # Use display_name or email username as folder name
-    folder_name = user.display_name or user.email.split('@')[0]
-    
-    user_folder = db.query(FileNode).filter(
-        FileNode.project_id == project_id,
-        FileNode.parent_id == users_folder.id,
-        FileNode.owner_id == user.id,
-        FileNode.type == FileNodeType.FOLDER
-    ).first()
-    
-    if not user_folder:
-        user_folder = FileNode(
-            project_id=project_id,
-            parent_id=users_folder.id,
-            name=folder_name,
-            type=FileNodeType.FOLDER,
-            owner_id=user.id,
-            privacy=PrivacyLevel.PRIVATE,
-            is_locked=True
-        )
-        db.add(user_folder)
-        db.commit()
-        db.refresh(user_folder)
-    
-    return user_folder
-
-
-@router.get("/project/{project_id}/my-folder", response_model=FileNodeBase)
-async def get_my_folder(
-    project_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get or create the current user's personal folder"""
-    check_project_permission(project_id, current_user, db)
-    user_folder = await ensure_user_folder(project_id, current_user, db)
-    return user_folder
+# NOTE: get_my_folder endpoint is defined above at line ~394
+# The ensure_user_folder helper below is kept for potential future use but 
+# the duplicate route has been removed to avoid conflicts
 
 
 @router.get("/project/{project_id}/shared-with-me", response_model=List[FileNodeBase])

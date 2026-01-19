@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService, activityService } from '../../src/services/projectService';
 import { ProjectActionModal } from '../../src/components/project/modals/ProjectActionModal';
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   fab: { 
     position: 'absolute', 
     right: 24, 
-    bottom: 24, 
+    bottom: Platform.OS === 'ios' ? 100 : 24, 
     width: 64, 
     height: 64, 
     borderRadius: 32, 

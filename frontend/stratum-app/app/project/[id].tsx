@@ -1186,91 +1186,91 @@ export default function ProjectDetailScreen() {
             }
           }}
         />
-      </Modal>
 
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmModal
-        visible={!!deleteNodeTarget}
-        name={deleteNodeTarget?.name || ''}
-        isFolder={deleteNodeTarget?.type === 'folder'}
-        isDeleting={isDeleting}
-        onCancel={() => setDeleteNodeTarget(null)}
-        onConfirm={async () => {
-          if (!canEditFiles) {
-            Alert.alert('Permission Denied', 'Guests can only view files. Deleting is not permitted.');
-            setDeleteNodeTarget(null);
-            return;
-          }
-          
-          if (!deleteNodeTarget) return;
-          try {
-            setIsDeleting(true);
-            await fileService.deleteNode(deleteNodeTarget.id);
-            setDeleteNodeTarget(null);
-            if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
-            else await loadRootFiles();
-          } catch {
-            Alert.alert('Error', 'Failed to delete');
-          } finally {
-            setIsDeleting(false);
-          }
-        }}
-      />
-
-      {/* Rename Modal */}
-      <RenameModal
-        visible={!!renameNode}
-        currentName={renameNode?.name || ''}
-        isFile={renameNode?.type === 'file'}
-        onCancel={() => setRenameNode(null)}
-        onRename={async (newBaseName) => {
-          if (!canEditFiles) {
-            Alert.alert('Permission Denied', 'Guests can only view files. Renaming is not permitted.');
-            setRenameNode(null);
-            return;
-          }
-          
-          if (!renameNode) return;
-          try {
-            let finalName = newBaseName.trim();
-            if (renameNode.type === 'file' && renameNode.name && renameNode.name.includes('.') && !renameNode.name.startsWith('.')) {
-              const ext = renameNode.name.substring(renameNode.name.lastIndexOf('.') + 1);
-              finalName = `${finalName}.${ext}`;
+        {/* Delete Confirmation Modal - inside FilesOverlay Modal for proper z-stacking */}
+        <DeleteConfirmModal
+          visible={!!deleteNodeTarget}
+          name={deleteNodeTarget?.name || ''}
+          isFolder={deleteNodeTarget?.type === 'folder'}
+          isDeleting={isDeleting}
+          onCancel={() => setDeleteNodeTarget(null)}
+          onConfirm={async () => {
+            if (!canEditFiles) {
+              Alert.alert('Permission Denied', 'Guests can only view files. Deleting is not permitted.');
+              setDeleteNodeTarget(null);
+              return;
             }
-            await fileService.renameNode(renameNode.id, finalName);
-            setRenameNode(null);
-            if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
-            else await loadRootFiles();
-          } catch {
-            Alert.alert('Error', 'Failed to rename');
-          }
-        }}
-      />
+            
+            if (!deleteNodeTarget) return;
+            try {
+              setIsDeleting(true);
+              await fileService.deleteNode(deleteNodeTarget.id);
+              setDeleteNodeTarget(null);
+              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              else await loadRootFiles();
+            } catch {
+              Alert.alert('Error', 'Failed to delete');
+            } finally {
+              setIsDeleting(false);
+            }
+          }}
+        />
 
-      {/* Move Mode Banner */}
-      <MoveBanner
-        visible={!!moveMode?.node}
-        itemName={moveMode?.node?.name || ''}
-        onMoveHere={async () => {
-          if (!canEditFiles) {
-            Alert.alert('Permission Denied', 'Guests can only view files. Moving is not permitted.');
-            setMoveMode(null);
-            return;
-          }
-          
-          if (!moveMode?.node) return;
-          try {
-            const destParentId = currentFolder?.id || null;
-            await fileService.moveNode(moveMode.node.id, (destParentId || undefined) as any);
-            setMoveMode(null);
-            if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
-            else await loadRootFiles();
-          } catch {
-            Alert.alert('Error', 'Failed to move');
-          }
-        }}
-        onCancel={() => setMoveMode(null)}
-      />
+        {/* Rename Modal - inside FilesOverlay Modal for proper z-stacking */}
+        <RenameModal
+          visible={!!renameNode}
+          currentName={renameNode?.name || ''}
+          isFile={renameNode?.type === 'file'}
+          onCancel={() => setRenameNode(null)}
+          onRename={async (newBaseName) => {
+            if (!canEditFiles) {
+              Alert.alert('Permission Denied', 'Guests can only view files. Renaming is not permitted.');
+              setRenameNode(null);
+              return;
+            }
+            
+            if (!renameNode) return;
+            try {
+              let finalName = newBaseName.trim();
+              if (renameNode.type === 'file' && renameNode.name && renameNode.name.includes('.') && !renameNode.name.startsWith('.')) {
+                const ext = renameNode.name.substring(renameNode.name.lastIndexOf('.') + 1);
+                finalName = `${finalName}.${ext}`;
+              }
+              await fileService.renameNode(renameNode.id, finalName);
+              setRenameNode(null);
+              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              else await loadRootFiles();
+            } catch {
+              Alert.alert('Error', 'Failed to rename');
+            }
+          }}
+        />
+
+        {/* Move Mode Banner - inside FilesOverlay Modal for proper z-stacking */}
+        <MoveBanner
+          visible={!!moveMode?.node}
+          itemName={moveMode?.node?.name || ''}
+          onMoveHere={async () => {
+            if (!canEditFiles) {
+              Alert.alert('Permission Denied', 'Guests can only view files. Moving is not permitted.');
+              setMoveMode(null);
+              return;
+            }
+            
+            if (!moveMode?.node) return;
+            try {
+              const destParentId = currentFolder?.id || null;
+              await fileService.moveNode(moveMode.node.id, (destParentId || undefined) as any);
+              setMoveMode(null);
+              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              else await loadRootFiles();
+            } catch {
+              Alert.alert('Error', 'Failed to move');
+            }
+          }}
+          onCancel={() => setMoveMode(null)}
+        />
+      </Modal>
 
       {/* Image preview handled by dedicated screen now */}
     </View>

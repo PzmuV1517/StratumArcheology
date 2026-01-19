@@ -24,30 +24,33 @@ export default function TabLayout() {
         tabBarBackground: () => (
           Platform.OS === 'ios' ? (
             <BlurView
-              intensity={80}
-              tint="dark"
+              intensity={50}
+              tint="systemChromeMaterialDark"
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1A1A1A' }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(26, 26, 26, 0.95)' }]} />
           )
         ),
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopColor: 'rgba(255, 255, 255, 0.1)',
-          borderTopWidth: StyleSheet.hairlineWidth,
-          height: Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-        },
+        tabBarStyle: Platform.select({
+          ios: {
+            position: 'absolute',
+            backgroundColor: 'transparent',
+            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            borderTopWidth: StyleSheet.hairlineWidth,
+          },
+          default: {
+            backgroundColor: '#1A1A1A',
+            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            borderTopWidth: StyleSheet.hairlineWidth,
+          },
+        }),
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
           letterSpacing: 0.3,
           marginTop: 2,
         },
-        // Smooth slide transition for tab content
-        animation: 'shift',
       }}
     >
       {/* Overview - Landing tab */}

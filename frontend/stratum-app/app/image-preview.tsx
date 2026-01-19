@@ -28,12 +28,12 @@ export default function ImagePreviewScreen() {
             if (!revoked) setBlobUrl(url);
           }
         } else {
-          const res = await fileService.downloadFile(nodeId);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (typeof reader.result === 'string' && !revoked) setBlobUrl(reader.result);
-          };
-            reader.readAsDataURL(res.data);
+          // On native, downloadFile returns { uri, contentLength, mimeType }
+          const res = await fileService.downloadFile(nodeId, name as string);
+          if (!revoked && res.uri) {
+            // Use the local file URI directly for native platforms
+            setBlobUrl(res.uri);
+          }
         }
       } catch (e) {
         console.error(e);
