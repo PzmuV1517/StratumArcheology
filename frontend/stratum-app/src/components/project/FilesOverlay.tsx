@@ -103,10 +103,21 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
         try {
           myFolder = await fileService.createMyFolder(projectId);
         } catch (createError: any) {
-          // If creation fails, show error
-          console.error('Failed to create My Folder:', createError);
-          Alert.alert('Error', createError.message || 'Failed to create your personal folder');
-          return;
+          // If creation fails with 400 (already exists), try fetching again
+          // This can happen if there's a race condition or the folder name format changed
+          if (createError.response?.status === 400) {
+            console.log('My Folder already exists, trying to fetch again...');
+            myFolder = await fileService.getMyFolder(projectId);
+            if (!myFolder) {
+              // Still can't find it - there might be a naming mismatch
+              Alert.alert('Error', 'Your personal folder exists but could not be found. Please check the file list.');
+              return;
+            }
+          } else {
+            console.error('Failed to create My Folder:', createError);
+            Alert.alert('Error', createError.response?.data?.detail || createError.message || 'Failed to create your personal folder');
+            return;
+          }
         }
       }
       
@@ -122,7 +133,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       }
     } catch (error: any) {
       console.error('Failed to access My Folder:', error);
-      Alert.alert('Error', error.message || 'Failed to access your personal folder');
+      Alert.alert('Error', error.response?.data?.detail || error.message || 'Failed to access your personal folder');
     } finally {
       setIsLoadingMyFolder(false);
     }

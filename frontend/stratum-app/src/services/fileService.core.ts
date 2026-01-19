@@ -62,7 +62,8 @@ export const fileServiceCore = {
   getMyFolder: async (projectId: string): Promise<FileNode | null> => {
     try {
       const res = await api.get(`/files/project/${projectId}/my-folder`);
-      return res.data;
+      // Backend returns null/empty when folder doesn't exist
+      return res.data || null;
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;

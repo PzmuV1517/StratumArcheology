@@ -235,12 +235,13 @@ async def create_my_folder(
             detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder."
         )
     
-    # Check if user already has a My Folder in this project
+    # Check if user already has a My Folder in this project (use flexible match like GET endpoint)
     existing = db.query(FileNode).filter(
         FileNode.project_id == project_id,
         FileNode.owner_id == current_user.id,
-        FileNode.name == f"My Folder ({current_user.display_name or current_user.email})",
-        FileNode.parent_id == None
+        FileNode.name.like("My Folder%"),
+        FileNode.parent_id == None,
+        FileNode.type == FileNodeType.FOLDER
     ).first()
     
     if existing:
