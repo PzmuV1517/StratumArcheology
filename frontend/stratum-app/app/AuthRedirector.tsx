@@ -8,18 +8,28 @@ import { useAuth } from '../src/contexts/AuthContext';
  * AuthRedirector handles auth-based navigation:
  * - Mobile: Never shows landing page, redirects to login/tabs based on auth
  * - Web: Landing page allowed, auth check only for protected routes
+ * - Handles session expiry by redirecting to login
  */
 const AuthRedirector: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, loading, sessionExpired, clearSessionExpired } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   // Wait for layout to mount before navigating
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Handle session expiry - redirect to login
+  useEffect(() => {
+    if (sessionExpired && mounted) {
+      console.log('[AuthRedirector] Session expired, redirecting to login');
+      clearSessionExpired();
+      router.replace('/(auth)/login');
+    }
+  }, [sessionExpired, mounted, clearSessionExpired, router]);
 
   useEffect(() => {
     // Don't navigate until mounted and auth state is resolved

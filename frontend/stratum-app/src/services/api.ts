@@ -1,6 +1,11 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from '../config/config';
+import { EventEmitter } from 'events';
+
+// Event emitter for auth events (session expiry)
+export const authEvents = new EventEmitter();
+export const AUTH_SESSION_EXPIRED = 'auth:session_expired';
 
 /**
  * Helper to resolve the most appropriate base URL at runtime
@@ -194,6 +199,8 @@ api.interceptors.response.use(
       // Token expired, clear storage
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('userData');
+      // Emit session expired event so AuthContext can handle redirect
+      authEvents.emit(AUTH_SESSION_EXPIRED);
     }
     return Promise.reject(error);
   }

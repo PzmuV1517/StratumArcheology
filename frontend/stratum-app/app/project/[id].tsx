@@ -29,6 +29,8 @@ import NewFolderModal from '../../src/components/project/modals/NewFolderModal';
 import DeleteConfirmModal from '../../src/components/project/modals/DeleteConfirmModal';
 import RenameModal from '../../src/components/project/modals/RenameModal';
 import MoveBanner from '../../src/components/project/MoveBanner';
+import { ConflictResolutionModal } from '../../src/components/sync/ConflictResolutionModal';
+import { conflicts, FileConflict } from '../../src/services/offlineQueueService';
 import { useWebSocket } from '../../src/contexts/WebSocketContext';
 import type { Project as ServiceProject } from '../../src/services/projectService.types';
 
@@ -91,6 +93,11 @@ export default function ProjectDetailScreen() {
   const reopenFilesOnReturnRef = useRef(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  
+  // Conflict resolution state
+  const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
+  const [currentConflict, setCurrentConflict] = useState<FileConflict | null>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   useEffect(() => {
     // Load web-only icon lazily to avoid native bundling issues
@@ -123,6 +130,8 @@ export default function ProjectDetailScreen() {
 
   useEffect(() => {
     loadProjectData();
+    // Also check for any file conflicts when loading project
+    checkForConflicts();
   }, [id]);
 
   // WebSocket: Join project room and listen for real-time updates
@@ -315,6 +324,48 @@ export default function ProjectDetailScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check for file conflicts
+  const checkForConflicts = async () => {
+    if (!id) return;
+    try {
+      const projectConflictsList = await conflicts.getProjectConflicts(id as string);
+      setProjectConflicts(projectConflictsList);
+      
+      // Show first unresolved conflict if any
+      if (projectConflictsList.length > 0 && !currentConflict) {
+        setCurrentConflict(projectConflictsList[0]);
+        setShowConflictModal(true);
+      }
+    } catch (error) {
+      console.error('[Project] Error checking conflicts:', error);
+    }
+  };
+
+  // Handle conflict resolution
+  const handleResolveConflict = async (resolution: 'keep_local' | 'keep_remote' | 'keep_both') => {
+    if (!currentConflict) return;
+    
+    try {
+      await conflicts.resolveConflict(currentConflict.id, resolution);
+      
+      // Find and show next conflict if any
+      const remaining = projectConflicts.filter(c => c.id !== currentConflict.id);
+      setProjectConflicts(remaining);
+      
+      if (remaining.length > 0) {
+        setCurrentConflict(remaining[0]);
+      } else {
+        setCurrentConflict(null);
+        setShowConflictModal(false);
+        Alert.alert('Conflicts Resolved', 'All file conflicts have been resolved.');
+        // Refresh files
+        loadRootFiles();
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to resolve conflict');
     }
   };
 
@@ -1328,6 +1379,17 @@ export default function ProjectDetailScreen() {
       </Modal>
 
       {/* Image preview handled by dedicated screen now */}
+
+      {/* Conflict Resolution Modal */}
+      <ConflictResolutionModal
+        visible={showConflictModal}
+        conflict={currentConflict}
+        onResolve={handleResolveConflict}
+        onCancel={() => {
+          setShowConflictModal(false);
+          setCurrentConflict(null);
+        }}
+      />
     </View>
   );
 }

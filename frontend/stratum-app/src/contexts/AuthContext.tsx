@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { authService } from '../services/authService';
-import api from '../services/api';
+import api, { authEvents, AUTH_SESSION_EXPIRED } from '../services/api';
 
 interface User {
   id: string;
@@ -12,24 +13,55 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  sessionExpired: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearSessionExpired: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  sessionExpired: false,
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
+  clearSessionExpired: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Handle session expiry event from API interceptor
+  const handleSessionExpired = useCallback(() => {
+    console.log('[AuthContext] Session expired event received');
+    setUser(null);
+    setSessionExpired(true);
+    Alert.alert(
+      'Session Expired',
+      'Your session has expired. Please log in again.',
+      [{ text: 'OK' }]
+    );
+  }, []);
+
+  // Clear session expired flag (after user acknowledges or logs in)
+  const clearSessionExpired = useCallback(() => {
+    setSessionExpired(false);
+  }, []);
+
+  useEffect(() => {
+    // Subscribe to session expiry events
+    authEvents.on(AUTH_SESSION_EXPIRED, handleSessionExpired);
+    
+    return () => {
+      authEvents.off(AUTH_SESSION_EXPIRED, handleSessionExpired);
+    };
+  }, [handleSessionExpired]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -140,10 +172,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        sessionExpired,
         login,
         register,
         logout,
         refreshUser,
+        clearSessionExpired,
       }}
     >
       {children}
