@@ -34,9 +34,16 @@ export const fileServiceCore = {
     return res.data;
   },
 
-  createFolder: async (projectId: string, name: string, parentId: string | null = null): Promise<FileNode> => {
+  createFolder: async (
+    projectId: string,
+    name: string,
+    parentId: string | null = null
+  ): Promise<FileNode> => {
     try {
-      const res = await api.post(`/files/project/${projectId}/folders`, { name, parent_id: parentId });
+      const res = await api.post(`/files/project/${projectId}/folders`, {
+        name,
+        parent_id: parentId,
+      });
       return res.data;
     } catch (error: any) {
       // If offline or network error, queue the action
@@ -45,7 +52,7 @@ export const fileServiceCore = {
         const { authService } = await import('./authService');
         const user = await authService.getCurrentUser();
         const tempId = `temp_folder_${Date.now()}`;
-        
+
         if (user) {
           await offlineQueue.enqueue(
             'CREATE_FOLDER',
@@ -54,7 +61,7 @@ export const fileServiceCore = {
             user.id,
             { priority: 1 }
           );
-          
+
           // Return temporary folder object
           return {
             id: tempId,
@@ -109,7 +116,9 @@ export const fileServiceCore = {
     return res.data;
   },
 
-  getMyFolderPermissions: async (projectId: string): Promise<{
+  getMyFolderPermissions: async (
+    projectId: string
+  ): Promise<{
     folder_id: string | null;
     default_can_view: boolean;
     default_can_edit: boolean;
@@ -119,11 +128,14 @@ export const fileServiceCore = {
     return res.data;
   },
 
-  updateMyFolderPermissions: async (projectId: string, settings: {
-    default_can_view: boolean;
-    default_can_edit: boolean;
-    member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
-  }): Promise<{ message: string; folder_id: string }> => {
+  updateMyFolderPermissions: async (
+    projectId: string,
+    settings: {
+      default_can_view: boolean;
+      default_can_edit: boolean;
+      member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
+    }
+  ): Promise<{ message: string; folder_id: string }> => {
     const res = await api.put(`/files/project/${projectId}/my-folder/permissions`, settings);
     return res.data;
   },

@@ -1,6 +1,6 @@
 /**
  * STRATUM Conflict Resolution Modal
- * 
+ *
  * Displays when a file/note has conflicts between local and remote versions.
  * Allows user to choose which version to keep or keep both.
  */
@@ -46,12 +46,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
   const isTextFile = conflict.fileName.match(/\.(txt|md|json|csv|xml|html|css|js|ts|py)$/i);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onCancel}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onCancel}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           {/* Header */}
@@ -70,8 +65,8 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             <View style={styles.fileInfo}>
               <Text style={styles.fileName}>{conflict.fileName}</Text>
               <Text style={styles.description}>
-                This file was modified both locally and on the server while you were offline.
-                Choose which version to keep.
+                This file was modified both locally and on the server while you were offline. Choose
+                which version to keep.
               </Text>
             </View>
 
@@ -89,9 +84,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
                 <Text style={styles.versionDate}>
                   Modified: {formatDate(conflict.localVersion.localUpdatedAt)}
                 </Text>
-                <Text style={styles.versionInfo}>
-                  Version {conflict.localVersion.localVersion}
-                </Text>
+                <Text style={styles.versionInfo}>Version {conflict.localVersion.localVersion}</Text>
                 <View style={styles.keepButton}>
                   <Text style={styles.keepButtonText}>Keep This</Text>
                 </View>
@@ -120,10 +113,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             </View>
 
             {/* Keep Both Option */}
-            <TouchableOpacity
-              style={styles.keepBothButton}
-              onPress={() => onResolve('keep_both')}
-            >
+            <TouchableOpacity style={styles.keepBothButton} onPress={() => onResolve('keep_both')}>
               <Ionicons name="copy" size={20} color="#a855f7" />
               <Text style={styles.keepBothText}>Keep Both (create copy)</Text>
             </TouchableOpacity>
@@ -131,10 +121,7 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
             {/* Diff View for Text Files */}
             {isTextFile && localContent && remoteContent && (
               <View style={styles.diffSection}>
-                <TouchableOpacity
-                  style={styles.diffToggle}
-                  onPress={() => setShowDiff(!showDiff)}
-                >
+                <TouchableOpacity style={styles.diffToggle} onPress={() => setShowDiff(!showDiff)}>
                   <Ionicons
                     name={showDiff ? 'chevron-down' : 'chevron-forward'}
                     size={20}

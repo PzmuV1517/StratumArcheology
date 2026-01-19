@@ -4,13 +4,13 @@ Alembic Environment Configuration for STRATUM Database Migrations
 This file configures Alembic to work with our SQLAlchemy models and environment.
 It handles both online (direct database connection) and offline (SQL script generation) migrations.
 """
-from logging.config import fileConfig
+
 import os
 import sys
+from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
@@ -18,10 +18,10 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 # Import our models and database configuration
-from app.database import Base
-from app.config import settings
 # Import all models to ensure they are registered with Base.metadata
 from app import models  # noqa: F401
+from app.config import settings
+from app.database import Base
 
 # Alembic Config object - provides access to values within alembic.ini
 config = context.config
@@ -41,7 +41,7 @@ target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """
     Run migrations in 'offline' mode.
-    
+
     This generates SQL scripts without requiring a database connection.
     Useful for reviewing migrations before applying them.
     """
@@ -64,7 +64,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """
     Run migrations in 'online' mode.
-    
+
     Creates an actual database connection and applies migrations directly.
     This is the normal mode used during development and deployment.
     """

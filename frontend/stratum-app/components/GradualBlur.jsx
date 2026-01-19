@@ -19,7 +19,7 @@ const DEFAULT_CONFIG = {
   responsive: false,
   target: 'parent',
   className: '',
-  style: {}
+  style: {},
 };
 
 const PRESETS = {
@@ -35,24 +35,24 @@ const PRESETS = {
   footer: { position: 'bottom', height: '8rem', curve: 'ease-out' },
   sidebar: { position: 'left', height: '6rem', strength: 2.5 },
   'page-header': { position: 'top', height: '10rem', target: 'page', strength: 3 },
-  'page-footer': { position: 'bottom', height: '10rem', target: 'page', strength: 3 }
+  'page-footer': { position: 'bottom', height: '10rem', target: 'page', strength: 3 },
 };
 
 const CURVE_FUNCTIONS = {
-  linear: p => p,
-  bezier: p => p * p * (3 - 2 * p),
-  'ease-in': p => p * p,
-  'ease-out': p => 1 - Math.pow(1 - p, 2),
-  'ease-in-out': p => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2)
+  linear: (p) => p,
+  bezier: (p) => p * p * (3 - 2 * p),
+  'ease-in': (p) => p * p,
+  'ease-out': (p) => 1 - Math.pow(1 - p, 2),
+  'ease-in-out': (p) => (p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2),
 };
 
 const mergeConfigs = (...configs) => configs.reduce((acc, c) => ({ ...acc, ...c }), {});
-const getGradientDirection = position =>
+const getGradientDirection = (position) =>
   ({
     top: 'to top',
     bottom: 'to bottom',
     left: 'to left',
-    right: 'to right'
+    right: 'to right',
   })[position] || 'to bottom';
 
 const debounce = (fn, wait) => {
@@ -92,7 +92,9 @@ const useIntersectionObserver = (ref, shouldObserve = false) => {
   useEffect(() => {
     if (!shouldObserve || !ref.current) return;
 
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), { threshold: 0.1 });
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
+      threshold: 0.1,
+    });
 
     observer.observe(ref.current);
     return () => observer.disconnect();
@@ -119,7 +121,9 @@ function GradualBlur(props) {
     const divs = [];
     const increment = 100 / config.divCount;
     const currentStrength =
-      isHovered && config.hoverIntensity ? config.strength * config.hoverIntensity : config.strength;
+      isHovered && config.hoverIntensity
+        ? config.strength * config.hoverIntensity
+        : config.strength;
 
     const curveFunc = CURVE_FUNCTIONS[config.curve] || CURVE_FUNCTIONS.linear;
 
@@ -156,14 +160,25 @@ function GradualBlur(props) {
         transition:
           config.animated && config.animated !== 'scroll'
             ? `backdrop-filter ${config.duration} ${config.easing}`
-            : undefined
+            : undefined,
       };
 
       if (Platform.OS === 'web') {
         divs.push(<div key={i} style={divStyle} />);
       } else {
         // Native: use View for blur overlays (no maskImage/backdropFilter)
-        divs.push(<View key={i} style={{ ...divStyle, maskImage: undefined, WebkitMaskImage: undefined, backdropFilter: undefined, WebkitBackdropFilter: undefined }} />);
+        divs.push(
+          <View
+            key={i}
+            style={{
+              ...divStyle,
+              maskImage: undefined,
+              WebkitMaskImage: undefined,
+              backdropFilter: undefined,
+              WebkitBackdropFilter: undefined,
+            }}
+          />
+        );
       }
     }
 
@@ -181,7 +196,7 @@ function GradualBlur(props) {
       opacity: isVisible ? 1 : 0,
       transition: config.animated ? `opacity ${config.duration} ${config.easing}` : undefined,
       zIndex: isPageTarget ? config.zIndex + 100 : config.zIndex,
-      ...config.style
+      ...config.style,
     };
 
     if (isVertical) {
@@ -225,7 +240,7 @@ function GradualBlur(props) {
           style={{
             position: 'relative',
             width: '100%',
-            height: '100%'
+            height: '100%',
           }}
         >
           {blurDivs}

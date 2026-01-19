@@ -53,7 +53,9 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
     const peek = Array.from(new Uint8Array(buffer.slice(0, 16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join(' ');
-    throw new Error(`Not a LAS file (signature not found in first ${Math.min(buffer.byteLength, 8 * 1024 * 1024)} bytes). First bytes: ${peek}`);
+    throw new Error(
+      `Not a LAS file (signature not found in first ${Math.min(buffer.byteLength, 8 * 1024 * 1024)} bytes). First bytes: ${peek}`
+    );
   }
 
   const versionMajor = view.getUint8(base + 24);
@@ -67,7 +69,10 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
   // Extended headers may store 64-bit counts; for simplicity rely on legacy when present.
   if (pointCount === 0) {
     // Fallback estimate
-    pointCount = Math.max(0, Math.floor((buffer.byteLength - offsetToPointData) / pointRecordLength));
+    pointCount = Math.max(
+      0,
+      Math.floor((buffer.byteLength - offsetToPointData) / pointRecordLength)
+    );
   }
 
   const xScale = view.getFloat64(base + 131, true);
@@ -93,7 +98,7 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
   let maxI = -Infinity;
 
   for (let i = 0; i < pointCount; i += step) {
-  const pOffset = offsetToPointData + i * pointRecordLength;
+    const pOffset = offsetToPointData + i * pointRecordLength;
     const X = view.getInt32(pOffset + 0, true);
     const Y = view.getInt32(pOffset + 4, true);
     const Z = view.getInt32(pOffset + 8, true);
@@ -142,19 +147,29 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
 function turboColor(t: number) {
   // Approximate Turbo colormap (simple piecewise)
   t = Math.max(0, Math.min(1, t));
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
   if (t < 0.25) {
     const k = t / 0.25;
-    r = 0; g = k; b = 1;
+    r = 0;
+    g = k;
+    b = 1;
   } else if (t < 0.5) {
     const k = (t - 0.25) / 0.25;
-    r = 0; g = 1; b = 1 - k;
+    r = 0;
+    g = 1;
+    b = 1 - k;
   } else if (t < 0.75) {
     const k = (t - 0.5) / 0.25;
-    r = k; g = 1; b = 0;
+    r = k;
+    g = 1;
+    b = 0;
   } else {
     const k = (t - 0.75) / 0.25;
-    r = 1; g = 1 - k; b = 0;
+    r = 1;
+    g = 1 - k;
+    b = 0;
   }
   return { r, g, b };
 }

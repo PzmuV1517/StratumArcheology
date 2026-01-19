@@ -51,7 +51,9 @@ export default function MyFolderSettingsModal({
   const [loading, setLoading] = useState(false);
   const [defaultCanView, setDefaultCanView] = useState(true);
   const [defaultCanEdit, setDefaultCanEdit] = useState(false);
-  const [memberPermissions, setMemberPermissions] = useState<Map<string, { canView: boolean; canEdit: boolean }>>(new Map());
+  const [memberPermissions, setMemberPermissions] = useState<
+    Map<string, { canView: boolean; canEdit: boolean }>
+  >(new Map());
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Initialize member permissions
@@ -66,7 +68,7 @@ export default function MyFolderSettingsModal({
       }
     });
     setMemberPermissions(initialPermissions);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members, currentUserId]);
 
   const otherMembers = members.filter((m) => m.id !== currentUserId);
@@ -129,7 +131,7 @@ export default function MyFolderSettingsModal({
         default_can_edit: defaultCanEdit,
         member_permissions: permissions,
       });
-      
+
       onClose();
     } catch {
       Alert.alert('Error', 'Failed to save folder settings');
@@ -148,12 +150,7 @@ export default function MyFolderSettingsModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.modalContainer}>
           {/* Header */}
@@ -175,9 +172,7 @@ export default function MyFolderSettingsModal({
               <View style={styles.permissionRow}>
                 <View style={styles.permissionInfo}>
                   <Text style={styles.permissionLabel}>Others can view</Text>
-                  <Text style={styles.permissionHint}>
-                    Team members can see your files
-                  </Text>
+                  <Text style={styles.permissionHint}>Team members can see your files</Text>
                 </View>
                 <Switch
                   value={defaultCanView}
@@ -193,9 +188,7 @@ export default function MyFolderSettingsModal({
               <View style={styles.permissionRow}>
                 <View style={styles.permissionInfo}>
                   <Text style={styles.permissionLabel}>Others can edit</Text>
-                  <Text style={styles.permissionHint}>
-                    Team members can modify your files
-                  </Text>
+                  <Text style={styles.permissionHint}>Team members can modify your files</Text>
                 </View>
                 <Switch
                   value={defaultCanEdit}
@@ -215,9 +208,7 @@ export default function MyFolderSettingsModal({
               <Text style={styles.advancedToggleText}>
                 {showAdvanced ? '▼' : '▶'} Per-Member Permissions
               </Text>
-              <Text style={styles.advancedToggleHint}>
-                Override defaults for specific members
-              </Text>
+              <Text style={styles.advancedToggleHint}>Override defaults for specific members</Text>
             </TouchableOpacity>
 
             {showAdvanced && (
@@ -226,16 +217,12 @@ export default function MyFolderSettingsModal({
                   style={styles.applyDefaultsButton}
                   onPress={handleApplyDefaultsToAll}
                 >
-                  <Text style={styles.applyDefaultsText}>
-                    Apply Defaults to All
-                  </Text>
+                  <Text style={styles.applyDefaultsText}>Apply Defaults to All</Text>
                 </TouchableOpacity>
 
                 {otherMembers.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>
-                      No other members in this project
-                    </Text>
+                    <Text style={styles.emptyStateText}>No other members in this project</Text>
                   </View>
                 ) : (
                   otherMembers.map((member) => {
@@ -243,7 +230,7 @@ export default function MyFolderSettingsModal({
                       canView: defaultCanView,
                       canEdit: defaultCanEdit,
                     };
-                    
+
                     return (
                       <View key={member.id} style={styles.memberRow}>
                         <View style={styles.memberAvatar}>
@@ -252,19 +239,12 @@ export default function MyFolderSettingsModal({
                           </Text>
                         </View>
                         <View style={styles.memberInfo}>
-                          <Text style={styles.memberName}>
-                            {member.display_name}
-                          </Text>
-                          <Text style={styles.memberRole}>
-                            {member.role}
-                          </Text>
+                          <Text style={styles.memberName}>{member.display_name}</Text>
+                          <Text style={styles.memberRole}>{member.role}</Text>
                         </View>
                         <View style={styles.memberPermissions}>
                           <TouchableOpacity
-                            style={[
-                              styles.permBadge,
-                              perm.canView && styles.permBadgeActive,
-                            ]}
+                            style={[styles.permBadge, perm.canView && styles.permBadgeActive]}
                             onPress={() => handleToggleView(member.id)}
                           >
                             <Text
@@ -277,10 +257,7 @@ export default function MyFolderSettingsModal({
                             </Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[
-                              styles.permBadge,
-                              perm.canEdit && styles.permBadgeActive,
-                            ]}
+                            style={[styles.permBadge, perm.canEdit && styles.permBadgeActive]}
                             onPress={() => handleToggleEdit(member.id)}
                           >
                             <Text

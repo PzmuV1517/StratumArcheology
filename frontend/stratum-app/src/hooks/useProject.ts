@@ -13,7 +13,10 @@ interface ProjectActions {
   loadProjects: () => Promise<void>;
   loadProject: (projectId: string) => Promise<void>;
   createProject: (name: string, description?: string) => Promise<Project | null>;
-  updateProject: (projectId: string, data: { name?: string; description?: string }) => Promise<boolean>;
+  updateProject: (
+    projectId: string,
+    data: { name?: string; description?: string }
+  ) => Promise<boolean>;
   deleteProject: (projectId: string) => Promise<boolean>;
   joinByCode: (code: string) => Promise<{ success: boolean; projectId?: string; error?: string }>;
   clearError: () => void;
@@ -128,24 +131,27 @@ export function useProject(projectId?: string): UseProjectReturn {
     []
   );
 
-  const deleteProject = useCallback(async (id: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
+  const deleteProject = useCallback(
+    async (id: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      await projectService.deleteProject(id);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-      if (project?.id === id) {
-        setProject(null);
+      try {
+        await projectService.deleteProject(id);
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+        if (project?.id === id) {
+          setProject(null);
+        }
+        return true;
+      } catch (e: any) {
+        setError(e.detail || e.message || 'Failed to delete project');
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-      return true;
-    } catch (e: any) {
-      setError(e.detail || e.message || 'Failed to delete project');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [project]);
+    },
+    [project]
+  );
 
   const joinByCode = useCallback(
     async (code: string): Promise<{ success: boolean; projectId?: string; error?: string }> => {

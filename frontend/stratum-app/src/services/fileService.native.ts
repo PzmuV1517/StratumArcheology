@@ -47,7 +47,7 @@ export const fileService = {
         const res = await api.post(`/files/project/${projectId}/upload`, fileUriOrFormData);
         return res.data;
       }
-      
+
       // Handle individual file upload
       const formData = new FormData();
       formData.append('file', {
@@ -67,9 +67,9 @@ export const fileService = {
         const { offlineQueue } = await import('./offlineQueueService');
         const { authService } = await import('./authService');
         const user = await authService.getCurrentUser();
-        
+
         const tempId = `temp_file_${Date.now()}`;
-        
+
         // Save file URI for later upload
         const fileUri = fileUriOrFormData instanceof FormData ? null : fileUriOrFormData;
         if (fileUri && user) {
@@ -80,7 +80,7 @@ export const fileService = {
             user.id,
             { localPath: fileUri, priority: 1 }
           );
-          
+
           // Return temporary file object
           return {
             id: tempId,
@@ -121,7 +121,7 @@ export const fileService = {
                 if (buttonIndex === 0) {
                   return resolve(null);
                 }
-                
+
                 if (buttonIndex === 1) {
                   // Take Photo - request camera permission first
                   const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -129,84 +129,87 @@ export const fileService = {
                     Alert.alert('Permission Required', 'Camera access is needed to take photos.');
                     return resolve(null);
                   }
-                  
+
                   const result = await ImagePicker.launchCameraAsync({
                     mediaTypes: ['images'],
                     quality: 0.8,
                     allowsEditing: false,
                   });
-                  
+
                   if (result.canceled || !result.assets?.length) {
                     return resolve(null);
                   }
-                  
+
                   const asset = result.assets[0];
                   // Generate proper filename with extension based on mime type
                   let fileName = asset.fileName;
                   const mimeType = asset.mimeType || 'image/jpeg';
-                  
+
                   // If no filename or no extension, generate one from mime type
                   if (!fileName || !fileName.includes('.')) {
                     const ext = mimeType.split('/')[1] || 'jpg';
                     const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
                     fileName = `photo_${Date.now()}.${cleanExt}`;
                   }
-                  
+
                   return resolve({
                     uri: asset.uri,
                     name: fileName,
                     mimeType: mimeType,
                   });
                 }
-                
+
                 if (buttonIndex === 2) {
                   // Upload Photo - from library
                   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                   if (status !== 'granted') {
-                    Alert.alert('Permission Required', 'Photo library access is needed to select photos.');
+                    Alert.alert(
+                      'Permission Required',
+                      'Photo library access is needed to select photos.'
+                    );
                     return resolve(null);
                   }
-                  
+
                   const result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ['images'],
                     quality: 0.8,
                     allowsEditing: false,
                   });
-                  
+
                   if (result.canceled || !result.assets?.length) {
                     return resolve(null);
                   }
-                  
+
                   const asset = result.assets[0];
                   // Generate proper filename with extension based on mime type
                   let fileName = asset.fileName;
                   const mimeType = asset.mimeType || 'image/jpeg';
-                  
+
                   // If no filename or no extension, generate one from mime type
                   if (!fileName || !fileName.includes('.')) {
                     const ext = mimeType.split('/')[1] || 'jpg';
                     const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
                     fileName = `photo_${Date.now()}.${cleanExt}`;
                   }
-                  
+
                   return resolve({
                     uri: asset.uri,
                     name: fileName,
                     mimeType: mimeType,
                   });
                 }
-                
+
                 if (buttonIndex === 3) {
                   // Upload Files - document picker
                   const result = await DocumentPicker.getDocumentAsync({
                     type: '*/*',
                     copyToCacheDirectory: true,
                   });
-                  
+
                   if (result.canceled || !result.assets?.length) {
                     return resolve(null);
                   }
-                  
+
                   const asset = result.assets[0];
                   return resolve({
                     uri: asset.uri,
@@ -238,16 +241,16 @@ export const fileService = {
                       Alert.alert('Permission Required', 'Camera access is needed to take photos.');
                       return resolve(null);
                     }
-                    
+
                     const result = await ImagePicker.launchCameraAsync({
                       mediaTypes: ['images'],
                       quality: 0.8,
                     });
-                    
+
                     if (result.canceled || !result.assets?.length) {
                       return resolve(null);
                     }
-                    
+
                     const asset = result.assets[0];
                     resolve({
                       uri: asset.uri,
@@ -269,16 +272,16 @@ export const fileService = {
                       Alert.alert('Permission Required', 'Photo library access is needed.');
                       return resolve(null);
                     }
-                    
+
                     const result = await ImagePicker.launchImageLibraryAsync({
                       mediaTypes: ['images'],
                       quality: 0.8,
                     });
-                    
+
                     if (result.canceled || !result.assets?.length) {
                       return resolve(null);
                     }
-                    
+
                     const asset = result.assets[0];
                     resolve({
                       uri: asset.uri,
@@ -299,11 +302,11 @@ export const fileService = {
                       type: '*/*',
                       copyToCacheDirectory: true,
                     });
-                    
+
                     if (result.canceled || !result.assets?.length) {
                       return resolve(null);
                     }
-                    
+
                     const asset = result.assets[0];
                     resolve({
                       uri: asset.uri,
@@ -327,7 +330,12 @@ export const fileService = {
     }
   },
 
-  replaceFile: async (nodeId: string, fileUri: string, fileName: string, mimeType: string): Promise<FileNode> => {
+  replaceFile: async (
+    nodeId: string,
+    fileUri: string,
+    fileName: string,
+    mimeType: string
+  ): Promise<FileNode> => {
     const formData = new FormData();
     formData.append('file', {
       uri: fileUri,
@@ -349,27 +357,27 @@ export const fileService = {
     if (!nodeId) {
       throw new Error('Invalid nodeId for download');
     }
-    
+
     const token = await AsyncStorage.getItem('authToken');
     const baseUrl = api.defaults.baseURL || '';
     const url = `${baseUrl}/files/${nodeId}/download`;
-    
+
     // Ensure we have a valid filename
     const safeFilename = filename || `file_${nodeId}_${Date.now()}`;
-    
+
     // Get cache directory
     const cacheDir = getCacheDir();
     if (!cacheDir) {
       throw new Error('Cache directory not available');
     }
-    
+
     // Create downloads directory if needed
     const downloadsDir = `${cacheDir}downloads/`;
     const dirInfo = await FileSystem.getInfoAsync(downloadsDir);
     if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(downloadsDir, { intermediates: true });
     }
-    
+
     // Generate unique filename to avoid conflicts
     let localUri = `${downloadsDir}${safeFilename}`;
     const existingFile = await FileSystem.getInfoAsync(localUri);
@@ -377,7 +385,7 @@ export const fileService = {
       // Delete existing file to allow overwrite
       await FileSystem.deleteAsync(localUri, { idempotent: true });
     }
-    
+
     try {
       // Create download with progress callback
       const downloadResumable = FileSystem.createDownloadResumable(
@@ -392,37 +400,37 @@ export const fileService = {
             }
           : undefined
       );
-      
+
       const result = await downloadResumable.downloadAsync();
-      
+
       if (!result || !result.uri) {
         throw new Error('Download failed - no result returned');
       }
-      
+
       // Get file info
       const fileInfo = await FileSystem.getInfoAsync(result.uri);
       const contentLength = (fileInfo as any).size || 0;
-      
+
       // Determine mime type from filename or response
       let mimeType = 'application/octet-stream';
       const ext = safeFilename.toLowerCase().split('.').pop();
       if (ext) {
         const mimeMap: Record<string, string> = {
-          'txt': 'text/plain',
-          'pdf': 'application/pdf',
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'mp3': 'audio/mpeg',
-          'mp4': 'video/mp4',
-          'csv': 'text/csv',
-          'json': 'application/json',
-          'md': 'text/markdown',
+          txt: 'text/plain',
+          pdf: 'application/pdf',
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          gif: 'image/gif',
+          mp3: 'audio/mpeg',
+          mp4: 'video/mp4',
+          csv: 'text/csv',
+          json: 'application/json',
+          md: 'text/markdown',
         };
         mimeType = mimeMap[ext] || mimeType;
       }
-      
+
       return {
         uri: result.uri,
         contentLength,
@@ -466,7 +474,9 @@ export const fileService = {
   },
 
   // Native-specific: get file info
-  getFileInfo: async (uri: string): Promise<{ exists: boolean; size?: number; modificationTime?: number }> => {
+  getFileInfo: async (
+    uri: string
+  ): Promise<{ exists: boolean; size?: number; modificationTime?: number }> => {
     try {
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) {
@@ -481,7 +491,7 @@ export const fileService = {
       return { exists: false };
     }
   },
-  
+
   // Get download URL for a file (used for offline caching)
   getDownloadUrl: async (nodeId: string): Promise<string> => {
     const token = await AsyncStorage.getItem('authToken');
@@ -499,7 +509,7 @@ export const fileService = {
       throw new Error('Failed to read file');
     }
   },
-  
+
   // Write text content to file
   writeTextToFile: async (uri: string, content: string): Promise<void> => {
     try {

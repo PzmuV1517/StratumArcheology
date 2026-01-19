@@ -1,35 +1,38 @@
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
-from fastapi.responses import JSONResponse
-from typing import Optional, Tuple
-import urllib.parse
-import asyncio
-import aiohttp
 import hashlib
-import os
-from app.minio_client import minio_client
 from io import BytesIO
+
+import aiohttp
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import JSONResponse
+
+from app.minio_client import minio_client
 
 router = APIRouter(prefix="/convert", tags=["convert"])
 
 
 def detect_ext(name_or_url: str) -> str:
-    path = name_or_url.split('?')[0]
-    if '/' in path:
-        path = path.rsplit('/', 1)[-1]
-    if '.' in path and not path.startswith('.'):
-        return path.rsplit('.', 1)[-1].lower()
-    return ''
+    path = name_or_url.split("?")[0]
+    if "/" in path:
+        path = path.rsplit("/", 1)[-1]
+    if "." in path and not path.startswith("."):
+        return path.rsplit(".", 1)[-1].lower()
+    return ""
 
 
 async def fetch_bytes(url: str) -> bytes:
     timeout = aiohttp.ClientTimeout(total=120)
     # Only allow http/https URLs; browser-only schemes (blob:, data:) can't be fetched server-side
     if not (url.startswith("http://") or url.startswith("https://")):
-        raise HTTPException(status_code=400, detail="Only http/https URLs are supported for 'src'. For local/blob URLs, POST the file to this endpoint.")
+        raise HTTPException(
+            status_code=400,
+            detail="Only http/https URLs are supported for 'src'. For local/blob URLs, POST the file to this endpoint.",
+        )
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as resp:
             if resp.status != 200:
-                raise HTTPException(status_code=502, detail=f"Upstream fetch failed: HTTP {resp.status}")
+                raise HTTPException(
+                    status_code=502, detail=f"Upstream fetch failed: HTTP {resp.status}"
+                )
             return await resp.read()
 
 
@@ -54,22 +57,27 @@ def write_ply_ascii(positions, colors=None) -> bytes:
     lines = []
     if has_color:
         for i in range(count):
-            x = positions[i*3+0]; y = positions[i*3+1]; z = positions[i*3+2]
-            r = max(0, min(255, int(colors[i*3+0] * 255)))
-            g = max(0, min(255, int(colors[i*3+1] * 255)))
-            b = max(0, min(255, int(colors[i*3+2] * 255)))
+            x = positions[i * 3 + 0]
+            y = positions[i * 3 + 1]
+            z = positions[i * 3 + 2]
+            r = max(0, min(255, int(colors[i * 3 + 0] * 255)))
+            g = max(0, min(255, int(colors[i * 3 + 1] * 255)))
+            b = max(0, min(255, int(colors[i * 3 + 2] * 255)))
             lines.append(f"{x} {y} {z} {r} {g} {b}")
     else:
         for i in range(count):
-            x = positions[i*3+0]; y = positions[i*3+1]; z = positions[i*3+2]
+            x = positions[i * 3 + 0]
+            y = positions[i * 3 + 1]
+            z = positions[i * 3 + 2]
             lines.append(f"{x} {y} {z}")
     body = "\n".join(lines).encode("utf-8")
     return "\n".join(header).encode("utf-8") + body
 
 
-def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Optional[list]]:
+def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
     # Minimal LAS parser similar to frontend; supports common formats 0-3 (no compression)
     import struct
+
     b = memoryview(buf)
     n = len(b)
     # quick checks
@@ -79,18 +87,28 @@ def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opt
         raise ValueError("Received HTML/XML, not a LAS file (check URL/auth)")
     # find 'LASF'
     base = -1
-    for i in range(0, min(n-4, 8*1024*1024)):
-        if b[i:i+4].tobytes() == b'LASF':
+    for i in range(0, min(n - 4, 8 * 1024 * 1024)):
+        if b[i : i + 4].tobytes() == b"LASF":
             base = i
             break
     if base < 0:
         peek = bytes(b[: min(n, 16)]).hex(" ")
         raise ValueError(f"Not a LAS file (signature not found). First bytes: {peek}")
-    def u8(off): return b[off]
-    def u16(off): return struct.unpack_from('<H', b, off)[0]
-    def i32(off): return struct.unpack_from('<i', b, off)[0]
-    def u32(off): return struct.unpack_from('<I', b, off)[0]
-    def f64(off): return struct.unpack_from('<d', b, off)[0]
+
+    def u8(off):
+        return b[off]
+
+    def u16(off):
+        return struct.unpack_from("<H", b, off)[0]
+
+    def i32(off):
+        return struct.unpack_from("<i", b, off)[0]
+
+    def u32(off):
+        return struct.unpack_from("<I", b, off)[0]
+
+    def f64(off):
+        return struct.unpack_from("<d", b, off)[0]
 
     point_format = u8(base + 104)
     rec_len = u16(base + 105)
@@ -101,63 +119,83 @@ def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opt
         if rec_len == 0:
             raise ValueError("Invalid LAS record length 0")
         count = max(0, (n - offset_pts) // rec_len)
-    x_scale = f64(base + 131); y_scale = f64(base + 139); z_scale = f64(base + 147)
-    x_off = f64(base + 155); y_off = f64(base + 163); z_off = f64(base + 171)
+    x_scale = f64(base + 131)
+    y_scale = f64(base + 139)
+    z_scale = f64(base + 147)
+    x_off = f64(base + 155)
+    y_off = f64(base + 163)
+    z_off = f64(base + 171)
     offset_pts = u32(base + 96) + base
 
     step = max(1, count // max_points) if count > max_points else 1
     outN = (count + step - 1) // step
-    positions = [0.0]*(outN*3)
-    have_rgb = point_format in (2,3)
-    colors = [0.0]*(outN*3) if have_rgb else None
+    positions = [0.0] * (outN * 3)
+    have_rgb = point_format in (2, 3)
+    colors = [0.0] * (outN * 3) if have_rgb else None
     minI, maxI = 1e20, -1e20
-    intensities = [0.0]*outN
+    intensities = [0.0] * outN
     j = 0
     for i in range(0, count, step):
-        p = offset_pts + i*rec_len
-        if p + rec_len > n: break
-        X = i32(p+0); Y = i32(p+4); Z = i32(p+8)
-        I = u16(p+12)
+        p = offset_pts + i * rec_len
+        if p + rec_len > n:
+            break
+        X = i32(p + 0)
+        Y = i32(p + 4)
+        Z = i32(p + 8)
+        I = u16(p + 12)
         intensities[j] = I
-        if I < minI: minI = I
-        if I > maxI: maxI = I
-        positions[j*3+0] = X * x_scale + x_off
-        positions[j*3+1] = Y * y_scale + y_off
-        positions[j*3+2] = Z * z_scale + z_off
+        if I < minI:
+            minI = I
+        if I > maxI:
+            maxI = I
+        positions[j * 3 + 0] = X * x_scale + x_off
+        positions[j * 3 + 1] = Y * y_scale + y_off
+        positions[j * 3 + 2] = Z * z_scale + z_off
         if have_rgb and colors is not None:
             rgb_off = p + (20 if point_format == 2 else 28)
             if rgb_off + 6 <= n:
-                r = u16(rgb_off+0); g = u16(rgb_off+2); bch = u16(rgb_off+4)
-                colors[j*3+0] = r / 65535.0
-                colors[j*3+1] = g / 65535.0
-                colors[j*3+2] = bch / 65535.0
+                r = u16(rgb_off + 0)
+                g = u16(rgb_off + 2)
+                bch = u16(rgb_off + 4)
+                colors[j * 3 + 0] = r / 65535.0
+                colors[j * 3 + 1] = g / 65535.0
+                colors[j * 3 + 2] = bch / 65535.0
         j += 1
-        if j >= outN: break
+        if j >= outN:
+            break
     # intensity to color if no rgb
     if colors is None:
         span = max(1.0, (maxI - minI))
-        colors = [0.0]*(j*3)
+        colors = [0.0] * (j * 3)
+
         def colmap(t: float):
             t = max(0.0, min(1.0, t))
             if t < 0.25:
-                k = t/0.25; return (0.0, k, 1.0)
+                k = t / 0.25
+                return (0.0, k, 1.0)
             elif t < 0.5:
-                k = (t-0.25)/0.25; return (0.0, 1.0, 1.0-k)
+                k = (t - 0.25) / 0.25
+                return (0.0, 1.0, 1.0 - k)
             elif t < 0.75:
-                k = (t-0.5)/0.25; return (k, 1.0, 0.0)
+                k = (t - 0.5) / 0.25
+                return (k, 1.0, 0.0)
             else:
-                k = (t-0.75)/0.25; return (1.0, 1.0-k, 0.0)
+                k = (t - 0.75) / 0.25
+                return (1.0, 1.0 - k, 0.0)
+
         for k in range(j):
-            t = (intensities[k]-minI)/span
-            r,g,bl = colmap(t)
-            colors[k*3+0]=r; colors[k*3+1]=g; colors[k*3+2]=bl
+            t = (intensities[k] - minI) / span
+            r, g, bl = colmap(t)
+            colors[k * 3 + 0] = r
+            colors[k * 3 + 1] = g
+            colors[k * 3 + 2] = bl
     # Truncate arrays if loop ended early
-    positions = positions[:j*3]
-    colors = colors[:j*3] if colors is not None else None
+    positions = positions[: j * 3]
+    colors = colors[: j * 3] if colors is not None else None
     return positions, colors
 
 
-def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Optional[list]]:
+def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
     """Very tolerant parser for LAS (Log ASCII Standard) well log files.
     This is NOT LiDAR LAS. We attempt to extract X/Y/Z-like columns from the ~ASCII section
     according to curve names defined in the ~Curves section. If suitable columns are not found,
@@ -165,12 +203,13 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
     Returns (positions, colors) with positions as list[float] length N*3.
     """
     try:
-        text = buf.decode('utf-8', errors='ignore')
+        text = buf.decode("utf-8", errors="ignore")
     except Exception:
-        text = buf.decode('latin-1', errors='ignore')
+        text = buf.decode("latin-1", errors="ignore")
 
     # Normalize newlines and lowercase for section detection
-    lines = text.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
     # Locate sections
     def _find_section_prefixes(prefixes: list[str]) -> int:
         prefs = [p.lower() for p in prefixes]
@@ -182,11 +221,11 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
         return -1
 
     # Common variants: "~Curve", "~Curves", "~Curve Information" etc.
-    idx_curves = _find_section_prefixes(['~curv', '~curves'])
+    idx_curves = _find_section_prefixes(["~curv", "~curves"])
     # ASCII can be "~ASCII" or shorthand "~A"
-    idx_ascii = _find_section_prefixes(['~ascii', '~a'])
+    idx_ascii = _find_section_prefixes(["~ascii", "~a"])
     if idx_ascii < 0:
-        raise ValueError('Text LAS (~ASCII) section not found')
+        raise ValueError("Text LAS (~ASCII) section not found")
 
     # Parse curves names order
     curve_names: list[str] = []
@@ -194,13 +233,13 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
         i = idx_curves + 1
         while i < len(lines):
             ln = lines[i].strip()
-            if ln.startswith('~'):  # next section
+            if ln.startswith("~"):  # next section
                 break
-            if ln and not ln.startswith('#'):  # typical curve line: NAME .UNIT : description
+            if ln and not ln.startswith("#"):  # typical curve line: NAME .UNIT : description
                 # take name up to first space or '.'
-                name = ln.split(':', 1)[0].strip()
-                name = name.split('.', 1)[0].strip()
-                name = name.split(' ', 1)[0].strip()
+                name = ln.split(":", 1)[0].strip()
+                name = name.split(".", 1)[0].strip()
+                name = name.split(" ", 1)[0].strip()
                 if name:
                     curve_names.append(name)
             i += 1
@@ -221,12 +260,12 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
     expected_cols: int = len(curve_names) if curve_names else 0
     while i < len(lines):
         ln = lines[i].strip()
-        if ln.startswith('~'):
+        if ln.startswith("~"):
             break
-        if not ln or ln.startswith('#'):
+        if not ln or ln.startswith("#"):
             i += 1
             continue
-        parts = [p for p in ln.replace('\t', ' ').split() if p]
+        parts = [p for p in ln.replace("\t", " ").split() if p]
         # Infer expected columns once if not from curves
         if expected_cols == 0:
             expected_cols = len(parts)
@@ -244,11 +283,11 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
         i += 1
 
     if not data_rows:
-        raise ValueError('Text LAS (~ASCII) section has no numeric rows')
+        raise ValueError("Text LAS (~ASCII) section has no numeric rows")
 
     # Identify x,y,z columns with broader heuristics
     def norm(s: str) -> str:
-        return ''.join(ch for ch in s.upper() if ch.isalnum())
+        return "".join(ch for ch in s.upper() if ch.isalnum())
 
     def find_idx_heur(cands: list[str]) -> int:
         if not curve_names:
@@ -267,13 +306,19 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
                     return j
         return -1
 
-    x_idx = find_idx_heur(['X', 'XCOORD', 'X_COORD', 'X-COORD', 'EASTING', 'EAST', 'UTME', 'EASTINGUTM', 'E', 'XE'])
-    y_idx = find_idx_heur(['Y', 'YCOORD', 'Y_COORD', 'Y-COORD', 'NORTHING', 'NORTH', 'UTMN', 'NORTHINGUTM', 'N', 'YN'])
-    z_idx = find_idx_heur(['Z', 'ELEV', 'ELEVATION', 'HEIGHT', 'TVD', 'TVDSS', 'MD', 'DEPT', 'DEPTH'])
+    x_idx = find_idx_heur(
+        ["X", "XCOORD", "X_COORD", "X-COORD", "EASTING", "EAST", "UTME", "EASTINGUTM", "E", "XE"]
+    )
+    y_idx = find_idx_heur(
+        ["Y", "YCOORD", "Y_COORD", "Y-COORD", "NORTHING", "NORTH", "UTMN", "NORTHINGUTM", "N", "YN"]
+    )
+    z_idx = find_idx_heur(
+        ["Z", "ELEV", "ELEVATION", "HEIGHT", "TVD", "TVDSS", "MD", "DEPT", "DEPTH"]
+    )
 
     # Latitude/Longitude fallback to XY (meters) if needed
-    lat_idx = find_idx_heur(['LAT', 'LATITUDE', 'LATD'])
-    lon_idx = find_idx_heur(['LON', 'LONG', 'LONGITUDE', 'LOND'])
+    lat_idx = find_idx_heur(["LAT", "LATITUDE", "LATD"])
+    lon_idx = find_idx_heur(["LON", "LONG", "LONGITUDE", "LOND"])
 
     # If both X and Y missing but have lat/lon, create XY in meters using equirectangular approximation
     use_latlon = (x_idx < 0 or y_idx < 0) and (lat_idx >= 0 and lon_idx >= 0)
@@ -343,7 +388,7 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
             z = row[z_idx]
         else:
             # prefer DEPTH if present for z
-            dep_idx = find_idx_heur(['DEPT', 'DEPTH'])
+            dep_idx = find_idx_heur(["DEPT", "DEPTH"])
             z = row[dep_idx] if 0 <= dep_idx < len(row) else float(k)
 
         if 0 <= x_idx < len(row) and 0 <= y_idx < len(row):
@@ -353,6 +398,7 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
             lat = row[lat_idx]
             lon = row[lon_idx]
             import math
+
             lat_rad = math.radians(lat0)
             meters_per_deg_lat = 111132.0
             meters_per_deg_lon = 111320.0 * math.cos(lat_rad)
@@ -371,18 +417,17 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
         count += 1
 
     if count == 0:
-        raise ValueError('Text LAS parsed but no valid rows could be used')
+        raise ValueError("Text LAS parsed but no valid rows could be used")
 
     return positions, None
 
 
-def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Optional[list]]:
+def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
     """Parse LAZ (compressed LAS) using laspy + lazrs, return positions and optional RGB colors.
     Falls back to elevation-only coloring on the frontend if RGB is absent.
     """
     try:
         import laspy
-        import numpy as np  # laspy depends on numpy
     except Exception as e:
         raise ValueError(f"LAZ support not available: {e}")
 
@@ -405,9 +450,9 @@ def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
     for xi, yi, zi in zip(x, y, z):
         positions_extend([float(xi), float(yi), float(zi)])
 
-    colors: Optional[list] = None
+    colors: list | None = None
     dims = set(las.point_format.dimension_names)
-    if {'red', 'green', 'blue'}.issubset(dims):
+    if {"red", "green", "blue"}.issubset(dims):
         r = las.red[::step]
         g = las.green[::step]
         b = las.blue[::step]
@@ -419,7 +464,9 @@ def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> Tuple[list, Opti
 
 
 @router.get("/pointcloud")
-async def convert_pointcloud(src: str = Query(..., description="Source URL to point cloud"), name: Optional[str] = None):
+async def convert_pointcloud(
+    src: str = Query(..., description="Source URL to point cloud"), name: str | None = None
+):
     ext = detect_ext(name or src)
     extU = ext.upper()
     # Fast-path: pass-through formats
@@ -428,9 +475,12 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
 
     if ext == "las":
         # Fetch, parse, and emit temporary PLY stored in MinIO
-        if src.startswith("blob:" ) or src.startswith("data:"):
+        if src.startswith("blob:") or src.startswith("data:"):
             # Make it explicit for frontend
-            raise HTTPException(status_code=400, detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.")
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.",
+            )
         data = await fetch_bytes(src)
         try:
             positions, colors = parse_las_python(data, max_points=2_000_000)
@@ -438,7 +488,7 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
             # Try tolerant ASCII LAS (Log ASCII Standard) parsing as fallback
             try:
                 positions, colors = parse_las_ascii(data, max_points=2_000_000)
-            except Exception as e2:
+            except Exception:
                 # Surface backend parsing failure; frontend can fallback or report
                 raise HTTPException(status_code=400, detail=f"LAS parse failed: {e}")
         ply_bytes = write_ply_ascii(positions, colors)
@@ -450,8 +500,11 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
     if ext == "laz":
-        if src.startswith("blob:" ) or src.startswith("data:"):
-            raise HTTPException(status_code=400, detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.")
+        if src.startswith("blob:") or src.startswith("data:"):
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.",
+            )
         data = await fetch_bytes(src)
         try:
             positions, colors = parse_laz_laspy(data, max_points=2_000_000)
@@ -469,7 +522,10 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
     # Unsupported in-browser: attempt to signal conversion requirement
     if ext in ("e57", "rwi", "rwp"):
         # Placeholder: require PDAL/CloudCompare on server to implement
-        raise HTTPException(status_code=501, detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.")
+        raise HTTPException(
+            status_code=501,
+            detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.",
+        )
 
     raise HTTPException(status_code=400, detail=f"Unsupported point cloud format: {extU}")
 
@@ -477,7 +533,7 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
 @router.post("/pointcloud")
 async def convert_pointcloud_upload(
     file: UploadFile = File(..., description="Point cloud file to convert"),
-    name: Optional[str] = Form(None)
+    name: str | None = Form(None),
 ):
     """Accepts a file upload (multipart/form-data) and converts to a PLY stored in MinIO.
     Currently supports: LAS (uncompressed). PLY/PCD are re-uploaded as-is.
@@ -506,7 +562,7 @@ async def convert_pointcloud_upload(
             # Fallback to ASCII LAS tolerant parser
             try:
                 positions, colors = parse_las_ascii(data, max_points=2_000_000)
-            except Exception as e2:
+            except Exception:
                 raise HTTPException(status_code=400, detail=f"LAS parse failed: {e}")
         ply_bytes = write_ply_ascii(positions, colors)
         key_base = hashlib.sha1((provided_name + str(len(ply_bytes))).encode("utf-8")).hexdigest()
@@ -530,6 +586,9 @@ async def convert_pointcloud_upload(
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
     if ext in ("e57", "rwi", "rwp"):
-        raise HTTPException(status_code=501, detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.")
+        raise HTTPException(
+            status_code=501,
+            detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.",
+        )
 
     raise HTTPException(status_code=400, detail=f"Unsupported point cloud format: {extU}")

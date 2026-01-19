@@ -77,11 +77,7 @@ export default function RegisterScreen({ navigation }) {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -89,10 +85,7 @@ export default function RegisterScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.navigate('Login')}
-        >
+        <TouchableOpacity style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.linkText}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>

@@ -42,20 +42,17 @@ async function getService(): Promise<NoteServiceMethods> {
 /**
  * Proxy that intercepts calls and delegates to the correct service
  */
-export const noteService: NoteServiceMethods = new Proxy(
-  {} as NoteServiceMethods,
-  {
-    get(_, prop: keyof NoteServiceMethods) {
-      return async (...args: any[]) => {
-        const service = await getService();
-        const fn = service[prop];
-        if (typeof fn !== 'function') {
-          throw new Error(`Property ${String(prop)} is not a function on noteService`);
-        }
-        return (fn as (...args: any[]) => any).apply(service, args);
-      };
-    },
-  }
-);
+export const noteService: NoteServiceMethods = new Proxy({} as NoteServiceMethods, {
+  get(_, prop: keyof NoteServiceMethods) {
+    return async (...args: any[]) => {
+      const service = await getService();
+      const fn = service[prop];
+      if (typeof fn !== 'function') {
+        throw new Error(`Property ${String(prop)} is not a function on noteService`);
+      }
+      return (fn as (...args: any[]) => any).apply(service, args);
+    };
+  },
+});
 
 export default noteService;

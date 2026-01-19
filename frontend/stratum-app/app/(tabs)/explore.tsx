@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
 import type { Project } from '../../src/services/projectService.types';
@@ -24,9 +31,11 @@ export default function ExploreScreen() {
     try {
       const projects = await projectService.getProjects();
       // Get the 3 most recent projects
-      const sortedProjects = projects.sort((a: any, b: any) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ).slice(0, 3);
+      const sortedProjects = projects
+        .sort(
+          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        .slice(0, 3);
       setRecentProjects(sortedProjects);
     } catch (error) {
       console.error('Failed to load recent activity:', error);
@@ -86,14 +95,14 @@ export default function ExploreScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Archaeological Documentation</Text>
           <Text style={styles.infoDescription}>
-            STRATUM helps archaeologists document excavation sites, organize field notes, 
-            and collaborate with team members in real-time.
+            STRATUM helps archaeologists document excavation sites, organize field notes, and
+            collaborate with team members in real-time.
           </Text>
         </View>
       </View>
     </ScrollView>
   );
-      }
+}
 
 const styles = StyleSheet.create({
   container: {

@@ -26,8 +26,10 @@ export default function MeshPanel({ src, name }: { src: string | null; name?: st
       if (!el) return;
       const k = e.key;
       let deltaY = 0;
-      if (k === 'i' || k === 'I') deltaY = -100; // zoom in
-      else if (k === 'o' || k === 'O') deltaY = 100; // zoom out
+      if (k === 'i' || k === 'I')
+        deltaY = -100; // zoom in
+      else if (k === 'o' || k === 'O')
+        deltaY = 100; // zoom out
       else return;
 
       try {

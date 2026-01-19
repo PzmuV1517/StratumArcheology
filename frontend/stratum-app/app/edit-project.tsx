@@ -56,19 +56,19 @@ export default function EditProjectScreen() {
       setLoading(true);
       const [projectData, currentUser] = await Promise.all([
         projectService.getProject(projectId as string),
-        authService.getCurrentUser()
+        authService.getCurrentUser(),
       ]);
       setName(projectData.name);
       setDescription(projectData.description || '');
       setRanLmiId(projectData.ran_lmi_id || '');
-      
+
       // Check if current user is the owner
       const userId = currentUser?.id;
       setIsOwner(userId === projectData.owner_id);
     } catch (error) {
       console.error('Error loading project:', error);
       Alert.alert('Error', 'Failed to load project', [
-        { text: 'OK', onPress: () => router.back() }
+        { text: 'OK', onPress: () => router.back() },
       ]);
     } finally {
       setLoading(false);
@@ -99,7 +99,8 @@ export default function EditProjectScreen() {
       ]);
     } catch (error: any) {
       console.error('Failed to update project:', error);
-      const message = error?.detail || error?.message || 'Failed to save changes. Please try again.';
+      const message =
+        error?.detail || error?.message || 'Failed to save changes. Please try again.';
       Alert.alert('Error', message);
     } finally {
       setSaving(false);
@@ -120,7 +121,8 @@ export default function EditProjectScreen() {
       router.replace('/');
     } catch (error: any) {
       console.error('Failed to delete project:', error);
-      const message = error?.detail || error?.message || 'Failed to delete project. Please try again.';
+      const message =
+        error?.detail || error?.message || 'Failed to delete project. Please try again.';
       Alert.alert('Error', message);
     } finally {
       setDeleting(false);
@@ -130,19 +132,19 @@ export default function EditProjectScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Edit Project',
             headerStyle: { backgroundColor: '#111111' },
             headerTintColor: '#FF2A2A',
-            headerTitleStyle: { 
+            headerTitleStyle: {
               color: '#F5F5F5',
               fontSize: 18,
-              fontWeight: '600'
+              fontWeight: '600',
             },
             headerBackTitle: 'Project',
             headerShown: true,
-          }} 
+          }}
         />
         <ActivityIndicator size="large" color="#FF2A2A" />
         <Text style={styles.loadingText}>Loading project...</Text>
@@ -152,21 +154,21 @@ export default function EditProjectScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Edit Project',
           headerStyle: { backgroundColor: '#111111' },
           headerTintColor: '#FF2A2A',
-          headerTitleStyle: { 
+          headerTitleStyle: {
             color: '#F5F5F5',
             fontSize: 18,
-            fontWeight: '600'
+            fontWeight: '600',
           },
           headerBackTitle: 'Project',
           headerShown: true,
-        }} 
+        }}
       />
-      
+
       <ScrollView style={styles.content}>
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Edit Project</Text>
@@ -219,12 +221,16 @@ export default function EditProjectScreen() {
               onPress={handleDelete}
               disabled={saving || deleting}
             >
-              <Text style={styles.deleteButtonText}>{deleting ? 'Deleting...' : 'Delete Project'}</Text>
+              <Text style={styles.deleteButtonText}>
+                {deleting ? 'Deleting...' : 'Delete Project'}
+              </Text>
             </TouchableOpacity>
           ) : (
             <View style={[styles.deleteButton, styles.disabledButton]}>
               <Text style={styles.disabledButtonText}>Delete Project</Text>
-              <Text style={styles.permissionHint}>Only the project leader can delete this project</Text>
+              <Text style={styles.permissionHint}>
+                Only the project leader can delete this project
+              </Text>
             </View>
           )}
 
@@ -249,9 +255,12 @@ export default function EditProjectScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Confirm deletion</Text>
             <Text style={styles.modalText}>
-              This action will permanently delete this project and all its notes. To confirm, type the project name exactly:
+              This action will permanently delete this project and all its notes. To confirm, type
+              the project name exactly:
             </Text>
-            <Text style={[styles.modalText, { fontWeight: '700', color: '#F5F5F5', marginBottom: 12 }]}>
+            <Text
+              style={[styles.modalText, { fontWeight: '700', color: '#F5F5F5', marginBottom: 12 }]}
+            >
               {name}
             </Text>
             <TextInput
@@ -263,15 +272,25 @@ export default function EditProjectScreen() {
               autoCapitalize="none"
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDeleteModal(false)} disabled={deleting}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleting}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalDeleteButton, (!isNameMatch || deleting) && { opacity: 0.6 }]}
+                style={[
+                  styles.modalButton,
+                  styles.modalDeleteButton,
+                  (!isNameMatch || deleting) && { opacity: 0.6 },
+                ]}
                 onPress={confirmDelete}
                 disabled={!isNameMatch || deleting}
               >
-                <Text style={[styles.modalButtonText, styles.modalDeleteText]}>{deleting ? 'Deleting...' : 'Delete'}</Text>
+                <Text style={[styles.modalButtonText, styles.modalDeleteText]}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

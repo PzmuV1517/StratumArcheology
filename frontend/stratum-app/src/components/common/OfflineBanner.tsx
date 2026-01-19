@@ -9,7 +9,7 @@ interface OfflineBannerProps {
 
 /**
  * OfflineBanner - Shows a banner when the device is offline
- * 
+ *
  * Animates in/out smoothly when network status changes.
  * Shows at the top of the screen with safe area awareness.
  */
@@ -21,19 +21,19 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
-    
+
     // Check network status
     const checkNetwork = async () => {
       if (Platform.OS === 'web') {
         // Web: use navigator.onLine
         setIsOffline(!navigator.onLine);
-        
+
         const handleOnline = () => setIsOffline(false);
         const handleOffline = () => setIsOffline(true);
-        
+
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        
+
         cleanup = () => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
@@ -42,16 +42,16 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
         // Native: use @react-native-community/netinfo
         try {
           const NetInfo = await import('@react-native-community/netinfo');
-          
+
           // Get initial state
           const state = await NetInfo.default.fetch();
           setIsOffline(!state.isConnected);
-          
+
           // Subscribe to changes
-          const unsubscribe = NetInfo.default.addEventListener(state => {
+          const unsubscribe = NetInfo.default.addEventListener((state) => {
             setIsOffline(!state.isConnected);
           });
-          
+
           cleanup = unsubscribe;
         } catch (error) {
           console.warn('[OfflineBanner] NetInfo not available:', error);
@@ -60,7 +60,7 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
     };
 
     checkNetwork();
-    
+
     return () => {
       if (cleanup) {
         cleanup();
@@ -92,13 +92,13 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
   if (!showBanner) return null;
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
-        styles.container, 
-        { 
+        styles.container,
+        {
           paddingTop: insets.top + 4,
-          transform: [{ translateY: slideAnim }] 
-        }
+          transform: [{ translateY: slideAnim }],
+        },
       ]}
     >
       <View style={styles.content}>

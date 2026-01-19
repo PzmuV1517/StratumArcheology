@@ -1,9 +1,9 @@
 /**
  * Pure Unit Tests for Auto-Save Logic
- * 
+ *
  * These tests verify the core auto-save logic without React hooks.
  * Avoids complex React Native testing dependencies.
- * 
+ *
  * Run with: npm test -- autoSaveLogic.test.ts
  */
 
@@ -59,7 +59,7 @@ function shouldSave(
 // Helper to format "time ago" strings
 function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  
+
   if (seconds < 60) return 'Just now';
   if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
@@ -77,14 +77,18 @@ interface StatusDisplay {
 
 function getStatusDisplay(status: AutoSaveStatus): StatusDisplay {
   switch (status) {
-    case 'idle': return { text: '', color: 'gray', icon: null };
-    case 'saving': return { text: 'Saving...', color: 'blue', icon: 'sync' };
-    case 'saved': return { text: 'Draft saved', color: 'green', icon: 'check-circle' };
-    case 'error': return { text: 'Save failed', color: 'red', icon: 'alert-circle' };
-    case 'submitted': return { text: 'Submitted', color: 'green', icon: 'check' };
+    case 'idle':
+      return { text: '', color: 'gray', icon: null };
+    case 'saving':
+      return { text: 'Saving...', color: 'blue', icon: 'sync' };
+    case 'saved':
+      return { text: 'Draft saved', color: 'green', icon: 'check-circle' };
+    case 'error':
+      return { text: 'Save failed', color: 'red', icon: 'alert-circle' };
+    case 'submitted':
+      return { text: 'Submitted', color: 'green', icon: 'check' };
   }
 }
-
 
 describe('DraftManager', () => {
   let manager: DraftManager<{ title: string; content: string }>;
@@ -141,7 +145,7 @@ describe('DraftManager', () => {
     it('should remove the draft', () => {
       manager.saveDraft('key', { title: 'Test', content: '' });
       manager.clearDraft('key');
-      
+
       expect(manager.hasDraft('key')).toBe(false);
     });
   });
@@ -157,7 +161,6 @@ describe('DraftManager', () => {
     });
   });
 });
-
 
 describe('shouldSave helper', () => {
   it('should return true when never saved before', () => {
@@ -175,7 +178,6 @@ describe('shouldSave helper', () => {
   });
 });
 
-
 describe('formatTimeAgo', () => {
   it('should show "Just now" for recent timestamps', () => {
     expect(formatTimeAgo(Date.now() - 30000)).toBe('Just now');
@@ -191,7 +193,6 @@ describe('formatTimeAgo', () => {
     expect(result).toBe('2 hours ago');
   });
 });
-
 
 describe('getStatusDisplay', () => {
   it('should return empty text for idle', () => {

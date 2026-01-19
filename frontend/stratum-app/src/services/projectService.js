@@ -127,7 +127,9 @@ export const projectService = {
   // Transfer project ownership to another member
   transferOwnership: async (projectId, newOwnerId) => {
     try {
-      const response = await api.post(`/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`);
+      const response = await api.post(
+        `/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`
+      );
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

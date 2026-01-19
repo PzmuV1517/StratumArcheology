@@ -156,17 +156,17 @@ export default function RegisterScreen() {
                   <FaEye size={18} color="#FF2A2A" />
                 )
               ) : (
-                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off' : 'eye'}
+                  size={20}
+                  color="#FF2A2A"
+                />
               )}
             </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#F5F5F5" />
           ) : (
@@ -192,36 +192,36 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#111111',
     justifyContent: 'center',
-    padding: 24
+    padding: 24,
   },
   header: {
     marginBottom: 48,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#F5F5F5',
     marginBottom: 8,
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
     color: '#9A9A9A',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   form: {
-    marginBottom: 24
+    marginBottom: 24,
   },
   inputGroup: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   label: {
     fontSize: 12,
     color: '#9A9A9A',
     marginBottom: 8,
     letterSpacing: 0.5,
-    fontWeight: '600'
+    fontWeight: '600',
   },
   input: {
     backgroundColor: 'transparent',
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: '#F5F5F5',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   inputWrapper: {
     position: 'relative',
@@ -259,13 +259,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    elevation: 8
+    elevation: 8,
   },
   buttonText: {
     color: '#F5F5F5',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: 'row',
@@ -273,18 +273,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A'
+    borderTopColor: '#2A2A2A',
   },
   footerText: {
     fontSize: 14,
     color: '#9A9A9A',
     marginRight: 8,
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   linkText: {
     fontSize: 14,
     color: '#FF2A2A',
     fontWeight: '600',
-    letterSpacing: 0.5
-  }
+    letterSpacing: 0.5,
+  },
 });

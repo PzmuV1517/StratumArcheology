@@ -32,17 +32,34 @@ export default function QRCodeView({ value, size = 220, label, onReadyDataUrl }:
         }
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [value, size]);
 
   if (Platform.OS !== 'web') {
     return (
       <View style={{ alignItems: 'center' }}>
-        <View style={{ width: size, height: size, borderRadius: 12, backgroundColor: '#222', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#9A9A9A', textAlign: 'center', padding: 12 }}>QR available on web. Link:</Text>
-          <Text selectable style={{ color: '#F5F5F5', fontWeight: '600', textAlign: 'center' }}>{value}</Text>
+        <View
+          style={{
+            width: size,
+            height: size,
+            borderRadius: 12,
+            backgroundColor: '#222',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: '#9A9A9A', textAlign: 'center', padding: 12 }}>
+            QR available on web. Link:
+          </Text>
+          <Text selectable style={{ color: '#F5F5F5', fontWeight: '600', textAlign: 'center' }}>
+            {value}
+          </Text>
         </View>
-        {label ? <Text style={{ color: '#F5F5F5', marginTop: 8, fontWeight: '700' }}>{label}</Text> : null}
+        {label ? (
+          <Text style={{ color: '#F5F5F5', marginTop: 8, fontWeight: '700' }}>{label}</Text>
+        ) : null}
       </View>
     );
   }
@@ -50,13 +67,27 @@ export default function QRCodeView({ value, size = 220, label, onReadyDataUrl }:
   return (
     <View style={{ alignItems: 'center' }}>
       {dataUrl ? (
-        <Image source={{ uri: dataUrl }} style={{ width: size, height: size, borderRadius: 12, backgroundColor: '#FFF' }} />
+        <Image
+          source={{ uri: dataUrl }}
+          style={{ width: size, height: size, borderRadius: 12, backgroundColor: '#FFF' }}
+        />
       ) : (
-        <View style={{ width: size, height: size, borderRadius: 12, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            width: size,
+            height: size,
+            borderRadius: 12,
+            backgroundColor: '#FFF',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Text style={{ color: '#111' }}>Generating QR…</Text>
         </View>
       )}
-      {label ? <Text style={{ color: '#F5F5F5', marginTop: 8, fontWeight: '700' }}>{label}</Text> : null}
+      {label ? (
+        <Text style={{ color: '#F5F5F5', marginTop: 8, fontWeight: '700' }}>{label}</Text>
+      ) : null}
     </View>
   );
 }

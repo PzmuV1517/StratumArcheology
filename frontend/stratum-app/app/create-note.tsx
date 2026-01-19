@@ -122,7 +122,9 @@ export default function CreateNoteScreen() {
           return;
         }
         await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-        const result = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        const result = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
         setRecording(result.recording);
         setIsRecording(true);
       }
@@ -145,7 +147,7 @@ export default function CreateNoteScreen() {
           setRecordedUri(url);
           setRecording(null);
           if (liveStream) {
-            liveStream.getTracks().forEach(t => t.stop());
+            liveStream.getTracks().forEach((t) => t.stop());
             setLiveStream(null);
           }
         }, 200);
@@ -164,10 +166,12 @@ export default function CreateNoteScreen() {
 
   const resetRecording = () => {
     if (Platform.OS === 'web' && recordedUri) {
-      try { URL.revokeObjectURL(recordedUri); } catch {}
+      try {
+        URL.revokeObjectURL(recordedUri);
+      } catch {}
     }
     if (liveStream) {
-      liveStream.getTracks().forEach(t => t.stop());
+      liveStream.getTracks().forEach((t) => t.stop());
       setLiveStream(null);
     }
     setRecording(null);
@@ -180,7 +184,11 @@ export default function CreateNoteScreen() {
     const dest = { pathname: '/project/[id]', params: { id: String(projectId), tab: 'notes' } };
     router.replace(dest as any);
     // web sometimes needs a push to refresh list
-    setTimeout(() => { try { router.push(dest as any); } catch {} }, 10);
+    setTimeout(() => {
+      try {
+        router.push(dest as any);
+      } catch {}
+    }, 10);
   }, [projectId]);
 
   const handleCreate = async () => {
@@ -207,7 +215,7 @@ export default function CreateNoteScreen() {
         title: title.trim(),
         content: isVoiceNote ? '' : content.trim(),
         project_id: projectId as string,
-        is_voice: isVoiceNote
+        is_voice: isVoiceNote,
       });
       if (isVoiceNote && recordedUri) {
         try {
@@ -228,7 +236,7 @@ export default function CreateNoteScreen() {
       await markSubmitted();
       // Show success and navigate back
       Alert.alert('Success', 'Note created successfully!', [
-        { text: 'OK', onPress: () => setTimeout(() => navigateBackToNotes(), 100) }
+        { text: 'OK', onPress: () => setTimeout(() => navigateBackToNotes(), 100) },
       ]);
     } catch (error: any) {
       console.error('Failed to create note:', error);
@@ -241,19 +249,19 @@ export default function CreateNoteScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Create Note',
           headerStyle: { backgroundColor: '#111111' },
           headerTintColor: '#FF2A2A',
-          headerTitleStyle: { 
+          headerTitleStyle: {
             color: '#F5F5F5',
             fontSize: 18,
-            fontWeight: '600'
+            fontWeight: '600',
           },
           headerBackTitle: 'Project',
           headerShown: true,
-        }} 
+        }}
       />
 
       {/* Draft Recovery Modal */}
@@ -285,13 +293,17 @@ export default function CreateNoteScreen() {
       {saveStatus !== 'idle' && (
         <View style={styles.saveStatusBar}>
           <Text style={styles.saveStatusText}>
-            {saveStatus === 'saving' ? '💾 Saving draft...' : 
-             saveStatus === 'saved' ? '✓ Draft saved' : 
-             saveStatus === 'error' ? '⚠ Save failed' : ''}
+            {saveStatus === 'saving'
+              ? '💾 Saving draft...'
+              : saveStatus === 'saved'
+                ? '✓ Draft saved'
+                : saveStatus === 'error'
+                  ? '⚠ Save failed'
+                  : ''}
           </Text>
         </View>
       )}
-      
+
       <ScrollView style={styles.content}>
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Create New Note</Text>
@@ -309,13 +321,15 @@ export default function CreateNoteScreen() {
             <TouchableOpacity
               style={[styles.toggleButton, isVoiceNote && styles.toggleActive]}
               onPress={() => {
-                setIsVoiceNote(v => !v);
+                setIsVoiceNote((v) => !v);
                 if (!isVoiceNote) setContent('');
                 else resetRecording();
               }}
               disabled={loading}
             >
-              <Text style={styles.toggleText}>{isVoiceNote ? 'Voice Note Enabled' : 'Voice Note: OFF'}</Text>
+              <Text style={styles.toggleText}>
+                {isVoiceNote ? 'Voice Note Enabled' : 'Voice Note: OFF'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -338,10 +352,16 @@ export default function CreateNoteScreen() {
           {isVoiceNote && (
             <View style={styles.voiceContainer}>
               <Text style={styles.label}>Voice Recording</Text>
-              {Platform.OS === 'web' && <LiveWaveform stream={liveStream} isRecording={isRecording} />}
+              {Platform.OS === 'web' && (
+                <LiveWaveform stream={liveStream} isRecording={isRecording} />
+              )}
               {Platform.OS !== 'web' && <NativeLevelBar active={isRecording} />}
               {recording ? (
-                <TouchableOpacity style={[styles.recButton, styles.stop]} onPress={stopRecording} disabled={loading}>
+                <TouchableOpacity
+                  style={[styles.recButton, styles.stop]}
+                  onPress={stopRecording}
+                  disabled={loading}
+                >
                   <Text style={styles.recButtonText}>Stop Recording</Text>
                 </TouchableOpacity>
               ) : (
@@ -350,14 +370,22 @@ export default function CreateNoteScreen() {
                   onPress={startRecording}
                   disabled={loading}
                 >
-                  <Text style={styles.recButtonText}>{recordedUri ? 'Re-record' : 'Start Recording'}</Text>
+                  <Text style={styles.recButtonText}>
+                    {recordedUri ? 'Re-record' : 'Start Recording'}
+                  </Text>
                 </TouchableOpacity>
               )}
               {recordedUri && !recording && (
                 <>
                   <Text style={styles.recInfo}>Recorded file ready to upload</Text>
-                  {Platform.OS === 'web' ? <audio src={recordedUri} controls style={{ width: '100%', marginBottom: 8 }} /> : null}
-                  <TouchableOpacity style={styles.clearAudio} onPress={resetRecording} disabled={loading}>
+                  {Platform.OS === 'web' ? (
+                    <audio src={recordedUri} controls style={{ width: '100%', marginBottom: 8 }} />
+                  ) : null}
+                  <TouchableOpacity
+                    style={styles.clearAudio}
+                    onPress={resetRecording}
+                    disabled={loading}
+                  >
                     <Text style={styles.clearAudioText}>Remove Audio</Text>
                   </TouchableOpacity>
                 </>
@@ -392,7 +420,13 @@ export default function CreateNoteScreen() {
 }
 
 // Live waveform (web)
-function LiveWaveform({ stream, isRecording }: { stream: MediaStream | null; isRecording: boolean }) {
+function LiveWaveform({
+  stream,
+  isRecording,
+}: {
+  stream: MediaStream | null;
+  isRecording: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const acRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -427,10 +461,25 @@ function LiveWaveform({ stream, isRecording }: { stream: MediaStream | null; isR
     draw();
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      try { ac.close(); } catch {}
+      try {
+        ac.close();
+      } catch {}
     };
   }, [stream, isRecording]);
-  return <canvas ref={canvasRef} width={800} height={120} style={{ width: '100%', height: 120, backgroundColor: '#111', borderRadius: 8, marginBottom: 12 }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      width={800}
+      height={120}
+      style={{
+        width: '100%',
+        height: 120,
+        backgroundColor: '#111',
+        borderRadius: 8,
+        marginBottom: 12,
+      }}
+    />
+  );
 }
 
 // Native simple level bar placeholder
@@ -515,17 +564,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   toggleRow: { marginBottom: 24 },
-  toggleButton: { backgroundColor: '#1E1E1E', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
+  toggleButton: {
+    backgroundColor: '#1E1E1E',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   toggleActive: { borderColor: '#FF2A2A', backgroundColor: '#2A2A2A' },
   toggleText: { color: '#F5F5F5', fontWeight: '600', fontSize: 14, letterSpacing: 0.3 },
-  voiceContainer: { marginBottom: 24, padding: 16, borderRadius: 12, backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333' },
+  voiceContainer: {
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   recButton: { padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 12 },
   start: { backgroundColor: '#FF2A2A' },
   stop: { backgroundColor: '#FF4444' },
   reRecord: { backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#FF2A2A' },
   recButtonText: { color: '#F5F5F5', fontWeight: '600', fontSize: 14 },
   recInfo: { color: '#9A9A9A', fontSize: 12, marginBottom: 8 },
-  clearAudio: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' },
+  clearAudio: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#2A2A2A',
+    borderWidth: 1,
+    borderColor: '#444',
+  },
   clearAudioText: { color: '#CFCFCF', fontSize: 12 },
   errorText: { color: '#FF5555', fontSize: 12, marginTop: 4 },
   // Auto-save modal styles

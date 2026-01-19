@@ -40,7 +40,10 @@ const getApiBaseUrl = (): string => {
 
   console.log('[Config] Platform:', Platform.OS);
   console.log('[Config] Constants.expoConfig?.hostUri:', Constants.expoConfig?.hostUri);
-  console.log('[Config] Constants.manifest2?.extra?.expoGo?.debuggerHost:', Constants.manifest2?.extra?.expoGo?.debuggerHost);
+  console.log(
+    '[Config] Constants.manifest2?.extra?.expoGo?.debuggerHost:',
+    Constants.manifest2?.extra?.expoGo?.debuggerHost
+  );
 
   if (Platform.OS === 'web') {
     // Web runs in browser, localhost works
@@ -53,9 +56,10 @@ const getApiBaseUrl = (): string => {
   if (Platform.OS === 'ios') {
     // Check if we're running in a simulator vs physical device
     // Physical iOS devices need the debuggerHost IP to reach the dev machine
-    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    const debuggerHost =
+      Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
     const hostIp = debuggerHost?.split(':')[0];
-    
+
     // If hostIp is a real network IP (not localhost/127.0.0.1), we might be on a physical device
     // But we can't reliably detect simulator vs physical device, so we provide both options
     // For now, default to 127.0.0.1 for iOS (works in simulator)
@@ -74,7 +78,8 @@ const getApiBaseUrl = (): string => {
   }
 
   // For other platforms or physical devices, try to use debuggerHost
-  const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+  const debuggerHost =
+    Constants.expoConfig?.hostUri || Constants.manifest2?.extra?.expoGo?.debuggerHost;
   if (debuggerHost) {
     const hostIp = debuggerHost.split(':')[0];
     console.log('[Config] debuggerHost:', debuggerHost, '-> hostIp:', hostIp);

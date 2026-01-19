@@ -62,11 +62,7 @@ export default function CreateNoteScreen({ route, navigation }) {
           numberOfLines={10}
         />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleCreate}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -74,10 +70,7 @@ export default function CreateNoteScreen({ route, navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>

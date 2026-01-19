@@ -57,10 +57,7 @@ export const projectService = {
   /**
    * Update a project
    */
-  updateProject: async (
-    projectId: string,
-    projectData: UpdateProjectData
-  ): Promise<Project> => {
+  updateProject: async (projectId: string, projectData: UpdateProjectData): Promise<Project> => {
     try {
       const response = await api.put(`/projects/${projectId}`, projectData);
       return response.data;
@@ -159,10 +156,7 @@ export const projectService = {
     role: string
   ): Promise<ProjectMember> => {
     try {
-      const response = await api.put(
-        `/projects/${projectId}/members/${userId}/role`,
-        { role }
-      );
+      const response = await api.put(`/projects/${projectId}/members/${userId}/role`, { role });
       return response.data;
     } catch (error: any) {
       throw error.response?.data || error;
@@ -172,10 +166,7 @@ export const projectService = {
   /**
    * Transfer project ownership to another member
    */
-  transferOwnership: async (
-    projectId: string,
-    newOwnerId: string
-  ): Promise<Project> => {
+  transferOwnership: async (projectId: string, newOwnerId: string): Promise<Project> => {
     try {
       const response = await api.post(
         `/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`

@@ -1,9 +1,9 @@
 /**
  * Pure Unit Tests for Sync Logic
- * 
+ *
  * These tests verify the core sync queue and conflict logic without
  * requiring React Native or Expo dependencies.
- * 
+ *
  * Run with: npm test -- syncLogic.test.ts
  */
 
@@ -44,7 +44,7 @@ class RequestQueue {
   }
 
   getPending(): QueuedRequest[] {
-    return this.queue.filter(r => r.retryCount < 5);
+    return this.queue.filter((r) => r.retryCount < 5);
   }
 
   getAll(): QueuedRequest[] {
@@ -52,18 +52,18 @@ class RequestQueue {
   }
 
   markComplete(id: number): void {
-    this.queue = this.queue.filter(r => r.id !== id);
+    this.queue = this.queue.filter((r) => r.id !== id);
   }
 
   incrementRetry(id: number): void {
-    const request = this.queue.find(r => r.id === id);
+    const request = this.queue.find((r) => r.id === id);
     if (request) {
       request.retryCount++;
     }
   }
 
   hasExceededRetries(id: number, maxRetries: number = 5): boolean {
-    const request = this.queue.find(r => r.id === id);
+    const request = this.queue.find((r) => r.id === id);
     return request ? request.retryCount >= maxRetries : false;
   }
 
@@ -78,11 +78,7 @@ class RequestQueue {
 
 // Conflict detector
 class ConflictDetector {
-  detectConflict(
-    localUpdatedAt: number,
-    serverUpdatedAt: number,
-    syncedAt: number
-  ): boolean {
+  detectConflict(localUpdatedAt: number, serverUpdatedAt: number, syncedAt: number): boolean {
     // Conflict if server was modified after our last sync
     // AND we have local changes
     return serverUpdatedAt > syncedAt && localUpdatedAt > syncedAt;
@@ -122,7 +118,7 @@ class NetworkSimulator {
   setOnline(online: boolean): void {
     if (this.online !== online) {
       this.online = online;
-      this.listeners.forEach(l => l(online));
+      this.listeners.forEach((l) => l(online));
     }
   }
 
@@ -133,11 +129,10 @@ class NetworkSimulator {
   subscribe(callback: (online: boolean) => void): () => void {
     this.listeners.push(callback);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== callback);
+      this.listeners = this.listeners.filter((l) => l !== callback);
     };
   }
 }
-
 
 describe('RequestQueue', () => {
   let queue: RequestQueue;
@@ -181,7 +176,7 @@ describe('RequestQueue', () => {
 
     it('should exclude requests at max retries', () => {
       const id = queue.add({ method: 'POST', url: '/a', body: null, headers: {} });
-      
+
       // Simulate 5 failed retries
       for (let i = 0; i < 5; i++) {
         queue.incrementRetry(id);
@@ -204,7 +199,7 @@ describe('RequestQueue', () => {
   describe('incrementRetry', () => {
     it('should increment retry count', () => {
       const id = queue.add({ method: 'POST', url: '/a', body: null, headers: {} });
-      
+
       queue.incrementRetry(id);
       queue.incrementRetry(id);
 
@@ -221,7 +216,7 @@ describe('RequestQueue', () => {
 
     it('should return true after max retries', () => {
       const id = queue.add({ method: 'POST', url: '/a', body: null, headers: {} });
-      
+
       for (let i = 0; i < 5; i++) {
         queue.incrementRetry(id);
       }
@@ -230,7 +225,6 @@ describe('RequestQueue', () => {
     });
   });
 });
-
 
 describe('ConflictDetector', () => {
   let detector: ConflictDetector;
@@ -303,7 +297,6 @@ describe('ConflictDetector', () => {
   });
 });
 
-
 describe('calculateBackoff', () => {
   it('should return base delay for first retry', () => {
     const delay = calculateBackoff(0, 1000);
@@ -314,7 +307,7 @@ describe('calculateBackoff', () => {
   it('should double delay for each retry', () => {
     const delay1 = calculateBackoff(1, 1000, 30000);
     const delay2 = calculateBackoff(2, 1000, 30000);
-    
+
     // With jitter, roughly 2x and 4x
     expect(delay1).toBeGreaterThan(1500);
     expect(delay2).toBeGreaterThan(3000);
@@ -325,7 +318,6 @@ describe('calculateBackoff', () => {
     expect(delay).toBeLessThanOrEqual(33000); // Max + 10% jitter
   });
 });
-
 
 describe('NetworkSimulator', () => {
   let network: NetworkSimulator;
@@ -346,28 +338,28 @@ describe('NetworkSimulator', () => {
   it('should notify subscribers on change', () => {
     const callback = jest.fn();
     network.subscribe(callback);
-    
+
     network.setOnline(false);
-    
+
     expect(callback).toHaveBeenCalledWith(false);
   });
 
   it('should not notify on same state', () => {
     const callback = jest.fn();
     network.subscribe(callback);
-    
+
     network.setOnline(true); // Already true
-    
+
     expect(callback).not.toHaveBeenCalled();
   });
 
   it('should allow unsubscribing', () => {
     const callback = jest.fn();
     const unsubscribe = network.subscribe(callback);
-    
+
     unsubscribe();
     network.setOnline(false);
-    
+
     expect(callback).not.toHaveBeenCalled();
   });
 });

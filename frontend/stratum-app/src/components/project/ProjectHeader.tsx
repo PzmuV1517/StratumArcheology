@@ -13,10 +13,16 @@ export default function ProjectHeader({ project }: { project: Project }) {
   return (
     <View style={styles.projectHeader}>
       <Text style={styles.projectName}>{project.name}</Text>
-      {!!project.description && <Text style={styles.projectDescription}>{project.description}</Text>}
+      {!!project.description && (
+        <Text style={styles.projectDescription}>{project.description}</Text>
+      )}
       <View style={styles.projectMeta}>
-  <Text style={styles.projectMetaText}>Created: {new Date(project.created_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
-  <Text style={styles.projectMetaText}>Updated: {new Date(project.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
+        <Text style={styles.projectMetaText}>
+          Created: {new Date(project.created_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+        </Text>
+        <Text style={styles.projectMetaText}>
+          Updated: {new Date(project.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+        </Text>
       </View>
     </View>
   );

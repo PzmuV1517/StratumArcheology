@@ -93,10 +93,7 @@ export default function ProjectsScreen({ navigation }) {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreateProject')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateProject')}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
     </View>

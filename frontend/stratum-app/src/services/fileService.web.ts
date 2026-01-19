@@ -10,7 +10,11 @@ export const fileService = {
   ...fileServiceCore,
 
   // Web-specific upload using FormData with File objects
-  uploadFile: async (projectId: string, file: File, parentId: string | null = null): Promise<FileNode> => {
+  uploadFile: async (
+    projectId: string,
+    file: File,
+    parentId: string | null = null
+  ): Promise<FileNode> => {
     const formData = new FormData();
     formData.append('file', file);
     if (parentId) {
@@ -34,7 +38,10 @@ export const fileService = {
   },
 
   // Web-specific download using fetch with streaming
-  downloadFile: async (nodeId: string, onProgress?: (loaded: number, total: number) => void): Promise<DownloadResult> => {
+  downloadFile: async (
+    nodeId: string,
+    onProgress?: (loaded: number, total: number) => void
+  ): Promise<DownloadResult> => {
     const token = await AsyncStorage.getItem('authToken');
     const url = `${api.defaults.baseURL}/files/${nodeId}/download`;
     const headers: Record<string, string> = {};

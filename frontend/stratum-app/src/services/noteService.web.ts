@@ -17,7 +17,11 @@ export const noteService = {
   },
 
   // Web-specific: upload audio blob from MediaRecorder
-  uploadAudio: async (noteId: string, blob: Blob, filename: string = 'voice-note.webm'): Promise<Attachment> => {
+  uploadAudio: async (
+    noteId: string,
+    blob: Blob,
+    filename: string = 'voice-note.webm'
+  ): Promise<Attachment> => {
     const formData = new FormData();
     const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
     formData.append('file', file, filename);
@@ -47,7 +51,7 @@ export const noteService = {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
-        
+
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             audioChunks.push(event.data);
@@ -67,7 +71,7 @@ export const noteService = {
           mediaRecorder.onstop = () => {
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
             // Stop all tracks
-            mediaRecorder?.stream.getTracks().forEach(track => track.stop());
+            mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
             resolve(blob);
           };
 
@@ -77,7 +81,7 @@ export const noteService = {
 
       cancel: () => {
         if (mediaRecorder) {
-          mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          mediaRecorder.stream.getTracks().forEach((track) => track.stop());
           mediaRecorder = null;
           audioChunks = [];
         }

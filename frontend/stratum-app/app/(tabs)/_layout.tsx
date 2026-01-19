@@ -10,7 +10,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
  * TabLayout - Main navigation tabs
  * Tab order: Overview (landing), Projects, Profile, Settings
  * Auth is handled by AuthRedirector at the root level
- * 
+ *
  * Uses iOS-style liquid glass aesthetic with blur effects
  */
 export default function TabLayout() {
@@ -21,7 +21,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#9A9A9A',
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarBackground: () => (
+        tabBarBackground: () =>
           Platform.OS === 'ios' ? (
             <BlurView
               intensity={50}
@@ -29,9 +29,10 @@ export default function TabLayout() {
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(26, 26, 26, 0.95)' }]} />
-          )
-        ),
+            <View
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(26, 26, 26, 0.95)' }]}
+            />
+          ),
         tabBarStyle: Platform.select({
           ios: {
             position: 'absolute',
@@ -58,42 +59,34 @@ export default function TabLayout() {
         name="overview"
         options={{
           title: 'Overview',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="house.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
         }}
       />
-      
+
       {/* Projects - All projects list */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Projects',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="folder.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="folder.fill" color={color} />,
         }}
       />
-      
+
       {/* Profile - User profile */}
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="person.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
         }}
       />
-      
+
       {/* Settings - App settings */}
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="gearshape.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
         }}
       />
 

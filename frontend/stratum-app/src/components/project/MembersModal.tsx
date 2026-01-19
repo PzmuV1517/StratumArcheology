@@ -1,5 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Image, Alert, Clipboard } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  Image,
+  Alert,
+  Clipboard,
+} from 'react-native';
 import { projectService } from '../../services/projectService';
 
 interface Member {
@@ -21,23 +32,37 @@ interface Props {
   onKicked?: () => void; // Called when current user is kicked
 }
 
-export default function MembersModal({ visible, members, onClose, onManage, renderMember, projectId, currentUserId, projectOwnerId, onKicked }: Props) {
-  const ownerId = projectOwnerId || members.find(m => (m.role || '').toString().toUpperCase() === 'LEADER')?.id || null;
-  
+export default function MembersModal({
+  visible,
+  members,
+  onClose,
+  onManage,
+  renderMember,
+  projectId,
+  currentUserId,
+  projectOwnerId,
+  onKicked,
+}: Props) {
+  const ownerId =
+    projectOwnerId ||
+    members.find((m) => (m.role || '').toString().toUpperCase() === 'LEADER')?.id ||
+    null;
+
   // Get current user's role
   const currentUserRole = useMemo(() => {
     if (!currentUserId) return null;
     if (currentUserId === ownerId) return 'LEADER';
-    const member = members.find(m => m.id === currentUserId);
+    const member = members.find((m) => m.id === currentUserId);
     return member ? (member.role || '').toString().toUpperCase() : null;
   }, [currentUserId, ownerId, members]);
-  
+
   const isOwner = currentUserRole === 'LEADER';
   const isResearcher = currentUserRole === 'RESEARCHER';
   const canManage = isOwner || isResearcher; // Both can manage, but with different permissions
-  
+
   const [inviteRole, setInviteRole] = useState<'RESEARCHER' | 'GUEST'>('GUEST');
-  const appOrigin = Platform.OS === 'web' ? (typeof window !== 'undefined' ? window.location.origin : '') : '';
+  const appOrigin =
+    Platform.OS === 'web' ? (typeof window !== 'undefined' ? window.location.origin : '') : '';
 
   const [manageError, setManageError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -48,13 +73,16 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState<string | null>(null);
-  const [showRoleChangeConfirm, setShowRoleChangeConfirm] = useState<{ userId: string; newRole: 'RESEARCHER' | 'GUEST' } | null>(null);
+  const [showRoleChangeConfirm, setShowRoleChangeConfirm] = useState<{
+    userId: string;
+    newRole: 'RESEARCHER' | 'GUEST';
+  } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
   // Role hierarchy for permission checks
-  const roleHierarchy: Record<string, number> = { 'LEADER': 3, 'RESEARCHER': 2, 'GUEST': 1 };
-  
+  const roleHierarchy: Record<string, number> = { LEADER: 3, RESEARCHER: 2, GUEST: 1 };
+
   // Get member's normalized role
   const getMemberRole = (member: Member): string => {
     return (member.role || '').toString().toUpperCase();
@@ -65,10 +93,10 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
     if (!canManage) return false;
     if (member.id === currentUserId) return false; // Can't manage yourself
     if (member.id === ownerId) return false; // Can't manage the owner
-    
+
     const memberRole = getMemberRole(member);
     const myRole = currentUserRole || '';
-    
+
     // Can only manage members with lower roles
     return roleHierarchy[myRole] > roleHierarchy[memberRole];
   };
@@ -77,13 +105,13 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
   const canKickMember = (member: Member): boolean => {
     if (!canManageMember(member)) return false;
     const memberRole = getMemberRole(member);
-    
+
     // Leaders can kick anyone below them
     if (isOwner) return memberRole !== 'LEADER';
-    
+
     // Researchers can only kick guests
     if (isResearcher) return memberRole === 'GUEST';
-    
+
     return false;
   };
 
@@ -95,18 +123,18 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
   // Get available role options for a member
   const getAvailableRoles = (member: Member): string[] => {
     const memberRole = getMemberRole(member);
-    
+
     if (isOwner) {
       // Leaders can set any role except leader (that's transfer)
-      return ['RESEARCHER', 'GUEST'].filter(r => r !== memberRole);
+      return ['RESEARCHER', 'GUEST'].filter((r) => r !== memberRole);
     }
-    
+
     if (isResearcher) {
       // Researchers can only toggle guests to researcher
       if (memberRole === 'GUEST') return ['RESEARCHER'];
       return [];
     }
-    
+
     return [];
   };
 
@@ -141,12 +169,12 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
       await projectService.removeMember(projectId, userId);
       setExpandedMemberId(null);
       setShowRemoveConfirm(null);
-      
+
       // If the current user was kicked, trigger the callback
       if (userId === currentUserId && onKicked) {
         onKicked();
       }
-      
+
       onManage();
     } catch (e: any) {
       setManageError(e?.detail || e?.message || 'Failed to remove member');
@@ -161,7 +189,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
       setShowTransferConfirm(null);
       setExpandedMemberId(null);
       onManage();
-      
+
       // Show success message
       if (Platform.OS === 'web') {
         alert('Ownership transferred successfully. You are now a researcher.');
@@ -185,7 +213,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
       const link = `${appOrigin || 'stratum://app'}${resp.accept_path}`;
       setGeneratedLink(link);
       setGeneratedCode(resp.code || null);
-      setGeneratedExpiresAt(resp.expires_at || null as any);
+      setGeneratedExpiresAt(resp.expires_at || (null as any));
     } catch (e: any) {
       setManageError(e?.detail || e?.message || 'Failed to generate invite');
     } finally {
@@ -195,7 +223,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
 
   const copyToClipboard = async () => {
     if (!generatedLink) return;
-    
+
     try {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(generatedLink);
@@ -211,7 +239,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
 
   const copyCodeToClipboard = async () => {
     if (!generatedCode) return;
-    
+
     try {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(generatedCode);
@@ -254,22 +282,25 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <Text style={styles.sectionTitle}>Team Members</Text>
             {canManage && (
-              <TouchableOpacity style={styles.actionButton} onPress={() => setIsManaging(!isManaging)}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => setIsManaging(!isManaging)}
+              >
                 <Text style={styles.actionButtonText}>{isManaging ? '✓ Done' : '⚙ Manage'}</Text>
               </TouchableOpacity>
             )}
           </View>
-          
+
           <ScrollView style={{ maxHeight: '60%' }}>
             {members.length > 0 ? (
               members.map((m) => {
                 const memberRole = getMemberRole(m);
                 const canManageThis = canManageMember(m);
                 const isExpanded = expandedMemberId === m.id && isManaging;
-                
+
                 return (
                   <View key={m.id} style={styles.memberCard}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.memberRow}
                       onPress={() => {
                         if (isManaging && canManageThis) {
@@ -279,9 +310,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                       activeOpacity={0.7}
                       disabled={!isManaging || !canManageThis}
                     >
-                      <View style={styles.memberInfo}>
-                        {renderMember(m)}
-                      </View>
+                      <View style={styles.memberInfo}>{renderMember(m)}</View>
                       <View style={[styles.roleBadge, getRoleBadgeStyle(memberRole)]}>
                         <Text style={styles.roleBadgeText}>{memberRole}</Text>
                       </View>
@@ -289,43 +318,47 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                         <Text style={styles.expandIcon}>{isExpanded ? '▲' : '▼'}</Text>
                       )}
                     </TouchableOpacity>
-                    
+
                     {/* Expanded management options */}
                     {isExpanded && (
                       <View style={styles.memberActions}>
                         {/* Role change buttons */}
-                        {canChangeRoleOf(m) && getAvailableRoles(m).length > 0 && getAvailableRoles(m).map(role => (
-                          <TouchableOpacity 
-                            key={role}
-                            style={styles.actionBtn}
-                            onPress={() => confirmRoleChange(m.id, role as 'RESEARCHER' | 'GUEST')}
-                          >
-                            <Text style={styles.actionBtnText}>
-                              Make {role.charAt(0) + role.slice(1).toLowerCase()}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                        
+                        {canChangeRoleOf(m) &&
+                          getAvailableRoles(m).length > 0 &&
+                          getAvailableRoles(m).map((role) => (
+                            <TouchableOpacity
+                              key={role}
+                              style={styles.actionBtn}
+                              onPress={() =>
+                                confirmRoleChange(m.id, role as 'RESEARCHER' | 'GUEST')
+                              }
+                            >
+                              <Text style={styles.actionBtnText}>
+                                Make {role.charAt(0) + role.slice(1).toLowerCase()}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+
                         {/* Transfer ownership button (leader only) */}
                         {isOwner && (
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             style={[styles.actionBtn, styles.transferBtn]}
                             onPress={() => setShowTransferConfirm(m.id)}
                           >
                             <Text style={styles.actionBtnText}>Transfer Leadership</Text>
                           </TouchableOpacity>
                         )}
-                        
+
                         {/* Remove button */}
                         {canKickMember(m) && (
-                          <TouchableOpacity 
+                          <TouchableOpacity
                             style={[styles.actionBtn, styles.dangerBtn]}
                             onPress={() => confirmRemoveMember(m.id)}
                           >
                             <Text style={styles.actionBtnText}>Remove from Project</Text>
                           </TouchableOpacity>
                         )}
-                        
+
                         {/* If no actions available, show info */}
                         {!canChangeRoleOf(m) && !isOwner && !canKickMember(m) && (
                           <Text style={styles.noActionsText}>No actions available</Text>
@@ -342,7 +375,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               </View>
             )}
           </ScrollView>
-          
+
           {/* Transfer ownership confirmation modal */}
           {showTransferConfirm && (
             <View style={styles.confirmOverlay}>
@@ -351,20 +384,22 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                 <Text style={styles.confirmText}>
                   Are you sure you want to transfer project leadership to{' '}
                   <Text style={styles.confirmHighlight}>
-                    {members.find(m => m.id === showTransferConfirm)?.display_name || 'this member'}
-                  </Text>?
+                    {members.find((m) => m.id === showTransferConfirm)?.display_name ||
+                      'this member'}
+                  </Text>
+                  ?
                 </Text>
                 <Text style={styles.confirmWarning}>
                   You will become a researcher and lose owner permissions.
                 </Text>
                 <View style={styles.confirmButtons}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, styles.cancelBtn]}
                     onPress={() => setShowTransferConfirm(null)}
                   >
                     <Text style={styles.confirmBtnText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, styles.dangerBtn]}
                     onPress={() => handleTransferOwnership(showTransferConfirm)}
                   >
@@ -374,7 +409,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               </View>
             </View>
           )}
-          
+
           {/* Remove member confirmation modal */}
           {showRemoveConfirm && (
             <View style={styles.confirmOverlay}>
@@ -383,7 +418,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                 <Text style={styles.confirmText}>
                   Are you sure you want to remove{' '}
                   <Text style={styles.confirmHighlight}>
-                    {members.find(m => m.id === showRemoveConfirm)?.display_name || 'this member'}
+                    {members.find((m) => m.id === showRemoveConfirm)?.display_name || 'this member'}
                   </Text>{' '}
                   from the project?
                 </Text>
@@ -391,13 +426,13 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                   They will lose access to all project data.
                 </Text>
                 <View style={styles.confirmButtons}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, styles.cancelBtn]}
                     onPress={() => setShowRemoveConfirm(null)}
                   >
                     <Text style={styles.confirmBtnText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, styles.dangerBtn]}
                     onPress={executeRemoveMember}
                   >
@@ -407,7 +442,7 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               </View>
             </View>
           )}
-          
+
           {/* Role change confirmation modal */}
           {showRoleChangeConfirm && (
             <View style={styles.confirmOverlay}>
@@ -416,21 +451,24 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                 <Text style={styles.confirmText}>
                   Change{' '}
                   <Text style={styles.confirmHighlight}>
-                    {members.find(m => m.id === showRoleChangeConfirm.userId)?.display_name || 'this member'}
+                    {members.find((m) => m.id === showRoleChangeConfirm.userId)?.display_name ||
+                      'this member'}
                   </Text>
                   's role to{' '}
                   <Text style={styles.confirmHighlight}>
-                    {showRoleChangeConfirm.newRole.charAt(0) + showRoleChangeConfirm.newRole.slice(1).toLowerCase()}
-                  </Text>?
+                    {showRoleChangeConfirm.newRole.charAt(0) +
+                      showRoleChangeConfirm.newRole.slice(1).toLowerCase()}
+                  </Text>
+                  ?
                 </Text>
                 <View style={styles.confirmButtons}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, styles.cancelBtn]}
                     onPress={() => setShowRoleChangeConfirm(null)}
                   >
                     <Text style={styles.confirmBtnText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.confirmBtn, { backgroundColor: '#2A7FFF' }]}
                     onPress={executeRoleChange}
                   >
@@ -440,41 +478,41 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
               </View>
             </View>
           )}
-          
+
           {/* Invite section (leaders only) */}
           {isOwner && (
             <View style={styles.inviteSection}>
               <Text style={styles.inviteTitle}>Invite to project</Text>
               <View style={styles.roleSelector}>
-                <TouchableOpacity 
-                  style={[styles.roleBtn, inviteRole === 'GUEST' && styles.roleBtnActive]} 
+                <TouchableOpacity
+                  style={[styles.roleBtn, inviteRole === 'GUEST' && styles.roleBtnActive]}
                   onPress={() => setInviteRole('GUEST')}
                 >
                   <Text style={styles.roleBtnText}>Guest</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.roleBtn, inviteRole === 'RESEARCHER' && styles.roleBtnActive]} 
+                <TouchableOpacity
+                  style={[styles.roleBtn, inviteRole === 'RESEARCHER' && styles.roleBtnActive]}
                   onPress={() => setInviteRole('RESEARCHER')}
                 >
                   <Text style={styles.roleBtnText}>Researcher</Text>
                 </TouchableOpacity>
               </View>
-              
-              <TouchableOpacity 
-                style={[styles.generateBtn, isGenerating && styles.generateBtnDisabled]} 
-                onPress={generateInvite} 
+
+              <TouchableOpacity
+                style={[styles.generateBtn, isGenerating && styles.generateBtnDisabled]}
+                onPress={generateInvite}
                 disabled={isGenerating}
               >
                 <Text style={styles.generateBtnText}>
                   {isGenerating ? 'Generating…' : 'Generate Invite Link'}
                 </Text>
               </TouchableOpacity>
-              
+
               {generatedLink && (
                 <View style={styles.linkContainer}>
                   {/* Close button */}
-                  <TouchableOpacity 
-                    style={styles.inviteCloseBtn} 
+                  <TouchableOpacity
+                    style={styles.inviteCloseBtn}
                     onPress={() => {
                       setGeneratedLink(null);
                       setGeneratedCode(null);
@@ -485,22 +523,22 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                   >
                     <Text style={styles.inviteCloseBtnText}>✕</Text>
                   </TouchableOpacity>
-                  
+
                   {/* Invite Code Section */}
                   {generatedCode && (
                     <View style={styles.codeSection}>
                       <Text style={styles.codeSectionLabel}>Invite Code</Text>
                       <View style={styles.codeRow}>
-                        <Text selectable style={styles.codeText}>{generatedCode}</Text>
+                        <Text selectable style={styles.codeText}>
+                          {generatedCode}
+                        </Text>
                         <TouchableOpacity style={styles.copyCodeBtn} onPress={copyCodeToClipboard}>
-                          <Text style={styles.copyBtnText}>
-                            {copiedCode ? '✓' : '📋'}
-                          </Text>
+                          <Text style={styles.copyBtnText}>{copiedCode ? '✓' : '📋'}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
                   )}
-                  
+
                   {/* Invite Link Section */}
                   <Text style={styles.codeSectionLabel}>Invite Link</Text>
                   <Text selectable style={styles.linkText} numberOfLines={2}>
@@ -511,11 +549,13 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                       {copiedLink ? '✓ Copied!' : '📋 Copy Link'}
                     </Text>
                   </TouchableOpacity>
-                  
+
                   {Platform.OS === 'web' && (
-                    <Image 
-                      source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedLink)}` }} 
-                      style={styles.qrCode} 
+                    <Image
+                      source={{
+                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedLink)}`,
+                      }}
+                      style={styles.qrCode}
                     />
                   )}
                   {generatedExpiresAt && (
@@ -525,17 +565,15 @@ export default function MembersModal({ visible, members, onClose, onManage, rend
                   )}
                 </View>
               )}
-              
+
               <Text style={styles.inviteHint}>
                 Share the invite code or link. Recipient must be signed in to accept.
               </Text>
             </View>
           )}
-          
-          {manageError && (
-            <Text style={styles.errorText}>{manageError}</Text>
-          )}
-          
+
+          {manageError && <Text style={styles.errorText}>{manageError}</Text>}
+
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>Close</Text>

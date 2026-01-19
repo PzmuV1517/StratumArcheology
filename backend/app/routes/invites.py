@@ -1,16 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from typing import Optional
 import secrets
 import string
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user, check_project_permission
-from app.models import User, Project, ProjectInvite, project_members, UserRole
-from app.schemas import InviteCreateRequest, InviteResponse, InviteAcceptRequest, InviteAcceptResponse, InviteJoinByCodeRequest
+from app.dependencies import check_project_permission, get_current_user
+from app.models import Project, ProjectInvite, User, project_members
+from app.schemas import (
+    InviteAcceptRequest,
+    InviteAcceptResponse,
+    InviteCreateRequest,
+    InviteJoinByCodeRequest,
+    InviteResponse,
+)
 from app.websocket import log_activity
-from sqlalchemy import select
 
 router = APIRouter(tags=["invites"])
 
@@ -19,8 +25,10 @@ def generate_short_code(project_id: str, length: int = 6) -> str:
     """Generate a short invite code like 'PRJ-ABC123' using first 3 chars of project ID as prefix."""
     prefix = project_id[:3].upper()
     # Use uppercase letters and digits for the random part (excluding confusing chars)
-    chars = string.ascii_uppercase.replace('O', '').replace('I', '') + string.digits.replace('0', '').replace('1', '')
-    random_part = ''.join(secrets.choice(chars) for _ in range(length))
+    chars = string.ascii_uppercase.replace("O", "").replace("I", "") + string.digits.replace(
+        "0", ""
+    ).replace("1", "")
+    random_part = "".join(secrets.choice(chars) for _ in range(length))
     return f"{prefix}-{random_part}"
 
 
@@ -35,12 +43,16 @@ def generate_unique_code(db: Session, project_id: str, max_attempts: int = 10) -
     return generate_short_code(project_id, length=10)
 
 
-@router.post("/projects/{project_id}/invites", response_model=InviteResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/projects/{project_id}/invites",
+    response_model=InviteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_invite(
     project_id: str,
     body: InviteCreateRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Create a single-use invite token for a project (leader/owner only)."""
     check_project_permission(project_id, current_user, db, required_role="leader")
@@ -50,7 +62,7 @@ async def create_invite(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     if body.ttl_hours and body.ttl_hours > 0:
         expires_at = datetime.utcnow() + timedelta(hours=body.ttl_hours)
     else:
@@ -67,7 +79,7 @@ async def create_invite(
         created_by=current_user.id,
         expires_at=expires_at,
         max_uses=body.max_uses,  # None = unlimited
-        use_count=0
+        use_count=0,
     )
     db.add(invite)
     db.commit()
@@ -77,11 +89,11 @@ async def create_invite(
         token=invite.token,
         code=invite.code,
         project_id=project_id,
-        role=invite.role.value if hasattr(invite.role, 'value') else str(invite.role),
+        role=invite.role.value if hasattr(invite.role, "value") else str(invite.role),
         expires_at=invite.expires_at,
         max_uses=invite.max_uses,
         use_count=invite.use_count,
-        accept_path=f"/invite?token={invite.token}"
+        accept_path=f"/invite?token={invite.token}",
     )
 
 
@@ -89,7 +101,7 @@ async def create_invite(
 async def accept_invite(
     body: InviteAcceptRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Accept an invite token and join the project with the invited role."""
     token = body.token
@@ -97,10 +109,12 @@ async def accept_invite(
     invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.token == token).first()
     if not invite:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
-    
+
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses"
+        )
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already used")
@@ -110,20 +124,21 @@ async def accept_invite(
     # Check if user already a member
     stmt = select(project_members).where(
         project_members.c.project_id == invite.project_id,
-        project_members.c.user_id == current_user.id
+        project_members.c.user_id == current_user.id,
     )
     existing = db.execute(stmt).first()
 
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already a member of this project")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already a member of this project",
+        )
 
     # Add membership
-    role_value = invite.role.value if hasattr(invite.role, 'value') else str(invite.role)
+    role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
     db.execute(
-            project_members.insert().values(
-            project_id=invite.project_id,
-            user_id=current_user.id,
-            role=role_value
+        project_members.insert().values(
+            project_id=invite.project_id, user_id=current_user.id, role=role_value
         )
     )
 
@@ -138,21 +153,21 @@ async def accept_invite(
         # Single-use behavior for legacy invites without max_uses
         invite.used = True
     db.commit()
-    
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=invite.project_id,
-        activity_type='member_joined',
-        description=f'{current_user.display_name} joined the project via invite as {role_value}',
+        activity_type="member_joined",
+        description=f"{current_user.display_name} joined the project via invite as {role_value}",
         user_id=current_user.id,
-        metadata={'role': role_value}
+        metadata={"role": role_value},
     )
 
     return InviteAcceptResponse(
         project_id=invite.project_id,
         user_id=current_user.id,
-        role=invite.role.value if hasattr(invite.role, 'value') else str(invite.role)
+        role=invite.role.value if hasattr(invite.role, "value") else str(invite.role),
     )
 
 
@@ -160,7 +175,7 @@ async def accept_invite(
 async def join_by_code(
     body: InviteJoinByCodeRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Join a project using a short invite code."""
     code = body.code.strip().upper()
@@ -168,33 +183,38 @@ async def join_by_code(
     invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.code == code).first()
     if not invite:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite code")
-    
+
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses"
+        )
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used"
+        )
     if invite.expires_at and invite.expires_at < datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code expired")
 
     # Check if user already a member
     stmt = select(project_members).where(
         project_members.c.project_id == invite.project_id,
-        project_members.c.user_id == current_user.id
+        project_members.c.user_id == current_user.id,
     )
     existing = db.execute(stmt).first()
 
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already a member of this project")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already a member of this project",
+        )
 
     # Add membership
-    role_value = invite.role.value if hasattr(invite.role, 'value') else str(invite.role)
+    role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
     db.execute(
         project_members.insert().values(
-            project_id=invite.project_id,
-            user_id=current_user.id,
-            role=role_value
+            project_id=invite.project_id, user_id=current_user.id, role=role_value
         )
     )
 
@@ -209,19 +229,17 @@ async def join_by_code(
         # Single-use behavior for legacy invites without max_uses
         invite.used = True
     db.commit()
-    
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=invite.project_id,
-        activity_type='member_joined',
-        description=f'{current_user.display_name} joined the project via invite code as {role_value}',
+        activity_type="member_joined",
+        description=f"{current_user.display_name} joined the project via invite code as {role_value}",
         user_id=current_user.id,
-        metadata={'role': role_value}
+        metadata={"role": role_value},
     )
 
     return InviteAcceptResponse(
-        project_id=invite.project_id,
-        user_id=current_user.id,
-        role=role_value
+        project_id=invite.project_id, user_id=current_user.id, role=role_value
     )

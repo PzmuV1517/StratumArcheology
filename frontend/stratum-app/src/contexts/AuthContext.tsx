@@ -1,4 +1,11 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+  useCallback,
+} from 'react';
 import { Alert } from 'react-native';
 import { authService } from '../services/authService';
 import api, { authEvents, AUTH_SESSION_EXPIRED } from '../services/api';
@@ -15,7 +22,11 @@ interface AuthContextType {
   loading: boolean;
   sessionExpired: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (email: string, password: string, displayName: string) => Promise<{ success: boolean; error?: string }>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearSessionExpired: () => void;
@@ -42,11 +53,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('[AuthContext] Session expired event received');
     setUser(null);
     setSessionExpired(true);
-    Alert.alert(
-      'Session Expired',
-      'Your session has expired. Please log in again.',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Session Expired', 'Your session has expired. Please log in again.', [
+      { text: 'OK' },
+    ]);
   }, []);
 
   // Clear session expired flag (after user acknowledges or logs in)
@@ -57,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Subscribe to session expiry events
     authEvents.on(AUTH_SESSION_EXPIRED, handleSessionExpired);
-    
+
     return () => {
       authEvents.off(AUTH_SESSION_EXPIRED, handleSessionExpired);
     };
@@ -72,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // First check if we have stored user data
       const storedUser = await authService.getCurrentUser();
       const token = await authService.getToken();
-      
+
       if (!storedUser || !token) {
         // No stored session
         setUser(null);

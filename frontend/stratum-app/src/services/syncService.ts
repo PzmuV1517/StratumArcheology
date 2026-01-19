@@ -1,13 +1,13 @@
 /**
  * STRATUM Sync Service
- * 
+ *
  * Handles synchronization between local database and server:
  * - Queue management for offline requests
  * - Conflict detection and resolution
  * - Background sync when connection restored (auto-sync)
  * - Timestamp-based last-write-wins with conflict detection
  * - Integration with offlineQueueService for file operations
- * 
+ *
  * Cross-platform: Works on both web and native
  */
 
@@ -99,14 +99,16 @@ function setupNetworkListener(): void {
 
   networkUnsubscribe = NetInfo.addEventListener(async (state: NetInfoState) => {
     const isOnline = state.isConnected && state.isInternetReachable;
-    
-    console.log(`[SyncService] Network state changed: connected=${state.isConnected}, reachable=${state.isInternetReachable}`);
-    
+
+    console.log(
+      `[SyncService] Network state changed: connected=${state.isConnected}, reachable=${state.isInternetReachable}`
+    );
+
     if (isOnline && wasOffline) {
       // Connection restored - trigger auto-sync
       console.log('[SyncService] Connection restored - triggering auto-sync');
       wasOffline = false;
-      
+
       // Small delay to let network stabilize
       setTimeout(async () => {
         try {
@@ -128,7 +130,7 @@ function setupNetworkListener(): void {
  */
 export async function processOfflineQueue(): Promise<void> {
   if (Platform.OS === 'web') return;
-  
+
   if (currentStatus.isSyncing) {
     console.log('[SyncService] Already syncing, skipping offline queue');
     return;
@@ -136,8 +138,8 @@ export async function processOfflineQueue(): Promise<void> {
 
   try {
     const queue = await offlineQueue.getQueue();
-    const pendingActions = queue.filter(a => a.status === 'pending');
-    
+    const pendingActions = queue.filter((a) => a.status === 'pending');
+
     if (pendingActions.length === 0) {
       console.log('[SyncService] No pending offline actions');
       return;
@@ -152,8 +154,8 @@ export async function processOfflineQueue(): Promise<void> {
 
     // Update pending count
     const updatedQueue = await offlineQueue.getQueue();
-    const stillPending = updatedQueue.filter(a => a.status === 'pending').length;
-    const failed = updatedQueue.filter(a => a.status === 'failed').length;
+    const stillPending = updatedQueue.filter((a) => a.status === 'pending').length;
+    const failed = updatedQueue.filter((a) => a.status === 'failed').length;
 
     updateSyncStatus({
       isSyncing: false,
@@ -176,8 +178,10 @@ export async function processOfflineQueue(): Promise<void> {
  * Process a single offline queued action
  */
 async function processOfflineAction(action: QueuedAction): Promise<void> {
-  console.log(`[SyncService] Processing action: ${action.type} for ${action.entityId || 'new entity'}`);
-  
+  console.log(
+    `[SyncService] Processing action: ${action.type} for ${action.entityId || 'new entity'}`
+  );
+
   await offlineQueue.updateActionStatus(action.id, 'processing');
 
   try {
@@ -215,7 +219,7 @@ async function processOfflineAction(action: QueuedAction): Promise<void> {
       default:
         console.warn(`[SyncService] Unknown action type: ${action.type}`);
     }
-    
+
     // Success - remove from queue
     await offlineQueue.removeFromQueue(action.id);
     console.log(`[SyncService] Action ${action.id} completed successfully`);
@@ -268,7 +272,7 @@ async function handleUploadFile(action: QueuedAction): Promise<void> {
     type: action.data.mimeType || 'application/octet-stream',
     name: action.data.name,
   } as any);
-  
+
   if (action.data.parent_id) {
     formData.append('parent_id', action.data.parent_id);
   }
@@ -314,7 +318,7 @@ async function handleUpdateProfile(action: QueuedAction): Promise<void> {
 /**
  * Initialize the sync service
  * Call this when the app starts
- * 
+ *
  * Note: On web, sync service is minimal since web is online-only.
  * Full offline queue support is mobile-only.
  */
@@ -322,32 +326,32 @@ export async function initSyncService(): Promise<void> {
   try {
     await initDatabase();
     console.log('[SyncService] Database initialized');
-    
+
     // On web, we don't use the offline queue - web is online-only
     if (Platform.OS === 'web') {
       console.log('[SyncService] Web platform - offline queue disabled');
       return;
     }
-    
+
     // Setup network listener for auto-sync
     setupNetworkListener();
     console.log('[SyncService] Network listener setup for auto-sync');
-    
+
     // Check initial network state
     const netState = await NetInfo.fetch();
     wasOffline = !netState.isConnected || !netState.isInternetReachable;
-    
+
     // Update initial status (mobile only)
     const stats = await getQueueStats();
     const offlineQueueItems = await offlineQueue.getQueue();
-    const offlinePending = offlineQueueItems.filter(a => a.status === 'pending').length;
-    const offlineFailed = offlineQueueItems.filter(a => a.status === 'failed').length;
-    
+    const offlinePending = offlineQueueItems.filter((a) => a.status === 'pending').length;
+    const offlineFailed = offlineQueueItems.filter((a) => a.status === 'failed').length;
+
     updateSyncStatus({
       pendingCount: stats.pending + offlinePending,
       failedCount: stats.failed + offlineFailed,
     });
-    
+
     // If we're online, sync any pending items
     if (!wasOffline) {
       console.log('[SyncService] Online at startup - checking for pending sync items');
@@ -368,7 +372,7 @@ export async function initSyncService(): Promise<void> {
 /**
  * Process the request queue
  * Call this when network is restored or periodically
- * 
+ *
  * Note: This is mobile-only. Web is always online and doesn't use offline queues.
  */
 export async function processQueue(): Promise<void> {
@@ -377,7 +381,7 @@ export async function processQueue(): Promise<void> {
     console.log('[SyncService] Web platform - queue processing skipped');
     return;
   }
-  
+
   // Prevent concurrent syncs
   if (currentStatus.isSyncing) {
     console.log('[SyncService] Sync already in progress');
@@ -460,17 +464,17 @@ async function processRequest(request: QueuedRequest): Promise<void> {
 function isRetryableError(error: any): boolean {
   // Network errors are retryable
   if (!error.response) return true;
-  
+
   // Server errors (5xx) are retryable
   const status = error.response?.status;
   if (status >= 500 && status < 600) return true;
-  
+
   // 429 Too Many Requests is retryable
   if (status === 429) return true;
-  
+
   // 408 Request Timeout is retryable
   if (status === 408) return true;
-  
+
   // Client errors (4xx) are generally not retryable
   return false;
 }
@@ -515,7 +519,7 @@ async function syncNote(localNote: LocalNote): Promise<void> {
   try {
     // Check if this is a new note or update
     const isNew = localNote.id.startsWith('local_');
-    
+
     if (localNote.pending_delete) {
       // Handle deletion
       if (!isNew) {
@@ -532,7 +536,7 @@ async function syncNote(localNote: LocalNote): Promise<void> {
         content: localNote.content,
         project_id: localNote.project_id,
       });
-      
+
       // Update local note with server ID
       const serverNote = response.data;
       await saveLocalNote({
@@ -568,7 +572,7 @@ async function syncNote(localNote: LocalNote): Promise<void> {
             title: localNote.title,
             content: localNote.content,
           });
-          
+
           // Mark as synced
           await saveLocalNote({
             ...localNote,
@@ -583,7 +587,7 @@ async function syncNote(localNote: LocalNote): Promise<void> {
             content: localNote.content,
             project_id: localNote.project_id,
           });
-          
+
           await saveLocalNote({
             ...localNote,
             id: response.data.id,
@@ -596,7 +600,7 @@ async function syncNote(localNote: LocalNote): Promise<void> {
     }
   } catch (error: any) {
     console.error(`[SyncService] Failed to sync note ${localNote.id}:`, error);
-    
+
     // Update note with sync error
     await saveLocalNote({
       ...localNote,
@@ -618,7 +622,7 @@ async function syncProject(localProject: LocalProject): Promise<void> {
         name: localProject.name,
         description: localProject.description,
       });
-      
+
       await saveLocalProject({
         ...localProject,
         id: response.data.id,
@@ -646,7 +650,7 @@ async function syncProject(localProject: LocalProject): Promise<void> {
             name: localProject.name,
             description: localProject.description,
           });
-          
+
           await saveLocalProject({
             ...localProject,
             is_synced: true,
@@ -658,7 +662,7 @@ async function syncProject(localProject: LocalProject): Promise<void> {
             name: localProject.name,
             description: localProject.description,
           });
-          
+
           await saveLocalProject({
             ...localProject,
             id: response.data.id,
@@ -671,7 +675,7 @@ async function syncProject(localProject: LocalProject): Promise<void> {
     }
   } catch (error: any) {
     console.error(`[SyncService] Failed to sync project ${localProject.id}:`, error);
-    
+
     await saveLocalProject({
       ...localProject,
       sync_error: error.message || 'Sync failed',
@@ -711,10 +715,10 @@ export function cleanupSyncService(): void {
  */
 export async function hasPendingSync(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  
+
   const stats = await getQueueStats();
   const offlineQueueItems = await offlineQueue.getQueue();
-  const offlinePending = offlineQueueItems.filter(a => a.status === 'pending').length;
-  
+  const offlinePending = offlineQueueItems.filter((a) => a.status === 'pending').length;
+
   return stats.pending > 0 || offlinePending > 0;
 }

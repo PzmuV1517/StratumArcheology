@@ -11,7 +11,10 @@ export const fileService = {
     return res.data;
   },
   createFolder: async (projectId, name, parentId = null) => {
-    const res = await api.post(`/files/project/${projectId}/folders`, { name, parent_id: parentId });
+    const res = await api.post(`/files/project/${projectId}/folders`, {
+      name,
+      parent_id: parentId,
+    });
     return res.data;
   },
   moveNode: async (nodeId, newParentId = null) => {
@@ -45,7 +48,7 @@ export const fileService = {
       onDownloadProgress: (e) => {
         if (onProgress) {
           const loaded = e.loaded;
-            // Some browsers supply e.total; if missing attempt to parse from headers after request
+          // Some browsers supply e.total; if missing attempt to parse from headers after request
           const total = e.total || 0;
           onProgress(loaded, total);
         }
@@ -73,7 +76,9 @@ export const fileService = {
       received += value.length;
       if (onProgress) onProgress(received, contentLength);
     }
-    const blob = new Blob(chunks, { type: response.headers.get('Content-Type') || 'application/octet-stream' });
+    const blob = new Blob(chunks, {
+      type: response.headers.get('Content-Type') || 'application/octet-stream',
+    });
     return { blob, contentLength };
   },
 };

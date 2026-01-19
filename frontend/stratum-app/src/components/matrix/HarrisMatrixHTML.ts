@@ -1,9 +1,9 @@
 /**
  * Harris Matrix HTML Generator for Mobile WebView
- * 
+ *
  * Generates a self-contained HTML document with the Harris Matrix visualization
  * that can be rendered in a WebView on iOS/Android.
- * 
+ *
  * Key adaptations for mobile:
  * - Touch-friendly interactions
  * - Viewport scaling for mobile screens
@@ -19,7 +19,7 @@ interface HarrisMatrixHTMLOptions {
 
 export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
   const { projectId, canEdit, initialData } = options;
-  
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

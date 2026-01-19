@@ -29,7 +29,7 @@ function hexToRgb(hex) {
     return {
       r: parseInt(m[1], 16),
       g: parseInt(m[2], 16),
-      b: parseInt(m[3], 16)
+      b: parseInt(m[3], 16),
     };
   }
   const m = cleaned.match(/^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
@@ -37,7 +37,7 @@ function hexToRgb(hex) {
   return {
     r: parseInt(m[1], 16),
     g: parseInt(m[2], 16),
-    b: parseInt(m[3], 16)
+    b: parseInt(m[3], 16),
   };
 }
 
@@ -54,7 +54,7 @@ const DotGrid = ({
   resistance = 750,
   returnDuration = 1.5,
   className = '',
-  style
+  style,
 }) => {
   const wrapperRef = useRef(null);
   const canvasRef = useRef(null);
@@ -67,7 +67,7 @@ const DotGrid = ({
     speed: 0,
     lastTime: 0,
     lastX: 0,
-    lastY: 0
+    lastY: 0,
   });
 
   const baseRgb = useMemo(() => hexToRgb(baseColor), [baseColor]);
@@ -182,7 +182,7 @@ const DotGrid = ({
   }, [buildGrid]);
 
   useEffect(() => {
-    const onMove = e => {
+    const onMove = (e) => {
       const now = performance.now();
       const pr = pointerRef.current;
       const dt = pr.lastTime ? now - pr.lastTime : 16;
@@ -222,16 +222,16 @@ const DotGrid = ({
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
-                ease: 'elastic.out(1,0.75)'
+                ease: 'elastic.out(1,0.75)',
               });
               dot._inertiaApplied = false;
-            }
+            },
           });
         }
       }
     };
 
-    const onClick = e => {
+    const onClick = (e) => {
       const rect = canvasRef.current.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
@@ -250,10 +250,10 @@ const DotGrid = ({
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
-                ease: 'elastic.out(1,0.75)'
+                ease: 'elastic.out(1,0.75)',
               });
               dot._inertiaApplied = false;
-            }
+            },
           });
         }
       }
@@ -269,15 +269,13 @@ const DotGrid = ({
     };
   }, [maxSpeed, speedTrigger, proximity, resistance, returnDuration, shockRadius, shockStrength]);
 
-  return (
-    Platform.OS === 'web' ? (
-      <section className={`dot-grid ${className}`} style={style}>
-        <div ref={wrapperRef} className="dot-grid__wrap">
-          <canvas ref={canvasRef} className="dot-grid__canvas" />
-        </div>
-      </section>
-    ) : null
-  );
+  return Platform.OS === 'web' ? (
+    <section className={`dot-grid ${className}`} style={style}>
+      <div ref={wrapperRef} className="dot-grid__wrap">
+        <canvas ref={canvasRef} className="dot-grid__canvas" />
+      </div>
+    </section>
+  ) : null;
 };
 
 export default DotGrid;

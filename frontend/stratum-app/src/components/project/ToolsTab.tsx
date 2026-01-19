@@ -50,7 +50,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [LocationModule, setLocationModule] = useState<any>(null);
-  
+
   const compassRotation = useRef(new Animated.Value(0)).current;
   const locationSubscription = useRef<LocationSubscription | null>(null);
   const headingSubscription = useRef<{ remove: () => void } | null>(null);
@@ -75,7 +75,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
     if (LocationModule && Platform.OS !== 'web') {
       requestPermissions();
     }
-    
+
     return () => {
       // Cleanup subscriptions
       if (locationSubscription.current) {
@@ -85,7 +85,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         headingSubscription.current.remove();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [LocationModule]);
 
   useEffect(() => {
@@ -100,19 +100,19 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const requestPermissions = async () => {
     if (!LocationModule) return;
-    
+
     try {
       const { status: foregroundStatus } = await LocationModule.requestForegroundPermissionsAsync();
-      
+
       if (foregroundStatus !== 'granted') {
         setLocationPermission(false);
         setLoading(false);
         return;
       }
-      
+
       setLocationPermission(true);
       setAcquiringGPS(true);
-      
+
       // Get fresh location with high accuracy (not cached)
       // Using maximumAge: 0 forces a fresh GPS fix instead of cached data
       const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
@@ -120,7 +120,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         maximumAge: 0, // Don't use cached location
         timeout: 15000, // 15 second timeout
       });
-      
+
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -130,9 +130,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         speed: currentLocation.coords.speed,
         timestamp: currentLocation.timestamp,
       });
-      
+
       setAcquiringGPS(false);
-      
+
       // Start heading updates for compass (mobile only)
       if (Platform.OS !== 'web') {
         const headingSub = await LocationModule.watchHeadingAsync((headingData: HeadingObject) => {
@@ -140,7 +140,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         });
         headingSubscription.current = headingSub;
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error('Error getting location:', error);
@@ -152,10 +152,10 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const startWatching = async () => {
     if (!locationPermission || !LocationModule) return;
-    
+
     try {
       setWatchingLocation(true);
-      
+
       locationSubscription.current = await LocationModule.watchPositionAsync(
         {
           accuracy: LocationModule.Accuracy.BestForNavigation,
@@ -190,7 +190,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const refreshLocation = async () => {
     if (!LocationModule) return;
-    
+
     try {
       setAcquiringGPS(true);
       const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
@@ -198,7 +198,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         maximumAge: 0, // Force fresh GPS fix
         timeout: 15000,
       });
-      
+
       setLocation({
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
@@ -231,19 +231,34 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   };
 
   const formatCoordinate = (value: number, isLatitude: boolean): string => {
-    const direction = isLatitude
-      ? value >= 0 ? 'N' : 'S'
-      : value >= 0 ? 'E' : 'W';
+    const direction = isLatitude ? (value >= 0 ? 'N' : 'S') : value >= 0 ? 'E' : 'W';
     const absValue = Math.abs(value);
     const degrees = Math.floor(absValue);
     const minutes = Math.floor((absValue - degrees) * 60);
     const seconds = ((absValue - degrees - minutes / 60) * 3600).toFixed(2);
-    
+
     return `${degrees}° ${minutes}' ${seconds}" ${direction}`;
   };
 
   const getCardinalDirection = (degrees: number): string => {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const directions = [
+      'N',
+      'NNE',
+      'NE',
+      'ENE',
+      'E',
+      'ESE',
+      'SE',
+      'SSE',
+      'S',
+      'SSW',
+      'SW',
+      'WSW',
+      'W',
+      'WNW',
+      'NW',
+      'NNW',
+    ];
     const index = Math.round(degrees / 22.5) % 16;
     return directions[index];
   };
@@ -290,11 +305,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const compassStyle = {
     transform: [
-      { rotate: compassRotation.interpolate({
+      {
+        rotate: compassRotation.interpolate({
           inputRange: [-360, 360],
           outputRange: ['-360deg', '360deg'],
-        })
-      }
+        }),
+      },
     ],
   };
 
@@ -333,7 +349,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             style={[styles.watchButton, watchingLocation && styles.watchButtonActive]}
             onPress={watchingLocation ? stopWatching : startWatching}
           >
-            <Text style={[styles.watchButtonText, watchingLocation && styles.watchButtonTextActive]}>
+            <Text
+              style={[styles.watchButtonText, watchingLocation && styles.watchButtonTextActive]}
+            >
               {watchingLocation ? '⏸ Pause' : '▶ Live'}
             </Text>
           </TouchableOpacity>
@@ -348,16 +366,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             >
               <View style={styles.coordinateLabel}>
                 <Text style={styles.coordinateLabelText}>Latitude</Text>
-                {copyFeedback === 'Latitude' && (
-                  <Text style={styles.copyFeedback}>Copied!</Text>
-                )}
+                {copyFeedback === 'Latitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
               </View>
               <Text style={styles.coordinateValue}>
                 {formatCoordinate(location.latitude, true)}
               </Text>
-              <Text style={styles.coordinateDecimal}>
-                {location.latitude.toFixed(8)}
-              </Text>
+              <Text style={styles.coordinateDecimal}>{location.latitude.toFixed(8)}</Text>
             </TouchableOpacity>
 
             {/* Longitude */}
@@ -367,16 +381,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             >
               <View style={styles.coordinateLabel}>
                 <Text style={styles.coordinateLabelText}>Longitude</Text>
-                {copyFeedback === 'Longitude' && (
-                  <Text style={styles.copyFeedback}>Copied!</Text>
-                )}
+                {copyFeedback === 'Longitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
               </View>
               <Text style={styles.coordinateValue}>
                 {formatCoordinate(location.longitude, false)}
               </Text>
-              <Text style={styles.coordinateDecimal}>
-                {location.longitude.toFixed(8)}
-              </Text>
+              <Text style={styles.coordinateDecimal}>{location.longitude.toFixed(8)}</Text>
             </TouchableOpacity>
 
             {/* Altitude */}
@@ -387,13 +397,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               >
                 <View style={styles.coordinateLabel}>
                   <Text style={styles.coordinateLabelText}>Altitude</Text>
-                  {copyFeedback === 'Altitude' && (
-                    <Text style={styles.copyFeedback}>Copied!</Text>
-                  )}
+                  {copyFeedback === 'Altitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
                 </View>
-                <Text style={styles.coordinateValue}>
-                  {location.altitude.toFixed(2)} m
-                </Text>
+                <Text style={styles.coordinateValue}>{location.altitude.toFixed(2)} m</Text>
               </TouchableOpacity>
             )}
 
@@ -401,12 +407,16 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             {location.accuracy !== null && (
               <View style={styles.coordinateRow}>
                 <Text style={styles.coordinateLabelText}>Accuracy</Text>
-                <Text style={[
-                  styles.coordinateValue,
-                  location.accuracy < 10 ? styles.accuracyGood : 
-                  location.accuracy < 50 ? styles.accuracyModerate : 
-                  styles.accuracyPoor
-                ]}>
+                <Text
+                  style={[
+                    styles.coordinateValue,
+                    location.accuracy < 10
+                      ? styles.accuracyGood
+                      : location.accuracy < 50
+                        ? styles.accuracyModerate
+                        : styles.accuracyPoor,
+                  ]}
+                >
                   ±{location.accuracy.toFixed(1)} m
                 </Text>
               </View>
@@ -424,14 +434,14 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
                 {copyFeedback === 'Coordinates' ? '✓ Copied!' : '📋 Copy Coordinates'}
               </Text>
             </TouchableOpacity>
-            
+
             {/* Last Updated Timestamp */}
             <Text style={styles.timestampText}>
               Last updated: {new Date(location.timestamp).toLocaleTimeString()}
             </Text>
           </View>
         )}
-        
+
         {/* Acquiring GPS indicator */}
         {acquiringGPS && (
           <View style={styles.acquiringContainer}>
@@ -442,8 +452,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
         {/* Refresh Button */}
         {!watchingLocation && (
-          <TouchableOpacity 
-            style={[styles.refreshButton, acquiringGPS && styles.refreshButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.refreshButton, acquiringGPS && styles.refreshButtonDisabled]}
             onPress={refreshLocation}
             disabled={acquiringGPS}
           >

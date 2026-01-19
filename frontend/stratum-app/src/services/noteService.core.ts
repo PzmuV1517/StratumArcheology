@@ -56,7 +56,7 @@ export const noteServiceCore = {
         const { authService } = await import('./authService');
         const user = await authService.getCurrentUser();
         const tempId = `temp_note_${Date.now()}`;
-        
+
         if (user) {
           await offlineQueue.enqueue(
             'CREATE_NOTE',
@@ -69,7 +69,7 @@ export const noteServiceCore = {
             user.id,
             { priority: 1 }
           );
-          
+
           // Return a temporary note object
           return {
             id: tempId,
@@ -97,16 +97,13 @@ export const noteServiceCore = {
         const { offlineQueue } = await import('./offlineQueueService');
         const { authService } = await import('./authService');
         const user = await authService.getCurrentUser();
-        
+
         if (user) {
-          await offlineQueue.enqueue(
-            'UPDATE_NOTE',
-            noteData.project_id || '',
-            noteData,
-            user.id,
-            { entityId: noteId, priority: 2 }
-          );
-          
+          await offlineQueue.enqueue('UPDATE_NOTE', noteData.project_id || '', noteData, user.id, {
+            entityId: noteId,
+            priority: 2,
+          });
+
           // Return optimistic update
           return {
             ...noteData,

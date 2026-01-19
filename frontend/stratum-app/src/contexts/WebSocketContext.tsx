@@ -1,7 +1,7 @@
 /**
  * WebSocket context for real-time project updates
  * Handles member kicks, role changes, and other real-time events
- * 
+ *
  * Uses a singleton socket that persists across route changes
  */
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';

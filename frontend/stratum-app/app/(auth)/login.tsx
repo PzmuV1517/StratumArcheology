@@ -63,7 +63,7 @@ export default function LoginScreen() {
   // Stable props for FaultyTerminal so typing doesn't restart its animation
   const terminalGridMul = useMemo(() => [2, 1] as [number, number], []);
   const terminalStyle = useMemo(
-    () => ({ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const),
+    () => ({ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }) as const,
     []
   );
   const terminalProps = useMemo(
@@ -103,7 +103,10 @@ export default function LoginScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert('Invalid URL', 'Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api');
+      Alert.alert(
+        'Invalid URL',
+        'Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api'
+      );
       return;
     }
     try {
@@ -189,94 +192,99 @@ export default function LoginScreen() {
         </div>
       ) : null}
       {/* Login card with fade-up */}
-      <Animated.View style={[styles.loginCard, { opacity: fade, transform: [{ translateY: translate }] }]}>      
-      <View style={styles.header}>
-        <Text style={styles.logo}>STRATUM</Text>
-      </View>
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>EMAIL</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#4A4A4A"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="username"
-            textContentType="username"
-            importantForAutofill="yes"
-          />
+      <Animated.View
+        style={[styles.loginCard, { opacity: fade, transform: [{ translateY: translate }] }]}
+      >
+        <View style={styles.header}>
+          <Text style={styles.logo}>STRATUM</Text>
         </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>PASSWORD</Text>
-          <View style={styles.inputWrapper}>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>EMAIL</Text>
             <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="Enter your password"
+              style={styles.input}
+              placeholder="Enter your email"
               placeholderTextColor="#4A4A4A"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoComplete="password"
-              textContentType="password"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="username"
+              textContentType="username"
               importantForAutofill="yes"
             />
-            <TouchableOpacity
-              style={styles.passwordToggle}
-              onPress={() => setShowPassword((v) => !v)}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {Platform.OS === 'web' ? (
-                showPassword ? (
-                  <FaEyeSlash size={18} color="#FF2A2A" />
-                ) : (
-                  <FaEye size={18} color="#FF2A2A" />
-                )
-              ) : (
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
-              )}
-            </TouchableOpacity>
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>PASSWORD</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                placeholder="Enter your password"
+                placeholderTextColor="#4A4A4A"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="yes"
+              />
+              <TouchableOpacity
+                style={styles.passwordToggle}
+                onPress={() => setShowPassword((v) => !v)}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {Platform.OS === 'web' ? (
+                  showPassword ? (
+                    <FaEyeSlash size={18} color="#FF2A2A" />
+                  ) : (
+                    <FaEye size={18} color="#FF2A2A" />
+                  )
+                ) : (
+                  <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#F5F5F5" />
+            ) : (
+              <Text style={styles.buttonText}>LOGIN</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.devButton} onPress={() => setShowDevModal(true)}>
+            <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#F5F5F5" />
-          ) : (
-            <Text style={styles.buttonText}>LOGIN</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.devButton} onPress={() => setShowDevModal(true)}>
-          <Text style={styles.devButtonText}>Dev: API Base URL</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <Link href="/(auth)/register" asChild>
-          <TouchableOpacity>
-            <Text style={styles.linkText}>Register</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <Link href="/(auth)/register" asChild>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Register</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
       </Animated.View>
 
       {/* Dev modal for API override */}
-      <Modal visible={showDevModal} transparent animationType="fade" onRequestClose={() => setShowDevModal(false)}>
+      <Modal
+        visible={showDevModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDevModal(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Backend API Base URL</Text>
-            <Text style={styles.modalText}>Enter the full API url including /api. Example: http://192.168.1.100:8000/api</Text>
+            <Text style={styles.modalText}>
+              Enter the full API url including /api. Example: http://192.168.1.100:8000/api
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="http://host:port/api"
@@ -287,14 +295,37 @@ export default function LoginScreen() {
               autoCorrect={false}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDevModal(false)} disabled={savingApi}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowDevModal(false)}
+                disabled={savingApi}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444' }]} onPress={resetApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>Reset</Text>}
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444' },
+                ]}
+                onPress={resetApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>Reset</Text>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#FF2A2A' }]} onPress={saveApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#F5F5F5' }]}>Save</Text>}
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#FF2A2A' }]}
+                onPress={saveApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#F5F5F5' }]}>Save</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -309,7 +340,7 @@ const styles: any = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     justifyContent: 'center',
-    padding: 24
+    padding: 24,
   },
   logo: {
     color: '#ffffff',
@@ -341,25 +372,25 @@ const styles: any = StyleSheet.create({
     fontWeight: '700',
     color: '#F5F5F5',
     marginBottom: 8,
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
     color: '#9A9A9A',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   form: {
-    marginBottom: 24
+    marginBottom: 24,
   },
   inputGroup: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   label: {
     fontSize: 12,
     color: '#9A9A9A',
     marginBottom: 8,
     letterSpacing: 0.5,
-    fontWeight: '600'
+    fontWeight: '600',
   },
   input: {
     backgroundColor: 'transparent',
@@ -369,7 +400,7 @@ const styles: any = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: '#F5F5F5',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   inputWrapper: {
     position: 'relative',
@@ -397,13 +428,13 @@ const styles: any = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    elevation: 8
+    elevation: 8,
   },
   buttonText: {
     color: '#F5F5F5',
     fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: 'row',
@@ -411,21 +442,20 @@ const styles: any = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A'
+    borderTopColor: '#2A2A2A',
   },
   footerText: {
     fontSize: 14,
     color: '#9A9A9A',
     marginRight: 8,
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   linkText: {
     fontSize: 14,
     color: '#FF2A2A',
     fontWeight: '600',
-    letterSpacing: 0.5
-  }
-  ,
+    letterSpacing: 0.5,
+  },
   devButton: {
     marginTop: 12,
     padding: 10,
@@ -433,11 +463,11 @@ const styles: any = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1A1A1A',
     borderWidth: 1,
-    borderColor: '#2A2A2A'
+    borderColor: '#2A2A2A',
   },
   devButtonText: {
     color: '#F5F5F5',
-    fontWeight: '600'
+    fontWeight: '600',
   },
   modalBackdrop: {
     flex: 1,
@@ -452,34 +482,33 @@ const styles: any = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#333',
-    width: '100%'
+    width: '100%',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#F5F5F5',
-    marginBottom: 8
+    marginBottom: 8,
   },
   modalText: {
     fontSize: 14,
     color: '#CCCCCC',
-    marginBottom: 12
+    marginBottom: 12,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12
+    gap: 12,
   },
   modalButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#2A2A2A'
+    backgroundColor: '#2A2A2A',
   },
   modalButtonText: {
     color: '#F5F5F5',
     fontSize: 14,
-    fontWeight: '600'
+    fontWeight: '600',
   },
-  
 });

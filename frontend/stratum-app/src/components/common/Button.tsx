@@ -82,10 +82,7 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'ghost' ? '#007AFF' : '#FFFFFF'}
-        />
+        <ActivityIndicator size="small" color={variant === 'ghost' ? '#007AFF' : '#FFFFFF'} />
       ) : (
         <>
           {icon}

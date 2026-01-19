@@ -24,11 +24,7 @@ const AuthStack = () => (
 
 const MainStack = () => (
   <Stack.Navigator>
-    <Stack.Screen
-      name="Projects"
-      component={ProjectsScreen}
-      options={{ headerShown: false }}
-    />
+    <Stack.Screen name="Projects" component={ProjectsScreen} options={{ headerShown: false }} />
     <Stack.Screen
       name="CreateProject"
       component={CreateProjectScreen}
@@ -54,9 +50,5 @@ export default function AppNavigator() {
     return null; // Or a loading screen
   }
 
-  return (
-    <NavigationContainer>
-      {user ? <MainStack /> : <AuthStack />}
-    </NavigationContainer>
-  );
+  return <NavigationContainer>{user ? <MainStack /> : <AuthStack />}</NavigationContainer>;
 }

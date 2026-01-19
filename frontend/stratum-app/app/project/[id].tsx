@@ -65,11 +65,17 @@ export default function ProjectDetailScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix' | 'history' | 'tools'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'gallery' | 'artefacts' | 'notes' | 'gps' | 'matrix' | 'history' | 'tools'
+  >('overview');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [fileNodes, setFileNodes] = useState<any[]>([]);
-  const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Root' }]);
+  const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string } | null>(
+    null
+  );
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([
+    { id: null, name: 'Root' },
+  ]);
   const [fileLoading, setFileLoading] = useState(false);
   const [renameNode, setRenameNode] = useState<any | null>(null);
   const [_renameText, setRenameText] = useState('');
@@ -92,7 +98,7 @@ export default function ProjectDetailScreen() {
   const [HarrisMatrixComponent, setHarrisMatrixComponent] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
-  
+
   // Conflict resolution state
   const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
   const [currentConflict, setCurrentConflict] = useState<FileConflict | null>(null);
@@ -136,38 +142,34 @@ export default function ProjectDetailScreen() {
   // WebSocket: Join project room and listen for real-time updates
   useEffect(() => {
     if (!id || !currentUser?.id || !socket) return;
-    
+
     console.log('[Project] Joining WebSocket room for project:', id);
-    
+
     // Join the project room
     joinProject(id as string, currentUser.id);
-    
+
     // Listen for member kicked events
     const handleMemberKicked = (data: any) => {
       console.log('[Project] Received member_kicked event:', data);
       if (data.user_id === currentUser.id && data.project_id === id) {
-        Alert.alert(
-          'Removed from Project',
-          'You have been removed from this project.',
-          [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-        );
+        Alert.alert('Removed from Project', 'You have been removed from this project.', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)') },
+        ]);
       }
     };
-    
+
     // Listen for role changed events
     const handleRoleChanged = (data: any) => {
       console.log('[Project] Received role_changed event:', data);
       if (data.user_id === currentUser.id && data.project_id === id) {
         // Refresh project data to get updated role
         loadProjectData();
-        Alert.alert(
-          'Role Updated',
-          `Your role has been changed to ${data.new_role}.`,
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Role Updated', `Your role has been changed to ${data.new_role}.`, [
+          { text: 'OK' },
+        ]);
       }
     };
-    
+
     // Listen for general member updates
     const handleMembersUpdated = (data: any) => {
       console.log('[Project] Received members_updated event:', data);
@@ -176,7 +178,7 @@ export default function ProjectDetailScreen() {
         loadProjectData();
       }
     };
-    
+
     // Listen for content updates (notes, files, artefacts)
     const handleContentUpdated = (data: any) => {
       console.log('[Project] Received content_updated event:', data);
@@ -185,19 +187,19 @@ export default function ProjectDetailScreen() {
         loadProjectData();
       }
     };
-    
+
     // Listen for timeline updates
     const handleTimelineUpdated = (data: any) => {
       console.log('[Project] Received timeline_updated event:', data);
       // Timeline component handles its own data loading
     };
-    
+
     socket.on('member_kicked', handleMemberKicked);
     socket.on('role_changed', handleRoleChanged);
     socket.on('members_updated', handleMembersUpdated);
     socket.on('content_updated', handleContentUpdated);
     socket.on('timeline_updated', handleTimelineUpdated);
-    
+
     // Cleanup listeners on unmount
     return () => {
       console.log('[Project] Leaving WebSocket room for project:', id);
@@ -226,7 +228,7 @@ export default function ProjectDetailScreen() {
     const userId = currentUser?.id || project?.owner_id;
     if (!userId) return null;
     if (userId === project?.owner_id) return 'LEADER';
-    const member = members.find(m => m.id === userId);
+    const member = members.find((m) => m.id === userId);
     return member ? (member.role || '').toString().toUpperCase() : null;
   }, [currentUser?.id, project?.owner_id, members]);
 
@@ -267,7 +269,7 @@ export default function ProjectDetailScreen() {
       myFolderOnOpenRef.current = true;
     }
   }, [globalParams?.openFiles, id, loading]);
-  
+
   const myFolderOnOpenRef = useRef(false);
 
   const loadProjectData = async () => {
@@ -277,12 +279,12 @@ export default function ProjectDetailScreen() {
         projectService.getProject(id),
         noteService.getNotes(id),
       ]);
-      
+
       setProject(projectData);
       setNotes(notesData);
       // Members are now included in projectData
       setMembers(projectData.members || []);
-      
+
       // Cache project for offline access (last 3 projects)
       try {
         const { recentProjectsCache } = await import('../../src/services/offlineService');
@@ -297,7 +299,7 @@ export default function ProjectDetailScreen() {
       }
     } catch (error) {
       console.error('Error loading project:', error);
-      
+
       // Try to load from offline cache if network fails
       try {
         const { recentProjectsCache } = await import('../../src/services/offlineService');
@@ -326,7 +328,7 @@ export default function ProjectDetailScreen() {
     try {
       const projectConflictsList = await conflicts.getProjectConflicts(id as string);
       setProjectConflicts(projectConflictsList);
-      
+
       // Show first unresolved conflict if any
       if (projectConflictsList.length > 0 && !currentConflict) {
         setCurrentConflict(projectConflictsList[0]);
@@ -340,14 +342,14 @@ export default function ProjectDetailScreen() {
   // Handle conflict resolution
   const handleResolveConflict = async (resolution: 'keep_local' | 'keep_remote' | 'keep_both') => {
     if (!currentConflict) return;
-    
+
     try {
       await conflicts.resolveConflict(currentConflict.id, resolution);
-      
+
       // Find and show next conflict if any
-      const remaining = projectConflicts.filter(c => c.id !== currentConflict.id);
+      const remaining = projectConflicts.filter((c) => c.id !== currentConflict.id);
       setProjectConflicts(remaining);
-      
+
       if (remaining.length > 0) {
         setCurrentConflict(remaining[0]);
       } else {
@@ -368,7 +370,9 @@ export default function ProjectDetailScreen() {
       setFileLoading(true);
       const nodes = await fileService.listRoot(id as string);
       // Mark Artefacts folder as locked in UI
-      const decorated = nodes.map((n: any) => (n.type === 'folder' && n.name === 'Artefacts' ? { ...n, is_locked: true } : n));
+      const decorated = nodes.map((n: any) =>
+        n.type === 'folder' && n.name === 'Artefacts' ? { ...n, is_locked: true } : n
+      );
       setFileNodes(decorated);
       setCurrentFolder({ id: null as any, name: 'Root' });
       setBreadcrumbs([{ id: null, name: 'Root' }]);
@@ -423,25 +427,29 @@ export default function ProjectDetailScreen() {
       Alert.alert('Permission Denied', 'Guests can only view files. Upload is not permitted.');
       return;
     }
-    
+
     try {
-      const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false, type: '*/*' });
+      const res = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: '*/*',
+      });
       if (res.canceled) return;
       const asset = res.assets[0];
-      
+
       console.log('Upload asset:', { uri: asset.uri, name: asset.name, mimeType: asset.mimeType });
-      
+
       const formData = new FormData();
-      const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : null;
+      const parentId = currentFolder && currentFolder.id ? currentFolder.id : null;
       if (parentId) {
         formData.append('parent_id', String(parentId));
       }
-      
+
       console.log('DEBUG: About to append file to FormData');
-      
+
       if (Platform.OS === 'web') {
         // On web, fetch blob and create File
-        const blob = await fetch(asset.uri).then(r => r.blob());
+        const blob = await fetch(asset.uri).then((r) => r.blob());
         let mime = asset.mimeType || blob.type || 'application/octet-stream';
         if (!mime || mime === 'application/octet-stream') {
           const lower = (asset.name || '').toLowerCase();
@@ -449,22 +457,36 @@ export default function ProjectDetailScreen() {
           else if (lower.endsWith('.png')) mime = 'image/png';
           else if (lower.endsWith('.heic')) mime = 'image/heic';
         }
-        const fileName = asset.name || (asset.uri.split('/').pop() || 'upload');
+        const fileName = asset.name || asset.uri.split('/').pop() || 'upload';
         const file = new File([blob], fileName, { type: mime });
         formData.append('file', file, fileName);
-        console.log('DEBUG: Appended File to FormData:', { name: fileName, type: mime, size: blob.size });
+        console.log('DEBUG: Appended File to FormData:', {
+          name: fileName,
+          type: mime,
+          size: blob.size,
+        });
       } else {
         // On native, use the { uri, name, type } shape that RN FormData accepts
-        const fileName = asset.name || (asset.uri.split('/').pop() || 'upload');
-        const fileType = asset.mimeType || (fileName.toLowerCase().endsWith('.png') ? 'image/png' : fileName.toLowerCase().match(/\.jpe?g$/) ? 'image/jpeg' : 'application/octet-stream');
+        const fileName = asset.name || asset.uri.split('/').pop() || 'upload';
+        const fileType =
+          asset.mimeType ||
+          (fileName.toLowerCase().endsWith('.png')
+            ? 'image/png'
+            : fileName.toLowerCase().match(/\.jpe?g$/)
+              ? 'image/jpeg'
+              : 'application/octet-stream');
         formData.append('file', {
           uri: asset.uri,
           name: fileName,
           type: fileType,
         } as any);
-        console.log('DEBUG: Appended native file to FormData:', { uri: asset.uri, name: fileName, type: fileType });
+        console.log('DEBUG: Appended native file to FormData:', {
+          uri: asset.uri,
+          name: fileName,
+          type: fileType,
+        });
       }
-      
+
       // Log FormData contents (web only, as native FormData doesn't support iteration)
       if (Platform.OS === 'web') {
         console.log('DEBUG: FormData entries:');
@@ -472,16 +494,19 @@ export default function ProjectDetailScreen() {
           console.log(`  ${key}:`, value);
         }
       }
-      
+
       // Call the API directly with formData
       const response = await fileService.uploadFile(id as string, formData);
       console.log('Upload success:', response);
-      
+
       if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
       else await loadRootFiles();
     } catch (e: any) {
       console.error('Upload error:', e);
-      const message = e?.detail || e?.message || 'Could not upload file. Please check your connection and try again.';
+      const message =
+        e?.detail ||
+        e?.message ||
+        'Could not upload file. Please check your connection and try again.';
       Alert.alert('Upload Failed', message);
     }
   };
@@ -511,55 +536,95 @@ export default function ProjectDetailScreen() {
 
   const openGalleryItem = (node: any) => {
     const lower = (node.name || '').toLowerCase();
-    const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+    const isAudio =
+      node.mime_type?.startsWith('audio/') || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
     if (isAudio) {
       if (node.note_id) {
         router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
       } else {
-        router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+        router.push({
+          pathname: '/data-preview',
+          params: { nodeId: node.id, name: node.name, kind: 'audio' },
+        });
       }
       return;
     }
-    const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.heic)$/i.test(node.name || '');
+    const isImage =
+      (node.mime_type && node.mime_type.startsWith('image/')) ||
+      /(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.heic)$/i.test(node.name || '');
     if (isImage) {
       router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
       return;
     }
     const lower2 = (node.name || '').toLowerCase();
-    const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
-    const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
-    const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
-    const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
-    const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+    const isCsv = node.mime_type === 'text/csv' || lower2.endsWith('.csv');
+    const isExcel =
+      node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      node.mime_type === 'application/vnd.ms-excel' ||
+      lower2.endsWith('.xlsx') ||
+      lower2.endsWith('.xls');
+    const isText =
+      node.mime_type === 'text/plain' ||
+      lower2.endsWith('.txt') ||
+      lower2.endsWith('.md') ||
+      lower2.endsWith('.json') ||
+      node.mime_type === 'application/json';
+    const isPdf = node.mime_type === 'application/pdf' || lower2.endsWith('.pdf');
+    const isVideo = node.mime_type?.startsWith('video/') || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
     const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
     const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
     if (isMesh) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'mesh' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'mesh' },
+      });
       return;
     }
     if (isPoint) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pointcloud' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'pointcloud' },
+      });
       return;
     }
     if (isVideo) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'video' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'video' },
+      });
       return;
     }
     if (isPdf) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'pdf' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'pdf' },
+      });
       return;
     }
     if (isText) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: lower2.endsWith('.md') ? 'markdown' : 'text' } });
+      router.push({
+        pathname: '/data-preview',
+        params: {
+          nodeId: node.id,
+          name: node.name,
+          kind: lower2.endsWith('.md') ? 'markdown' : 'text',
+        },
+      });
       return;
     }
     if (isExcel) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'excel' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'excel' },
+      });
       return;
     }
     if (isCsv) {
-      router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'csv' } });
+      router.push({
+        pathname: '/data-preview',
+        params: { nodeId: node.id, name: node.name, kind: 'csv' },
+      });
       return;
     }
   };
@@ -567,13 +632,16 @@ export default function ProjectDetailScreen() {
   const handleCreateNote = () => {
     // Permission check: guests cannot create notes
     if (isGuest) {
-      Alert.alert('Permission Denied', 'Guests can only view notes. Creating notes is not permitted.');
+      Alert.alert(
+        'Permission Denied',
+        'Guests can only view notes. Creating notes is not permitted.'
+      );
       return;
     }
-    
+
     router.push({
       pathname: '/create-note',
-      params: { projectId: project?.id }
+      params: { projectId: project?.id },
     });
   };
 
@@ -587,12 +655,16 @@ export default function ProjectDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => { loadNotes(); }, [loadNotes]);
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
 
   const handleNotePress = (noteId: string) => {
     const n: any = (notes as any[]).find((x: any) => x.id === noteId);
     if (!n) return;
-    const hasAudio = (n.attachments || []).some((a: any) => (a?.mime_type || a?.file_type || '').startsWith('audio/'));
+    const hasAudio = (n.attachments || []).some((a: any) =>
+      (a?.mime_type || a?.file_type || '').startsWith('audio/')
+    );
     const isVoice = (!n.content || n.content.trim() === '') && hasAudio;
     if (isVoice) {
       // Do not navigate; inline preview stays
@@ -604,10 +676,13 @@ export default function ProjectDetailScreen() {
   const handleDeleteNote = async (noteId: string) => {
     // Permission check: guests cannot delete notes
     if (isGuest) {
-      Alert.alert('Permission Denied', 'Guests can only view notes. Deleting notes is not permitted.');
+      Alert.alert(
+        'Permission Denied',
+        'Guests can only view notes. Deleting notes is not permitted.'
+      );
       return;
     }
-    
+
     try {
       await noteService.deleteNote(noteId);
       Alert.alert('Deleted', 'Note has been removed.');
@@ -624,7 +699,7 @@ export default function ProjectDetailScreen() {
       Alert.alert('Error', 'Cannot download - not a valid file');
       return;
     }
-    
+
     try {
       if (Platform.OS === 'web') {
         // Web: open download URL in new tab
@@ -632,32 +707,28 @@ export default function ProjectDetailScreen() {
         window.open(downloadUrl, '_blank');
       } else {
         // Native: download and share
-        Alert.alert(
-          'Download',
-          `Download "${node.name}"?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Download',
-              onPress: async () => {
-                try {
-                  const result = await fileService.downloadFile(node.id, node.name);
-                  if (result?.uri) {
-                    // Offer to share/open the file
-                    try {
-                      await fileService.shareFile(result.uri);
-                    } catch (_shareError) {
-                      // If sharing fails, at least tell user where file is
-                      Alert.alert('Downloaded', `File saved to: ${result.uri}`);
-                    }
+        Alert.alert('Download', `Download "${node.name}"?`, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Download',
+            onPress: async () => {
+              try {
+                const result = await fileService.downloadFile(node.id, node.name);
+                if (result?.uri) {
+                  // Offer to share/open the file
+                  try {
+                    await fileService.shareFile(result.uri);
+                  } catch (_shareError) {
+                    // If sharing fails, at least tell user where file is
+                    Alert.alert('Downloaded', `File saved to: ${result.uri}`);
                   }
-                } catch (downloadError: any) {
-                  Alert.alert('Download Failed', downloadError.message || 'Failed to download file');
                 }
-              },
+              } catch (downloadError: any) {
+                Alert.alert('Download Failed', downloadError.message || 'Failed to download file');
+              }
             },
-          ]
-        );
+          },
+        ]);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to prepare download');
@@ -668,10 +739,13 @@ export default function ProjectDetailScreen() {
     // Permission check: only owners can change project settings
     if (!canChangeSettings) {
       const role = getCurrentUserRole() || 'GUEST';
-      Alert.alert('Permission Denied', `${role}s cannot modify project settings. Only the project owner can change settings.`);
+      Alert.alert(
+        'Permission Denied',
+        `${role}s cannot modify project settings. Only the project owner can change settings.`
+      );
       return;
     }
-    
+
     // Directly navigate to the Edit Project screen
     if (project?.id) {
       router.push({
@@ -687,9 +761,13 @@ export default function ProjectDetailScreen() {
   const _renderNote = ({ item }: { item: Note }) => (
     <TouchableOpacity style={styles.noteCard} onPress={() => handleNotePress(item.id)}>
       <View style={styles.noteHeader}>
-        <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
+        <Text style={styles.noteTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
         <Text style={styles.noteDate}>
-          {item.updated_at ? new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' }) : ''}
+          {item.updated_at
+            ? new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })
+            : ''}
         </Text>
       </View>
       {item.content && (
@@ -727,21 +805,23 @@ export default function ProjectDetailScreen() {
   if (!project) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen 
-          options={{ 
+        <Stack.Screen
+          options={{
             title: 'Project Not Found',
             headerStyle: { backgroundColor: '#111111' },
             headerTintColor: '#FF2A2A',
-            headerTitleStyle: { 
+            headerTitleStyle: {
               color: '#F5F5F5',
               fontSize: 18,
-              fontWeight: '600'
+              fontWeight: '600',
             },
             headerShown: true,
-          }} 
+          }}
         />
         <Text style={styles.errorText}>Project not found</Text>
-        <Text style={styles.errorSubtext}>You may have been removed from this project or it no longer exists.</Text>
+        <Text style={styles.errorSubtext}>
+          You may have been removed from this project or it no longer exists.
+        </Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(tabs)')}>
           <Text style={styles.backButtonText}>Go to Projects</Text>
         </TouchableOpacity>
@@ -751,30 +831,33 @@ export default function ProjectDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
+      <Stack.Screen
+        options={{
           // Remove visible title next to back while keeping header spacing
           headerTitle: ' ',
           headerStyle: { backgroundColor: '#111111' },
           headerTintColor: '#FF2A2A',
-          headerTitleStyle: { 
+          headerTitleStyle: {
             color: 'transparent',
             fontSize: 18,
-            fontWeight: '600'
+            fontWeight: '600',
           },
           headerBackTitle: 'Projects',
           headerShown: true,
           // On iOS, hide custom back button to avoid duplicate with native back
-          headerLeft: Platform.OS === 'ios' ? undefined : () => (
-            <TouchableOpacity
-              onPress={() => router.replace('/(tabs)')}
-              style={styles.headerBackButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.headerBackIcon}>‹</Text>
-            </TouchableOpacity>
-          ),
+          headerLeft:
+            Platform.OS === 'ios'
+              ? undefined
+              : () => (
+                  <TouchableOpacity
+                    onPress={() => router.replace('/(tabs)')}
+                    style={styles.headerBackButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.headerBackIcon}>‹</Text>
+                  </TouchableOpacity>
+                ),
           headerBackVisible: true,
           presentation: 'card',
           // Right side: Files icon (left) + Burger (right)
@@ -806,13 +889,10 @@ export default function ProjectDetailScreen() {
               </TouchableOpacity>
             </View>
           ),
-        }} 
+        }}
       />
-      
-      <ScrollView 
-        style={styles.content}
-        scrollEnabled={activeTab !== 'matrix'}
-      >
+
+      <ScrollView style={styles.content} scrollEnabled={activeTab !== 'matrix'}>
         {/* Tab Content */}
         <View style={styles.tabContent}>
           {activeTab === 'overview' ? (
@@ -923,10 +1003,18 @@ export default function ProjectDetailScreen() {
             >
               {Platform.OS === 'web' ? (
                 <div style={{ height: '100%', width: '100%' }}>
-                  {HarrisMatrixComponent && React.createElement(HarrisMatrixComponent, { projectId: project?.id as string, canEdit: canEditMatrix })}
+                  {HarrisMatrixComponent &&
+                    React.createElement(HarrisMatrixComponent, {
+                      projectId: project?.id as string,
+                      canEdit: canEditMatrix,
+                    })}
                 </div>
               ) : (
-                HarrisMatrixComponent && React.createElement(HarrisMatrixComponent, { projectId: project?.id as string, canEdit: canEditMatrix })
+                HarrisMatrixComponent &&
+                React.createElement(HarrisMatrixComponent, {
+                  projectId: project?.id as string,
+                  canEdit: canEditMatrix,
+                })
               )}
             </View>
           ) : activeTab === 'history' ? (
@@ -989,7 +1077,9 @@ export default function ProjectDetailScreen() {
           style={[styles.bottomTab, activeTab === 'overview' && styles.activeBottomTab]}
           onPress={() => setActiveTab('overview')}
         >
-          <Text style={[styles.bottomTabText, activeTab === 'overview' && styles.activeBottomTabText]}>
+          <Text
+            style={[styles.bottomTabText, activeTab === 'overview' && styles.activeBottomTabText]}
+          >
             Overview
           </Text>
         </TouchableOpacity>
@@ -1005,7 +1095,9 @@ export default function ProjectDetailScreen() {
           style={[styles.bottomTab, activeTab === 'artefacts' && styles.activeBottomTab]}
           onPress={() => setActiveTab('artefacts')}
         >
-          <Text style={[styles.bottomTabText, activeTab === 'artefacts' && styles.activeBottomTabText]}>
+          <Text
+            style={[styles.bottomTabText, activeTab === 'artefacts' && styles.activeBottomTabText]}
+          >
             Artefacts
           </Text>
         </TouchableOpacity>
@@ -1013,23 +1105,28 @@ export default function ProjectDetailScreen() {
           style={[styles.bottomTab, activeTab === 'matrix' && styles.activeBottomTab]}
           onPress={() => setActiveTab('matrix')}
         >
-          <Text style={[styles.bottomTabText, activeTab === 'matrix' && styles.activeBottomTabText]}>
+          <Text
+            style={[styles.bottomTabText, activeTab === 'matrix' && styles.activeBottomTabText]}
+          >
             Matrix
           </Text>
         </TouchableOpacity>
         {/* More dropdown button */}
         <TouchableOpacity
           style={[
-            styles.bottomTab, 
+            styles.bottomTab,
             styles.moreTab,
-            ['gallery', 'gps', 'history', 'tools'].includes(activeTab) && styles.activeBottomTab
+            ['gallery', 'gps', 'history', 'tools'].includes(activeTab) && styles.activeBottomTab,
           ]}
           onPress={() => setShowMoreMenu(!showMoreMenu)}
         >
-          <Text style={[
-            styles.bottomTabText, 
-            ['gallery', 'gps', 'history', 'tools'].includes(activeTab) && styles.activeBottomTabText
-          ]}>
+          <Text
+            style={[
+              styles.bottomTabText,
+              ['gallery', 'gps', 'history', 'tools'].includes(activeTab) &&
+                styles.activeBottomTabText,
+            ]}
+          >
             More ▾
           </Text>
         </TouchableOpacity>
@@ -1038,23 +1135,31 @@ export default function ProjectDetailScreen() {
       {/* More menu dropdown */}
       {showMoreMenu && (
         <View style={styles.moreMenuOverlay}>
-          <TouchableOpacity 
-            style={styles.moreMenuBackdrop} 
+          <TouchableOpacity
+            style={styles.moreMenuBackdrop}
             onPress={() => setShowMoreMenu(false)}
             activeOpacity={1}
           />
           <View style={styles.moreMenu}>
             <TouchableOpacity
               style={[styles.moreMenuItem, activeTab === 'gallery' && styles.moreMenuItemActive]}
-              onPress={() => { setActiveTab('gallery'); setShowMoreMenu(false); }}
+              onPress={() => {
+                setActiveTab('gallery');
+                setShowMoreMenu(false);
+              }}
             >
-              <Text style={[styles.moreMenuText, activeTab === 'gallery' && styles.moreMenuTextActive]}>
+              <Text
+                style={[styles.moreMenuText, activeTab === 'gallery' && styles.moreMenuTextActive]}
+              >
                 Gallery
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.moreMenuItem, activeTab === 'gps' && styles.moreMenuItemActive]}
-              onPress={() => { setActiveTab('gps'); setShowMoreMenu(false); }}
+              onPress={() => {
+                setActiveTab('gps');
+                setShowMoreMenu(false);
+              }}
             >
               <Text style={[styles.moreMenuText, activeTab === 'gps' && styles.moreMenuTextActive]}>
                 Map
@@ -1062,18 +1167,28 @@ export default function ProjectDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.moreMenuItem, activeTab === 'history' && styles.moreMenuItemActive]}
-              onPress={() => { setActiveTab('history'); setShowMoreMenu(false); }}
+              onPress={() => {
+                setActiveTab('history');
+                setShowMoreMenu(false);
+              }}
             >
-              <Text style={[styles.moreMenuText, activeTab === 'history' && styles.moreMenuTextActive]}>
+              <Text
+                style={[styles.moreMenuText, activeTab === 'history' && styles.moreMenuTextActive]}
+              >
                 Time Machine
               </Text>
             </TouchableOpacity>
             {Platform.OS !== 'web' && (
               <TouchableOpacity
                 style={[styles.moreMenuItem, activeTab === 'tools' && styles.moreMenuItemActive]}
-                onPress={() => { setActiveTab('tools'); setShowMoreMenu(false); }}
+                onPress={() => {
+                  setActiveTab('tools');
+                  setShowMoreMenu(false);
+                }}
               >
-                <Text style={[styles.moreMenuText, activeTab === 'tools' && styles.moreMenuTextActive]}>
+                <Text
+                  style={[styles.moreMenuText, activeTab === 'tools' && styles.moreMenuTextActive]}
+                >
                   Tools
                 </Text>
               </TouchableOpacity>
@@ -1095,15 +1210,19 @@ export default function ProjectDetailScreen() {
       {/* Members modal (component) */}
       <MembersModal
         visible={showMembersModal}
-        members={members.map(m => ({ 
-          id: m.id || m.user_id || '', 
-          display_name: m.display_name, 
-          email: m.email, 
-          role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' 
+        members={members.map((m) => ({
+          id: m.id || m.user_id || '',
+          display_name: m.display_name,
+          email: m.email,
+          role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST',
         }))}
         onClose={() => setShowMembersModal(false)}
         onManage={handleManageMembers}
-        renderMember={(m) => renderMember({ item: { ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' } })}
+        renderMember={(m) =>
+          renderMember({
+            item: { ...m, role: (m.role || '').toUpperCase() as 'LEADER' | 'RESEARCHER' | 'GUEST' },
+          })
+        }
         projectId={id as string}
         currentUserId={currentUser?.id || project?.owner_id}
         projectOwnerId={project?.owner_id}
@@ -1115,7 +1234,12 @@ export default function ProjectDetailScreen() {
       />
 
       {/* Files overlay full-screen (component) */}
-      <Modal visible={showFilesOverlay} transparent={false} animationType="slide" onRequestClose={() => setShowFilesOverlay(false)}>
+      <Modal
+        visible={showFilesOverlay}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setShowFilesOverlay(false)}
+      >
         <FilesOverlay
           visible={true}
           currentFolder={currentFolder}
@@ -1127,36 +1251,62 @@ export default function ProjectDetailScreen() {
           onOpenFolder={openFolder as any}
           onNavigateBreadcrumb={navigateBreadcrumb}
           onUpload={uploadIntoCurrent}
-          onCreateFolder={() => { setNewFolderName(''); setShowNewFolderModal(true); }}
+          onCreateFolder={() => {
+            setNewFolderName('');
+            setShowNewFolderModal(true);
+          }}
           onDownload={handleDownloadFile}
-          onRename={(node: any) => { setRenameNode(node); setRenameText(node.name); }}
+          onRename={(node: any) => {
+            setRenameNode(node);
+            setRenameText(node.name);
+          }}
           onMove={(node: any) => setMoveMode({ node })}
           onDelete={(node: any) => setDeleteNodeTarget(node)}
           onOpenFile={async (node: any) => {
             if (node.type === 'folder') return;
             const lower = (node.name || '').toLowerCase();
-            const isAudio = (node.mime_type?.startsWith('audio/')) || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+            const isAudio =
+              node.mime_type?.startsWith('audio/') || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
             if (isAudio) {
               if (node.note_id) {
                 router.push({ pathname: '/voice-note/[id]', params: { id: node.note_id } });
               } else {
-                router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind: 'audio' } });
+                router.push({
+                  pathname: '/data-preview',
+                  params: { nodeId: node.id, name: node.name, kind: 'audio' },
+                });
               }
               return;
             }
-            const isImage = (node.mime_type && node.mime_type.startsWith('image/')) || /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || '');
+            const isImage =
+              (node.mime_type && node.mime_type.startsWith('image/')) ||
+              /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || '');
             if (isImage) {
               reopenFilesOnReturnRef.current = true;
               setShowFilesOverlay(false);
-              router.push({ pathname: '/image-preview', params: { nodeId: node.id, name: node.name } });
+              router.push({
+                pathname: '/image-preview',
+                params: { nodeId: node.id, name: node.name },
+              });
               return;
             }
             const lower2 = (node.name || '').toLowerCase();
-            const isCsv = (node.mime_type === 'text/csv') || lower2.endsWith('.csv');
-            const isExcel = (node.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') || (node.mime_type === 'application/vnd.ms-excel') || lower2.endsWith('.xlsx') || lower2.endsWith('.xls');
-            const isText = (node.mime_type === 'text/plain') || lower2.endsWith('.txt') || lower2.endsWith('.md') || lower2.endsWith('.json') || node.mime_type === 'application/json';
-            const isPdf = (node.mime_type === 'application/pdf') || lower2.endsWith('.pdf');
-            const isVideo = (node.mime_type?.startsWith('video/')) || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+            const isCsv = node.mime_type === 'text/csv' || lower2.endsWith('.csv');
+            const isExcel =
+              node.mime_type ===
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+              node.mime_type === 'application/vnd.ms-excel' ||
+              lower2.endsWith('.xlsx') ||
+              lower2.endsWith('.xls');
+            const isText =
+              node.mime_type === 'text/plain' ||
+              lower2.endsWith('.txt') ||
+              lower2.endsWith('.md') ||
+              lower2.endsWith('.json') ||
+              node.mime_type === 'application/json';
+            const isPdf = node.mime_type === 'application/pdf' || lower2.endsWith('.pdf');
+            const isVideo =
+              node.mime_type?.startsWith('video/') || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
             const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
             const isMesh = /\.(glb|gltf)$/i.test(lower2);
 
@@ -1171,7 +1321,10 @@ export default function ProjectDetailScreen() {
               else if (isAudio) kind = 'audio';
               reopenFilesOnReturnRef.current = true;
               setShowFilesOverlay(false);
-              router.push({ pathname: '/data-preview', params: { nodeId: node.id, name: node.name, kind } });
+              router.push({
+                pathname: '/data-preview',
+                params: { nodeId: node.id, name: node.name, kind },
+              });
               return;
             }
             Alert.alert('Preview', 'This file type is not yet supported.');
@@ -1190,11 +1343,11 @@ export default function ProjectDetailScreen() {
             }
           }}
           canEdit={canEditFiles}
-          projectMembers={members.map(m => ({
+          projectMembers={members.map((m) => ({
             id: m.id || m.user_id || '',
             display_name: m.display_name,
             email: m.email,
-            role: m.role
+            role: m.role,
           }))}
           currentUserId={currentUser?.id}
         />
@@ -1204,17 +1357,21 @@ export default function ProjectDetailScreen() {
           onCancel={() => setShowNewFolderModal(false)}
           onCreate={async (name) => {
             if (!canEditFiles) {
-              Alert.alert('Permission Denied', 'Guests can only view files. Creating folders is not permitted.');
+              Alert.alert(
+                'Permission Denied',
+                'Guests can only view files. Creating folders is not permitted.'
+              );
               setShowNewFolderModal(false);
               return;
             }
-            
+
             if (!name) return;
             try {
-              const parentId = (currentFolder && currentFolder.id) ? currentFolder.id : undefined;
+              const parentId = currentFolder && currentFolder.id ? currentFolder.id : undefined;
               await fileService.createFolder(id as string, name, parentId as any);
               setShowNewFolderModal(false);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               Alert.alert('Error', 'Failed to create folder');
@@ -1231,17 +1388,21 @@ export default function ProjectDetailScreen() {
           onCancel={() => setDeleteNodeTarget(null)}
           onConfirm={async () => {
             if (!canEditFiles) {
-              Alert.alert('Permission Denied', 'Guests can only view files. Deleting is not permitted.');
+              Alert.alert(
+                'Permission Denied',
+                'Guests can only view files. Deleting is not permitted.'
+              );
               setDeleteNodeTarget(null);
               return;
             }
-            
+
             if (!deleteNodeTarget) return;
             try {
               setIsDeleting(true);
               await fileService.deleteNode(deleteNodeTarget.id);
               setDeleteNodeTarget(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               Alert.alert('Error', 'Failed to delete');
@@ -1259,21 +1420,30 @@ export default function ProjectDetailScreen() {
           onCancel={() => setRenameNode(null)}
           onRename={async (newBaseName) => {
             if (!canEditFiles) {
-              Alert.alert('Permission Denied', 'Guests can only view files. Renaming is not permitted.');
+              Alert.alert(
+                'Permission Denied',
+                'Guests can only view files. Renaming is not permitted.'
+              );
               setRenameNode(null);
               return;
             }
-            
+
             if (!renameNode) return;
             try {
               let finalName = newBaseName.trim();
-              if (renameNode.type === 'file' && renameNode.name && renameNode.name.includes('.') && !renameNode.name.startsWith('.')) {
+              if (
+                renameNode.type === 'file' &&
+                renameNode.name &&
+                renameNode.name.includes('.') &&
+                !renameNode.name.startsWith('.')
+              ) {
                 const ext = renameNode.name.substring(renameNode.name.lastIndexOf('.') + 1);
                 finalName = `${finalName}.${ext}`;
               }
               await fileService.renameNode(renameNode.id, finalName);
               setRenameNode(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               Alert.alert('Error', 'Failed to rename');
@@ -1287,17 +1457,21 @@ export default function ProjectDetailScreen() {
           itemName={moveMode?.node?.name || ''}
           onMoveHere={async () => {
             if (!canEditFiles) {
-              Alert.alert('Permission Denied', 'Guests can only view files. Moving is not permitted.');
+              Alert.alert(
+                'Permission Denied',
+                'Guests can only view files. Moving is not permitted.'
+              );
               setMoveMode(null);
               return;
             }
-            
+
             if (!moveMode?.node) return;
             try {
               const destParentId = currentFolder?.id || null;
               await fileService.moveNode(moveMode.node.id, (destParentId || undefined) as any);
               setMoveMode(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               Alert.alert('Error', 'Failed to move');

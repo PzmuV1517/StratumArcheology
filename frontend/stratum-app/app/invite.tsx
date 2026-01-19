@@ -35,7 +35,7 @@ export default function InviteAcceptScreen() {
       <Text style={styles.title}>Project Invitation</Text>
       <Text style={styles.text}>{message || 'Processing invite…'}</Text>
       {status !== 'accepting' && (
-        <TouchableOpacity style={styles.button} onPress={() => router.replace('/') }>
+        <TouchableOpacity style={styles.button} onPress={() => router.replace('/')}>
           <Text style={styles.buttonText}>Go Home</Text>
         </TouchableOpacity>
       )}
@@ -44,9 +44,20 @@ export default function InviteAcceptScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111111', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  container: {
+    flex: 1,
+    backgroundColor: '#111111',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
   title: { color: '#F5F5F5', fontSize: 22, fontWeight: '700', marginBottom: 12 },
   text: { color: '#9A9A9A', fontSize: 14, textAlign: 'center', marginBottom: 16 },
-  button: { backgroundColor: '#FF2A2A', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  button: {
+    backgroundColor: '#FF2A2A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
   buttonText: { color: '#F5F5F5', fontWeight: '600' },
 });

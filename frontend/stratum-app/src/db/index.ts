@@ -1,6 +1,6 @@
 /**
  * STRATUM Offline Database Module
- * 
+ *
  * Exports all database functionality for offline-first architecture.
  */
 

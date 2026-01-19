@@ -1,11 +1,6 @@
 import api from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  User,
-  AuthResult,
-  AUTH_TOKEN_KEY,
-  USER_DATA_KEY,
-} from './authService.types';
+import { User, AuthResult, AUTH_TOKEN_KEY, USER_DATA_KEY } from './authService.types';
 
 /**
  * Auth service - works on both web and native
@@ -39,11 +34,7 @@ export const authService = {
   /**
    * Register new user
    */
-  register: async (
-    email: string,
-    password: string,
-    displayName: string
-  ): Promise<AuthResult> => {
+  register: async (email: string, password: string, displayName: string): Promise<AuthResult> => {
     try {
       const response = await api.post('/auth/register', {
         email,
@@ -60,8 +51,7 @@ export const authService = {
       console.error('Register error:', error);
       return {
         success: false,
-        error:
-          error.response?.data?.detail || error.message || 'Registration failed',
+        error: error.response?.data?.detail || error.message || 'Registration failed',
       };
     }
   },
@@ -78,7 +68,7 @@ export const authService = {
       if (api.defaults && api.defaults.headers) {
         delete (api.defaults.headers as any).common?.Authorization;
       }
-      
+
       // Clear offline data to prevent data leakage to other users
       if (clearOfflineData) {
         try {
@@ -86,12 +76,12 @@ export const authService = {
           const { recentProjectsCache, offlineFilesStorage } = await import('./offlineService');
           await recentProjectsCache.clearCache();
           await offlineFilesStorage.clearAllOfflineFiles();
-          
+
           // Also clear any pending offline queue
           const { offlineQueue, conflicts } = await import('./offlineQueueService');
           await offlineQueue.clearQueue();
           await conflicts.clearResolved();
-          
+
           console.log('[AuthService] Cleared offline data on logout');
         } catch (offlineError) {
           console.warn('[AuthService] Failed to clear offline data:', offlineError);

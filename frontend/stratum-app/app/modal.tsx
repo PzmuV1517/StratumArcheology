@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { projectService } from '../src/services/projectService';
 
@@ -28,18 +37,19 @@ export default function CreateProjectModal() {
         description: description.trim() || undefined,
         ran_lmi_id: ranLmiId.trim(),
       });
-      
+
       // Navigate directly to the newly created project
       if (newProject?.id) {
         router.replace(`/project/${newProject.id}`);
       } else {
         // Fallback if no project ID returned
         Alert.alert('Success', 'Project created successfully!', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       }
     } catch (error: any) {
-      const message = error?.detail || error?.message || 'Failed to create project. Please try again.';
+      const message =
+        error?.detail || error?.message || 'Failed to create project. Please try again.';
       Alert.alert('Error', message);
     } finally {
       setLoading(false);
@@ -80,11 +90,7 @@ export default function CreateProjectModal() {
           numberOfLines={4}
         />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleCreate}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -92,10 +98,7 @@ export default function CreateProjectModal() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>

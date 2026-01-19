@@ -32,7 +32,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
         const w = canvas.width / buffer.length;
         for (let i = 0; i < buffer.length; i++) {
           const v = buffer[i] / 255;
-            const h = v * canvas.height;
+          const h = v * canvas.height;
           g.fillStyle = '#FF2A2A';
           g.fillRect(i * w, canvas.height - h, w - 1, h);
         }
@@ -43,7 +43,9 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
     }
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      try { ctx?.close(); } catch {}
+      try {
+        ctx?.close();
+      } catch {}
     };
   }, [audioUrl]);
 
@@ -63,7 +65,17 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', padding: 16, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  wrapper: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#0E0E0E',
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
   audio: { width: '100%' },
   canvas: { width: '100%', height: 120, backgroundColor: '#111111', borderRadius: 8 },
   info: { color: '#9A9A9A' },

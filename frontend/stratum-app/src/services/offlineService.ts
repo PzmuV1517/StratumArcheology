@@ -1,6 +1,6 @@
 /**
  * STRATUM Offline Service
- * 
+ *
  * Manages offline data caching:
  * - Automatically caches last 3 accessed projects
  * - Allows users to manually save files for offline viewing
@@ -64,10 +64,10 @@ export const recentProjectsCache = {
   ): Promise<void> => {
     try {
       const recentProjects = await recentProjectsCache.getRecentProjects();
-      
+
       // Remove if already exists
-      const filtered = recentProjects.filter(p => p.project_id !== projectId);
-      
+      const filtered = recentProjects.filter((p) => p.project_id !== projectId);
+
       // Add to front
       const newEntry: RecentProject = {
         id: `recent_${projectId}`,
@@ -77,14 +77,16 @@ export const recentProjectsCache = {
         members_data: JSON.stringify(membersData),
         accessed_at: new Date().toISOString(),
       };
-      
+
       filtered.unshift(newEntry);
-      
+
       // Keep only last MAX_RECENT_PROJECTS
       const trimmed = filtered.slice(0, MAX_RECENT_PROJECTS);
-      
+
       await AsyncStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(trimmed));
-      console.log(`[OfflineService] Cached project ${projectId} (${trimmed.length} recent projects)`);
+      console.log(
+        `[OfflineService] Cached project ${projectId} (${trimmed.length} recent projects)`
+      );
     } catch (error) {
       console.error('[OfflineService] Failed to save recent project:', error);
     }
@@ -106,17 +108,19 @@ export const recentProjectsCache = {
   /**
    * Get a specific cached project
    */
-  getCachedProject: async (projectId: string): Promise<{
+  getCachedProject: async (
+    projectId: string
+  ): Promise<{
     project: any;
     notes: any[];
     members: any[];
   } | null> => {
     try {
       const recentProjects = await recentProjectsCache.getRecentProjects();
-      const cached = recentProjects.find(p => p.project_id === projectId);
-      
+      const cached = recentProjects.find((p) => p.project_id === projectId);
+
       if (!cached) return null;
-      
+
       return {
         project: JSON.parse(cached.project_data),
         notes: JSON.parse(cached.notes_data),
@@ -133,7 +137,7 @@ export const recentProjectsCache = {
    */
   isProjectCached: async (projectId: string): Promise<boolean> => {
     const recentProjects = await recentProjectsCache.getRecentProjects();
-    return recentProjects.some(p => p.project_id === projectId);
+    return recentProjects.some((p) => p.project_id === projectId);
   },
 
   /**
@@ -142,7 +146,7 @@ export const recentProjectsCache = {
   removeProject: async (projectId: string): Promise<void> => {
     try {
       const recentProjects = await recentProjectsCache.getRecentProjects();
-      const filtered = recentProjects.filter(p => p.project_id !== projectId);
+      const filtered = recentProjects.filter((p) => p.project_id !== projectId);
       await AsyncStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(filtered));
       console.log(`[OfflineService] Removed project ${projectId} from cache`);
     } catch (error) {
@@ -179,18 +183,18 @@ export const offlineFilesStorage = {
     onProgress?: (current: number, total: number, fileName: string) => void
   ): Promise<{ success: number; failed: number; errors: string[] }> => {
     const results = { success: 0, failed: 0, errors: [] as string[] };
-    
+
     if (Platform.OS === 'web') {
       // Web: Store metadata only (actual files use browser cache)
       try {
         const existingData = await AsyncStorage.getItem(OFFLINE_FILES_KEY);
         const offlineFiles: OfflineFile[] = existingData ? JSON.parse(existingData) : [];
-        
+
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           onProgress?.(i + 1, files.length, file.name);
-          
-          const existingIndex = offlineFiles.findIndex(f => f.node_id === file.id);
+
+          const existingIndex = offlineFiles.findIndex((f) => f.node_id === file.id);
           const newEntry: OfflineFile = {
             id: `offline_${file.id}`,
             project_id: projectId,
@@ -205,7 +209,7 @@ export const offlineFilesStorage = {
             last_accessed_at: new Date().toISOString(),
             remote_updated_at: file.updated_at || new Date().toISOString(),
           };
-          
+
           if (existingIndex >= 0) {
             offlineFiles[existingIndex] = newEntry;
           } else {
@@ -213,7 +217,7 @@ export const offlineFilesStorage = {
           }
           results.success++;
         }
-        
+
         await AsyncStorage.setItem(OFFLINE_FILES_KEY, JSON.stringify(offlineFiles));
       } catch (error: any) {
         results.errors.push(`Web storage error: ${error.message}`);
@@ -221,31 +225,31 @@ export const offlineFilesStorage = {
       }
       return results;
     }
-    
+
     // Native: Download files to local storage
     const offlineDir = await getOfflineFilesDir();
     const existingData = await AsyncStorage.getItem(OFFLINE_FILES_KEY);
     const offlineFiles: OfflineFile[] = existingData ? JSON.parse(existingData) : [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       onProgress?.(i + 1, files.length, file.name);
-      
+
       try {
         const localPath = `${offlineDir}${projectId}/${file.id}_${file.name}`;
         const localDir = `${offlineDir}${projectId}/`;
-        
+
         // Create project subdirectory
         const dirInfo = await FileSystem.getInfoAsync(localDir);
         if (!dirInfo.exists) {
           await FileSystem.makeDirectoryAsync(localDir, { intermediates: true });
         }
-        
+
         // Download the file
         const downloadResult = await FileSystem.downloadAsync(file.downloadUrl, localPath);
-        
+
         if (downloadResult.status === 200) {
-          const existingIndex = offlineFiles.findIndex(f => f.node_id === file.id);
+          const existingIndex = offlineFiles.findIndex((f) => f.node_id === file.id);
           const newEntry: OfflineFile = {
             id: `offline_${file.id}`,
             project_id: projectId,
@@ -260,7 +264,7 @@ export const offlineFilesStorage = {
             last_accessed_at: new Date().toISOString(),
             remote_updated_at: file.updated_at || new Date().toISOString(),
           };
-          
+
           if (existingIndex >= 0) {
             offlineFiles[existingIndex] = newEntry;
           } else {
@@ -276,9 +280,11 @@ export const offlineFilesStorage = {
         results.errors.push(`${file.name}: ${error.message}`);
       }
     }
-    
+
     await AsyncStorage.setItem(OFFLINE_FILES_KEY, JSON.stringify(offlineFiles));
-    console.log(`[OfflineService] Saved ${results.success} files for offline, ${results.failed} failed`);
+    console.log(
+      `[OfflineService] Saved ${results.success} files for offline, ${results.failed} failed`
+    );
     return results;
   },
 
@@ -289,9 +295,9 @@ export const offlineFilesStorage = {
     try {
       const data = await AsyncStorage.getItem(OFFLINE_FILES_KEY);
       const files: OfflineFile[] = data ? JSON.parse(data) : [];
-      
+
       if (projectId) {
-        return files.filter(f => f.project_id === projectId);
+        return files.filter((f) => f.project_id === projectId);
       }
       return files;
     } catch (error) {
@@ -305,7 +311,7 @@ export const offlineFilesStorage = {
    */
   isFileSavedOffline: async (nodeId: string): Promise<boolean> => {
     const files = await offlineFilesStorage.getOfflineFiles();
-    return files.some(f => f.node_id === nodeId);
+    return files.some((f) => f.node_id === nodeId);
   },
 
   /**
@@ -313,7 +319,7 @@ export const offlineFilesStorage = {
    */
   getOfflineFile: async (nodeId: string): Promise<OfflineFile | null> => {
     const files = await offlineFilesStorage.getOfflineFiles();
-    return files.find(f => f.node_id === nodeId) || null;
+    return files.find((f) => f.node_id === nodeId) || null;
   },
 
   /**
@@ -322,8 +328,8 @@ export const offlineFilesStorage = {
   removeOfflineFile: async (nodeId: string): Promise<void> => {
     try {
       const files = await offlineFilesStorage.getOfflineFiles();
-      const file = files.find(f => f.node_id === nodeId);
-      
+      const file = files.find((f) => f.node_id === nodeId);
+
       if (file && Platform.OS !== 'web') {
         // Delete local file
         const fileInfo = await FileSystem.getInfoAsync(file.local_path);
@@ -331,9 +337,9 @@ export const offlineFilesStorage = {
           await FileSystem.deleteAsync(file.local_path);
         }
       }
-      
+
       // Update storage
-      const remaining = files.filter(f => f.node_id !== nodeId);
+      const remaining = files.filter((f) => f.node_id !== nodeId);
       await AsyncStorage.setItem(OFFLINE_FILES_KEY, JSON.stringify(remaining));
     } catch (error) {
       console.error('[OfflineService] Failed to remove offline file:', error);
@@ -376,64 +382,78 @@ export const offlineFilesStorage = {
    */
   syncOfflineFiles: async (
     projectId: string | undefined,
-    getRemoteFileInfo: (nodeIds: string[]) => Promise<{ id: string; updated_at: string; name: string; mime_type?: string; size?: number }[]>,
+    getRemoteFileInfo: (
+      nodeIds: string[]
+    ) => Promise<
+      { id: string; updated_at: string; name: string; mime_type?: string; size?: number }[]
+    >,
     getDownloadUrl: (nodeId: string) => Promise<string>,
-    onProgress?: (current: number, total: number, fileName: string, status: 'checking' | 'downloading' | 'up-to-date') => void
+    onProgress?: (
+      current: number,
+      total: number,
+      fileName: string,
+      status: 'checking' | 'downloading' | 'up-to-date'
+    ) => void
   ): Promise<{ updated: number; upToDate: number; failed: number; errors: string[] }> => {
     const results = { updated: 0, upToDate: 0, failed: 0, errors: [] as string[] };
-    
+
     try {
       // Get offline files to check
       const offlineFiles = await offlineFilesStorage.getOfflineFiles(projectId);
-      
+
       if (offlineFiles.length === 0) {
         console.log('[OfflineService] No offline files to sync');
         return results;
       }
-      
+
       // Get remote file info in batch
-      const nodeIds = offlineFiles.map(f => f.node_id);
+      const nodeIds = offlineFiles.map((f) => f.node_id);
       const remoteFiles = await getRemoteFileInfo(nodeIds);
-      const remoteMap = new Map(remoteFiles.map(f => [f.id, f]));
-      
+      const remoteMap = new Map(remoteFiles.map((f) => [f.id, f]));
+
       const existingData = await AsyncStorage.getItem(OFFLINE_FILES_KEY);
       const allOfflineFiles: OfflineFile[] = existingData ? JSON.parse(existingData) : [];
-      
+
       for (let i = 0; i < offlineFiles.length; i++) {
         const localFile = offlineFiles[i];
         const remoteFile = remoteMap.get(localFile.node_id);
-        
+
         onProgress?.(i + 1, offlineFiles.length, localFile.name, 'checking');
-        
+
         if (!remoteFile) {
           // File no longer exists on server - mark as failed/orphaned
           results.failed++;
           results.errors.push(`${localFile.name}: File not found on server`);
           continue;
         }
-        
+
         // Compare timestamps
-        const localUpdatedAt = localFile.remote_updated_at ? new Date(localFile.remote_updated_at).getTime() : 0;
+        const localUpdatedAt = localFile.remote_updated_at
+          ? new Date(localFile.remote_updated_at).getTime()
+          : 0;
         const remoteUpdatedAt = new Date(remoteFile.updated_at).getTime();
-        
+
         if (remoteUpdatedAt > localUpdatedAt) {
           // File has been updated on server - re-download
           onProgress?.(i + 1, offlineFiles.length, localFile.name, 'downloading');
-          
+
           try {
             const downloadUrl = await getDownloadUrl(localFile.node_id);
-            
+
             if (Platform.OS !== 'web') {
               // Native: download to local path
-              const downloadResult = await FileSystem.downloadAsync(downloadUrl, localFile.local_path);
-              
+              const downloadResult = await FileSystem.downloadAsync(
+                downloadUrl,
+                localFile.local_path
+              );
+
               if (downloadResult.status !== 200) {
                 throw new Error(`Download failed with status ${downloadResult.status}`);
               }
             }
-            
+
             // Update the offline file record
-            const fileIndex = allOfflineFiles.findIndex(f => f.node_id === localFile.node_id);
+            const fileIndex = allOfflineFiles.findIndex((f) => f.node_id === localFile.node_id);
             if (fileIndex >= 0) {
               allOfflineFiles[fileIndex] = {
                 ...allOfflineFiles[fileIndex],
@@ -445,7 +465,7 @@ export const offlineFilesStorage = {
                 local_path: Platform.OS === 'web' ? downloadUrl : localFile.local_path,
               };
             }
-            
+
             results.updated++;
             console.log(`[OfflineService] Updated: ${localFile.name}`);
           } catch (error: any) {
@@ -458,11 +478,13 @@ export const offlineFilesStorage = {
           results.upToDate++;
         }
       }
-      
+
       // Save updated offline files
       await AsyncStorage.setItem(OFFLINE_FILES_KEY, JSON.stringify(allOfflineFiles));
-      
-      console.log(`[OfflineService] Sync complete: ${results.updated} updated, ${results.upToDate} up-to-date, ${results.failed} failed`);
+
+      console.log(
+        `[OfflineService] Sync complete: ${results.updated} updated, ${results.upToDate} up-to-date, ${results.failed} failed`
+      );
       return results;
     } catch (error: any) {
       console.error('[OfflineService] Sync failed:', error);

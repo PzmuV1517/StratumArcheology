@@ -1,6 +1,6 @@
 /**
  * Harris Matrix Component Exports
- * 
+ *
  * Platform-specific implementations are automatically resolved by the bundler:
  * - HarrisMatrix.web.tsx for web platform
  * - HarrisMatrix.native.tsx for iOS/Android

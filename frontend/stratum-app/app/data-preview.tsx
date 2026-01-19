@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, ScrollView, TextInput, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  TextInput,
+  Modal,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fileService } from '../src/services/fileService';
@@ -23,7 +34,11 @@ let AutoSizer: any = null;
 let VariableSizeGrid: any = null;
 
 export default function DataPreviewScreen() {
-  const { nodeId, name, kind } = useLocalSearchParams<{ nodeId: string; name: string; kind?: string }>();
+  const { nodeId, name, kind } = useLocalSearchParams<{
+    nodeId: string;
+    name: string;
+    kind?: string;
+  }>();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +58,10 @@ export default function DataPreviewScreen() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1); // web zoom for preview types
   const [showDraftRecoveryModal, setShowDraftRecoveryModal] = useState(false);
-  const [pendingDraftData, setPendingDraftData] = useState<{ textContent?: string; table?: string[][] } | null>(null);
+  const [pendingDraftData, setPendingDraftData] = useState<{
+    textContent?: string;
+    table?: string[][];
+  } | null>(null);
   const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
   const gridRef = useRef<any>(null);
@@ -57,29 +75,31 @@ export default function DataPreviewScreen() {
   // Determine if file is editable (text or spreadsheet only)
   const isEditableFile = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || '';
-    return ext.endsWith('.txt') || ext.endsWith('.md') || ext.endsWith('.json') || 
-           ext.endsWith('.csv') || ext.endsWith('.xlsx') || ext.endsWith('.xls');
+    return (
+      ext.endsWith('.txt') ||
+      ext.endsWith('.md') ||
+      ext.endsWith('.json') ||
+      ext.endsWith('.csv') ||
+      ext.endsWith('.xlsx') ||
+      ext.endsWith('.xls')
+    );
   }, [name]);
 
   // AutoSave hook - only for editable files
-  const {
-    saveStatus,
-    wasRestored,
-    saveDraft,
-    clearDraft,
-    hasDraft,
-    getDraft,
-    scheduleAutoSave,
-  } = useAutoSave<{ textContent?: string | null; table?: string[][] | null; editableTitle?: string }>({
-    formId: `data-preview-${nodeId}`,
-    initialData: { textContent: null, table: null, editableTitle: '' },
-    skipRestore: true, // We'll handle restore manually to show confirmation
-    onRestore: (data) => {
-      if (data.textContent !== undefined && data.textContent !== null) setTextContent(data.textContent);
-      if (data.table) setTable(data.table);
-      if (data.editableTitle) setEditableTitle(data.editableTitle);
-    },
-  });
+  const { saveStatus, wasRestored, saveDraft, clearDraft, hasDraft, getDraft, scheduleAutoSave } =
+    useAutoSave<{ textContent?: string | null; table?: string[][] | null; editableTitle?: string }>(
+      {
+        formId: `data-preview-${nodeId}`,
+        initialData: { textContent: null, table: null, editableTitle: '' },
+        skipRestore: true, // We'll handle restore manually to show confirmation
+        onRestore: (data) => {
+          if (data.textContent !== undefined && data.textContent !== null)
+            setTextContent(data.textContent);
+          if (data.table) setTable(data.table);
+          if (data.editableTitle) setEditableTitle(data.editableTitle);
+        },
+      }
+    );
 
   // Check for draft on mount and show recovery modal
   useEffect(() => {
@@ -202,15 +222,19 @@ export default function DataPreviewScreen() {
         const token = await AsyncStorage.getItem('authToken');
         const { blob }: any = await fileService.downloadFileStream(nodeId, token, undefined);
         const ext = (name as string)?.toLowerCase() || '';
-        
+
         // AUDIO FIRST (handles audio/webm)
         const isBlobAudio = blob.type && /^audio\//.test(blob.type);
         if (isBlobAudio || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(ext) || kind === 'audio') {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
             setAudioUrl(url);
-            setPdfUrl(null); setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
-            setTable(null); setTextContent(null);
+            setPdfUrl(null);
+            setVideoUrl(null);
+            setPointUrl(null);
+            setMeshUrl(null);
+            setTable(null);
+            setTextContent(null);
           }
           return;
         }
@@ -220,8 +244,11 @@ export default function DataPreviewScreen() {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
             setPdfUrl(url);
-            setVideoUrl(null); setPointUrl(null); setMeshUrl(null);
-            setTable(null); setTextContent(null);
+            setVideoUrl(null);
+            setPointUrl(null);
+            setMeshUrl(null);
+            setTable(null);
+            setTextContent(null);
           }
           return;
         }
@@ -233,9 +260,12 @@ export default function DataPreviewScreen() {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
             setVideoUrl(url);
-            setPdfUrl(null); setPointUrl(null); setMeshUrl(null);
+            setPdfUrl(null);
+            setPointUrl(null);
+            setMeshUrl(null);
             setAudioUrl(null);
-            setTable(null); setTextContent(null);
+            setTable(null);
+            setTextContent(null);
           }
           return;
         }
@@ -245,8 +275,12 @@ export default function DataPreviewScreen() {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
             setMeshUrl(url);
-            setPdfUrl(null); setVideoUrl(null); setPointUrl(null);
-            setAudioUrl(null); setTable(null); setTextContent(null);
+            setPdfUrl(null);
+            setVideoUrl(null);
+            setPointUrl(null);
+            setAudioUrl(null);
+            setTable(null);
+            setTextContent(null);
           }
           return;
         }
@@ -256,8 +290,12 @@ export default function DataPreviewScreen() {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
             setPointUrl(url);
-            setPdfUrl(null); setVideoUrl(null); setMeshUrl(null);
-            setAudioUrl(null); setTable(null); setTextContent(null);
+            setPdfUrl(null);
+            setVideoUrl(null);
+            setMeshUrl(null);
+            setAudioUrl(null);
+            setTable(null);
+            setTextContent(null);
           }
           return;
         }
@@ -316,7 +354,9 @@ export default function DataPreviewScreen() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [nodeId, name, kind]);
 
   const handleDownload = async () => {
@@ -394,7 +434,10 @@ export default function DataPreviewScreen() {
           Alert.alert('Success', 'File saved successfully');
         } else if (table) {
           // CSV/Excel on native - needs more complex handling
-          Alert.alert('Info', 'Spreadsheet saving on native is coming soon. Please use web for now.');
+          Alert.alert(
+            'Info',
+            'Spreadsheet saving on native is coming soon. Please use web for now.'
+          );
         }
         setSaving(false);
         return;
@@ -431,7 +474,10 @@ export default function DataPreviewScreen() {
         let maxCol = 0;
         for (const r of trimmed) {
           for (let i = r.length - 1; i >= 0; i--) {
-            if (String(r[i] ?? '').length > 0) { maxCol = Math.max(maxCol, i + 1); break; }
+            if (String(r[i] ?? '').length > 0) {
+              maxCol = Math.max(maxCol, i + 1);
+              break;
+            }
           }
         }
         trimmed = trimmed.map((r) => r.slice(0, maxCol));
@@ -454,8 +500,15 @@ export default function DataPreviewScreen() {
           const ws = XLSX.utils.aoa_to_sheet(trimmed);
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-          const wbout = XLSX.write(wb, { bookType: ext.endsWith('.xls') ? 'xls' : 'xlsx', type: 'array' });
-          blob = new Blob([wbout], { type: ext.endsWith('.xls') ? 'application/vnd.ms-excel' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const wbout = XLSX.write(wb, {
+            bookType: ext.endsWith('.xls') ? 'xls' : 'xlsx',
+            type: 'array',
+          });
+          blob = new Blob([wbout], {
+            type: ext.endsWith('.xls')
+              ? 'application/vnd.ms-excel'
+              : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
         }
       } else {
         return;
@@ -464,7 +517,10 @@ export default function DataPreviewScreen() {
       // Upload via replaceFile
       const formData = new FormData();
       // On web, wrap blob in File so filename is sent
-      const file = Platform.OS === 'web' ? new File([blob], finalFilename, { type: blob.type }) : (blob as any);
+      const file =
+        Platform.OS === 'web'
+          ? new File([blob], finalFilename, { type: blob.type })
+          : (blob as any);
       formData.append('file', file as any, finalFilename);
       await fileService.replaceFile(nodeId as string, formData);
       // Keep current editing mode; do not force exit on save
@@ -484,7 +540,9 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && pdfUrl) {
-        try { window.URL.revokeObjectURL(pdfUrl); } catch {}
+        try {
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch {}
       }
     };
   }, [pdfUrl]);
@@ -492,7 +550,9 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && videoUrl) {
-        try { window.URL.revokeObjectURL(videoUrl); } catch {}
+        try {
+          window.URL.revokeObjectURL(videoUrl);
+        } catch {}
       }
     };
   }, [videoUrl]);
@@ -500,7 +560,9 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && pointUrl) {
-        try { window.URL.revokeObjectURL(pointUrl); } catch {}
+        try {
+          window.URL.revokeObjectURL(pointUrl);
+        } catch {}
       }
     };
   }, [pointUrl]);
@@ -508,7 +570,9 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && meshUrl) {
-        try { window.URL.revokeObjectURL(meshUrl); } catch {}
+        try {
+          window.URL.revokeObjectURL(meshUrl);
+        } catch {}
       }
     };
   }, [meshUrl]);
@@ -516,7 +580,9 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     return () => {
       if (Platform.OS === 'web' && audioUrl) {
-        try { URL.revokeObjectURL(audioUrl); } catch {} 
+        try {
+          URL.revokeObjectURL(audioUrl);
+        } catch {}
       }
     };
   }, [audioUrl]);
@@ -558,8 +624,10 @@ export default function DataPreviewScreen() {
     if (ext.endsWith('.pdf') || kind === 'pdf') return (name as string) || 'PDF File';
     if (ext.match(/\.(mp4|webm|ogg|mov)$/) || kind === 'video') return (name as string) || 'Video';
     if (ext.match(/\.(glb|gltf)$/) || kind === 'mesh') return (name as string) || '3D Model';
-    if (ext.match(/\.(las|laz|ply|e57|pcd|rwi|rwp)$/) || kind === 'pointcloud') return (name as string) || 'Point Cloud';
-    if (ext.match(/\.(mp3|wav|webm|m4a|aac|ogg)$/) || kind === 'audio') return (name as string) || 'Audio';
+    if (ext.match(/\.(las|laz|ply|e57|pcd|rwi|rwp)$/) || kind === 'pointcloud')
+      return (name as string) || 'Point Cloud';
+    if (ext.match(/\.(mp3|wav|webm|m4a|aac|ogg)$/) || kind === 'audio')
+      return (name as string) || 'Audio';
     return (name as string) || (kind === 'csv' ? 'CSV' : 'Spreadsheet');
   }, [name, kind, editing, isNoteFile, editableTitle, originalTitle]);
 
@@ -646,11 +714,12 @@ export default function DataPreviewScreen() {
                 nativeID={Platform.OS === 'web' ? 'preview-content' : undefined}
                 style={
                   Platform.OS === 'web'
-                    ? (
-                        canZoomWeb
-                          ? [styles.zoomContentWeb, { transform: [{ scale: zoom }] as any, transformOrigin: '0 0' as any }]
-                          : styles.zoomWrapper
-                      )
+                    ? canZoomWeb
+                      ? [
+                          styles.zoomContentWeb,
+                          { transform: [{ scale: zoom }] as any, transformOrigin: '0 0' as any },
+                        ]
+                      : styles.zoomWrapper
                     : styles.zoomWrapper
                 }
               >
@@ -672,7 +741,9 @@ export default function DataPreviewScreen() {
                     return (
                       <Panel
                         table={table}
-                        setTable={(updater: any) => setTable((prev) => updater(prev || [] as any) as any)}
+                        setTable={(updater: any) =>
+                          setTable((prev) => updater(prev || ([] as any)) as any)
+                        }
                         editing={editing}
                         onDirty={() => setDirty(true)}
                       />
@@ -683,9 +754,15 @@ export default function DataPreviewScreen() {
                     editing={editing}
                     isNoteFile={isNoteFile}
                     editableTitle={editableTitle}
-                    setEditableTitle={(t) => { setEditableTitle(t); setDirty(true); }}
+                    setEditableTitle={(t) => {
+                      setEditableTitle(t);
+                      setDirty(true);
+                    }}
                     textContent={textContent || ''}
-                    setTextContent={(t) => { setTextContent(t); setDirty(true); }}
+                    setTextContent={(t) => {
+                      setTextContent(t);
+                      setDirty(true);
+                    }}
                     filename={(name as string) || ''}
                     onDirty={() => setDirty(true)}
                   />
@@ -719,7 +796,10 @@ export default function DataPreviewScreen() {
         <TouchableOpacity style={styles.actionButton} onPress={handleDownload}>
           <Text style={styles.actionButtonText}>Download</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.closeButton]} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.closeButton]}
+          onPress={() => router.back()}
+        >
           <Text style={[styles.actionButtonText, { color: '#9A9A9A' }]}>Close</Text>
         </TouchableOpacity>
       </View>
@@ -728,15 +808,24 @@ export default function DataPreviewScreen() {
       {editing && saveStatus !== 'idle' && (
         <View style={styles.autosaveIndicator}>
           <Text style={styles.autosaveText}>
-            {saveStatus === 'saving' ? 'Saving draft…' : 
-             saveStatus === 'saved' ? 'Draft saved' : 
-             saveStatus === 'error' ? 'Draft save failed' : ''}
+            {saveStatus === 'saving'
+              ? 'Saving draft…'
+              : saveStatus === 'saved'
+                ? 'Draft saved'
+                : saveStatus === 'error'
+                  ? 'Draft save failed'
+                  : ''}
           </Text>
         </View>
       )}
 
       {/* Draft Recovery Modal */}
-      <Modal visible={showDraftRecoveryModal} transparent animationType="fade" onRequestClose={() => setShowDraftRecoveryModal(false)}>
+      <Modal
+        visible={showDraftRecoveryModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDraftRecoveryModal(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Recover Unsaved Changes?</Text>
@@ -795,27 +884,74 @@ const styles = StyleSheet.create({
   errorText: { color: '#FF4444', fontSize: 16 },
   // table/text styles moved into components
   actions: { flexDirection: 'row', gap: 12, padding: 16 },
-  actionButton: { flex: 1, backgroundColor: '#2A2A2A', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   closeButton: { backgroundColor: '#1A1A1A' },
   actionButtonText: { color: '#F5F5F5', fontWeight: '600' },
-  headerCell: { backgroundColor: '#151515', borderRightWidth: 1, borderRightColor: '#2A2A2A', borderBottomWidth: 1, borderBottomColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 4 },
+  headerCell: {
+    backgroundColor: '#151515',
+    borderRightWidth: 1,
+    borderRightColor: '#2A2A2A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
   headerText: { color: '#9A9A9A', fontSize: 10, fontWeight: '600' },
   markdownWrapper: {},
   zoomWrapper: { flex: 1 },
   // Scrollable viewport on web to avoid tearing and allow panning when zoomed
   zoomViewportWeb: { flex: 1, overflow: 'scroll' as any },
   // Inner content gets scaled
-  zoomContentWeb: { minWidth: '100%', minHeight: '100%', maxWidth: "500%", maxHeight: "500%" },
+  zoomContentWeb: { minWidth: '100%', minHeight: '100%', maxWidth: '500%', maxHeight: '500%' },
   // Autosave indicator
-  autosaveIndicator: { position: 'absolute', top: 60, right: 16, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  autosaveIndicator: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   autosaveText: { color: '#9A9A9A', fontSize: 12 },
   // Modal styles
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  modalCard: { backgroundColor: '#1E1E1A', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#333', width: '100%', maxWidth: 400 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#1E1E1A',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+    width: '100%',
+    maxWidth: 400,
+  },
   modalTitle: { color: '#F5F5F5', fontWeight: '700', fontSize: 18, marginBottom: 8 },
   modalText: { color: '#9A9A9A', marginBottom: 16, lineHeight: 22 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
-  modalButton: { backgroundColor: '#2A2A2A', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#333' },
+  modalButton: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   modalButtonPrimary: { backgroundColor: '#2A2A2A', borderColor: '#FF2A2A' },
   modalButtonText: { color: '#F5F5F5', fontWeight: '600' },
 });

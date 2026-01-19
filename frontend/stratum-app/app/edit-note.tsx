@@ -40,14 +40,10 @@ export default function EditNoteScreen() {
   const initialData = useMemo(() => ({ title: '', content: '' }), []);
 
   // Auto-save hook
-  const {
-    saveStatus,
-    hasDraft,
-    saveDraft,
-    restoreDraft,
-    clearDraft,
-    markSubmitted,
-  } = useAutoSave<{ title: string; content: string }>({
+  const { saveStatus, hasDraft, saveDraft, restoreDraft, clearDraft, markSubmitted } = useAutoSave<{
+    title: string;
+    content: string;
+  }>({
     formId: `edit-note-${noteId}`,
     initialData,
     onRestore: (data) => {
@@ -94,10 +90,9 @@ export default function EditNoteScreen() {
       setOriginalDataLoaded(true);
     } catch (error: any) {
       console.error('Error loading note:', error);
-      const message = error?.detail || error?.message || 'Failed to load note. It may have been deleted.';
-      Alert.alert('Error', message, [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      const message =
+        error?.detail || error?.message || 'Failed to load note. It may have been deleted.';
+      Alert.alert('Error', message, [{ text: 'OK', onPress: () => router.back() }]);
     } finally {
       setLoading(false);
     }
@@ -121,7 +116,8 @@ export default function EditNoteScreen() {
       ]);
     } catch (error: any) {
       console.error('Failed to update note:', error);
-      const message = error?.detail || error?.message || 'Failed to save changes. Please try again.';
+      const message =
+        error?.detail || error?.message || 'Failed to save changes. Please try again.';
       Alert.alert('Error', message);
     } finally {
       setSaving(false);
@@ -131,19 +127,19 @@ export default function EditNoteScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Edit Note',
             headerStyle: { backgroundColor: '#111111' },
             headerTintColor: '#FF2A2A',
-            headerTitleStyle: { 
+            headerTitleStyle: {
               color: '#F5F5F5',
               fontSize: 18,
-              fontWeight: '600'
+              fontWeight: '600',
             },
             headerBackTitle: 'Note',
             headerShown: true,
-          }} 
+          }}
         />
         <ActivityIndicator size="large" color="#FF2A2A" />
         <Text style={styles.loadingText}>Loading note...</Text>
@@ -164,19 +160,14 @@ export default function EditNoteScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Unsaved Draft Found</Text>
             <Text style={styles.modalText}>
-              You have an unsaved draft from a previous editing session. Would you like to restore it or discard it?
+              You have an unsaved draft from a previous editing session. Would you like to restore
+              it or discard it?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonSecondary}
-                onPress={handleDiscardDraft}
-              >
+              <TouchableOpacity style={styles.modalButtonSecondary} onPress={handleDiscardDraft}>
                 <Text style={styles.modalButtonSecondaryText}>Discard</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButtonPrimary}
-                onPress={handleRestoreDraft}
-              >
+              <TouchableOpacity style={styles.modalButtonPrimary} onPress={handleRestoreDraft}>
                 <Text style={styles.modalButtonPrimaryText}>Restore</Text>
               </TouchableOpacity>
             </View>
@@ -184,21 +175,21 @@ export default function EditNoteScreen() {
         </View>
       </Modal>
 
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Edit Note',
           headerStyle: { backgroundColor: '#111111' },
           headerTintColor: '#FF2A2A',
-          headerTitleStyle: { 
+          headerTitleStyle: {
             color: '#F5F5F5',
             fontSize: 18,
-            fontWeight: '600'
+            fontWeight: '600',
           },
           headerBackTitle: 'Note',
           headerShown: true,
-        }} 
+        }}
       />
-      
+
       {/* Save Status Indicator */}
       {saveStatus !== 'idle' && (
         <View style={styles.saveStatusBar}>

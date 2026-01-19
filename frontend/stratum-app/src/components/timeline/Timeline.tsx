@@ -24,14 +24,12 @@ interface TimelineProps {
  * Timeline component for displaying project activity
  * Works on both web and native platforms
  */
-export default function Timeline({
-  projectId,
-  maxHeight,
-  onActivityPress,
-}: TimelineProps) {
+export default function Timeline({ projectId, maxHeight, onActivityPress }: TimelineProps) {
   const [mode, setMode] = useState<TimelineMode>('project');
-  const { activities, isLoading, hasMore, loadMore, refresh, error } =
-    useActivity(projectId, mode === 'personal');
+  const { activities, isLoading, hasMore, loadMore, refresh, error } = useActivity(
+    projectId,
+    mode === 'personal'
+  );
 
   const renderActivity = ({ item, index }: { item: ProjectActivity; index: number }) => {
     const icon = activityService.getActivityIcon(item.activity_type);
@@ -132,9 +130,7 @@ export default function Timeline({
             colors={['#007AFF']}
           />
         }
-        contentContainerStyle={
-          activities.length === 0 ? styles.emptyList : undefined
-        }
+        contentContainerStyle={activities.length === 0 ? styles.emptyList : undefined}
       >
         {isLoading && activities.length === 0 ? (
           <Loading message="Loading activity..." />
@@ -143,9 +139,7 @@ export default function Timeline({
         ) : (
           <>
             {activities.map((item, index) => (
-              <View key={item.id.toString()}>
-                {renderActivity({ item, index })}
-              </View>
+              <View key={item.id.toString()}>{renderActivity({ item, index })}</View>
             ))}
             {renderFooter()}
           </>

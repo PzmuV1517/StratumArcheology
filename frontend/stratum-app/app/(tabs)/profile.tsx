@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  ScrollView,
+  Image,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -52,9 +64,11 @@ export default function ProfileScreen() {
   };
 
   const handleHelpSupport = () => {
-    Alert.alert('Help & Support', 'Need help?\n\n• Email: support@stratum.app\n• Documentation: docs.stratum.app\n• Community Forum: forum.stratum.app', [
-      { text: 'OK', style: 'default' },
-    ]);
+    Alert.alert(
+      'Help & Support',
+      'Need help?\n\n• Email: support@stratum.app\n• Documentation: docs.stratum.app\n• Community Forum: forum.stratum.app',
+      [{ text: 'OK', style: 'default' }]
+    );
   };
 
   const handleAbout = () => {
@@ -81,7 +95,10 @@ export default function ProfileScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert('Invalid URL', 'Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api');
+      Alert.alert(
+        'Invalid URL',
+        'Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api'
+      );
       return;
     }
     try {
@@ -137,17 +154,17 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
             <Text style={styles.menuItemText}>Settings</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.menuItem} onPress={handleHelpSupport}>
             <Text style={styles.menuItemText}>Help & Support</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Text style={styles.menuItemText}>About</Text>
             <Text style={styles.menuItemArrow}>→</Text>
@@ -159,13 +176,19 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={openDevModal}>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuItemText}>Backend API Base URL</Text>
-              <Text style={styles.menuItemSubtext} numberOfLines={1}>{effectiveApi}</Text>
+              <Text style={styles.menuItemSubtext} numberOfLines={1}>
+                {effectiveApi}
+              </Text>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.logoutButton, isLoggingOut && { opacity: 0.7 }]} onPress={handleLogout} disabled={isLoggingOut}>
+        <TouchableOpacity
+          style={[styles.logoutButton, isLoggingOut && { opacity: 0.7 }]}
+          onPress={handleLogout}
+          disabled={isLoggingOut}
+        >
           {isLoggingOut ? (
             <ActivityIndicator color="#F5F5F5" />
           ) : (
@@ -184,15 +207,21 @@ export default function ProfileScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Confirm logout</Text>
-            <Text style={styles.modalText}>
-              Are you sure you want to log out of STRATUM?
-            </Text>
+            <Text style={styles.modalText}>Are you sure you want to log out of STRATUM?</Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalLogoutButton, isLoggingOut && { opacity: 0.7 }]}
+                style={[
+                  styles.modalButton,
+                  styles.modalLogoutButton,
+                  isLoggingOut && { opacity: 0.7 },
+                ]}
                 onPress={performLogout}
                 disabled={isLoggingOut}
               >
@@ -217,8 +246,10 @@ export default function ProfileScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Backend API Base URL</Text>
-            <Text style={styles.modalText}>Enter the full API url including /api.
-            {'\n'}Example: http://192.168.1.100:8000/api</Text>
+            <Text style={styles.modalText}>
+              Enter the full API url including /api.
+              {'\n'}Example: http://192.168.1.100:8000/api
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="http://host:port/api"
@@ -229,14 +260,37 @@ export default function ProfileScreen() {
               autoCorrect={false}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDevModal(false)} disabled={savingApi}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowDevModal(false)}
+                disabled={savingApi}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444' }]} onPress={resetApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>Reset</Text>}
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444' },
+                ]}
+                onPress={resetApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>Reset</Text>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#FF2A2A' }]} onPress={saveApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#F5F5F5' }]}>Save</Text>}
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#FF2A2A' }]}
+                onPress={saveApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#F5F5F5' }]}>Save</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

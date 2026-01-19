@@ -1,6 +1,6 @@
 /**
  * STRATUM File Upload Menu
- * 
+ *
  * Dropdown menu for file uploads with options:
  * - Take Photo (camera)
  * - Upload Photo (gallery)
@@ -8,15 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -46,14 +38,10 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
 
   const requestCameraPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'web') return true;
-    
+
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Camera Permission',
-        'Camera access is needed to take photos.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Camera Permission', 'Camera access is needed to take photos.', [{ text: 'OK' }]);
       return false;
     }
     return true;
@@ -61,14 +49,12 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
 
   const requestMediaLibraryPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'web') return true;
-    
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Gallery Permission',
-        'Photo library access is needed to upload photos.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Gallery Permission', 'Photo library access is needed to upload photos.', [
+        { text: 'OK' },
+      ]);
       return false;
     }
     return true;
@@ -90,7 +76,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
       if (!result.canceled && result.assets.length > 0) {
         const asset = result.assets[0];
         const fileName = `photo_${Date.now()}.${asset.uri.split('.').pop() || 'jpg'}`;
-        
+
         const selectedFile: SelectedFile = {
           uri: asset.uri,
           name: fileName,
@@ -98,7 +84,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
           size: asset.fileSize,
           type: 'image',
         };
-        
+
         onFileSelected([selectedFile]);
         onClose();
       }
@@ -128,7 +114,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
         const selectedFiles: SelectedFile[] = result.assets.map((asset, index) => {
           const extension = asset.uri.split('.').pop() || 'jpg';
           const fileName = asset.fileName || `photo_${Date.now()}_${index}.${extension}`;
-          
+
           return {
             uri: asset.uri,
             name: fileName,
@@ -137,7 +123,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
             type: 'image' as const,
           };
         });
-        
+
         onFileSelected(selectedFiles);
         onClose();
       }
@@ -165,7 +151,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
           size: asset.size,
           type: 'document' as const,
         }));
-        
+
         onFileSelected(selectedFiles);
         onClose();
       }
@@ -205,17 +191,8 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
   ];
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
+      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>

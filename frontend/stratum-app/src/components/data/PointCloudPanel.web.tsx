@@ -18,7 +18,12 @@ export default function PointCloudPanel({ src, name }: Props) {
   const pointsRef = React.useRef<THREE.Points | null>(null);
   const axesRef = React.useRef<THREE.AxesHelper | null>(null);
   const gridRef = React.useRef<THREE.GridHelper | null>(null);
-  const geomMetaRef = React.useRef<{ zMin?: number; zMax?: number; hasRGB?: boolean; hasIntensity?: boolean } | null>(null);
+  const geomMetaRef = React.useRef<{
+    zMin?: number;
+    zMax?: number;
+    hasRGB?: boolean;
+    hasIntensity?: boolean;
+  } | null>(null);
   const radiusRef = React.useRef<number>(1);
 
   const [error, setError] = React.useState<string | null>(null);
@@ -32,7 +37,9 @@ export default function PointCloudPanel({ src, name }: Props) {
   const [sizeMode, setSizeMode] = React.useState<'pixel' | 'world'>('pixel');
   const [sizePx, setSizePx] = React.useState<number>(1); // pixels (default)
   const [sizeWorld, setSizeWorld] = React.useState<number>(0.01); // fraction of radius
-  const [colorMode, setColorMode] = React.useState<'auto' | 'rgb' | 'intensity' | 'elevation'>('auto');
+  const [colorMode, setColorMode] = React.useState<'auto' | 'rgb' | 'intensity' | 'elevation'>(
+    'auto'
+  );
   const [colormap, setColormap] = React.useState<'turbo' | 'viridis' | 'gray'>('turbo');
 
   const ext = React.useMemo(() => {
@@ -47,39 +54,44 @@ export default function PointCloudPanel({ src, name }: Props) {
     if (!host) return;
 
     // init three
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(bg);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(bg);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 5000);
     camera.position.set(0.5, 0.5, 1.5);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' as any });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      logarithmicDepthBuffer: true,
+      powerPreference: 'high-performance' as any,
+    });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(host.clientWidth, host.clientHeight);
     host.appendChild(renderer.domElement);
 
-  const controls = new TrackballControls(camera, renderer.domElement);
-  controls.rotateSpeed = 5.0;
-  controls.zoomSpeed = 2.0;
-  controls.panSpeed = 1.2;
-  (controls as any).noRotate = false;
-  (controls as any).noZoom = false;
-  (controls as any).noPan = false;
-  (controls as any).staticMoving = true; // stop smoothing after input, reduces post-drag jitter
-  (controls as any).dynamicDampingFactor = 0.06;
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.2;
+    (controls as any).noRotate = false;
+    (controls as any).noZoom = false;
+    (controls as any).noPan = false;
+    (controls as any).staticMoving = true; // stop smoothing after input, reduces post-drag jitter
+    (controls as any).dynamicDampingFactor = 0.06;
     controls.target.set(0, 0, 0);
 
-  const light = new THREE.AmbientLight(0xffffff, 1.0);
-  scene.add(light);
+    const light = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(light);
 
-  // Helpers
-  const axes = new THREE.AxesHelper(1);
-  axes.visible = showAxes;
-  scene.add(axes);
-  axesRef.current = axes;
+    // Helpers
+    const axes = new THREE.AxesHelper(1);
+    axes.visible = showAxes;
+    scene.add(axes);
+    axesRef.current = axes;
 
-  const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-  grid.visible = showGrid;
-  scene.add(grid);
-  gridRef.current = grid;
+    const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+    grid.visible = showGrid;
+    scene.add(grid);
+    gridRef.current = grid;
 
     rendererRef.current = renderer;
     sceneRef.current = scene;
@@ -104,7 +116,9 @@ export default function PointCloudPanel({ src, name }: Props) {
     window.addEventListener('resize', onResize);
 
     // Ensure wheel always zooms within the viewer area (even when page is scrollable or overlay is on top)
-    try { (host.style as any).overscrollBehavior = 'contain'; } catch {}
+    try {
+      (host.style as any).overscrollBehavior = 'contain';
+    } catch {}
     const onWheel = (e: WheelEvent) => {
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName || '';
@@ -207,7 +221,10 @@ export default function PointCloudPanel({ src, name }: Props) {
           };
           // initial coloring
           applyColorMode(geometry, colorMode, colormap);
-          const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!geometry.getAttribute('color') });
+          const material = new THREE.PointsMaterial({
+            size: 1,
+            vertexColors: !!geometry.getAttribute('color'),
+          });
           const pts = new THREE.Points(geometry, material);
           scene.add(pts);
           pointsRef.current = pts;
@@ -223,7 +240,7 @@ export default function PointCloudPanel({ src, name }: Props) {
             setProgress(Math.max(0, Math.min(1, p)));
           } else {
             // fallback: nudge progress up to 0.9 while unknown
-            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+            setProgress((prev) => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
           }
         },
         (err: any) => {
@@ -255,7 +272,10 @@ export default function PointCloudPanel({ src, name }: Props) {
           };
           applyColorMode(geom, colorMode, colormap);
           // ensure material uses vertex colors
-          const mat = new THREE.PointsMaterial({ size: 1, vertexColors: !!geom.getAttribute('color') });
+          const mat = new THREE.PointsMaterial({
+            size: 1,
+            vertexColors: !!geom.getAttribute('color'),
+          });
           const pts = new THREE.Points(geom, mat);
           scene.add(pts);
           pointsRef.current = pts;
@@ -270,7 +290,7 @@ export default function PointCloudPanel({ src, name }: Props) {
             const p = (evt as any).loaded / Math.max(1, (evt as any).total);
             setProgress(Math.max(0, Math.min(1, p)));
           } else {
-            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+            setProgress((prev) => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
           }
         },
         (err: any) => {
@@ -290,9 +310,9 @@ export default function PointCloudPanel({ src, name }: Props) {
           const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
           if (isBlobLike) {
             setLoadingText('Uploading for conversion…');
-            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
+            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
             // Upload file bytes via multipart/form-data
-            const blob = await fetch(src).then(r => r.blob());
+            const blob = await fetch(src).then((r) => r.blob());
             const form = new FormData();
             form.append('file', blob, name || `upload.${ext}`);
             if (name) form.append('name', name);
@@ -307,7 +327,9 @@ export default function PointCloudPanel({ src, name }: Props) {
                 if (j?.detail) msg += `: ${j.detail}`;
                 else if (j?.message) msg += `: ${j.message}`;
               } catch {
-                try { msg += `: ${await resp.text()}`; } catch {}
+                try {
+                  msg += `: ${await resp.text()}`;
+                } catch {}
               }
               throw new Error(msg);
             }
@@ -315,7 +337,7 @@ export default function PointCloudPanel({ src, name }: Props) {
             convertedUrl = data?.url;
           } else {
             setLoadingText('Requesting conversion…');
-            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
+            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
             const qs = new URLSearchParams();
             if (src) qs.set('src', src);
             if (name) qs.set('name', name);
@@ -327,7 +349,9 @@ export default function PointCloudPanel({ src, name }: Props) {
                 if (j?.detail) msg += `: ${j.detail}`;
                 else if (j?.message) msg += `: ${j.message}`;
               } catch {
-                try { msg += `: ${await resp.text()}`; } catch {}
+                try {
+                  msg += `: ${await resp.text()}`;
+                } catch {}
               }
               throw new Error(msg);
             }
@@ -354,7 +378,10 @@ export default function PointCloudPanel({ src, name }: Props) {
                 hasIntensity: !!geometry.getAttribute('intensity'),
               };
               applyColorMode(geometry, colorMode, colormap);
-              const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!geometry.getAttribute('color') });
+              const material = new THREE.PointsMaterial({
+                size: 1,
+                vertexColors: !!geometry.getAttribute('color'),
+              });
               const pts = new THREE.Points(geometry, material);
               scene.add(pts);
               pointsRef.current = pts;
@@ -369,10 +396,13 @@ export default function PointCloudPanel({ src, name }: Props) {
                 const p = (evt as any).loaded / Math.max(1, (evt as any).total);
                 setProgress(Math.max(0, Math.min(1, p)));
               } else {
-                setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+                setProgress((prev) => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
               }
             },
-            (err: any) => { setLoading(false); setError('Failed to load converted PLY: ' + (err?.message || String(err))); }
+            (err: any) => {
+              setLoading(false);
+              setError('Failed to load converted PLY: ' + (err?.message || String(err)));
+            }
           );
         } catch (e: any) {
           // Fallback: if this was a local LAS (blob/data) and conversion failed, try in-browser LAS parse (uncompressed only)
@@ -380,7 +410,7 @@ export default function PointCloudPanel({ src, name }: Props) {
             const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
             if (ext === 'las' && isBlobLike) {
               setLoadingText('Parsing LAS (client)…');
-              const blob = await fetch(src).then(r => r.blob());
+              const blob = await fetch(src).then((r) => r.blob());
               const ab = await blob.arrayBuffer();
               const res = parseLAS(ab, { maxPoints: 2_000_000 });
               const geometry = new THREE.BufferGeometry();
@@ -415,22 +445,25 @@ export default function PointCloudPanel({ src, name }: Props) {
     }
   }, [src, ext]);
 
-  const tuneHelpersToFit = React.useCallback((radius: number) => {
-    const axes = axesRef.current;
-    const grid = gridRef.current;
-    const scene = sceneRef.current;
-    const scale = Math.max(1, radius);
-    if (axes) axes.scale.setScalar(scale * 0.5);
-    if (grid && scene) {
-      scene.remove(grid);
-      const divisions = 10;
-      const size = Math.max(1, radius * 2);
-      const newGrid = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
-      newGrid.visible = showGrid;
-      scene.add(newGrid);
-      gridRef.current = newGrid;
-    }
-  }, [showGrid]);
+  const tuneHelpersToFit = React.useCallback(
+    (radius: number) => {
+      const axes = axesRef.current;
+      const grid = gridRef.current;
+      const scene = sceneRef.current;
+      const scale = Math.max(1, radius);
+      if (axes) axes.scale.setScalar(scale * 0.5);
+      if (grid && scene) {
+        scene.remove(grid);
+        const divisions = 10;
+        const size = Math.max(1, radius * 2);
+        const newGrid = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
+        newGrid.visible = showGrid;
+        scene.add(newGrid);
+        gridRef.current = newGrid;
+      }
+    },
+    [showGrid]
+  );
 
   // Re-apply color mode when controls change
   React.useEffect(() => {
@@ -449,7 +482,7 @@ export default function PointCloudPanel({ src, name }: Props) {
     const mat = pts.material as THREE.PointsMaterial;
     if (sizeMode === 'pixel') {
       mat.sizeAttenuation = false;
-      const dpr = (window.devicePixelRatio || 1);
+      const dpr = window.devicePixelRatio || 1;
       mat.size = sizePx * dpr;
     } else {
       mat.sizeAttenuation = true;
@@ -479,7 +512,11 @@ export default function PointCloudPanel({ src, name }: Props) {
       <div style={controlsStyle}>
         <div style={rowStyle}>
           <label style={labelStyle}>Size mode</label>
-          <select value={sizeMode} onChange={(e) => setSizeMode(e.currentTarget.value as any)} style={selectStyle}>
+          <select
+            value={sizeMode}
+            onChange={(e) => setSizeMode(e.currentTarget.value as any)}
+            style={selectStyle}
+          >
             <option value="pixel">Pixel</option>
             <option value="world">World</option>
           </select>
@@ -515,14 +552,22 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
         <div style={rowStyle}>
           <label style={labelStyle}>Color</label>
-          <select value={colorMode} onChange={(e) => setColorMode(e.currentTarget.value as any)} style={selectStyle}>
+          <select
+            value={colorMode}
+            onChange={(e) => setColorMode(e.currentTarget.value as any)}
+            style={selectStyle}
+          >
             <option value="auto">Auto</option>
             <option value="rgb">RGB</option>
             <option value="intensity">Intensity</option>
             <option value="elevation">Elevation</option>
           </select>
           {colorMode !== 'rgb' && (
-            <select value={colormap} onChange={(e) => setColormap(e.currentTarget.value as any)} style={selectStyle}>
+            <select
+              value={colormap}
+              onChange={(e) => setColormap(e.currentTarget.value as any)}
+              style={selectStyle}
+            >
               <option value="turbo">Turbo</option>
               <option value="viridis">Viridis</option>
               <option value="gray">Grayscale</option>
@@ -531,9 +576,17 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
         <div style={rowStyle}>
           <label style={labelStyle}>Axes</label>
-          <input type="checkbox" checked={showAxes} onChange={(e) => setShowAxes(e.currentTarget.checked)} />
+          <input
+            type="checkbox"
+            checked={showAxes}
+            onChange={(e) => setShowAxes(e.currentTarget.checked)}
+          />
           <label style={{ ...labelStyle, marginLeft: 12 }}>Grid</label>
-          <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.currentTarget.checked)} />
+          <input
+            type="checkbox"
+            checked={showGrid}
+            onChange={(e) => setShowGrid(e.currentTarget.checked)}
+          />
           <label style={{ ...labelStyle, marginLeft: 12 }}>Background</label>
           <select value={bg} onChange={(e) => setBg(e.currentTarget.value)} style={selectStyle}>
             <option value="#0E0E0E">Dark</option>
@@ -544,12 +597,12 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
       </div>
       {!src && (
-        <View style={styles.center}> 
+        <View style={styles.center}>
           <Text style={styles.info}>No file selected</Text>
         </View>
       )}
       {!!src && error && (
-        <View style={[styles.center, styles.overlay]}> 
+        <View style={[styles.center, styles.overlay]}>
           <Text style={styles.title}>Point Cloud Preview</Text>
           <Text style={styles.info}>{error}</Text>
           {!!name && <Text style={[styles.info, { opacity: 0.8 }]}>File: {name}</Text>}
@@ -571,12 +624,17 @@ function getZStats(geometry: THREE.BufferGeometry) {
     }
   }
   if (!isFinite(min) || !isFinite(max)) {
-    min = 0; max = 1;
+    min = 0;
+    max = 1;
   }
   return { min, max };
 }
 
-function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | 'intensity' | 'elevation', map: 'turbo' | 'viridis' | 'gray') {
+function applyColorMode(
+  geometry: THREE.BufferGeometry,
+  mode: 'auto' | 'rgb' | 'intensity' | 'elevation',
+  map: 'turbo' | 'viridis' | 'gray'
+) {
   const hasRGB = !!geometry.getAttribute('color');
   const intensity = geometry.getAttribute('intensity') as THREE.BufferAttribute | undefined;
 
@@ -593,7 +651,8 @@ function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | '
   if (resolved === 'intensity' && intensity) {
     const count = intensity.count;
     const colors = new Float32Array(count * 3);
-    let min = Infinity, max = -Infinity;
+    let min = Infinity,
+      max = -Infinity;
     for (let i = 0; i < count; i++) {
       const v = intensity.getX(i);
       if (v < min) min = v;
@@ -616,7 +675,8 @@ function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | '
     if (pos) {
       const count = pos.count;
       const colors = new Float32Array(count * 3);
-      let min = Infinity, max = -Infinity;
+      let min = Infinity,
+        max = -Infinity;
       for (let i = 2; i < count * 3; i += 3) {
         const z = pos.array[i] as number;
         if (z < min) min = z;
@@ -646,9 +706,11 @@ function colormapFn(map: 'turbo' | 'viridis' | 'gray', t: number) {
   }
   if (map === 'viridis') {
     // simple viridis approx
-    const r = clamp(0.267 + 2.151*t - 1.820*t*t);
-    const g = clamp(0.005 + 1.120*t + 1.614*t*t - 1.870*t*t*t);
-    const b = clamp(0.329 + 2.190*(1-t) - 4.292*(1-t)*(1-t) + 2.146*(1-t)*(1-t)*(1-t));
+    const r = clamp(0.267 + 2.151 * t - 1.82 * t * t);
+    const g = clamp(0.005 + 1.12 * t + 1.614 * t * t - 1.87 * t * t * t);
+    const b = clamp(
+      0.329 + 2.19 * (1 - t) - 4.292 * (1 - t) * (1 - t) + 2.146 * (1 - t) * (1 - t) * (1 - t)
+    );
     return { r, g, b };
   }
   // turbo-like
@@ -687,7 +749,15 @@ function fitViewToGeometry(
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', overflow: 'hidden', position: 'relative' },
+  wrapper: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#0E0E0E',
+    overflow: 'hidden',
+    position: 'relative',
+  },
   fill: { position: 'absolute', inset: 0 } as any,
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)' } as any,
@@ -711,8 +781,19 @@ const controlsStyle: React.CSSProperties = {
 };
 const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
 const labelStyle: React.CSSProperties = { color: '#ddd', fontSize: 12, minWidth: 72 };
-const selectStyle: React.CSSProperties = { background: '#111', color: '#eee', border: '1px solid #444', borderRadius: 6, padding: '4px 6px' };
-const valueStyle: React.CSSProperties = { color: '#aaa', width: 48, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+const selectStyle: React.CSSProperties = {
+  background: '#111',
+  color: '#eee',
+  border: '1px solid #444',
+  borderRadius: 6,
+  padding: '4px 6px',
+};
+const valueStyle: React.CSSProperties = {
+  color: '#aaa',
+  width: 48,
+  textAlign: 'right',
+  fontVariantNumeric: 'tabular-nums',
+};
 
 // Loading overlay styles
 const loadingOverlayStyle: React.CSSProperties = {
@@ -751,5 +832,17 @@ const progressBarInnerStyle: React.CSSProperties = {
   background: 'linear-gradient(90deg, #58a6ff, #79c0ff)',
   transition: 'width 120ms ease',
 };
-const percentStyle: React.CSSProperties = { color: '#aaa', fontSize: 12, marginTop: 6, textAlign: 'right' };
-const fileNameStyle: React.CSSProperties = { color: '#888', fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const percentStyle: React.CSSProperties = {
+  color: '#aaa',
+  fontSize: 12,
+  marginTop: 6,
+  textAlign: 'right',
+};
+const fileNameStyle: React.CSSProperties = {
+  color: '#888',
+  fontSize: 12,
+  marginTop: 6,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};

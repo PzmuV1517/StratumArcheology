@@ -40,9 +40,7 @@ export default function ProjectDetailScreen({ route, navigation }) {
   const renderNote = ({ item }) => (
     <TouchableOpacity
       style={styles.noteCard}
-      onPress={() =>
-        navigation.navigate('NoteDetail', { projectId, noteId: item.id })
-      }
+      onPress={() => navigation.navigate('NoteDetail', { projectId, noteId: item.id })}
     >
       <Text style={styles.noteTitle}>{item.title}</Text>
       <Text style={styles.noteContent} numberOfLines={2}>
@@ -50,9 +48,7 @@ export default function ProjectDetailScreen({ route, navigation }) {
       </Text>
       <View style={styles.noteMeta}>
         <Text style={styles.authorText}>{item.author_name}</Text>
-        <Text style={styles.dateText}>
-          {new Date(item.created_at).toLocaleDateString()}
-        </Text>
+        <Text style={styles.dateText}>{new Date(item.created_at).toLocaleDateString()}</Text>
       </View>
       {item.photos_count > 0 && (
         <View style={styles.photosBadge}>

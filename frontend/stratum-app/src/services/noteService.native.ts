@@ -31,7 +31,11 @@ export const noteService = {
   },
 
   // Native-specific: upload audio from URI
-  uploadAudio: async (noteId: string, audioUri: string, filename: string = 'voice-note.mp3'): Promise<Attachment> => {
+  uploadAudio: async (
+    noteId: string,
+    audioUri: string,
+    filename: string = 'voice-note.mp3'
+  ): Promise<Attachment> => {
     const formData = new FormData();
     formData.append('file', {
       uri: audioUri,

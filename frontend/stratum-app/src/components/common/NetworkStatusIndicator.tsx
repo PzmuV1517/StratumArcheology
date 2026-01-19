@@ -1,33 +1,18 @@
 /**
  * Network Status Indicator Component
- * 
+ *
  * Displays current network status with visual feedback:
  * - Online: Green dot
  * - Offline: Red dot with message
  * - Syncing: Animated indicator
- * 
+ *
  * Cross-platform: Works on both web and native
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-} from 'react-native';
-import {
-  subscribeNetworkStatus,
-  NetworkState,
-  isOnline,
-} from '../../services/networkService';
-import {
-  subscribeSyncStatus,
-  SyncStatus,
-  forceSync,
-} from '../../services/syncService';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { subscribeNetworkStatus, NetworkState, isOnline } from '../../services/networkService';
+import { subscribeSyncStatus, SyncStatus, forceSync } from '../../services/syncService';
 
 interface NetworkStatusIndicatorProps {
   /** Show full status bar or just the dot */
@@ -36,10 +21,7 @@ interface NetworkStatusIndicatorProps {
   style?: any;
 }
 
-export function NetworkStatusIndicator({
-  compact = false,
-  style,
-}: NetworkStatusIndicatorProps) {
+export function NetworkStatusIndicator({ compact = false, style }: NetworkStatusIndicatorProps) {
   const [networkState, setNetworkState] = useState<NetworkState | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -122,16 +104,11 @@ export function NetworkStatusIndicator({
         accessibilityRole="button"
       >
         <Animated.View
-          style={[
-            styles.dot,
-            { backgroundColor: getStatusColor(), opacity: pulseAnim },
-          ]}
+          style={[styles.dot, { backgroundColor: getStatusColor(), opacity: pulseAnim }]}
         />
         {pendingCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {pendingCount > 99 ? '99+' : pendingCount}
-            </Text>
+            <Text style={styles.badgeText}>{pendingCount > 99 ? '99+' : pendingCount}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -143,19 +120,13 @@ export function NetworkStatusIndicator({
     return (
       <TouchableOpacity
         onPress={handlePress}
-        style={[
-          styles.fullContainer,
-          { backgroundColor: getStatusColor() },
-          style,
-        ]}
+        style={[styles.fullContainer, { backgroundColor: getStatusColor() }, style]}
         accessibilityLabel={`Network status: ${getStatusText()}`}
         accessibilityRole="button"
       >
         <Animated.View style={[styles.dotSmall, { opacity: pulseAnim }]} />
         <Text style={styles.statusText}>{getStatusText()}</Text>
-        {isConnected && !isSyncing && (
-          <Text style={styles.tapText}>Tap to sync</Text>
-        )}
+        {isConnected && !isSyncing && <Text style={styles.tapText}>Tap to sync</Text>}
       </TouchableOpacity>
     );
   }
@@ -166,7 +137,7 @@ export function NetworkStatusIndicator({
 
 /**
  * Offline Banner Component
- * 
+ *
  * Shows a prominent banner when offline
  */
 export function OfflineBanner() {
@@ -192,7 +163,7 @@ export function OfflineBanner() {
 
 /**
  * Sync Status Badge Component
- * 
+ *
  * Shows pending sync count as a badge
  */
 export function SyncBadge({ style }: { style?: any }) {
@@ -208,9 +179,7 @@ export function SyncBadge({ style }: { style?: any }) {
 
   return (
     <View style={[styles.syncBadge, style]}>
-      <Text style={styles.syncBadgeText}>
-        {pendingCount > 99 ? '99+' : pendingCount}
-      </Text>
+      <Text style={styles.syncBadgeText}>{pendingCount > 99 ? '99+' : pendingCount}</Text>
     </View>
   );
 }

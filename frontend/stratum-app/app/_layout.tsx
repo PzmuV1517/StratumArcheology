@@ -24,7 +24,6 @@ const StratumDarkTheme = {
   },
 };
 
-
 function RootLayoutNav() {
   // Web-only: keep dark inputs even when browser autofill applies
   useEffect(() => {
@@ -57,12 +56,14 @@ function RootLayoutNav() {
     <AuthRedirector>
       <ThemeProvider value={StratumDarkTheme}>
         <View style={styles.container}>
-          <Stack screenOptions={{ 
-            headerShown: false,
-            // Enable iOS swipe-back gesture from anywhere on screen
-            gestureEnabled: true,
-            fullScreenGestureEnabled: true,
-          }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Enable iOS swipe-back gesture from anywhere on screen
+              gestureEnabled: true,
+              fullScreenGestureEnabled: true,
+            }}
+          >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />

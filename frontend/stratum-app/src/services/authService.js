@@ -10,16 +10,16 @@ export const authService = {
         password,
       });
       const { access_token, user } = response.data;
-      
+
       await AsyncStorage.setItem('authToken', access_token);
       await AsyncStorage.setItem('userData', JSON.stringify(user));
-      
+
       return { success: true, token: access_token, user };
     } catch (error) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || error.message || 'Login failed' 
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message || 'Login failed',
       };
     }
   },
@@ -33,16 +33,16 @@ export const authService = {
         display_name: displayName,
       });
       const { access_token, user } = response.data;
-      
+
       await AsyncStorage.setItem('authToken', access_token);
       await AsyncStorage.setItem('userData', JSON.stringify(user));
-      
+
       return { success: true, token: access_token, user };
     } catch (error) {
       console.error('Register error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.detail || error.message || 'Registration failed' 
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message || 'Registration failed',
       };
     }
   },

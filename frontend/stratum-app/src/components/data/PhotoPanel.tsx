@@ -10,6 +10,15 @@ export default function PhotoPanel({ uri }: { uri: string }) {
 }
 
 const styles = StyleSheet.create({
-  imageWrapper: { flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#000', borderWidth: 1, borderColor: '#2A2A2A', justifyContent: 'center', alignItems: 'center' },
+  imageWrapper: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   image: { width: '100%', height: '100%' },
 });

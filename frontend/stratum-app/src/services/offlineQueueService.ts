@@ -1,6 +1,6 @@
 /**
  * STRATUM Offline Queue Service
- * 
+ *
  * Comprehensive offline queue system for:
  * - Queueing API requests when offline
  * - Auto-syncing when connection restored
@@ -13,7 +13,15 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
-import { v4 as uuidv4 } from 'uuid';
+
+// Simple UUID generator for React Native
+const generateUUID = (): string => {
+  // Use timestamp + random for uniqueness
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 15);
+  const randomPart2 = Math.random().toString(36).substring(2, 15);
+  return `${timestamp}-${randomPart}-${randomPart2}`;
+};
 
 // Storage keys
 const QUEUE_KEY = '@stratum_offline_queue';
@@ -23,9 +31,9 @@ const PENDING_EDITS_KEY = '@stratum_pending_edits';
 const CONFLICTS_KEY = '@stratum_conflicts';
 
 // Types
-export type QueueActionType = 
-  | 'CREATE_NOTE' 
-  | 'UPDATE_NOTE' 
+export type QueueActionType =
+  | 'CREATE_NOTE'
+  | 'UPDATE_NOTE'
   | 'DELETE_NOTE'
   | 'UPLOAD_FILE'
   | 'UPDATE_FILE'
@@ -98,14 +106,14 @@ export const getStratumOfflineDir = async (): Promise<string> => {
   if (Platform.OS === 'web') {
     return 'stratum_offline'; // Virtual path for web
   }
-  
+
   // Use cacheDirectory for iOS/Android - this is inside the app container
   // and doesn't require additional permissions
   const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
   if (!baseDir) {
     throw new Error('No storage directory available');
   }
-  
+
   const stratumDir = `${baseDir}stratum_offline/`;
   const dirInfo = await FileSystem.getInfoAsync(stratumDir);
   if (!dirInfo.exists) {
@@ -116,17 +124,19 @@ export const getStratumOfflineDir = async (): Promise<string> => {
 };
 
 // Get subdirectories for different content types
-export const getOfflineSubDir = async (subDir: 'files' | 'edits' | 'uploads' | 'cache'): Promise<string> => {
+export const getOfflineSubDir = async (
+  subDir: 'files' | 'edits' | 'uploads' | 'cache'
+): Promise<string> => {
   const baseDir = await getStratumOfflineDir();
   const fullPath = `${baseDir}${subDir}/`;
-  
+
   if (Platform.OS !== 'web') {
     const dirInfo = await FileSystem.getInfoAsync(fullPath);
     if (!dirInfo.exists) {
       await FileSystem.makeDirectoryAsync(fullPath, { intermediates: true });
     }
   }
-  
+
   return fullPath;
 };
 
@@ -149,9 +159,9 @@ export const offlineQueue = {
     }
   ): Promise<string> => {
     const queue = await offlineQueue.getQueue();
-    
+
     const action: QueuedAction = {
-      id: uuidv4(),
+      id: generateUUID(),
       type,
       projectId,
       entityId: options?.entityId,
@@ -163,13 +173,13 @@ export const offlineQueue = {
       userId,
       priority: options?.priority ?? 10,
     };
-    
+
     queue.push(action);
     queue.sort((a, b) => a.priority - b.priority);
-    
+
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     console.log(`[OfflineQueue] Enqueued ${type} for project ${projectId}`);
-    
+
     return action.id;
   },
 
@@ -191,7 +201,7 @@ export const offlineQueue = {
    */
   getProjectQueue: async (projectId: string): Promise<QueuedAction[]> => {
     const queue = await offlineQueue.getQueue();
-    return queue.filter(a => a.projectId === projectId);
+    return queue.filter((a) => a.projectId === projectId);
   },
 
   /**
@@ -199,7 +209,7 @@ export const offlineQueue = {
    */
   getPendingCount: async (): Promise<number> => {
     const queue = await offlineQueue.getQueue();
-    return queue.filter(a => a.status === 'pending' || a.status === 'failed').length;
+    return queue.filter((a) => a.status === 'pending' || a.status === 'failed').length;
   },
 
   /**
@@ -211,8 +221,8 @@ export const offlineQueue = {
     error?: string
   ): Promise<void> => {
     const queue = await offlineQueue.getQueue();
-    const actionIndex = queue.findIndex(a => a.id === actionId);
-    
+    const actionIndex = queue.findIndex((a) => a.id === actionId);
+
     if (actionIndex >= 0) {
       queue[actionIndex].status = status;
       if (error) {
@@ -228,7 +238,7 @@ export const offlineQueue = {
    */
   dequeue: async (actionId: string): Promise<void> => {
     const queue = await offlineQueue.getQueue();
-    const filtered = queue.filter(a => a.id !== actionId);
+    const filtered = queue.filter((a) => a.id !== actionId);
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
   },
 
@@ -237,7 +247,7 @@ export const offlineQueue = {
    */
   clearFailed: async (): Promise<void> => {
     const queue = await offlineQueue.getQueue();
-    const filtered = queue.filter(a => a.status !== 'failed');
+    const filtered = queue.filter((a) => a.status !== 'failed');
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
   },
 
@@ -258,14 +268,14 @@ export const fileVersions = {
    */
   setVersion: async (version: FileVersion): Promise<void> => {
     const versions = await fileVersions.getAllVersions();
-    const existingIndex = versions.findIndex(v => v.nodeId === version.nodeId);
-    
+    const existingIndex = versions.findIndex((v) => v.nodeId === version.nodeId);
+
     if (existingIndex >= 0) {
       versions[existingIndex] = version;
     } else {
       versions.push(version);
     }
-    
+
     await AsyncStorage.setItem(FILE_VERSIONS_KEY, JSON.stringify(versions));
   },
 
@@ -274,7 +284,7 @@ export const fileVersions = {
    */
   getVersion: async (nodeId: string): Promise<FileVersion | null> => {
     const versions = await fileVersions.getAllVersions();
-    return versions.find(v => v.nodeId === nodeId) || null;
+    return versions.find((v) => v.nodeId === nodeId) || null;
   },
 
   /**
@@ -317,7 +327,7 @@ export const fileVersions = {
    */
   clearVersion: async (nodeId: string): Promise<void> => {
     const versions = await fileVersions.getAllVersions();
-    const filtered = versions.filter(v => v.nodeId !== nodeId);
+    const filtered = versions.filter((v) => v.nodeId !== nodeId);
     await AsyncStorage.setItem(FILE_VERSIONS_KEY, JSON.stringify(filtered));
   },
 };
@@ -332,22 +342,22 @@ export const pendingEdits = {
   saveEdit: async (edit: Omit<PendingFileEdit, 'id'>): Promise<string> => {
     const edits = await pendingEdits.getAllEdits();
     const newEdit: PendingFileEdit = {
-      id: uuidv4(),
+      id: generateUUID(),
       ...edit,
     };
-    
+
     // Replace existing edit for same file
-    const existingIndex = edits.findIndex(e => e.nodeId === edit.nodeId);
+    const existingIndex = edits.findIndex((e) => e.nodeId === edit.nodeId);
     if (existingIndex >= 0) {
       newEdit.id = edits[existingIndex].id;
       edits[existingIndex] = newEdit;
     } else {
       edits.push(newEdit);
     }
-    
+
     await AsyncStorage.setItem(PENDING_EDITS_KEY, JSON.stringify(edits));
     console.log(`[OfflineQueue] Saved pending edit for ${edit.fileName}`);
-    
+
     return newEdit.id;
   },
 
@@ -356,7 +366,7 @@ export const pendingEdits = {
    */
   getEdit: async (nodeId: string): Promise<PendingFileEdit | null> => {
     const edits = await pendingEdits.getAllEdits();
-    return edits.find(e => e.nodeId === nodeId) || null;
+    return edits.find((e) => e.nodeId === nodeId) || null;
   },
 
   /**
@@ -377,7 +387,7 @@ export const pendingEdits = {
    */
   getProjectEdits: async (projectId: string): Promise<PendingFileEdit[]> => {
     const edits = await pendingEdits.getAllEdits();
-    return edits.filter(e => e.projectId === projectId);
+    return edits.filter((e) => e.projectId === projectId);
   },
 
   /**
@@ -385,7 +395,7 @@ export const pendingEdits = {
    */
   hasDrafts: async (projectId: string): Promise<boolean> => {
     const edits = await pendingEdits.getProjectEdits(projectId);
-    return edits.some(e => e.isDraft);
+    return edits.some((e) => e.isDraft);
   },
 
   /**
@@ -393,8 +403,8 @@ export const pendingEdits = {
    */
   removeEdit: async (nodeId: string): Promise<void> => {
     const edits = await pendingEdits.getAllEdits();
-    const edit = edits.find(e => e.nodeId === nodeId);
-    
+    const edit = edits.find((e) => e.nodeId === nodeId);
+
     // Delete the edited file if it exists
     if (edit && Platform.OS !== 'web') {
       try {
@@ -406,8 +416,8 @@ export const pendingEdits = {
         console.warn('[OfflineQueue] Failed to delete edited file:', error);
       }
     }
-    
-    const filtered = edits.filter(e => e.nodeId !== nodeId);
+
+    const filtered = edits.filter((e) => e.nodeId !== nodeId);
     await AsyncStorage.setItem(PENDING_EDITS_KEY, JSON.stringify(filtered));
   },
 
@@ -438,29 +448,33 @@ export const conflicts = {
   /**
    * Record a conflict
    */
-  addConflict: async (conflict: Omit<FileConflict, 'id' | 'createdAt' | 'resolved'>): Promise<string> => {
+  addConflict: async (
+    conflict: Omit<FileConflict, 'id' | 'createdAt' | 'resolved'>
+  ): Promise<string> => {
     const allConflicts = await conflicts.getAllConflicts();
-    
+
     // Check if conflict already exists for this file
-    const existingIndex = allConflicts.findIndex(c => c.nodeId === conflict.nodeId && !c.resolved);
-    
+    const existingIndex = allConflicts.findIndex(
+      (c) => c.nodeId === conflict.nodeId && !c.resolved
+    );
+
     const newConflict: FileConflict = {
-      id: uuidv4(),
+      id: generateUUID(),
       ...conflict,
       createdAt: new Date().toISOString(),
       resolved: false,
     };
-    
+
     if (existingIndex >= 0) {
       newConflict.id = allConflicts[existingIndex].id;
       allConflicts[existingIndex] = newConflict;
     } else {
       allConflicts.push(newConflict);
     }
-    
+
     await AsyncStorage.setItem(CONFLICTS_KEY, JSON.stringify(allConflicts));
     console.log(`[OfflineQueue] Recorded conflict for ${conflict.fileName}`);
-    
+
     return newConflict.id;
   },
 
@@ -469,7 +483,7 @@ export const conflicts = {
    */
   getUnresolvedConflicts: async (): Promise<FileConflict[]> => {
     const allConflicts = await conflicts.getAllConflicts();
-    return allConflicts.filter(c => !c.resolved);
+    return allConflicts.filter((c) => !c.resolved);
   },
 
   /**
@@ -477,7 +491,7 @@ export const conflicts = {
    */
   getProjectConflicts: async (projectId: string): Promise<FileConflict[]> => {
     const allConflicts = await conflicts.getAllConflicts();
-    return allConflicts.filter(c => c.projectId === projectId && !c.resolved);
+    return allConflicts.filter((c) => c.projectId === projectId && !c.resolved);
   },
 
   /**
@@ -501,8 +515,8 @@ export const conflicts = {
     resolution: 'keep_local' | 'keep_remote' | 'keep_both'
   ): Promise<void> => {
     const allConflicts = await conflicts.getAllConflicts();
-    const conflictIndex = allConflicts.findIndex(c => c.id === conflictId);
-    
+    const conflictIndex = allConflicts.findIndex((c) => c.id === conflictId);
+
     if (conflictIndex >= 0) {
       allConflicts[conflictIndex].resolved = true;
       allConflicts[conflictIndex].resolution = resolution;
@@ -516,7 +530,7 @@ export const conflicts = {
    */
   clearResolved: async (): Promise<void> => {
     const allConflicts = await conflicts.getAllConflicts();
-    const unresolved = allConflicts.filter(c => !c.resolved);
+    const unresolved = allConflicts.filter((c) => !c.resolved);
     await AsyncStorage.setItem(CONFLICTS_KEY, JSON.stringify(unresolved));
   },
 
@@ -536,7 +550,7 @@ export const checkConnectivity = async (): Promise<boolean> => {
   if (Platform.OS === 'web') {
     return navigator.onLine;
   }
-  
+
   try {
     const state = await NetInfo.fetch();
     return state.isConnected === true && state.isInternetReachable !== false;
@@ -576,42 +590,43 @@ export const getOfflineStorageStats = async (): Promise<OfflineStorageStats> => 
     editsBytes: 0,
     cacheBytes: 0,
   };
-  
+
   if (Platform.OS === 'web') {
     return stats;
   }
-  
+
   try {
     // Calculate AsyncStorage sizes (in KB)
     const queueData = await AsyncStorage.getItem(QUEUE_KEY);
     stats.queueSize = Math.round((queueData?.length || 0) / 1024);
-    
+
     const versionsData = await AsyncStorage.getItem(FILE_VERSIONS_KEY);
     stats.versionsSize = Math.round((versionsData?.length || 0) / 1024);
-    
+
     const editsData = await AsyncStorage.getItem(PENDING_EDITS_KEY);
     stats.pendingEditsSize = Math.round((editsData?.length || 0) / 1024);
-    
+
     const conflictsData = await AsyncStorage.getItem(CONFLICTS_KEY);
     stats.conflictsSize = Math.round((conflictsData?.length || 0) / 1024);
-    
-    stats.totalSize = stats.queueSize + stats.versionsSize + stats.pendingEditsSize + stats.conflictsSize;
-    
+
+    stats.totalSize =
+      stats.queueSize + stats.versionsSize + stats.pendingEditsSize + stats.conflictsSize;
+
     // Calculate file system sizes
     const baseDir = await getStratumOfflineDir();
-    
+
     const calculateDirSize = async (dirPath: string): Promise<number> => {
       try {
         const dirInfo = await FileSystem.getInfoAsync(dirPath);
         if (!dirInfo.exists) return 0;
-        
+
         const contents = await FileSystem.readDirectoryAsync(dirPath);
         let size = 0;
-        
+
         for (const item of contents) {
           const itemPath = `${dirPath}${item}`;
           const itemInfo = await FileSystem.getInfoAsync(itemPath);
-          
+
           if (itemInfo.exists) {
             if (itemInfo.isDirectory) {
               size += await calculateDirSize(`${itemPath}/`);
@@ -620,22 +635,21 @@ export const getOfflineStorageStats = async (): Promise<OfflineStorageStats> => 
             }
           }
         }
-        
+
         return size;
       } catch (error) {
         return 0;
       }
     };
-    
+
     stats.filesBytes = await calculateDirSize(`${baseDir}files/`);
     stats.editsBytes = await calculateDirSize(`${baseDir}edits/`);
     stats.cacheBytes = await calculateDirSize(`${baseDir}cache/`);
     stats.totalBytes = stats.filesBytes + stats.editsBytes + stats.cacheBytes;
-    
   } catch (error) {
     console.error('[OfflineQueue] Failed to calculate storage stats:', error);
   }
-  
+
   return stats;
 };
 

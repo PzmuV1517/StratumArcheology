@@ -72,21 +72,21 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
-      
+
       const url = selectedCategory
         ? `${apiBaseUrl}/api/files/project/${projectId}/time-machine?category=${selectedCategory}`
         : `${apiBaseUrl}/api/files/project/${projectId}/time-machine`;
-      
+
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to load version history');
       }
-      
+
       const result = await response.json();
       setData(result);
     } catch (error) {
@@ -108,7 +108,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   }, [loadTimeMachineData]);
 
   const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => {
+    setExpandedCategories((prev) => {
       const next = new Set(prev);
       if (next.has(category)) {
         next.delete(category);
@@ -120,7 +120,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   };
 
   const toggleFile = (fileId: string) => {
-    setExpandedFiles(prev => {
+    setExpandedFiles((prev) => {
       const next = new Set(prev);
       if (next.has(fileId)) {
         next.delete(fileId);
@@ -172,26 +172,22 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       const token = await AsyncStorage.getItem('authToken');
       const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
       const url = `${apiBaseUrl}/api/files/${fileId}/version/${version}/download?token=${token}`;
-      
+
       if (Platform.OS === 'web') {
         window.open(url, '_blank');
       } else {
-        Alert.alert(
-          'Download Version',
-          `Download ${fileName} version ${version}?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Download',
-              onPress: () => {
-                // For native, we'd use Linking or file download library
-                import('expo-linking').then(Linking => {
-                  Linking.openURL(url);
-                });
-              },
+        Alert.alert('Download Version', `Download ${fileName} version ${version}?`, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Download',
+            onPress: () => {
+              // For native, we'd use Linking or file download library
+              import('expo-linking').then((Linking) => {
+                Linking.openURL(url);
+              });
             },
-          ]
-        );
+          },
+        ]);
       }
     } catch (error) {
       console.error('Error downloading version:', error);
@@ -212,21 +208,18 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
             try {
               const token = await AsyncStorage.getItem('authToken');
               const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
-              
-              const response = await fetch(
-                `${apiBaseUrl}/api/files/${fileId}/restore/${version}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                  },
-                }
-              );
-              
+
+              const response = await fetch(`${apiBaseUrl}/api/files/${fileId}/restore/${version}`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
               if (!response.ok) {
                 throw new Error('Failed to restore version');
               }
-              
+
               Alert.alert('Success', `Restored ${fileName} to version ${version}`);
               loadTimeMachineData();
             } catch (error) {
@@ -241,7 +234,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const renderCategoryFilter = () => {
     const categories = Object.keys(CATEGORY_INFO);
-    
+
     return (
       <ScrollView
         horizontal
@@ -250,39 +243,32 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
         contentContainerStyle={styles.filterContent}
       >
         <TouchableOpacity
-          style={[
-            styles.filterChip,
-            !selectedCategory && styles.filterChipActive,
-          ]}
+          style={[styles.filterChip, !selectedCategory && styles.filterChipActive]}
           onPress={() => setSelectedCategory(null)}
         >
-          <Text style={[
-            styles.filterChipText,
-            !selectedCategory && styles.filterChipTextActive,
-          ]}>
+          <Text style={[styles.filterChipText, !selectedCategory && styles.filterChipTextActive]}>
             All
           </Text>
         </TouchableOpacity>
-        
-        {categories.map(cat => {
+
+        {categories.map((cat) => {
           const info = CATEGORY_INFO[cat];
           const count = data?.categories[cat]?.length || 0;
           if (count === 0 && selectedCategory !== cat) return null;
-          
+
           return (
             <TouchableOpacity
               key={cat}
-              style={[
-                styles.filterChip,
-                selectedCategory === cat && styles.filterChipActive,
-              ]}
+              style={[styles.filterChip, selectedCategory === cat && styles.filterChipActive]}
               onPress={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
             >
               <Text style={styles.filterChipIcon}>{info.icon}</Text>
-              <Text style={[
-                styles.filterChipText,
-                selectedCategory === cat && styles.filterChipTextActive,
-              ]}>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedCategory === cat && styles.filterChipTextActive,
+                ]}
+              >
                 {info.label} ({count})
               </Text>
             </TouchableOpacity>
@@ -295,32 +281,30 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   const renderFileVersions = (file: FileWithVersions) => {
     const isExpanded = expandedFiles.has(file.id);
     const info = CATEGORY_INFO[file.category] || CATEGORY_INFO.other;
-    
+
     return (
       <View key={file.id} style={styles.fileCard}>
-        <TouchableOpacity
-          style={styles.fileHeader}
-          onPress={() => toggleFile(file.id)}
-        >
+        <TouchableOpacity style={styles.fileHeader} onPress={() => toggleFile(file.id)}>
           <View style={styles.fileInfo}>
             <Text style={styles.fileIcon}>{info.icon}</Text>
             <View style={styles.fileDetails}>
-              <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+              <Text style={styles.fileName} numberOfLines={1}>
+                {file.name}
+              </Text>
               <Text style={styles.fileMeta}>
-                v{file.current_version} • {formatFileSize(file.size)} • {formatTimeAgo(file.updated_at)}
+                v{file.current_version} • {formatFileSize(file.size)} •{' '}
+                {formatTimeAgo(file.updated_at)}
               </Text>
             </View>
           </View>
           <View style={styles.fileActions}>
             <View style={styles.versionBadge}>
-              <Text style={styles.versionBadgeText}>
-                {file.versions.length + 1} versions
-              </Text>
+              <Text style={styles.versionBadgeText}>{file.versions.length + 1} versions</Text>
             </View>
             <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
           </View>
         </TouchableOpacity>
-        
+
         {isExpanded && (
           <View style={styles.versionsContainer}>
             {/* Current version */}
@@ -338,7 +322,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                 </Text>
               </View>
             </View>
-            
+
             {/* Previous versions */}
             {file.versions.map((version) => (
               <View key={version.id} style={styles.versionItem}>
@@ -375,17 +359,14 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const renderCategory = (category: string, files: FileWithVersions[]) => {
     if (files.length === 0) return null;
-    
+
     const info = CATEGORY_INFO[category] || CATEGORY_INFO.other;
     const isExpanded = expandedCategories.has(category);
     const totalVersions = files.reduce((sum, f) => sum + f.versions.length + 1, 0);
-    
+
     return (
       <View key={category} style={styles.categorySection}>
-        <TouchableOpacity
-          style={styles.categoryHeader}
-          onPress={() => toggleCategory(category)}
-        >
+        <TouchableOpacity style={styles.categoryHeader} onPress={() => toggleCategory(category)}>
           <View style={styles.categoryInfo}>
             <Text style={styles.categoryIcon}>{info.icon}</Text>
             <View>
@@ -397,12 +378,8 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           </View>
           <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
         </TouchableOpacity>
-        
-        {isExpanded && (
-          <View style={styles.categoryFiles}>
-            {files.map(renderFileVersions)}
-          </View>
-        )}
+
+        {isExpanded && <View style={styles.categoryFiles}>{files.map(renderFileVersions)}</View>}
       </View>
     );
   };
@@ -458,20 +435,14 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FF2A2A"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF2A2A" />
         }
       >
         {categories.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📁</Text>
             <Text style={styles.emptyTitle}>No files found</Text>
-            <Text style={styles.emptySubtitle}>
-              Upload files to see them here
-            </Text>
+            <Text style={styles.emptySubtitle}>Upload files to see them here</Text>
           </View>
         ) : (
           categories.map(([category, files]) => renderCategory(category, files))

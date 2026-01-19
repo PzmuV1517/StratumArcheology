@@ -1,11 +1,11 @@
 /**
  * STRATUM Network Status Service
- * 
+ *
  * Monitors network connectivity and provides:
  * - Online/offline detection
  * - Network quality estimation
  * - Automatic sync trigger on reconnection
- * 
+ *
  * Cross-platform: Uses NetInfo on native, navigator.onLine on web
  */
 
@@ -50,10 +50,10 @@ export async function initNetworkService(): Promise<void> {
   } else {
     await initNativeNetworkService();
   }
-  
+
   // Also listen for app state changes to refresh on resume
   AppState.addEventListener('change', handleAppStateChange);
-  
+
   console.log('[NetworkService] Initialized');
 }
 
@@ -96,11 +96,11 @@ function initWebNetworkService(): void {
 async function initNativeNetworkService(): Promise<void> {
   try {
     NetInfo = require('@react-native-community/netinfo').default;
-    
+
     // Get initial state
     const state = await NetInfo.fetch();
     handleNetInfoChange(state);
-    
+
     // Subscribe to changes
     unsubscribeNetInfo = NetInfo.addEventListener(handleNetInfoChange);
   } catch (error) {
@@ -121,7 +121,7 @@ async function initNativeNetworkService(): Promise<void> {
  */
 function handleNetInfoChange(state: any): void {
   const wasOffline = !currentState.isConnected;
-  
+
   updateNetworkState({
     status: state.isConnected ? 'online' : 'offline',
     isConnected: state.isConnected || false,
@@ -149,7 +149,7 @@ function handleAppStateChange(nextAppState: AppStateStatus): void {
 
 /**
  * Trigger sync when reconnecting
- * 
+ *
  * Note: Mobile-only. Web is always online and doesn't use offline queues.
  */
 async function triggerReconnectSync(): Promise<void> {
@@ -158,7 +158,7 @@ async function triggerReconnectSync(): Promise<void> {
     console.log('[NetworkService] Web platform - reconnect sync skipped');
     return;
   }
-  
+
   try {
     // Dynamically import to avoid circular dependency
     const { processQueue } = await import('./syncService');
@@ -175,15 +175,15 @@ async function triggerReconnectSync(): Promise<void> {
 function updateNetworkState(newState: NetworkState): void {
   const previousStatus = currentState.status;
   currentState = newState;
-  
+
   // Log status changes
   if (previousStatus !== newState.status) {
     console.log(`[NetworkService] Status changed: ${previousStatus} -> ${newState.status}`);
   }
-  
+
   // Notify all subscribers
   statusCallbacks.forEach((callback) => callback(currentState));
-  
+
   // Persist last known state
   AsyncStorage.setItem('@stratum_network_state', JSON.stringify(currentState)).catch(() => {});
 }
@@ -203,7 +203,7 @@ export async function refreshNetworkStatus(): Promise<NetworkState> {
     const state = await NetInfo.fetch();
     handleNetInfoChange(state);
   }
-  
+
   return currentState;
 }
 
@@ -236,12 +236,12 @@ export function isOnline(): boolean {
 }
 
 /**
- * 
+ *
  * Check if currently connected to backend (in case backend is down but network is up)
  */
 
 export function isConnectedToBackend(): boolean {
-  return currentState.isConnected && currentState.isInternetReachable === true
+  return currentState.isConnected && currentState.isInternetReachable === true;
 }
 
 /**
@@ -263,7 +263,7 @@ export function cleanupNetworkService(): void {
 
 /**
  * Perform a network request with offline queue fallback
- * 
+ *
  * If offline, queues the request for later.
  * If online, executes immediately.
  */

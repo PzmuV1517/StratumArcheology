@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { fileService } from '../src/services/fileService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -45,7 +53,9 @@ export default function ImagePreviewScreen() {
     return () => {
       revoked = true;
       if (blobUrl && Platform.OS === 'web') {
-        try { window.URL.revokeObjectURL(blobUrl); } catch {}
+        try {
+          window.URL.revokeObjectURL(blobUrl);
+        } catch {}
       }
     };
   }, [nodeId]);
@@ -92,7 +102,10 @@ export default function ImagePreviewScreen() {
         <TouchableOpacity style={styles.actionButton} onPress={handleDownload} disabled={!blobUrl}>
           <Text style={styles.actionButtonText}>Download</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.closeButton]} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.closeButton]}
+          onPress={() => router.back()}
+        >
           <Text style={[styles.actionButtonText, { color: '#9A9A9A' }]}>Close</Text>
         </TouchableOpacity>
       </View>
@@ -107,7 +120,15 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 12, color: '#9A9A9A' },
   errorText: { color: '#FF4444', fontSize: 16 },
   actions: { flexDirection: 'row', gap: 12, padding: 16 },
-  actionButton: { flex: 1, backgroundColor: '#2A2A2A', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
   closeButton: { backgroundColor: '#1A1A1A' },
   actionButtonText: { color: '#F5F5F5', fontWeight: '600' },
 });

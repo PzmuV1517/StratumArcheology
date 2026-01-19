@@ -53,11 +53,7 @@ export default function LoginScreen({ navigation }) {
           secureTextEntry
         />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -65,10 +61,7 @@ export default function LoginScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.navigate('Register')}
-        >
+        <TouchableOpacity style={styles.linkButton} onPress={() => navigation.navigate('Register')}>
           <Text style={styles.linkText}>Don't have an account? Register</Text>
         </TouchableOpacity>
       </View>

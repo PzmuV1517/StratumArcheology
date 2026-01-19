@@ -1,23 +1,17 @@
 /**
  * Draft Status Indicator Component
- * 
+ *
  * Displays the current auto-save status with visual feedback:
  * - Saving: Blue text with spinner
  * - Saved: Green text
  * - Error: Red text
  * - Restored: Yellow text
- * 
+ *
  * Cross-platform: Works on both web and native
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Animated,
-} from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { SaveStatus, getDraftStatusDisplay } from '../../hooks/useAutoSave';
 
 interface DraftStatusIndicatorProps {
@@ -37,11 +31,7 @@ export function DraftStatusIndicator({
   wasRestored,
   style,
 }: DraftStatusIndicatorProps) {
-  const { text, color, visible } = getDraftStatusDisplay(
-    saveStatus,
-    lastSavedAt,
-    wasRestored
-  );
+  const { text, color, visible } = getDraftStatusDisplay(saveStatus, lastSavedAt, wasRestored);
 
   if (!visible) return null;
 
@@ -58,13 +48,7 @@ export function DraftStatusIndicator({
 /**
  * Compact draft indicator (just a dot)
  */
-export function DraftDot({
-  saveStatus,
-  style,
-}: {
-  saveStatus: SaveStatus;
-  style?: any;
-}) {
+export function DraftDot({ saveStatus, style }: { saveStatus: SaveStatus; style?: any }) {
   const getColor = () => {
     switch (saveStatus) {
       case 'saving':
@@ -80,15 +64,7 @@ export function DraftDot({
 
   if (saveStatus === 'idle') return null;
 
-  return (
-    <View
-      style={[
-        styles.dot,
-        { backgroundColor: getColor() },
-        style,
-      ]}
-    />
-  );
+  return <View style={[styles.dot, { backgroundColor: getColor() }, style]} />;
 }
 
 const styles = StyleSheet.create({

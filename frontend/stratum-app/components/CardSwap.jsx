@@ -1,4 +1,12 @@
-import React, { Children, cloneElement, forwardRef, isValidElement, useEffect, useMemo, useRef } from 'react';
+import React, {
+  Children,
+  cloneElement,
+  forwardRef,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { Platform, View } from 'react-native';
 import gsap from 'gsap';
 import './CardSwap.css';
@@ -9,7 +17,11 @@ export const Card = forwardRef(({ customClass, ...rest }, ref) => {
     return <View ref={ref} {...rest} />;
   }
   return (
-    <div ref={ref} {...rest} className={`card ${customClass ?? ''} ${rest.className ?? ''}`.trim()} />
+    <div
+      ref={ref}
+      {...rest}
+      className={`card ${customClass ?? ''} ${rest.className ?? ''}`.trim()}
+    />
   );
 });
 Card.displayName = 'Card';
@@ -18,7 +30,7 @@ const makeSlot = (i, distX, distY, total) => ({
   x: i * distX,
   y: -i * distY,
   z: -i * distX * 1.5,
-  zIndex: total - i
+  zIndex: total - i,
 });
 const placeNow = (el, slot, skew) =>
   gsap.set(el, {
@@ -30,7 +42,7 @@ const placeNow = (el, slot, skew) =>
     skewY: skew,
     transformOrigin: 'center center',
     zIndex: slot.zIndex,
-    force3D: true
+    force3D: true,
   });
 
 const CardSwap = ({
@@ -43,7 +55,7 @@ const CardSwap = ({
   onCardClick,
   skewAmount = 6,
   easing = 'elastic',
-  children
+  children,
 }) => {
   const config =
     easing === 'elastic'
@@ -53,7 +65,7 @@ const CardSwap = ({
           durMove: 2,
           durReturn: 2,
           promoteOverlap: 0.9,
-          returnDelay: 0.05
+          returnDelay: 0.05,
         }
       : {
           ease: 'power1.inOut',
@@ -61,7 +73,7 @@ const CardSwap = ({
           durMove: 0.8,
           durReturn: 0.8,
           promoteOverlap: 0.45,
-          returnDelay: 0.2
+          returnDelay: 0.2,
         };
 
   const childArr = useMemo(() => Children.toArray(children), [children]);
@@ -79,7 +91,9 @@ const CardSwap = ({
 
   useEffect(() => {
     const total = refs.length;
-    refs.forEach((r, i) => placeNow(r.current, makeSlot(i, cardDistance, verticalDistance, total), skewAmount));
+    refs.forEach((r, i) =>
+      placeNow(r.current, makeSlot(i, cardDistance, verticalDistance, total), skewAmount)
+    );
 
     const swap = () => {
       if (order.current.length < 2) return;
@@ -92,7 +106,7 @@ const CardSwap = ({
       tl.to(elFront, {
         y: '+=500',
         duration: config.durDrop,
-        ease: config.ease
+        ease: config.ease,
       });
 
       tl.addLabel('promote', `-=${config.durDrop * config.promoteOverlap}`);
@@ -107,7 +121,7 @@ const CardSwap = ({
             y: slot.y,
             z: slot.z,
             duration: config.durMove,
-            ease: config.ease
+            ease: config.ease,
           },
           `promote+=${i * 0.15}`
         );
@@ -129,7 +143,7 @@ const CardSwap = ({
           y: backSlot.y,
           z: backSlot.z,
           duration: config.durReturn,
-          ease: config.ease
+          ease: config.ease,
         },
         'return'
       );
@@ -170,10 +184,10 @@ const CardSwap = ({
           key: i,
           ref: refs[i],
           style: { width, height, ...(child.props.style ?? {}) },
-          onClick: e => {
+          onClick: (e) => {
             child.props.onClick?.(e);
             onCardClick?.(i);
-          }
+          },
         })
       : child
   );

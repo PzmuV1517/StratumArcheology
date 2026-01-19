@@ -1,9 +1,9 @@
 /**
  * SharedFilesView Component
- * 
+ *
  * Displays files that have been shared with the user ("Shared with me")
  * and files the user has shared with others ("Shared by me").
- * 
+ *
  * Uses the backend endpoints:
  * - GET /files/project/{projectId}/shared-with-me
  * - GET /files/project/{projectId}/shared-by-me
@@ -48,26 +48,29 @@ export default function SharedFilesView({ projectId, onFilePress, onClose }: Sha
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadSharedFiles = useCallback(async (showLoader = true) => {
-    try {
-      if (showLoader) setLoading(true);
-      setError(null);
+  const loadSharedFiles = useCallback(
+    async (showLoader = true) => {
+      try {
+        if (showLoader) setLoading(true);
+        setError(null);
 
-      const [withMeResponse, byMeResponse] = await Promise.all([
-        api.get(`/files/project/${projectId}/shared-with-me`),
-        api.get(`/files/project/${projectId}/shared-by-me`),
-      ]);
+        const [withMeResponse, byMeResponse] = await Promise.all([
+          api.get(`/files/project/${projectId}/shared-with-me`),
+          api.get(`/files/project/${projectId}/shared-by-me`),
+        ]);
 
-      setSharedWithMe(withMeResponse.data.files || []);
-      setSharedByMe(byMeResponse.data.files || []);
-    } catch (err: any) {
-      console.error('[SharedFilesView] Failed to load shared files:', err);
-      setError(err.message || 'Failed to load shared files');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [projectId]);
+        setSharedWithMe(withMeResponse.data.files || []);
+        setSharedByMe(byMeResponse.data.files || []);
+      } catch (err: any) {
+        console.error('[SharedFilesView] Failed to load shared files:', err);
+        setError(err.message || 'Failed to load shared files');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [projectId]
+  );
 
   useEffect(() => {
     loadSharedFiles();
@@ -104,22 +107,18 @@ export default function SharedFilesView({ projectId, onFilePress, onClose }: Sha
   };
 
   const renderFileItem = (file: SharedFile, showOwner = false) => (
-    <TouchableOpacity
-      key={file.id}
-      style={styles.fileItem}
-      onPress={() => onFilePress?.(file)}
-    >
+    <TouchableOpacity key={file.id} style={styles.fileItem} onPress={() => onFilePress?.(file)}>
       <Text style={styles.fileIcon}>{getFileIcon(file)}</Text>
       <View style={styles.fileInfo}>
-        <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+        <Text style={styles.fileName} numberOfLines={1}>
+          {file.name}
+        </Text>
         <View style={styles.fileMeta}>
           {showOwner && file.owner_name && (
             <Text style={styles.ownerText}>From: {file.owner_name}</Text>
           )}
           {!showOwner && file.shared_with && file.shared_with.length > 0 && (
-            <Text style={styles.sharedWithText}>
-              Shared with {file.shared_with.length} user(s)
-            </Text>
+            <Text style={styles.sharedWithText}>Shared with {file.shared_with.length} user(s)</Text>
           )}
           {file.size && <Text style={styles.sizeText}>{formatFileSize(file.size)}</Text>}
           {file.updated_at && <Text style={styles.dateText}>{formatDate(file.updated_at)}</Text>}
@@ -211,22 +210,16 @@ export default function SharedFilesView({ projectId, onFilePress, onClose }: Sha
       <ScrollView
         style={styles.fileList}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FF2A2A"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF2A2A" />
         }
       >
         {currentFiles.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>
-              {activeTab === 'with-me' ? '📥' : '📤'}
-            </Text>
+            <Text style={styles.emptyIcon}>{activeTab === 'with-me' ? '📥' : '📤'}</Text>
             <Text style={styles.emptyTitle}>
               {activeTab === 'with-me'
                 ? 'No files shared with you'
-                : 'You haven\'t shared any files'}
+                : "You haven't shared any files"}
             </Text>
             <Text style={styles.emptySubtitle}>
               {activeTab === 'with-me'

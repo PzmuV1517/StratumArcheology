@@ -9,7 +9,12 @@ interface ProjectActionModalProps {
   onJoinProject: () => void;
 }
 
-export function ProjectActionModal({ visible, onClose, onCreateProject, onJoinProject }: ProjectActionModalProps) {
+export function ProjectActionModal({
+  visible,
+  onClose,
+  onCreateProject,
+  onJoinProject,
+}: ProjectActionModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -27,9 +32,12 @@ export function ProjectActionModal({ visible, onClose, onCreateProject, onJoinPr
 
           {/* Options */}
           <View style={styles.optionsContainer}>
-            <TouchableOpacity 
-              style={styles.optionButton} 
-              onPress={() => { onClose(); onCreateProject(); }}
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                onClose();
+                onCreateProject();
+              }}
               activeOpacity={0.7}
             >
               <View style={styles.iconContainer}>
@@ -42,9 +50,12 @@ export function ProjectActionModal({ visible, onClose, onCreateProject, onJoinPr
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.optionButton} 
-              onPress={() => { onClose(); onJoinProject(); }}
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                onClose();
+                onJoinProject();
+              }}
               activeOpacity={0.7}
             >
               <View style={styles.iconContainer}>

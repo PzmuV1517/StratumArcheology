@@ -1,12 +1,12 @@
 /**
  * useAutoSave Hook
- * 
+ *
  * Provides automatic draft saving functionality for forms:
  * - Saves drafts every 30 seconds (debounced)
  * - Restores drafts on mount (crash recovery)
  * - Clears draft after successful submission
  * - Visual indicator for save status
- * 
+ *
  * Cross-platform: Uses AsyncStorage for persistence
  */
 
@@ -81,7 +81,7 @@ export function useAutoSave<T>({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [wasRestored, setWasRestored] = useState(false);
-  
+
   // Refs for debouncing and intervals
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -92,34 +92,37 @@ export function useAutoSave<T>({
   /**
    * Save draft to storage
    */
-  const saveDraft = useCallback(async (data: T): Promise<void> => {
-    try {
-      setSaveStatus('saving');
-      
-      const draftData: DraftData<T> = {
-        data,
-        metadata: {
-          formId,
-          savedAt: new Date().toISOString(),
-          version: DRAFT_VERSION,
-        },
-      };
+  const saveDraft = useCallback(
+    async (data: T): Promise<void> => {
+      try {
+        setSaveStatus('saving');
 
-      await AsyncStorage.setItem(storageKey, JSON.stringify(draftData));
-      
-      const now = new Date();
-      setLastSavedAt(now);
-      setSaveStatus('saved');
-      
-      console.log(`[AutoSave] Draft saved for ${formId}`);
-      
-      // Reset to idle after showing "saved" briefly
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (error) {
-      console.error(`[AutoSave] Failed to save draft for ${formId}:`, error);
-      setSaveStatus('error');
-    }
-  }, [formId, storageKey]);
+        const draftData: DraftData<T> = {
+          data,
+          metadata: {
+            formId,
+            savedAt: new Date().toISOString(),
+            version: DRAFT_VERSION,
+          },
+        };
+
+        await AsyncStorage.setItem(storageKey, JSON.stringify(draftData));
+
+        const now = new Date();
+        setLastSavedAt(now);
+        setSaveStatus('saved');
+
+        console.log(`[AutoSave] Draft saved for ${formId}`);
+
+        // Reset to idle after showing "saved" briefly
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error(`[AutoSave] Failed to save draft for ${formId}:`, error);
+        setSaveStatus('error');
+      }
+    },
+    [formId, storageKey]
+  );
 
   /**
    * Clear the saved draft
@@ -154,16 +157,16 @@ export function useAutoSave<T>({
     try {
       const data = await AsyncStorage.getItem(storageKey);
       if (!data) return null;
-      
+
       const parsed: DraftData<T> = JSON.parse(data);
-      
+
       // Check version compatibility
       if (parsed.metadata.version !== DRAFT_VERSION) {
         console.log(`[AutoSave] Draft version mismatch, clearing old draft`);
         await clearDraft();
         return null;
       }
-      
+
       return parsed.data;
     } catch (error) {
       console.error(`[AutoSave] Failed to get draft for ${formId}:`, error);
@@ -183,7 +186,7 @@ export function useAutoSave<T>({
       clearInterval(intervalTimerRef.current);
     }
     pendingDataRef.current = null;
-    
+
     // Clear the draft
     await clearDraft();
     console.log(`[AutoSave] Form submitted, draft cleared for ${formId}`);
@@ -192,22 +195,25 @@ export function useAutoSave<T>({
   /**
    * Schedule an auto-save (debounced)
    */
-  const scheduleAutoSave = useCallback((data: T): void => {
-    // Store pending data
-    pendingDataRef.current = data;
-    
-    // Clear existing debounce timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    
-    // Schedule new save
-    debounceTimerRef.current = setTimeout(() => {
-      if (pendingDataRef.current) {
-        saveDraft(pendingDataRef.current);
+  const scheduleAutoSave = useCallback(
+    (data: T): void => {
+      // Store pending data
+      pendingDataRef.current = data;
+
+      // Clear existing debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
-    }, debounceDelay);
-  }, [saveDraft, debounceDelay]);
+
+      // Schedule new save
+      debounceTimerRef.current = setTimeout(() => {
+        if (pendingDataRef.current) {
+          saveDraft(pendingDataRef.current);
+        }
+      }, debounceDelay);
+    },
+    [saveDraft, debounceDelay]
+  );
 
   /**
    * Restore draft on mount

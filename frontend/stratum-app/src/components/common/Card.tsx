@@ -10,14 +10,7 @@ interface CardProps {
   footer?: React.ReactNode;
 }
 
-export default function Card({
-  title,
-  subtitle,
-  children,
-  style,
-  onPress,
-  footer,
-}: CardProps) {
+export default function Card({ title, subtitle, children, style, onPress, footer }: CardProps) {
   const content = (
     <View style={[styles.card, style]}>
       {(title || subtitle) && (

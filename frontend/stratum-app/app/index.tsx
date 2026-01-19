@@ -26,7 +26,7 @@ export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isNarrow = width < 900;
-  
+
   if (Platform.OS !== 'web') {
     // Native: don't render anything, just redirect
     return null;
@@ -35,7 +35,17 @@ export default function LandingPage() {
   // Web: render landing page
   return (
     <>
-      <div className="main-landing" style={{ minHeight: '100vh', width: '100vw', overflowX: 'hidden', overflowY: 'auto', position: 'relative', background: '#000000' }}>
+      <div
+        className="main-landing"
+        style={{
+          minHeight: '100vh',
+          width: '100vw',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          position: 'relative',
+          background: '#000000',
+        }}
+      >
         <section style={{ position: 'relative' }}>
           {/* Fixed DotGrid background that appears below hero (hero covers via z-index) */}
           <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
@@ -51,10 +61,23 @@ export default function LandingPage() {
             </div>
           </div>
           {/* Hero section - takes full viewport height on load */}
-          <section className="hero-section" style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <section
+            className="hero-section"
+            style={{
+              position: 'relative',
+              zIndex: 2,
+              minHeight: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <View style={styles.hero}>
               <Text style={styles.title}>Organize research. Share results.</Text>
-              <Text style={styles.subtitle}>Projects, artefacts, and notes in one streamlined workspace.</Text>
+              <Text style={styles.subtitle}>
+                Projects, artefacts, and notes in one streamlined workspace.
+              </Text>
               <View style={{ marginTop: 24 }}>
                 <StarBorder
                   as="button"
@@ -72,99 +95,132 @@ export default function LandingPage() {
           </section>
           {/* Informational section */}
           <View style={styles.infoSection}>
-                <Text style={styles.sectionHeading}>Why STRATUM?</Text>
-              <View style={styles.cards}>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Artefacts, not files</Text>
-                  <Text style={styles.cardBody}>Group results, notes, and assets with a living manifest that stays in sync.</Text>
+            <Text style={styles.sectionHeading}>Why STRATUM?</Text>
+            <View style={styles.cards}>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Artefacts, not files</Text>
+                <Text style={styles.cardBody}>
+                  Group results, notes, and assets with a living manifest that stays in sync.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Collaborate safely</Text>
+                <Text style={styles.cardBody}>
+                  Role-based access, history, and site-styled confirmations prevent mistakes.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Edit or view anything</Text>
+                <Text style={styles.cardBody}>
+                  CSV, Excel, Markdown, PNG, text files, Pointcloud, Mesh and JSON with a unified
+                  preview and quick saves.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Harris Matrix</Text>
+                <Text style={styles.cardBody}>
+                  Visualize and manage complex stratigraphic relationships with our built-in Harris
+                  Matrix tool.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Cross-platform</Text>
+                <Text style={styles.cardBody}>
+                  Access your projects from both web and mobile with a consistent experience.
+                </Text>
+              </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Offline support</Text>
+                <Text style={styles.cardBody}>
+                  Work seamlessly without an internet connection, with automatic syncing when
+                  you&apos;re back online.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Mosaic highlights (visual variety) */}
+          <View style={styles.sectionBlock}>
+            <Text style={styles.sectionHeading}>What makes STRATUM different</Text>
+            <View style={[styles.mosaicRow, isNarrow ? { flexDirection: 'column' } : null]}>
+              <View style={styles.mosaicCol}>
+                <View style={[styles.card, styles.cardTall]}>
+                  <Text style={styles.cardTitle}>Context-rich artefacts</Text>
+                  <Text style={styles.cardBody}>
+                    Every artefact carries its origin, linked notes, and related assets—so results
+                    aren’t just files, they’re stories.
+                  </Text>
                 </View>
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Collaborate safely</Text>
-                  <Text style={styles.cardBody}>Role-based access, history, and site-styled confirmations prevent mistakes.</Text>
+                  <Text style={styles.cardTitle}>Instant previews</Text>
+                  <Text style={styles.cardBody}>
+                    Open large CSVs, JSON, and Markdown with a fast, consistent UI on web and
+                    mobile.
+                  </Text>
                 </View>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Edit or view anything</Text>
-                  <Text style={styles.cardBody}>CSV, Excel, Markdown, PNG, text files, Pointcloud, Mesh and JSON with a unified preview and quick saves.</Text>
+              </View>
+              <View style={styles.mosaicCol}>
+                <View style={styles.cardAccent}>
+                  <Text style={styles.cardBadge}>NEW</Text>
+                  <Text style={styles.cardTitle}>Live manifests</Text>
+                  <Text style={styles.cardBody}>
+                    artefact.json updates automatically as your project grows, keeping everything
+                    coherent.
+                  </Text>
                 </View>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Harris Matrix</Text>
-                  <Text style={styles.cardBody}>Visualize and manage complex stratigraphic relationships with our built-in Harris Matrix tool.</Text>
-                </View>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Cross-platform</Text>
-                  <Text style={styles.cardBody}>Access your projects from both web and mobile with a consistent experience.</Text>
-                </View>
-                <View style={styles.card}>
-                  <Text style={styles.cardTitle}>Offline support</Text>
-                  <Text style={styles.cardBody}>Work seamlessly without an internet connection, with automatic syncing when you&apos;re back online.</Text>
+                <View style={[styles.card, styles.cardInset]}>
+                  <Text style={styles.cardTitle}>Safe collaboration</Text>
+                  <Text style={styles.cardBody}>
+                    Role-based access and confirmations reduce mistakes without slowing you down.
+                  </Text>
                 </View>
               </View>
             </View>
+          </View>
 
-            {/* Mosaic highlights (visual variety) */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.sectionHeading}>What makes STRATUM different</Text>
-              <View style={[styles.mosaicRow, isNarrow ? { flexDirection: 'column' } : null]}>
-                <View style={styles.mosaicCol}>
-                  <View style={[styles.card, styles.cardTall]}>
-                    <Text style={styles.cardTitle}>Context-rich artefacts</Text>
-                    <Text style={styles.cardBody}>Every artefact carries its origin, linked notes, and related assets—so results aren’t just files, they’re stories.</Text>
-                  </View>
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Instant previews</Text>
-                    <Text style={styles.cardBody}>Open large CSVs, JSON, and Markdown with a fast, consistent UI on web and mobile.</Text>
-                  </View>
-                </View>
-                <View style={styles.mosaicCol}>
-                  <View style={styles.cardAccent}>
-                    <Text style={styles.cardBadge}>NEW</Text>
-                    <Text style={styles.cardTitle}>Live manifests</Text>
-                    <Text style={styles.cardBody}>artefact.json updates automatically as your project grows, keeping everything coherent.</Text>
-                  </View>
-                  <View style={[styles.card, styles.cardInset]}>
-                    <Text style={styles.cardTitle}>Safe collaboration</Text>
-                    <Text style={styles.cardBody}>Role-based access and confirmations reduce mistakes without slowing you down.</Text>
-                  </View>
-                </View>
+          {/* Stats row */}
+          <View style={[styles.sectionBlock, { paddingTop: 20, paddingBottom: 0 }]}>
+            <View style={[styles.statsRow, isNarrow ? { flexDirection: 'column' } : null]}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>10×</Text>
+                <Text style={styles.statLabel}>Faster setup</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>1 place</Text>
+                <Text style={styles.statLabel}>for notes & data</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>Zero</Text>
+                <Text style={styles.statLabel}>context loss</Text>
               </View>
             </View>
+          </View>
 
-            {/* Stats row */}
-            <View style={[styles.sectionBlock, { paddingTop: 20, paddingBottom: 0 }]}> 
-              <View style={[styles.statsRow, isNarrow ? { flexDirection: 'column' } : null]}> 
-                <View style={styles.statCard}><Text style={styles.statNumber}>10×</Text><Text style={styles.statLabel}>Faster setup</Text></View>
-                <View style={styles.statCard}><Text style={styles.statNumber}>1 place</Text><Text style={styles.statLabel}>for notes & data</Text></View>
-                <View style={styles.statCard}><Text style={styles.statNumber}>Zero</Text><Text style={styles.statLabel}>context loss</Text></View>
+          {/* CardSwap row */}
+          <View style={[styles.sectionBlock, { paddingTop: 0, paddingBottom: 150 }]}>
+            <View style={[styles.cardSwapRow, isNarrow ? { flexDirection: 'column' } : null]}>
+              <View style={styles.cardSwapLeft}>
+                <Text style={styles.sectionHeading}>Intuitive at every step</Text>
+              </View>
+              <View style={styles.cardSwapRight}>
+                {Platform.OS === 'web' ? (
+                  <div style={{ height: '600px', position: 'relative' }}>
+                    <CardSwap
+                      cardDistance={60}
+                      verticalDistance={70}
+                      delay={5000}
+                      pauseOnHover={false}
+                      onCardClick={() => {}}
+                    >
+                      <Card key={0} />
+                      <Card key={1} />
+                      <Card key={2} />
+                    </CardSwap>
+                  </div>
+                ) : null}
               </View>
             </View>
-
-            {/* CardSwap row */}
-            <View style={[styles.sectionBlock, { paddingTop: 0, paddingBottom: 150 }]}> 
-              <View style={[styles.cardSwapRow, isNarrow ? { flexDirection: 'column' } : null]}> 
-                <View style={styles.cardSwapLeft}> 
-                  <Text style={styles.sectionHeading}>Intuitive at every step</Text> 
-                </View> 
-                <View style={styles.cardSwapRight}> 
-                  {Platform.OS === 'web' ? (
-                    <div style={{ height: '600px', position: 'relative' }}>
-                      <CardSwap
-                        cardDistance={60}
-                        verticalDistance={70}
-                        delay={5000}
-                        pauseOnHover={false}
-                        onCardClick={() => {}}
-                      >
-                        <Card key={0} />
-                        <Card key={1} />
-                        <Card key={2} />
-                      </CardSwap>
-                    </div>
-                  ) : null}
-                </View>
-              </View>
-            </View>
-
-
+          </View>
         </section>
       </div>
       <GradualBlur
@@ -347,7 +403,7 @@ const styles = StyleSheet.create({
   compareHalf: {
     flex: 1,
   },
-  
+
   cardSwapRow: {
     flexDirection: 'row',
     gap: 12,

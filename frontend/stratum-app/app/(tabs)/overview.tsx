@@ -42,17 +42,17 @@ export default function OverviewScreen() {
     try {
       setLoading(true);
       const projects = await projectService.getProjects();
-      
+
       // Sort by updated_at/created_at and get top 3
       const sorted = projects.sort((a, b) => {
         const dateA = new Date(a.updated_at || a.created_at).getTime();
         const dateB = new Date(b.updated_at || b.created_at).getTime();
         return dateB - dateA;
       });
-      
+
       const top3 = sorted.slice(0, 3);
       setRecentProjects(top3);
-      
+
       // Load activities for each project
       if (top3.length > 0) {
         loadProjectActivities(top3);
@@ -74,19 +74,22 @@ export default function OverviewScreen() {
   const loadProjectActivities = async (projects: Project[]) => {
     setActivitiesLoading(true);
     const activitiesMap: Record<string, Activity[]> = {};
-    
+
     try {
       const token = await AsyncStorage.getItem('authToken');
       const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
-      
+
       for (const project of projects) {
         try {
-          const response = await fetch(`${apiBaseUrl}/api/activities/project/${project.id}?limit=5`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          
+          const response = await fetch(
+            `${apiBaseUrl}/api/activities/project/${project.id}?limit=5`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
           if (response.ok) {
             const activities = await response.json();
             activitiesMap[project.id] = activities;
@@ -96,7 +99,7 @@ export default function OverviewScreen() {
           activitiesMap[project.id] = [];
         }
       }
-      
+
       setProjectActivities(activitiesMap);
     } finally {
       setActivitiesLoading(false);
@@ -142,7 +145,7 @@ export default function OverviewScreen() {
 
   const renderProjectCard = (project: Project) => {
     const activities = projectActivities[project.id] || [];
-    
+
     return (
       <TouchableOpacity
         key={project.id}
@@ -158,21 +161,21 @@ export default function OverviewScreen() {
             {formatTimeAgo(project.updated_at || project.created_at)}
           </Text>
         </View>
-        
+
         {project.description && (
           <Text style={styles.projectDescription} numberOfLines={2}>
             {project.description}
           </Text>
         )}
-        
+
         {/* Interactive Timeline */}
         <View style={styles.timelineContainer}>
           <Text style={styles.timelineTitle}>Recent Activity</Text>
           {activitiesLoading ? (
             <ActivityIndicator size="small" color="#FF2A2A" style={{ marginVertical: 8 }} />
           ) : activities.length > 0 ? (
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.timelineScroll}
               contentContainerStyle={styles.timelineContent}
@@ -191,7 +194,7 @@ export default function OverviewScreen() {
             <Text style={styles.noActivityText}>No recent activity</Text>
           )}
         </View>
-        
+
         <View style={styles.projectFooter}>
           <Text style={styles.viewProjectText}>View Project →</Text>
         </View>
@@ -215,9 +218,7 @@ export default function OverviewScreen() {
         <Text style={styles.welcomeText}>
           Welcome back{user?.display_name ? `, ${user.display_name.split(' ')[0]}` : ''}
         </Text>
-        <Text style={styles.subtitleText}>
-          {"Here's what's happening in your projects"}
-        </Text>
+        <Text style={styles.subtitleText}>{"Here's what's happening in your projects"}</Text>
       </View>
 
       {/* Recent Projects Section */}
@@ -233,20 +234,13 @@ export default function OverviewScreen() {
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateEmoji}>📁</Text>
             <Text style={styles.emptyStateTitle}>No projects yet</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Create your first project to get started
-            </Text>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => router.push('/modal')}
-            >
+            <Text style={styles.emptyStateSubtitle}>Create your first project to get started</Text>
+            <TouchableOpacity style={styles.createButton} onPress={() => router.push('/modal')}>
               <Text style={styles.createButtonText}>Create Project</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.projectsGrid}>
-            {recentProjects.map(renderProjectCard)}
-          </View>
+          <View style={styles.projectsGrid}>{recentProjects.map(renderProjectCard)}</View>
         )}
       </View>
 
@@ -254,14 +248,11 @@ export default function OverviewScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>Quick Actions</Text>
         <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push('/modal')}
-          >
+          <TouchableOpacity style={styles.quickActionButton} onPress={() => router.push('/modal')}>
             <Text style={styles.quickActionIcon}>➕</Text>
             <Text style={styles.quickActionText}>New Project</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => router.push('/join-project')}
@@ -269,7 +260,7 @@ export default function OverviewScreen() {
             <Text style={styles.quickActionIcon}>🔗</Text>
             <Text style={styles.quickActionText}>Join Project</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => router.push('/settings')}

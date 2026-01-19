@@ -1,10 +1,10 @@
 /**
  * STRATUM Offline Database Service
- * 
+ *
  * Cross-platform database abstraction layer:
  * - Native (iOS/Android): Uses expo-sqlite
  * - Web: Uses localStorage with in-memory cache
- * 
+ *
  * Provides unified API for local data storage regardless of platform.
  */
 
@@ -47,11 +47,11 @@ async function initSQLite(): Promise<void> {
   try {
     SQLite = require('expo-sqlite');
     db = await SQLite.openDatabaseAsync(DB_NAME);
-    
+
     // Execute table creation as a transaction
     await db.execAsync(CREATE_TABLES_SQL);
     await db.execAsync(INIT_METADATA_SQL);
-    
+
     console.log('[OfflineDB] SQLite database initialized successfully');
   } catch (error) {
     console.error('[OfflineDB] SQLite initialization failed:', error);
@@ -144,10 +144,7 @@ export async function getLocalProject(id: string): Promise<LocalProject | null> 
     const projects = await getLocalProjects();
     return projects.find((p) => p.id === id) || null;
   } else {
-    const result = await db.getFirstAsync(
-      'SELECT * FROM local_projects WHERE id = ?',
-      [id]
-    );
+    const result = await db.getFirstAsync('SELECT * FROM local_projects WHERE id = ?', [id]);
     if (result) {
       return {
         ...result,
@@ -318,7 +315,9 @@ export async function markNoteForDeletion(id: string): Promise<void> {
 /**
  * Add a request to the offline queue
  */
-export async function queueRequest(request: Omit<QueuedRequest, 'id' | 'created_at' | 'retry_count' | 'last_error' | 'status'>): Promise<string> {
+export async function queueRequest(
+  request: Omit<QueuedRequest, 'id' | 'created_at' | 'retry_count' | 'last_error' | 'status'>
+): Promise<string> {
   const id = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const queuedRequest: QueuedRequest = {
     id,
@@ -350,7 +349,7 @@ export async function queueRequest(request: Omit<QueuedRequest, 'id' | 'created_
       ]
     );
   }
-  
+
   return id;
 }
 
@@ -437,7 +436,9 @@ export async function getQueueStats(): Promise<{ pending: number; failed: number
 /**
  * Record a sync conflict for manual resolution
  */
-export async function recordConflict(conflict: Omit<SyncConflict, 'id' | 'created_at' | 'resolved' | 'resolution'>): Promise<string> {
+export async function recordConflict(
+  conflict: Omit<SyncConflict, 'id' | 'created_at' | 'resolved' | 'resolution'>
+): Promise<string> {
   const id = `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const fullConflict: SyncConflict = {
     id,
@@ -509,10 +510,10 @@ export async function resolveConflict(
       await AsyncStorage.setItem('@stratum_conflicts', JSON.stringify(conflicts));
     }
   } else {
-    await db.runAsync(
-      'UPDATE sync_conflicts SET resolved = 1, resolution = ? WHERE id = ?',
-      [resolution, id]
-    );
+    await db.runAsync('UPDATE sync_conflicts SET resolved = 1, resolution = ? WHERE id = ?', [
+      resolution,
+      id,
+    ]);
   }
 }
 

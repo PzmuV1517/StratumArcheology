@@ -65,15 +65,11 @@ export const noteService = {
         name: 'photo.jpg',
       });
 
-      const response = await api.post(
-        `/notes/${noteId}/attachments`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await api.post(`/notes/${noteId}/attachments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

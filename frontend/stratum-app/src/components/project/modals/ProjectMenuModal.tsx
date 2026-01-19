@@ -10,18 +10,37 @@ interface Props {
   canChangeSettings?: boolean;
 }
 
-export default function ProjectMenuModal({ visible, membersCount, onClose, onOpenMembers, onOpenSettings, canChangeSettings = true }: Props) {
+export default function ProjectMenuModal({
+  visible,
+  membersCount,
+  onClose,
+  onOpenMembers,
+  onOpenSettings,
+  canChangeSettings = true,
+}: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.menuBackdrop}>
         {/* Click outside to close */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); onOpenMembers(); }}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              onClose();
+              onOpenMembers();
+            }}
+          >
             <Text style={styles.menuItemText}>Members ({membersCount})</Text>
           </TouchableOpacity>
           {canChangeSettings ? (
-            <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); onOpenSettings(); }}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                onClose();
+                onOpenSettings();
+              }}
+            >
               <Text style={styles.menuItemText}>Settings</Text>
             </TouchableOpacity>
           ) : (
@@ -30,7 +49,10 @@ export default function ProjectMenuModal({ visible, membersCount, onClose, onOpe
               <Text style={styles.permissionHint}>Only the leader can change settings</Text>
             </View>
           )}
-          <TouchableOpacity style={[styles.menuItem, { justifyContent: 'center' }]} onPress={onClose}>
+          <TouchableOpacity
+            style={[styles.menuItem, { justifyContent: 'center' }]}
+            onPress={onClose}
+          >
             <Text style={[styles.menuItemText, { color: '#9A9A9A' }]}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -40,8 +62,21 @@ export default function ProjectMenuModal({ visible, membersCount, onClose, onOpe
 }
 
 const styles = StyleSheet.create({
-  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  menuCard: { backgroundColor: '#1E1E1A', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#333', width: '100%' },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  menuCard: {
+    backgroundColor: '#1E1E1A',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+    width: '100%',
+  },
   menuItem: { paddingVertical: 12 },
   menuItemText: { color: '#F5F5F5', fontSize: 16, fontWeight: '600' },
   disabledMenuItem: { opacity: 0.6 },

@@ -6,24 +6,40 @@
   color-scheme: dark;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100%;
   overflow-x: hidden;
 }
 /* Ensure dark base behind fixed overlays */
-body { background-color: #000; }
+body {
+  background-color: #000;
+}
 
 /* Hide scrollbars on web while keeping scrolling functional */
 /* Firefox */
-html { scrollbar-width: none; }
+html {
+  scrollbar-width: none;
+}
 /* IE 10+ and old Edge */
-body { -ms-overflow-style: none; }
+body {
+  -ms-overflow-style: none;
+}
 /* Chrome, Safari, Opera */
-body::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
-body::-webkit-scrollbar-thumb { background: transparent; }
+body::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+body::-webkit-scrollbar-thumb {
+  background: transparent;
+}
 
 /* Smooth fonts on dark bg */
-* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 /* StarBorder uses its own CSS from components/StarBorder.css; no global overrides needed here. */
 
@@ -37,7 +53,7 @@ body::-webkit-scrollbar-thumb { background: transparent; }
   pointer-events: none;
   z-index: 1; /* sits above ColorBends background, below content */
   /* Fade from transparent to the page bg (#000) */
-  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #000 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, #000 100%);
 }
 
 /* Fade the top of the DotGrid into black so it blends into the hero area */
@@ -49,5 +65,5 @@ body::-webkit-scrollbar-thumb { background: transparent; }
   height: 14rem; /* adjust for longer/shorter blend */
   pointer-events: none;
   z-index: 1; /* above DotGrid (z=0), below content (z>=2) and hero (z=10) */
-  background: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0) 100%);
+  background: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0) 100%);
 }

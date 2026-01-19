@@ -25,11 +25,7 @@ export type { FileNode, DownloadResult } from './fileService.core';
 
 // Notes
 export { noteService } from './noteService';
-export type {
-  Note,
-  Attachment,
-  CreateNoteData,
-} from './noteService.core';
+export type { Note, Attachment, CreateNoteData } from './noteService.core';
 
 // Forms
 export { formsService } from './formsService';

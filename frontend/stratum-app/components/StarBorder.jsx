@@ -1,7 +1,5 @@
-
 import { Platform, View } from 'react-native';
 import './StarBorder.css';
-
 
 const StarBorder = ({
   as: Component = Platform.OS === 'web' ? 'button' : View,
@@ -13,33 +11,33 @@ const StarBorder = ({
   ...rest
 }) => {
   // Only apply className and HTML styles on web
-  const webProps = Platform.OS === 'web' ? {
-    className: `star-border-container ${className}`,
-    style: {
-      padding: `${thickness}px 0`,
-      ...(rest.style || {})
-    }
-  } : {};
+  const webProps =
+    Platform.OS === 'web'
+      ? {
+          className: `star-border-container ${className}`,
+          style: {
+            padding: `${thickness}px 0`,
+            ...(rest.style || {}),
+          },
+        }
+      : {};
 
   return (
-    <Component
-      {...webProps}
-      {...rest}
-    >
+    <Component {...webProps} {...rest}>
       {Platform.OS === 'web' ? (
         <>
           <div
             className="border-gradient-bottom"
             style={{
               background: `radial-gradient(circle, ${color}, transparent 10%)`,
-              animationDuration: speed
+              animationDuration: speed,
             }}
           ></div>
           <div
             className="border-gradient-top"
             style={{
               background: `radial-gradient(circle, ${color}, transparent 10%)`,
-              animationDuration: speed
+              animationDuration: speed,
             }}
           ></div>
           <div className="inner-content">{children}</div>

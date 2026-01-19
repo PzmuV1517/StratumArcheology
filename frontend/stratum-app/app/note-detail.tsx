@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Platform
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Stack } from 'expo-router';
@@ -61,7 +61,7 @@ export default function NoteDetailScreen() {
     } catch (error) {
       console.error('Error loading note:', error);
       Alert.alert('Error', 'Failed to load note details', [
-        { text: 'OK', onPress: () => router.back() }
+        { text: 'OK', onPress: () => router.back() },
       ]);
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function NoteDetailScreen() {
   const handleEdit = () => {
     router.push({
       pathname: '/edit-note',
-      params: { noteId, projectId }
+      params: { noteId, projectId },
     });
   };
 
@@ -85,8 +85,8 @@ export default function NoteDetailScreen() {
       await noteService.deleteNote(noteId as string);
       setShowDeleteModal(false);
       Alert.alert('Deleted', 'Note has been deleted.', [
-        { 
-          text: 'OK', 
+        {
+          text: 'OK',
           onPress: () => {
             // Navigate back to the project detail page reliably
             if (projectId) {
@@ -94,8 +94,8 @@ export default function NoteDetailScreen() {
             } else {
               router.back();
             }
-          }
-        }
+          },
+        },
       ]);
     } catch (error: any) {
       console.error('Error deleting note:', error);
@@ -109,20 +109,20 @@ export default function NoteDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Note Details',
             headerStyle: { backgroundColor: '#111111' },
             headerTintColor: '#FF2A2A',
-            headerTitleStyle: { 
+            headerTitleStyle: {
               color: '#F5F5F5',
               fontSize: 18,
-              fontWeight: '600'
+              fontWeight: '600',
             },
             headerBackTitle: 'Project',
             headerShown: true,
             presentation: 'card',
-          }} 
+          }}
         />
         <ActivityIndicator size="large" color="#FF2A2A" />
         <Text style={styles.loadingText}>Loading note...</Text>
@@ -133,19 +133,19 @@ export default function NoteDetailScreen() {
   if (!note) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen 
+        <Stack.Screen
           options={{
             title: 'Note Not Found',
             headerStyle: { backgroundColor: '#111111' },
             headerTintColor: '#FF2A2A',
-            headerTitleStyle: { 
+            headerTitleStyle: {
               color: '#F5F5F5',
               fontSize: 18,
-              fontWeight: '600'
+              fontWeight: '600',
             },
             headerBackTitle: 'Project',
             headerShown: true,
-          }} 
+          }}
         />
         <Text style={styles.errorText}>Note not found</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -155,20 +155,22 @@ export default function NoteDetailScreen() {
     );
   }
 
-  const isAudioNote = note && (!note.content || note.content.trim() === '') &&
+  const isAudioNote =
+    note &&
+    (!note.content || note.content.trim() === '') &&
     (note.attachments || []).some((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
 
   return (
     <View style={styles.container}>
-        <Stack.Screen 
+      <Stack.Screen
         options={{
           title: note.title,
           headerStyle: { backgroundColor: '#111111' },
           headerTintColor: '#FF2A2A',
-          headerTitleStyle: { 
+          headerTitleStyle: {
             color: '#F5F5F5',
             fontSize: 18,
-            fontWeight: '600'
+            fontWeight: '600',
           },
           headerBackTitle: 'Project',
           headerShown: true,
@@ -183,12 +185,12 @@ export default function NoteDetailScreen() {
               </TouchableOpacity>
             </View>
           ),
-        }} 
+        }}
       />
       <ScrollView style={styles.content}>
         <View style={styles.noteContainer}>
           <Text style={styles.noteTitle}>{note.title}</Text>
-          
+
           <View style={styles.noteMeta}>
             <Text style={styles.noteMetaText}>
               Created: {new Date(note.created_at).toLocaleDateString()}
@@ -218,13 +220,18 @@ export default function NoteDetailScreen() {
           )}
 
           {/* Attachments section */}
-          {note.attachments && note.attachments.length > 0 && (
+          {note.attachments &&
+            note.attachments.length > 0 &&
             (() => {
-              const nonAudio = note.attachments.filter((a: any) => !(a.mime_type || a.file_type)?.startsWith('audio/'));
+              const nonAudio = note.attachments.filter(
+                (a: any) => !(a.mime_type || a.file_type)?.startsWith('audio/')
+              );
               if (isAudioNote && nonAudio.length === 0) return null;
               return (
                 <View style={{ marginTop: 24 }}>
-                  <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>Attachments</Text>
+                  <Text style={{ color: '#F5F5F5', fontWeight: '700', marginBottom: 12 }}>
+                    Attachments
+                  </Text>
                   {nonAudio.map((att: any) => (
                     <View key={att.id} style={{ marginBottom: 12 }}>
                       <Text style={{ color: '#9A9A9A' }}>{att.filename}</Text>
@@ -232,8 +239,7 @@ export default function NoteDetailScreen() {
                   ))}
                 </View>
               );
-            })()
-          )}
+            })()}
         </View>
       </ScrollView>
 
@@ -248,18 +254,33 @@ export default function NoteDetailScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Delete note?</Text>
             <Text style={styles.modalText}>
-              This will permanently delete this note and its attachments. This action cannot be undone.
+              This will permanently delete this note and its attachments. This action cannot be
+              undone.
             </Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444', opacity: isDeleting ? 0.7 : 1 }]}
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: '#3A0C0C',
+                    borderWidth: 1,
+                    borderColor: '#FF4444',
+                    opacity: isDeleting ? 0.7 : 1,
+                  },
+                ]}
                 onPress={confirmDelete}
                 disabled={isDeleting}
               >
-                <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>{isDeleting ? 'Deleting…' : 'Delete'}</Text>
+                <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>
+                  {isDeleting ? 'Deleting…' : 'Delete'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -279,7 +300,9 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
 
   const cleanup = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    try { ctxRef.current?.close(); } catch {}
+    try {
+      ctxRef.current?.close();
+    } catch {}
     ctxRef.current = null;
     analyserRef.current = null;
   };
@@ -302,15 +325,16 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
       const draw = () => {
         rafRef.current = requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(data);
-        g.clearRect(0,0,canvasRef.current!.width,canvasRef.current!.height);
+        g.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
         g.strokeStyle = '#FF2A2A';
         g.lineWidth = 2;
         g.beginPath();
         const slice = canvasRef.current!.width / data.length;
-        for (let i=0;i<data.length;i++){
+        for (let i = 0; i < data.length; i++) {
           const v = data[i] / 128.0 - 1.0;
-          const y = (v * canvasRef.current!.height)/2 + canvasRef.current!.height/2;
-          if (i===0) g.moveTo(0,y); else g.lineTo(i*slice,y);
+          const y = (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+          if (i === 0) g.moveTo(0, y);
+          else g.lineTo(i * slice, y);
         }
         g.stroke();
       };
@@ -326,11 +350,15 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
     // Wait for user interaction or metadata before initializing
     const el = audioRef.current;
     if (!el) return;
-    const onMeta = () => { try { el.currentTime = 0; } catch {}; };
+    const onMeta = () => {
+      try {
+        el.currentTime = 0;
+      } catch {}
+    };
     const onFirstPlay = () => {
       init();
       const ctx = ctxRef.current;
-      if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     };
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('play', onFirstPlay, { once: true });
@@ -356,12 +384,21 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
       />
       {(!ready || needsResume) && (
         <TouchableOpacity
-          style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', borderRadius: 6 }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 6,
+          }}
           onPress={() => {
             init();
             const ctx = ctxRef.current;
-            if (ctx && ctx.state === 'suspended') ctx.resume().catch(()=>{});
-            try { audioRef.current?.play(); } catch {}
+            if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+            try {
+              audioRef.current?.play();
+            } catch {}
           }}
         >
           <Text style={{ color: '#F5F5F5', fontWeight: '600' }}>Tap to enable audio</Text>

@@ -36,7 +36,7 @@ export const storage = {
       return result as [string, string | null][];
     } catch (error) {
       console.error('Storage multiGet error:', error);
-      return keys.map(key => [key, null]);
+      return keys.map((key) => [key, null]);
     }
   },
 

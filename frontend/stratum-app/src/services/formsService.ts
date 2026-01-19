@@ -18,10 +18,7 @@ export const formsService = {
     projectId: string,
     record: ContextFeatureRecord
   ): Promise<FormSaveResponse> => {
-    const res = await api.post(
-      `/forms/project/${projectId}/context-feature`,
-      record
-    );
+    const res = await api.post(`/forms/project/${projectId}/context-feature`, record);
     return res.data;
   },
 
@@ -32,20 +29,14 @@ export const formsService = {
     projectId: string,
     record: StratigraphicUnitRecord
   ): Promise<FormSaveResponse> => {
-    const res = await api.post(
-      `/forms/project/${projectId}/stratigraphic-unit`,
-      record
-    );
+    const res = await api.post(`/forms/project/${projectId}/stratigraphic-unit`, record);
     return res.data;
   },
 
   /**
    * Save an artefact record
    */
-  saveArtefact: async (
-    projectId: string,
-    record: ArtefactRecord
-  ): Promise<FormSaveResponse> => {
+  saveArtefact: async (projectId: string, record: ArtefactRecord): Promise<FormSaveResponse> => {
     const res = await api.post(`/forms/project/${projectId}/artefact`, record);
     return res.data;
   },
@@ -53,9 +44,7 @@ export const formsService = {
   /**
    * Get all context/features for a project
    */
-  getContextFeatures: async (
-    projectId: string
-  ): Promise<ContextFeatureRecord[]> => {
+  getContextFeatures: async (projectId: string): Promise<ContextFeatureRecord[]> => {
     const res = await api.get(`/forms/project/${projectId}/context-features`);
     return res.data;
   },
@@ -63,9 +52,7 @@ export const formsService = {
   /**
    * Get all stratigraphic units for a project
    */
-  getStratigraphicUnits: async (
-    projectId: string
-  ): Promise<StratigraphicUnitRecord[]> => {
+  getStratigraphicUnits: async (projectId: string): Promise<StratigraphicUnitRecord[]> => {
     const res = await api.get(`/forms/project/${projectId}/stratigraphic-units`);
     return res.data;
   },

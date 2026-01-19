@@ -15,7 +15,14 @@ export default function PdfPanel({ src }: { src: string | null }) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', overflow: 'hidden' },
+  wrapper: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#0E0E0E',
+    overflow: 'hidden',
+  },
   iframe: { width: '100%', height: '100%', borderWidth: 0 },
   info: { color: '#9A9A9A', padding: 12, textAlign: 'center' },
 });

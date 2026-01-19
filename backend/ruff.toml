@@ -1,0 +1,37 @@
+# Ruff configuration for STRATUM backend
+
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = [
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "F",      # Pyflakes
+  "I",      # isort
+  "B",      # flake8-bugbear
+  "UP",     # pyupgrade
+]
+ignore = [
+  "E501",   # line too long (handled by formatter)
+  "E701",   # multiple statements on one line (colon) - used in compact code
+  "E702",   # multiple statements on one line (semicolon) - used in compact code
+  "E711",   # comparison to None (SQLAlchemy requires == None for filters)
+  "E741",   # ambiguous variable name (I, l, O) - acceptable in math/science code
+  "B008",   # do not perform function calls in argument defaults (FastAPI Depends pattern)
+  "B904",   # raise from in except (too noisy for HTTPException re-raises)
+  "B905",   # zip without strict= (not needed for same-length iterables)
+  "W293",   # blank line contains whitespace (formatter handles this)
+  "UP028",  # yield from suggestion (not always cleaner)
+  "UP045",  # Optional[X] vs X | None (both are valid)
+  "F841",   # local variable assigned but never used (sometimes intentional)
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports in __init__ files
+"alembic/*" = ["E402", "F401"]  # alembic migrations
+"app/routes/convert.py" = ["E402"]  # complex math/parsing code
+
+[format]
+quote-style = "double"
+indent-style = "space"

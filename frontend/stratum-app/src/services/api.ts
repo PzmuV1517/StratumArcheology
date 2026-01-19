@@ -24,7 +24,7 @@ export const authEvents = {
   },
   emit: (event: string) => {
     if (event === AUTH_SESSION_EXPIRED) {
-      sessionExpiredListeners.forEach(cb => cb());
+      sessionExpiredListeners.forEach((cb) => cb());
     }
   },
 };
@@ -39,13 +39,8 @@ const resolveBaseUrl = async (): Promise<string> => {
     let base = override || config.apiBaseUrl;
 
     // Prevent mixed content on HTTPS pages by upgrading scheme when pointing to same host
-    const isWeb =
-      typeof window !== 'undefined' && typeof document !== 'undefined';
-    if (
-      isWeb &&
-      window.location.protocol === 'https:' &&
-      base.startsWith('http://')
-    ) {
+    const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+    if (isWeb && window.location.protocol === 'https:' && base.startsWith('http://')) {
       try {
         const target = new URL(base);
         const current = new URL(window.location.href);
@@ -91,7 +86,7 @@ api.interceptors.request.use(
     // Ensure baseURL honors override on every request
     const base = await resolveBaseUrl();
     axiosConfig.baseURL = base;
-    
+
     // Debug logging
     console.log('[API] Request to:', base + axiosConfig.url);
 
@@ -110,8 +105,7 @@ api.interceptors.request.use(
     }
 
     // Only set JSON Content-Type when body is NOT FormData
-    const isFormData =
-      typeof FormData !== 'undefined' && axiosConfig.data instanceof FormData;
+    const isFormData = typeof FormData !== 'undefined' && axiosConfig.data instanceof FormData;
     if (!isFormData) {
       axiosConfig.headers = axiosConfig.headers || {};
       if (!axiosConfig.headers['Content-Type']) {
@@ -119,10 +113,7 @@ api.interceptors.request.use(
       }
     } else {
       // Remove JSON header so browser can set multipart boundary
-      if (
-        axiosConfig.headers &&
-        axiosConfig.headers['Content-Type'] === 'application/json'
-      ) {
+      if (axiosConfig.headers && axiosConfig.headers['Content-Type'] === 'application/json') {
         delete axiosConfig.headers['Content-Type'];
       }
     }
@@ -139,20 +130,20 @@ api.interceptors.response.use(
     // This is needed because 307 redirects lose Authorization headers on iOS
     if (response.status === 307) {
       const redirectUrl = response.headers?.location;
-      
+
       if (redirectUrl) {
         const originalRequest = response.config;
         // Update the URL and retry with auth header
         originalRequest.url = redirectUrl;
         originalRequest.baseURL = ''; // Clear baseURL since redirectUrl is absolute
-        
+
         // Re-attach the token
         const token = await AsyncStorage.getItem('authToken');
         if (token) {
           originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${token}`;
         }
-        
+
         console.log('[API] Following 307 redirect to:', redirectUrl);
         return api.request(originalRequest);
       }
@@ -169,42 +160,42 @@ api.interceptors.response.use(
       url: error.config?.url,
       baseURL: error.config?.baseURL,
     });
-    
+
     if (!error.response) {
       // No response - could be network error, timeout, or server unreachable
       // Be more specific about what's actually a "no network" vs "server down"
       const errorMessage = error.message?.toLowerCase() || '';
       const errorCode = error.code || '';
-      
+
       // These indicate actual network/connectivity issues
-      const isNetworkConnectivityError = 
+      const isNetworkConnectivityError =
         errorCode === 'ERR_NETWORK' ||
         errorCode === 'ECONNREFUSED' ||
         errorCode === 'ENOTFOUND' ||
         errorMessage.includes('network request failed') ||
         errorMessage.includes('network error');
-      
+
       // Timeout is a different issue - server might be slow, not unreachable
-      const isTimeout = 
-        errorCode === 'ECONNABORTED' || 
-        errorMessage.includes('timeout');
-      
+      const isTimeout = errorCode === 'ECONNABORTED' || errorMessage.includes('timeout');
+
       console.log('[API] No response analysis:', {
         errorMessage,
         errorCode,
         isNetworkConnectivityError,
         isTimeout,
       });
-      
+
       if (isNetworkConnectivityError) {
         console.log('[API] Network connectivity error detected');
         // For simulator, this usually means wrong IP or server not running
-        const networkError = new Error('Cannot connect to server. Make sure the backend is running.');
+        const networkError = new Error(
+          'Cannot connect to server. Make sure the backend is running.'
+        );
         (networkError as any).isNetworkError = true;
         (networkError as any).originalError = error;
         return Promise.reject(networkError);
       }
-      
+
       if (isTimeout) {
         console.log('[API] Timeout error detected');
         const timeoutError = new Error('Request timed out. The server may be busy.');
@@ -212,11 +203,11 @@ api.interceptors.response.use(
         (timeoutError as any).originalError = error;
         return Promise.reject(timeoutError);
       }
-      
+
       // For other errors without a response, provide the original message
       console.log('[API] Unknown error without response:', error.message);
     }
-    
+
     if (error.response?.status === 401) {
       // Token expired, clear storage
       await AsyncStorage.removeItem('authToken');

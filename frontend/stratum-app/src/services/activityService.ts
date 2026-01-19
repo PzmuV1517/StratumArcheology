@@ -1,9 +1,5 @@
 import api from './api';
-import {
-  ProjectActivity,
-  ActivityListResponse,
-  ActivityType,
-} from './activityService.types';
+import { ProjectActivity, ActivityListResponse, ActivityType } from './activityService.types';
 
 /**
  * Activity service for project timeline
@@ -43,10 +39,7 @@ export const activityService = {
   /**
    * Get personal activities across all projects for the current user
    */
-  getMyActivities: async (
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<ProjectActivity[]> => {
+  getMyActivities: async (limit: number = 50, offset: number = 0): Promise<ProjectActivity[]> => {
     try {
       const res = await api.get('/activities/me', {
         params: { limit, offset },
@@ -168,4 +161,8 @@ export const activityService = {
 };
 
 export { ActivityType };
-export type { ProjectActivity, ActivityListResponse, ActivityExtraData } from './activityService.types';
+export type {
+  ProjectActivity,
+  ActivityListResponse,
+  ActivityExtraData,
+} from './activityService.types';

@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Keyboard } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+  Keyboard,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { projectService } from '../src/services/projectService';
@@ -21,18 +31,18 @@ export default function JoinProjectScreen() {
       // - Relative: /invite?token=abc123
       // - Just token: abc123
       const trimmed = link.trim();
-      
+
       // Try to parse as URL
       if (trimmed.includes('token=')) {
         const match = trimmed.match(/token=([^&\s]+)/);
         if (match) return match[1];
       }
-      
+
       // If it looks like just a token (no slashes or special chars)
       if (!trimmed.includes('/') && !trimmed.includes('?') && trimmed.length > 10) {
         return trimmed;
       }
-      
+
       return null;
     } catch {
       return null;
@@ -47,7 +57,10 @@ export default function JoinProjectScreen() {
 
     const token = extractTokenFromLink(linkInput);
     if (!token) {
-      Alert.alert('Invalid Link', 'Could not find a valid invite token in the link. Please check and try again.');
+      Alert.alert(
+        'Invalid Link',
+        'Could not find a valid invite token in the link. Please check and try again.'
+      );
       return;
     }
 
@@ -57,14 +70,14 @@ export default function JoinProjectScreen() {
     try {
       const result = await projectService.acceptInvite(token);
       const projectId = result?.project_id;
-      
+
       if (projectId) {
         // Navigate directly to the project
         router.replace(`/project/${projectId}`);
       } else {
         // Fallback if no project ID returned
         Alert.alert('Welcome!', 'You have successfully joined the project.', [
-          { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
+          { text: 'View Projects', onPress: () => router.replace('/(tabs)') },
         ]);
       }
     } catch (error: any) {
@@ -97,14 +110,14 @@ export default function JoinProjectScreen() {
     try {
       const result = await projectService.joinByCode(codeInput.trim().toUpperCase());
       const projectId = result?.project_id;
-      
+
       if (projectId) {
         // Navigate directly to the project
         router.replace(`/project/${projectId}`);
       } else {
         // Fallback if no project ID returned
         Alert.alert('Welcome!', 'You have successfully joined the project.', [
-          { text: 'View Projects', onPress: () => router.replace('/(tabs)') }
+          { text: 'View Projects', onPress: () => router.replace('/(tabs)') },
         ]);
       }
     } catch (error: any) {
@@ -148,27 +161,23 @@ export default function JoinProjectScreen() {
             style={[styles.tab, method === 'link' && styles.tabActive]}
             onPress={() => setMethod('link')}
           >
-            <Ionicons 
-              name="link-outline" 
-              size={20} 
-              color={method === 'link' ? '#FF2A2A' : '#666'} 
+            <Ionicons
+              name="link-outline"
+              size={20}
+              color={method === 'link' ? '#FF2A2A' : '#666'}
             />
-            <Text style={[styles.tabText, method === 'link' && styles.tabTextActive]}>
-              By Link
-            </Text>
+            <Text style={[styles.tabText, method === 'link' && styles.tabTextActive]}>By Link</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, method === 'code' && styles.tabActive]}
             onPress={() => setMethod('code')}
           >
-            <Ionicons 
-              name="keypad-outline" 
-              size={20} 
-              color={method === 'code' ? '#FF2A2A' : '#666'} 
+            <Ionicons
+              name="keypad-outline"
+              size={20}
+              color={method === 'code' ? '#FF2A2A' : '#666'}
             />
-            <Text style={[styles.tabText, method === 'code' && styles.tabTextActive]}>
-              By Code
-            </Text>
+            <Text style={[styles.tabText, method === 'code' && styles.tabTextActive]}>By Code</Text>
           </TouchableOpacity>
         </View>
 
@@ -176,9 +185,7 @@ export default function JoinProjectScreen() {
         {method === 'link' && (
           <View style={styles.formSection}>
             <Text style={styles.label}>Invite Link</Text>
-            <Text style={styles.hint}>
-              Paste the invite link shared by the project leader
-            </Text>
+            <Text style={styles.hint}>Paste the invite link shared by the project leader</Text>
             <TextInput
               style={styles.input}
               placeholder="https://stratum.app/invite?token=..."
@@ -210,9 +217,7 @@ export default function JoinProjectScreen() {
         {method === 'code' && (
           <View style={styles.formSection}>
             <Text style={styles.label}>Invite Code</Text>
-            <Text style={styles.hint}>
-              Enter the short code provided by the project leader
-            </Text>
+            <Text style={styles.hint}>Enter the short code provided by the project leader</Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
               placeholder="ABC-123456"
@@ -244,7 +249,8 @@ export default function JoinProjectScreen() {
         <View style={styles.infoSection}>
           <Ionicons name="information-circle-outline" size={20} color="#666" />
           <Text style={styles.infoText}>
-            Ask the project leader for an invite link or code. Once you join, you'll be able to view and contribute to the project based on your assigned role.
+            Ask the project leader for an invite link or code. Once you join, you'll be able to view
+            and contribute to the project based on your assigned role.
           </Text>
         </View>
       </View>

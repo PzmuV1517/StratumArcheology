@@ -15,7 +15,16 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', padding: 16, alignItems: 'center', justifyContent: 'center' },
+  wrapper: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    backgroundColor: '#0E0E0E',
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   info: { color: '#9A9A9A', fontSize: 14, textAlign: 'center' },
   name: { color: '#F5F5F5', fontSize: 12, marginTop: 8 },
 });

@@ -21,11 +21,14 @@ const ITEMS_PER_PAGE = 50;
 /**
  * Hook for project activity/timeline
  * Includes real-time updates via WebSocket
- * 
+ *
  * @param projectId - The project ID (string UUID)
  * @param personalOnly - If true, only show current user's activities
  */
-export function useActivity(projectId: string | undefined, personalOnly: boolean = false): UseActivityReturn {
+export function useActivity(
+  projectId: string | undefined,
+  personalOnly: boolean = false
+): UseActivityReturn {
   const [activities, setActivities] = useState<ProjectActivity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -68,12 +71,12 @@ export function useActivity(projectId: string | undefined, personalOnly: boolean
 
       try {
         const offset = append ? currentOffset.current : 0;
-        
+
         let newActivities: ProjectActivity[];
         if (personalOnly) {
           // Get personal activities (from /activities/me) and filter by project
           const allMyActivities = await activityService.getMyActivities(200, 0);
-          newActivities = allMyActivities.filter(a => a.project_id === projectId);
+          newActivities = allMyActivities.filter((a) => a.project_id === projectId);
           // Apply pagination manually
           newActivities = newActivities.slice(offset, offset + ITEMS_PER_PAGE);
         } else {

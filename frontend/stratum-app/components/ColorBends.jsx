@@ -110,7 +110,7 @@ export default function ColorBends({
   warpStrength = 1,
   mouseInfluence = 1,
   parallax = 0.5,
-  noise = 0.1
+  noise = 0.1,
 }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -147,10 +147,10 @@ export default function ColorBends({
         uPointer: { value: new THREE.Vector2(0, 0) },
         uMouseInfluence: { value: mouseInfluence },
         uParallax: { value: parallax },
-        uNoise: { value: noise }
+        uNoise: { value: noise },
       },
       premultipliedAlpha: true,
-      transparent: true
+      transparent: true,
     });
     materialRef.current = material;
 
@@ -160,7 +160,7 @@ export default function ColorBends({
     const renderer = new THREE.WebGLRenderer({
       antialias: false,
       powerPreference: 'high-performance',
-      alpha: true
+      alpha: true,
     });
     rendererRef.current = renderer;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -239,7 +239,7 @@ export default function ColorBends({
     material.uniforms.uParallax.value = parallax;
     material.uniforms.uNoise.value = noise;
 
-    const toVec3 = hex => {
+    const toVec3 = (hex) => {
       const h = hex.replace('#', '').trim();
       const v =
         h.length === 3
@@ -269,7 +269,7 @@ export default function ColorBends({
     parallax,
     noise,
     colors,
-    transparent
+    transparent,
   ]);
 
   useEffect(() => {
@@ -277,7 +277,7 @@ export default function ColorBends({
     const container = containerRef.current;
     if (!material || !container) return;
 
-    const handlePointerMove = e => {
+    const handlePointerMove = (e) => {
       const rect = container.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / (rect.width || 1)) * 2 - 1;
       const y = -(((e.clientY - rect.top) / (rect.height || 1)) * 2 - 1);
@@ -290,9 +290,7 @@ export default function ColorBends({
     };
   }, []);
 
-  return (
-    Platform.OS === 'web'
-      ? <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />
-      : null
-  );
+  return Platform.OS === 'web' ? (
+    <div ref={containerRef} className={`color-bends-container ${className}`} style={style} />
+  ) : null;
 }

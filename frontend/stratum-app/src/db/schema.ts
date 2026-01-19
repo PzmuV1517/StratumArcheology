@@ -1,9 +1,9 @@
 /**
  * STRATUM Offline Database Configuration
- * 
+ *
  * Provides local SQLite storage for offline-first capability.
  * Uses expo-sqlite for native and localStorage for web.
- * 
+ *
  * Features:
  * - Local caching of projects, notes, files metadata
  * - Request queue for offline API calls

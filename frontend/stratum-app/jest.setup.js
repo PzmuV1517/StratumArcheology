@@ -2,26 +2,34 @@
 // Configure testing environment
 
 // Mock expo-sqlite for testing (virtual mock for modules not installed)
-jest.mock('expo-sqlite', () => ({
-  openDatabaseSync: jest.fn(() => ({
-    execSync: jest.fn(),
-    runSync: jest.fn(() => ({ lastInsertRowId: 1 })),
-    getFirstSync: jest.fn(),
-    getAllSync: jest.fn(() => []),
-  })),
-}), { virtual: true });
+jest.mock(
+  'expo-sqlite',
+  () => ({
+    openDatabaseSync: jest.fn(() => ({
+      execSync: jest.fn(),
+      runSync: jest.fn(() => ({ lastInsertRowId: 1 })),
+      getFirstSync: jest.fn(),
+      getAllSync: jest.fn(() => []),
+    })),
+  }),
+  { virtual: true }
+);
 
 // Mock NetInfo (virtual mock)
-jest.mock('@react-native-community/netinfo', () => ({
-  addEventListener: jest.fn(() => jest.fn()),
-  fetch: jest.fn(() =>
-    Promise.resolve({
-      type: 'wifi',
-      isConnected: true,
-      isInternetReachable: true,
-    })
-  ),
-}), { virtual: true });
+jest.mock(
+  '@react-native-community/netinfo',
+  () => ({
+    addEventListener: jest.fn(() => jest.fn()),
+    fetch: jest.fn(() =>
+      Promise.resolve({
+        type: 'wifi',
+        isConnected: true,
+        isInternetReachable: true,
+      })
+    ),
+  }),
+  { virtual: true }
+);
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({

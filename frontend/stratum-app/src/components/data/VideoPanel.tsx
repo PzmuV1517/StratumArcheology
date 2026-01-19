@@ -1,10 +1,10 @@
-import React from "react";
-import videojs from "video.js";
-import "video.js/dist/video-js.css";
-import { View, StyleSheet } from "react-native";
+import React from 'react';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
+import { View, StyleSheet } from 'react-native';
 
 interface Props {
-    src: string | null;
+  src: string | null;
 }
 
 const guessType = (url: string) => {
@@ -25,7 +25,9 @@ export default function VideoPanel({ src }: Props) {
         sources: [{ src, type: guessType(src) }],
       });
     }
-    return () => { if (playerRef.current) playerRef.current.dispose(); };
+    return () => {
+      if (playerRef.current) playerRef.current.dispose();
+    };
   }, [src]);
   return (
     <View style={styles.container}>
@@ -35,9 +37,9 @@ export default function VideoPanel({ src }: Props) {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

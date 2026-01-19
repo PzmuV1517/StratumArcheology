@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
   Platform,
   Alert,
   ActivityIndicator,
@@ -20,17 +20,21 @@ import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { offlineFilesStorage, recentProjectsCache } from '../src/services/offlineService';
-import { offlineQueue, getOfflineStorageStats, OfflineStorageStats } from '../src/services/offlineQueueService';
+import {
+  offlineQueue,
+  getOfflineStorageStats,
+  OfflineStorageStats,
+} from '../src/services/offlineQueueService';
 import { OfflineFile } from '../src/db/schema';
 
 // Storage bar component
-function StorageBar({ 
-  stratumUsed, 
-  otherUsed, 
-  totalStorage 
-}: { 
-  stratumUsed: number; 
-  otherUsed: number; 
+function StorageBar({
+  stratumUsed,
+  otherUsed,
+  totalStorage,
+}: {
+  stratumUsed: number;
+  otherUsed: number;
   totalStorage: number;
 }) {
   const free = totalStorage - stratumUsed - otherUsed;
@@ -48,9 +52,18 @@ function StorageBar({
   return (
     <View style={storageStyles.container}>
       <View style={storageStyles.bar}>
-        <View style={[storageStyles.segment, { width: `${stratumPercent}%`, backgroundColor: '#FF2A2A' }]} />
-        <View style={[storageStyles.segment, { width: `${otherPercent}%`, backgroundColor: '#666' }]} />
-        <View style={[storageStyles.segment, { width: `${freePercent}%`, backgroundColor: '#2A2A2A' }]} />
+        <View
+          style={[
+            storageStyles.segment,
+            { width: `${stratumPercent}%`, backgroundColor: '#FF2A2A' },
+          ]}
+        />
+        <View
+          style={[storageStyles.segment, { width: `${otherPercent}%`, backgroundColor: '#666' }]}
+        />
+        <View
+          style={[storageStyles.segment, { width: `${freePercent}%`, backgroundColor: '#2A2A2A' }]}
+        />
       </View>
       <View style={storageStyles.legend}>
         <View style={storageStyles.legendItem}>
@@ -62,7 +75,12 @@ function StorageBar({
           <Text style={storageStyles.legendText}>Other ({formatSize(otherUsed)})</Text>
         </View>
         <View style={storageStyles.legendItem}>
-          <View style={[storageStyles.legendDot, { backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' }]} />
+          <View
+            style={[
+              storageStyles.legendDot,
+              { backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' },
+            ]}
+          />
           <Text style={storageStyles.legendText}>Free ({formatSize(free)})</Text>
         </View>
       </View>
@@ -72,10 +90,10 @@ function StorageBar({
 
 const storageStyles = StyleSheet.create({
   container: { marginVertical: 16 },
-  bar: { 
-    height: 12, 
-    borderRadius: 6, 
-    flexDirection: 'row', 
+  bar: {
+    height: 12,
+    borderRadius: 6,
+    flexDirection: 'row',
     overflow: 'hidden',
     backgroundColor: '#2A2A2A',
   },
@@ -90,29 +108,31 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
-  
+
   // Storage stats
   const [stratumUsed, setStratumUsed] = useState(0);
   const [otherUsed, setOtherUsed] = useState(0);
   const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
   const [loadingStorage, setLoadingStorage] = useState(true);
   const [offlineStorageStats, setOfflineStorageStats] = useState<OfflineStorageStats | null>(null);
-  
+
   // Offline files
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(false);
   // Connection status - use a ref to track actual status
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [connectionStatus, setConnectionStatus] = useState<
+    'unknown' | 'connected' | 'disconnected'
+  >('unknown');
   const connectionCheckedRef = React.useRef(false);
-  
+
   // Network state (real-time from NetInfo)
   const [networkState, setNetworkState] = useState<NetInfoState | null>(null);
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
-  
+
   // Downloaded projects
   const [downloadedProjects, setDownloadedProjects] = useState<any[]>([]);
-  
+
   // Profile settings
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(user?.display_name || '');
@@ -150,7 +170,7 @@ export default function SettingsScreen() {
   const loadPendingQueue = useCallback(async () => {
     try {
       const queue = await offlineQueue.getQueue();
-      const pendingCount = queue.filter(a => a.status === 'pending').length;
+      const pendingCount = queue.filter((a) => a.status === 'pending').length;
       setPendingQueueCount(pendingCount);
     } catch (err) {
       console.error('Failed to load pending queue:', err);
@@ -170,29 +190,29 @@ export default function SettingsScreen() {
       setLoadingStorage(false);
       return;
     }
-    
+
     try {
       // Get STRATUM offline files size
       const stratumSize = await offlineFilesStorage.getOfflineStorageSize();
       setStratumUsed(stratumSize);
-      
+
       // Get offline queue storage stats
       try {
         const queueStats = await getOfflineStorageStats();
         setOfflineStorageStats(queueStats);
         // Add queue storage to stratum size for more accurate total
         if (queueStats && queueStats.totalSize) {
-          setStratumUsed(prev => prev + (queueStats.totalSize * 1024)); // Convert KB to bytes
+          setStratumUsed((prev) => prev + queueStats.totalSize * 1024); // Convert KB to bytes
         }
       } catch (queueErr) {
         console.warn('Failed to get queue storage stats:', queueErr);
       }
-      
+
       // Get device storage info - wrap in try-catch for Expo Go compatibility
       try {
         if (typeof FileSystem.getFreeDiskStorageAsync === 'function') {
           const freeSpace = await FileSystem.getFreeDiskStorageAsync();
-          
+
           // Also try to get total disk storage for more accurate calculation
           let totalDiskSpace = freeSpace;
           if (typeof FileSystem.getTotalDiskCapacityAsync === 'function') {
@@ -202,13 +222,13 @@ export default function SettingsScreen() {
               setOtherUsed(totalDiskSpace - freeSpace - stratumSize);
             } catch {
               // Fallback: estimate total based on free space
-              const estimatedTotal = freeSpace + stratumSize + (20 * 1e9); // Rough estimate
+              const estimatedTotal = freeSpace + stratumSize + 20 * 1e9; // Rough estimate
               setTotalStorage(estimatedTotal);
               setOtherUsed(estimatedTotal - freeSpace - stratumSize);
             }
           } else {
             // Fallback: estimate total based on free space
-            const estimatedTotal = freeSpace + stratumSize + (20 * 1e9);
+            const estimatedTotal = freeSpace + stratumSize + 20 * 1e9;
             setTotalStorage(estimatedTotal);
             setOtherUsed(estimatedTotal - freeSpace - stratumSize);
           }
@@ -247,11 +267,11 @@ export default function SettingsScreen() {
     try {
       // First check network connectivity via NetInfo
       const netState = await NetInfo.fetch();
-      
+
       if (!netState.isConnected) {
         setConnectionStatus('disconnected');
         Alert.alert(
-          'No Network', 
+          'No Network',
           'Your device is not connected to a network. Check your Wi-Fi or cellular data.'
         );
         setCheckingConnection(false);
@@ -261,7 +281,7 @@ export default function SettingsScreen() {
       if (!netState.isInternetReachable) {
         setConnectionStatus('disconnected');
         Alert.alert(
-          'No Internet', 
+          'No Internet',
           'Network connected but internet is not reachable. Try again later.'
         );
         setCheckingConnection(false);
@@ -272,13 +292,11 @@ export default function SettingsScreen() {
       const response = await api.get('/health');
       if (response.status === 200) {
         setConnectionStatus('connected');
-        const pendingMessage = pendingQueueCount > 0 
-          ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
-          : '';
-        Alert.alert(
-          'Connected ✓', 
-          `Successfully connected to STRATUM backend.${pendingMessage}`
-        );
+        const pendingMessage =
+          pendingQueueCount > 0
+            ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
+            : '';
+        Alert.alert('Connected ✓', `Successfully connected to STRATUM backend.${pendingMessage}`);
       } else {
         setConnectionStatus('disconnected');
         Alert.alert('Connection Failed', 'Could not reach STRATUM backend.');
@@ -286,7 +304,7 @@ export default function SettingsScreen() {
     } catch {
       setConnectionStatus('disconnected');
       Alert.alert(
-        'Connection Failed', 
+        'Connection Failed',
         'Could not reach STRATUM backend. The server may be temporarily unavailable.'
       );
     } finally {
@@ -348,7 +366,10 @@ export default function SettingsScreen() {
       // Request permissions first on iOS
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to upload a profile picture.'
+        );
         return;
       }
 
@@ -376,12 +397,12 @@ export default function SettingsScreen() {
 
   const uploadProfileImage = async (): Promise<string | null> => {
     if (!selectedImage) return null;
-    
+
     try {
       // Create form data for upload
       const formData = new FormData();
       const filename = `profile_${user?.id}_${Date.now()}.jpg`;
-      
+
       if (Platform.OS === 'web') {
         // Web: fetch blob from URI
         const response = await fetch(selectedImage);
@@ -400,7 +421,7 @@ export default function SettingsScreen() {
       const response = await api.post('/files/profile-picture', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       return response.data.url;
     } catch (error: any) {
       console.error('Failed to upload profile image:', error);
@@ -416,7 +437,7 @@ export default function SettingsScreen() {
     setSavingProfile(true);
     try {
       let photoUrl = newPhotoUrl;
-      
+
       // Upload new image if selected
       if (selectedImage && selectedImage !== user?.photo_url) {
         try {
@@ -445,7 +466,7 @@ export default function SettingsScreen() {
         }
         Alert.alert('Success', 'Profile updated successfully.');
       }
-      
+
       setShowProfileModal(false);
       setSelectedImage(null);
     } catch (error: any) {
@@ -456,13 +477,16 @@ export default function SettingsScreen() {
   };
 
   // Group offline files by project
-  const groupedOfflineFiles = offlineFiles.reduce((acc, file) => {
-    if (!acc[file.project_id]) {
-      acc[file.project_id] = [];
-    }
-    acc[file.project_id].push(file);
-    return acc;
-  }, {} as Record<string, OfflineFile[]>);
+  const groupedOfflineFiles = offlineFiles.reduce(
+    (acc, file) => {
+      if (!acc[file.project_id]) {
+        acc[file.project_id] = [];
+      }
+      acc[file.project_id].push(file);
+      return acc;
+    },
+    {} as Record<string, OfflineFile[]>
+  );
 
   const formatSize = (bytes: number) => {
     if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
@@ -485,9 +509,9 @@ export default function SettingsScreen() {
         {/* Profile Settings Section - Moved above Storage */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
-          
-          <TouchableOpacity 
-            style={styles.menuItem} 
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => {
               setNewDisplayName(user?.display_name || '');
               setNewPhotoUrl(user?.photo_url || '');
@@ -518,13 +542,13 @@ export default function SettingsScreen() {
         {Platform.OS !== 'web' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Storage</Text>
-            
+
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Device Storage</Text>
               {loadingStorage ? (
                 <ActivityIndicator color="#FF2A2A" style={{ marginVertical: 20 }} />
               ) : (
-                <StorageBar 
+                <StorageBar
                   stratumUsed={stratumUsed}
                   otherUsed={otherUsed}
                   totalStorage={totalStorage}
@@ -532,10 +556,7 @@ export default function SettingsScreen() {
               )}
             </View>
 
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => setShowOfflineModal(true)}
-            >
+            <TouchableOpacity style={styles.menuItem} onPress={() => setShowOfflineModal(true)}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuItemText}>Offline Usage</Text>
                 <Text style={styles.menuItemSubtext}>
@@ -550,26 +571,41 @@ export default function SettingsScreen() {
         {/* Connection & Sync Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connection & Sync</Text>
-          
+
           <View style={styles.card}>
             <View style={styles.connectionRow}>
-              <View style={[
-                styles.connectionIndicator,
-                { backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : 
-                                  connectionStatus === 'disconnected' ? '#FF4444' : '#666' }
-              ]} />
+              <View
+                style={[
+                  styles.connectionIndicator,
+                  {
+                    backgroundColor:
+                      connectionStatus === 'connected'
+                        ? '#4CAF50'
+                        : connectionStatus === 'disconnected'
+                          ? '#FF4444'
+                          : '#666',
+                  },
+                ]}
+              />
               <View style={{ flex: 1 }}>
                 <Text style={styles.connectionTitle}>
-                  {connectionStatus === 'connected' ? 'Online' : 
-                   connectionStatus === 'disconnected' ? 'Offline' : 'Not checked'}
+                  {connectionStatus === 'connected'
+                    ? 'Online'
+                    : connectionStatus === 'disconnected'
+                      ? 'Offline'
+                      : 'Not checked'}
                 </Text>
                 <Text style={styles.connectionSubtitle}>
-                  {networkState?.type === 'wifi' ? 'Wi-Fi' :
-                   networkState?.type === 'cellular' ? 'Cellular' :
-                   networkState?.type === 'none' ? 'No Network' : 'Tap Refresh to check'}
+                  {networkState?.type === 'wifi'
+                    ? 'Wi-Fi'
+                    : networkState?.type === 'cellular'
+                      ? 'Cellular'
+                      : networkState?.type === 'none'
+                        ? 'No Network'
+                        : 'Tap Refresh to check'}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.refreshButton}
                 onPress={checkConnection}
                 disabled={checkingConnection}
@@ -615,8 +651,8 @@ export default function SettingsScreen() {
 
           <ScrollView style={styles.modalContent}>
             {/* Connection Check */}
-            <TouchableOpacity 
-              style={[styles.actionButton, checkingConnection && { opacity: 0.7 }]} 
+            <TouchableOpacity
+              style={[styles.actionButton, checkingConnection && { opacity: 0.7 }]}
               onPress={checkConnection}
               disabled={checkingConnection}
             >
@@ -626,10 +662,14 @@ export default function SettingsScreen() {
                 <>
                   <Text style={styles.actionButtonText}>Check Connection</Text>
                   {connectionStatus !== 'unknown' && (
-                    <View style={[
-                      styles.statusDot, 
-                      { backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : '#FF4444' }
-                    ]} />
+                    <View
+                      style={[
+                        styles.statusDot,
+                        {
+                          backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : '#FF4444',
+                        },
+                      ]}
+                    />
                   )}
                 </>
               )}
@@ -649,15 +689,28 @@ export default function SettingsScreen() {
                 </View>
                 <View style={styles.storageStatRow}>
                   <Text style={styles.storageStatLabel}>Pending Edits</Text>
-                  <Text style={styles.storageStatValue}>{offlineStorageStats.pendingEditsSize} KB</Text>
+                  <Text style={styles.storageStatValue}>
+                    {offlineStorageStats.pendingEditsSize} KB
+                  </Text>
                 </View>
                 <View style={styles.storageStatRow}>
                   <Text style={styles.storageStatLabel}>Conflicts</Text>
-                  <Text style={styles.storageStatValue}>{offlineStorageStats.conflictsSize} KB</Text>
+                  <Text style={styles.storageStatValue}>
+                    {offlineStorageStats.conflictsSize} KB
+                  </Text>
                 </View>
-                <View style={[styles.storageStatRow, { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8, marginTop: 8 }]}>
-                  <Text style={[styles.storageStatLabel, { fontWeight: '600' }]}>Total Queue Storage</Text>
-                  <Text style={[styles.storageStatValue, { color: '#FF2A2A' }]}>{offlineStorageStats.totalSize} KB</Text>
+                <View
+                  style={[
+                    styles.storageStatRow,
+                    { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8, marginTop: 8 },
+                  ]}
+                >
+                  <Text style={[styles.storageStatLabel, { fontWeight: '600' }]}>
+                    Total Queue Storage
+                  </Text>
+                  <Text style={[styles.storageStatValue, { color: '#FF2A2A' }]}>
+                    {offlineStorageStats.totalSize} KB
+                  </Text>
                 </View>
               </View>
             )}
@@ -668,7 +721,7 @@ export default function SettingsScreen() {
                 <Text style={styles.cardTitle}>Pending Sync Actions</Text>
                 <Text style={styles.pendingQueueCount}>{pendingQueueCount}</Text>
                 <Text style={styles.pendingQueueDescription}>
-                  {connectionStatus === 'connected' 
+                  {connectionStatus === 'connected'
                     ? 'Actions will sync automatically in the background'
                     : 'Will sync when connection is restored'}
                 </Text>
@@ -677,21 +730,25 @@ export default function SettingsScreen() {
 
             {/* Offline Files */}
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Saved Files</Text>
-            
+
             {offlineFiles.length === 0 ? (
               <Text style={styles.emptyText}>No files saved for offline access.</Text>
             ) : (
               <>
                 {Object.entries(groupedOfflineFiles).map(([projectId, files]) => (
                   <View key={projectId} style={styles.projectGroup}>
-                    <Text style={styles.projectGroupTitle}>Project: {projectId.slice(0, 8)}...</Text>
+                    <Text style={styles.projectGroupTitle}>
+                      Project: {projectId.slice(0, 8)}...
+                    </Text>
                     {files.map((file) => (
                       <View key={file.node_id} style={styles.fileItem}>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.fileName} numberOfLines={1}>{file.name}</Text>
+                          <Text style={styles.fileName} numberOfLines={1}>
+                            {file.name}
+                          </Text>
                           <Text style={styles.fileSize}>{formatSize(file.size)}</Text>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={() => removeOfflineFile(file.node_id)}
                           style={styles.removeButton}
                         >
@@ -701,12 +758,22 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                 ))}
-                
-                <TouchableOpacity 
-                  style={[styles.actionButton, { backgroundColor: '#3A0C0C', borderColor: '#FF4444', borderWidth: 1, marginTop: 16 }]}
+
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: '#3A0C0C',
+                      borderColor: '#FF4444',
+                      borderWidth: 1,
+                      marginTop: 16,
+                    },
+                  ]}
                   onPress={clearAllOfflineFiles}
                 >
-                  <Text style={[styles.actionButtonText, { color: '#FF4444' }]}>Clear All Offline Files</Text>
+                  <Text style={[styles.actionButtonText, { color: '#FF4444' }]}>
+                    Clear All Offline Files
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -714,9 +781,10 @@ export default function SettingsScreen() {
             {/* Downloaded Projects */}
             <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Downloaded Projects</Text>
             <Text style={styles.descriptionText}>
-              Projects downloaded for offline viewing. You can see their files but can only open files that are also saved offline.
+              Projects downloaded for offline viewing. You can see their files but can only open
+              files that are also saved offline.
             </Text>
-            
+
             {downloadedProjects.length === 0 ? (
               <Text style={styles.emptyText}>No projects downloaded for offline access.</Text>
             ) : (
@@ -730,7 +798,7 @@ export default function SettingsScreen() {
                         Downloaded: {new Date(project.accessed_at).toLocaleDateString()}
                       </Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => removeDownloadedProject(project.project_id)}
                       style={styles.removeButton}
                     >
@@ -757,8 +825,8 @@ export default function SettingsScreen() {
               <Text style={styles.backText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity 
-              onPress={saveProfile} 
+            <TouchableOpacity
+              onPress={saveProfile}
               disabled={savingProfile}
               style={{ opacity: savingProfile ? 0.5 : 1 }}
             >
@@ -775,9 +843,9 @@ export default function SettingsScreen() {
             <View style={styles.profileEditSection}>
               <TouchableOpacity onPress={pickImage} style={styles.profileImageEdit}>
                 {selectedImage || user?.photo_url ? (
-                  <Image 
-                    source={{ uri: selectedImage || user?.photo_url }} 
-                    style={styles.profileImageLarge} 
+                  <Image
+                    source={{ uri: selectedImage || user?.photo_url }}
+                    style={styles.profileImageLarge}
                   />
                 ) : (
                   <View style={styles.profilePlaceholderLarge}>

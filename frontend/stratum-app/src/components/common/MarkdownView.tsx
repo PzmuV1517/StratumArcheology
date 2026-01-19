@@ -10,7 +10,7 @@ let MarkdownDisplayNative: any = null;
 
 /**
  * MarkdownView - Cross-platform markdown renderer
- * 
+ *
  * On web: Uses react-markdown with remark/rehype plugins
  * On native: Uses react-native-markdown-display or fallback text rendering
  */
@@ -24,23 +24,33 @@ export default function MarkdownView({ content }: { content: string }) {
         if (Platform.OS === 'web') {
           if (!ReactMarkdown) ReactMarkdown = (await import('react-markdown')).default;
           if (!remarkGfm) remarkGfm = (await import('remark-gfm')).default;
-          try { if (!rehypeRaw) rehypeRaw = (await import('rehype-raw')).default; } catch {}
-          try { if (!remarkMath) remarkMath = (await import('remark-math')).default; } catch {}
-          try { if (!rehypeKatex) rehypeKatex = (await import('rehype-katex')).default; } catch {}
+          try {
+            if (!rehypeRaw) rehypeRaw = (await import('rehype-raw')).default;
+          } catch {}
+          try {
+            if (!remarkMath) remarkMath = (await import('remark-math')).default;
+          } catch {}
+          try {
+            if (!rehypeKatex) rehypeKatex = (await import('rehype-katex')).default;
+          } catch {}
         } else {
           // Native: try to load react-native-markdown-display
           try {
             const mdModule = await import('react-native-markdown-display');
             MarkdownDisplayNative = mdModule.default;
           } catch {
-            console.log('[MarkdownView] react-native-markdown-display not available, using fallback');
+            console.log(
+              '[MarkdownView] react-native-markdown-display not available, using fallback'
+            );
           }
         }
       } finally {
         if (mounted) setReady(true);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Native platform rendering
@@ -48,7 +58,7 @@ export default function MarkdownView({ content }: { content: string }) {
     if (!ready) {
       return <Text style={nativeStyles.loadingText}>Loading...</Text>;
     }
-    
+
     // If native markdown library is available, use it
     if (MarkdownDisplayNative) {
       return (
@@ -65,7 +75,7 @@ export default function MarkdownView({ content }: { content: string }) {
         </ScrollView>
       );
     }
-    
+
     // Fallback: Simple styled text rendering for native
     return (
       <ScrollView style={nativeStyles.container}>
@@ -73,7 +83,7 @@ export default function MarkdownView({ content }: { content: string }) {
       </ScrollView>
     );
   }
-  
+
   // Web platform rendering
   if (!ready || !ReactMarkdown) return <Text style={{ color: '#9A9A9A' }}>Loading…</Text>;
 

@@ -16,7 +16,9 @@ export default function VoiceNoteScreen() {
         if (!id) return;
         const n = await noteService.getNote(id);
         setNote(n);
-        const att = (n.attachments || []).find((a: any) => (a.mime_type || a.file_type)?.startsWith('audio/'));
+        const att = (n.attachments || []).find((a: any) =>
+          (a.mime_type || a.file_type)?.startsWith('audio/')
+        );
         setAudioUrl(att?.url || null);
       } finally {
         setLoading(false);
@@ -26,15 +28,26 @@ export default function VoiceNoteScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: note?.title || 'Voice Note', headerStyle: { backgroundColor: '#111' }, headerTintColor: '#FF2A2A' }} />
+      <Stack.Screen
+        options={{
+          title: note?.title || 'Voice Note',
+          headerStyle: { backgroundColor: '#111' },
+          headerTintColor: '#FF2A2A',
+        }}
+      />
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#FF2A2A" /><Text style={styles.loading}>Loading…</Text></View>
+        <View style={styles.center}>
+          <ActivityIndicator color="#FF2A2A" />
+          <Text style={styles.loading}>Loading…</Text>
+        </View>
       ) : (
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{note?.title}</Text>
           <View style={{ flex: 1, marginTop: 16 }}>
             <AudioPanel audioUrl={audioUrl || ''} />
-            {!audioUrl && <Text style={{ color: '#9A9A9A', marginTop: 12 }}>No audio attachment found.</Text>}
+            {!audioUrl && (
+              <Text style={{ color: '#9A9A9A', marginTop: 12 }}>No audio attachment found.</Text>
+            )}
           </View>
         </View>
       )}
