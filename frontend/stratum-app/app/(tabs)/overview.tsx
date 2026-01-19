@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   },
   welcomeSection: {
     padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
     paddingBottom: 8,
   },
   welcomeText: {
