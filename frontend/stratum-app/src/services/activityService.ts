@@ -14,25 +14,19 @@ export const activityService = {
    * Get activities for a project with pagination
    */
   getActivities: async (
-    projectId: number,
-    page: number = 1,
-    perPage: number = 50
-  ): Promise<ActivityListResponse> => {
+    projectId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<ProjectActivity[]> => {
     try {
-      const res = await api.get(`/projects/${projectId}/activities`, {
-        params: { page, per_page: perPage },
+      const res = await api.get(`/activities/project/${projectId}`, {
+        params: { limit, offset },
       });
       return res.data;
     } catch (error: any) {
       // Return empty list on error
       console.error('Failed to fetch activities:', error);
-      return {
-        activities: [],
-        total: 0,
-        page,
-        per_page: perPage,
-        has_more: false,
-      };
+      return [];
     }
   },
 
@@ -40,11 +34,10 @@ export const activityService = {
    * Get recent activities (last N)
    */
   getRecentActivities: async (
-    projectId: number,
+    projectId: string,
     limit: number = 20
   ): Promise<ProjectActivity[]> => {
-    const response = await activityService.getActivities(projectId, 1, limit);
-    return response.activities;
+    return activityService.getActivities(projectId, limit, 0);
   },
 
   /**

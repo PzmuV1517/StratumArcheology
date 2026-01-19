@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
@@ -99,12 +99,8 @@ export default function Timeline({
 
   return (
     <View style={[styles.container, maxHeight ? { maxHeight } : undefined]}>
-      <FlatList
-        data={activities}
-        renderItem={renderActivity}
-        keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
+      <ScrollView
+        showsVerticalScrollIndicator={Platform.OS === 'web'}
         refreshControl={
           <RefreshControl
             refreshing={isLoading && activities.length > 0}
@@ -113,14 +109,25 @@ export default function Timeline({
             colors={['#007AFF']}
           />
         }
-        showsVerticalScrollIndicator={Platform.OS === 'web'}
         contentContainerStyle={
           activities.length === 0 ? styles.emptyList : undefined
         }
-      />
-      {isLoading && activities.length === 0 && (
-        <Loading message="Loading activity..." />
-      )}
+      >
+        {isLoading && activities.length === 0 ? (
+          <Loading message="Loading activity..." />
+        ) : activities.length === 0 ? (
+          renderEmpty()
+        ) : (
+          <>
+            {activities.map((item, index) => (
+              <View key={item.id.toString()}>
+                {renderActivity({ item, index })}
+              </View>
+            ))}
+            {renderFooter()}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }

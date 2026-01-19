@@ -89,11 +89,11 @@ async def get_my_activities(
         limit: Maximum number of activities to return (default 50, max 200)
         offset: Number of activities to skip for pagination
     """
-    from app.models import Project, ProjectMember
+    from app.models import Project, project_members
     
     # Get all project IDs where user is a member
-    user_project_ids = db.query(ProjectMember.project_id).filter(
-        ProjectMember.user_id == current_user.id
+    user_project_ids = db.query(project_members.c.project_id).filter(
+        project_members.c.user_id == current_user.id
     ).all()
     project_ids = [p[0] for p in user_project_ids]
     

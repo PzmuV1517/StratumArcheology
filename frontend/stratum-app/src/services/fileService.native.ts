@@ -40,26 +40,62 @@ export const fileService = {
     mimeType?: string,
     parentId: string | null = null
   ): Promise<FileNode> => {
-    // Handle FormData directly (when called from project screen)
-    if (fileUriOrFormData instanceof FormData) {
-      // Don't set Content-Type header - let the browser/RN set it with the correct boundary
-      const res = await api.post(`/files/project/${projectId}/upload`, fileUriOrFormData);
+    try {
+      // Handle FormData directly (when called from project screen)
+      if (fileUriOrFormData instanceof FormData) {
+        // Don't set Content-Type header - let the browser/RN set it with the correct boundary
+        const res = await api.post(`/files/project/${projectId}/upload`, fileUriOrFormData);
+        return res.data;
+      }
+      
+      // Handle individual file upload
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUriOrFormData,
+        name: fileName || 'file',
+        type: mimeType || 'application/octet-stream',
+      } as any);
+      if (parentId) {
+        formData.append('parent_id', parentId);
+      }
+      // Don't set Content-Type header - let RN set it with the correct boundary
+      const res = await api.post(`/files/project/${projectId}/upload`, formData);
       return res.data;
+    } catch (error: any) {
+      // If offline or network error, queue the upload
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network') || !error.response) {
+        const { offlineQueue } = await import('./offlineQueueService');
+        const { authService } = await import('./authService');
+        const user = await authService.getCurrentUser();
+        
+        const tempId = `temp_file_${Date.now()}`;
+        
+        // Save file URI for later upload
+        const fileUri = fileUriOrFormData instanceof FormData ? null : fileUriOrFormData;
+        if (fileUri && user) {
+          await offlineQueue.enqueue(
+            'UPLOAD_FILE',
+            projectId,
+            { parent_id: parentId, name: fileName, mime_type: mimeType },
+            user.id,
+            { localPath: fileUri, priority: 1 }
+          );
+          
+          // Return temporary file object
+          return {
+            id: tempId,
+            name: fileName || 'file',
+            type: 'file',
+            parent_id: parentId,
+            project_id: projectId,
+            mime_type: mimeType,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as FileNode;
+        }
+      }
+      throw error;
     }
-    
-    // Handle individual file upload
-    const formData = new FormData();
-    formData.append('file', {
-      uri: fileUriOrFormData,
-      name: fileName || 'file',
-      type: mimeType || 'application/octet-stream',
-    } as any);
-    if (parentId) {
-      formData.append('parent_id', parentId);
-    }
-    // Don't set Content-Type header - let RN set it with the correct boundary
-    const res = await api.post(`/files/project/${projectId}/upload`, formData);
-    return res.data;
   },
 
   // Native-specific: upload with FormData directly

@@ -9,23 +9,28 @@ interface ActivityState {
 }
 
 interface ActivityActions {
-  loadActivities: (page?: number) => Promise<void>;
+  loadActivities: () => Promise<void>;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
 export type UseActivityReturn = ActivityState & ActivityActions;
 
+const ITEMS_PER_PAGE = 50;
+
 /**
  * Hook for project activity/timeline
  * Includes real-time updates via WebSocket
+ * 
+ * @param projectId - The project ID (string UUID)
+ * @param personalOnly - If true, only show current user's activities
  */
-export function useActivity(projectId: number | undefined): UseActivityReturn {
+export function useActivity(projectId: string | undefined, personalOnly: boolean = false): UseActivityReturn {
   const [activities, setActivities] = useState<ProjectActivity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const currentPage = useRef(1);
+  const currentOffset = useRef(0);
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Subscribe to real-time activity updates
@@ -47,48 +52,59 @@ export function useActivity(projectId: number | undefined): UseActivityReturn {
     };
   }, [projectId]);
 
-  // Load initial activities when projectId changes
+  // Load initial activities when projectId or personalOnly changes
   useEffect(() => {
     if (projectId) {
-      loadActivities(1);
+      loadActivities();
     }
-  }, [projectId]);
+  }, [projectId, personalOnly]);
 
   const loadActivities = useCallback(
-    async (page: number = 1): Promise<void> => {
+    async (append: boolean = false): Promise<void> => {
       if (!projectId) return;
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await activityService.getActivities(projectId, page, 50);
-
-        if (page === 1) {
-          setActivities(response.activities);
+        const offset = append ? currentOffset.current : 0;
+        
+        let newActivities: ProjectActivity[];
+        if (personalOnly) {
+          // Get personal activities (from /activities/me) and filter by project
+          const allMyActivities = await activityService.getMyActivities(200, 0);
+          newActivities = allMyActivities.filter(a => a.project_id === projectId);
+          // Apply pagination manually
+          newActivities = newActivities.slice(offset, offset + ITEMS_PER_PAGE);
         } else {
-          setActivities((prev) => [...prev, ...response.activities]);
+          newActivities = await activityService.getActivities(projectId, ITEMS_PER_PAGE, offset);
         }
 
-        currentPage.current = page;
-        setHasMore(response.has_more);
+        if (append) {
+          setActivities((prev) => [...prev, ...newActivities]);
+        } else {
+          setActivities(newActivities);
+        }
+
+        currentOffset.current = offset + newActivities.length;
+        setHasMore(newActivities.length === ITEMS_PER_PAGE);
       } catch (e: any) {
         setError(e.message || 'Failed to load activities');
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId, personalOnly]
   );
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (!hasMore || isLoading) return;
-    await loadActivities(currentPage.current + 1);
+    await loadActivities(true);
   }, [hasMore, isLoading, loadActivities]);
 
   const refresh = useCallback(async (): Promise<void> => {
-    currentPage.current = 1;
-    await loadActivities(1);
+    currentOffset.current = 0;
+    await loadActivities(false);
   }, [loadActivities]);
 
   return {

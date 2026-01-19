@@ -35,8 +35,40 @@ export const fileServiceCore = {
   },
 
   createFolder: async (projectId: string, name: string, parentId: string | null = null): Promise<FileNode> => {
-    const res = await api.post(`/files/project/${projectId}/folders`, { name, parent_id: parentId });
-    return res.data;
+    try {
+      const res = await api.post(`/files/project/${projectId}/folders`, { name, parent_id: parentId });
+      return res.data;
+    } catch (error: any) {
+      // If offline or network error, queue the action
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network') || !error.response) {
+        const { offlineQueue } = await import('./offlineQueueService');
+        const { authService } = await import('./authService');
+        const user = await authService.getCurrentUser();
+        const tempId = `temp_folder_${Date.now()}`;
+        
+        if (user) {
+          await offlineQueue.enqueue(
+            'CREATE_FOLDER',
+            projectId,
+            { name, parent_id: parentId },
+            user.id,
+            { priority: 1 }
+          );
+          
+          // Return temporary folder object
+          return {
+            id: tempId,
+            name,
+            type: 'folder',
+            parent_id: parentId,
+            project_id: projectId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          } as FileNode;
+        }
+      }
+      throw error;
+    }
   },
 
   moveNode: async (nodeId: string, newParentId: string | null = null): Promise<FileNode> => {
