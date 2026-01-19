@@ -319,10 +319,28 @@ export default function SettingsScreen() {
     );
   };
 
-  const removeDownloadedProject = async (_projectId: string) => {
-    // TODO: Implement removal from recent projects cache
-    // For now just reload the list
-    await loadDownloadedProjects();
+  const removeDownloadedProject = async (projectId: string) => {
+    Alert.alert(
+      'Remove Downloaded Project',
+      'This will remove the cached project data. You will need internet to view it again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await recentProjectsCache.removeProject(projectId);
+              await loadDownloadedProjects();
+              await loadStorageInfo();
+            } catch (error) {
+              console.error('Failed to remove downloaded project:', error);
+              Alert.alert('Error', 'Failed to remove downloaded project');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const pickImage = async () => {

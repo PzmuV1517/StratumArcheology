@@ -137,6 +137,20 @@ export const recentProjectsCache = {
   },
 
   /**
+   * Remove a specific project from the cache
+   */
+  removeProject: async (projectId: string): Promise<void> => {
+    try {
+      const recentProjects = await recentProjectsCache.getRecentProjects();
+      const filtered = recentProjects.filter(p => p.project_id !== projectId);
+      await AsyncStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(filtered));
+      console.log(`[OfflineService] Removed project ${projectId} from cache`);
+    } catch (error) {
+      console.error('[OfflineService] Failed to remove project from cache:', error);
+    }
+  },
+
+  /**
    * Clear all recent projects cache
    */
   clearCache: async (): Promise<void> => {

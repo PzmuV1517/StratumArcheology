@@ -400,13 +400,13 @@ async def get_my_folder(
     """Get the current user's personal folder in a project, if it exists"""
     check_project_permission(project_id, current_user, db)
     
+    # Find the user's My Folder - don't filter by privacy since user might have changed it
     my_folder = db.query(FileNode).filter(
         FileNode.project_id == project_id,
         FileNode.owner_id == current_user.id,
         FileNode.name.like("My Folder%"),
         FileNode.parent_id == None,
-        FileNode.type == FileNodeType.FOLDER,
-        FileNode.privacy == PrivacyLevel.PRIVATE
+        FileNode.type == FileNodeType.FOLDER
     ).first()
     
     return my_folder

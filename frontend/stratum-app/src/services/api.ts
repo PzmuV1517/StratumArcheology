@@ -1,11 +1,33 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config } from '../config/config';
-import { EventEmitter } from 'events';
 
-// Event emitter for auth events (session expiry)
-export const authEvents = new EventEmitter();
+// Simple event system for auth events (React Native compatible)
 export const AUTH_SESSION_EXPIRED = 'auth:session_expired';
+
+type AuthEventCallback = () => void;
+const sessionExpiredListeners: AuthEventCallback[] = [];
+
+export const authEvents = {
+  on: (event: string, callback: AuthEventCallback) => {
+    if (event === AUTH_SESSION_EXPIRED) {
+      sessionExpiredListeners.push(callback);
+    }
+  },
+  off: (event: string, callback: AuthEventCallback) => {
+    if (event === AUTH_SESSION_EXPIRED) {
+      const index = sessionExpiredListeners.indexOf(callback);
+      if (index > -1) {
+        sessionExpiredListeners.splice(index, 1);
+      }
+    }
+  },
+  emit: (event: string) => {
+    if (event === AUTH_SESSION_EXPIRED) {
+      sessionExpiredListeners.forEach(cb => cb());
+    }
+  },
+};
 
 /**
  * Helper to resolve the most appropriate base URL at runtime

@@ -67,15 +67,35 @@ export const authService = {
   },
 
   /**
-   * Logout - clear stored credentials
+   * Logout - clear stored credentials and optionally clear offline data
+   * @param clearOfflineData - If true, clears all offline cached data
    */
-  logout: async (): Promise<void> => {
+  logout: async (clearOfflineData: boolean = true): Promise<void> => {
     try {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
       await AsyncStorage.removeItem(USER_DATA_KEY);
       // Clear axios default Authorization header
       if (api.defaults && api.defaults.headers) {
         delete (api.defaults.headers as any).common?.Authorization;
+      }
+      
+      // Clear offline data to prevent data leakage to other users
+      if (clearOfflineData) {
+        try {
+          // Import dynamically to avoid circular dependencies
+          const { recentProjectsCache, offlineFilesStorage } = await import('./offlineService');
+          await recentProjectsCache.clearCache();
+          await offlineFilesStorage.clearAllOfflineFiles();
+          
+          // Also clear any pending offline queue
+          const { offlineQueue, conflicts } = await import('./offlineQueueService');
+          await offlineQueue.clearQueue();
+          await conflicts.clearResolved();
+          
+          console.log('[AuthService] Cleared offline data on logout');
+        } catch (offlineError) {
+          console.warn('[AuthService] Failed to clear offline data:', offlineError);
+        }
       }
     } catch (error) {
       console.error('Logout error:', error);
