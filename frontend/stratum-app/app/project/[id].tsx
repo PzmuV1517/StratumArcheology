@@ -1268,6 +1268,13 @@ export default function ProjectDetailScreen() {
             }
           }}
           canEdit={canEditFiles}
+          projectMembers={members.map(m => ({
+            id: m.id || m.user_id || '',
+            display_name: m.display_name,
+            email: m.email,
+            role: m.role
+          }))}
+          currentUserId={currentUser?.id}
         />
         {/* New Folder Modal - rendered inside FilesOverlay Modal for proper z-stacking */}
         <NewFolderModal

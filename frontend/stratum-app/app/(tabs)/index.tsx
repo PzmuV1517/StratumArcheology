@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { projectService, activityService } from '../../src/services/projectService';
@@ -23,34 +23,7 @@ export default function ProjectsScreen() {
   const [activeSubTab, setActiveSubTab] = useState<'projects' | 'mystuff'>('projects');
   const router = useRouter();
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  // Reload projects when screen comes back into focus (after creating a project)
-  useFocusEffect(
-    React.useCallback(() => {
-      // Don't run on initial mount - useEffect handles that
-      let isActive = true;
-      
-      const refresh = async () => {
-        if (isActive) {
-          await loadProjects();
-          if (activeSubTab === 'mystuff') {
-            await loadMyActivities();
-          }
-        }
-      };
-      
-      refresh();
-      
-      return () => {
-        isActive = false;
-      };
-    }, [activeSubTab])
-  );
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       const data = await projectService.getProjects();
       setProjects(data);
@@ -60,9 +33,9 @@ export default function ProjectsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
-  const loadMyActivities = async () => {
+  const loadMyActivities = useCallback(async () => {
     try {
       // Use the dedicated endpoint for personal activities
       const myActivities = await activityService.getMyActivities(50);
@@ -70,7 +43,21 @@ export default function ProjectsScreen() {
     } catch (error) {
       console.error('Failed to load activities:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+
+  // Reload projects when screen comes back into focus (after creating a project)
+  useFocusEffect(
+    useCallback(() => {
+      loadProjects();
+      if (activeSubTab === 'mystuff') {
+        loadMyActivities();
+      }
+    }, [loadProjects, loadMyActivities, activeSubTab])
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);
