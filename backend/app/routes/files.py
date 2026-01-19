@@ -205,7 +205,7 @@ async def create_my_folder(
     - Only one "My Folder" can exist per user per project
     - The folder is owned by the creating user
     """
-    from app.models import project_members, MemberRole
+    from app.models import project_members, UserRole
     
     check_project_permission(project_id, current_user, db)
     
@@ -229,7 +229,7 @@ async def create_my_folder(
         if member:
             member_role = member.role
     
-    if not is_owner and member_role == MemberRole.GUEST:
+    if not is_owner and member_role == UserRole.GUEST:
         raise HTTPException(
             status_code=403, 
             detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder."
@@ -399,6 +399,9 @@ async def get_my_folder(
     db: Session = Depends(get_db)
 ):
     """Get the current user's personal folder in a project, if it exists"""
+    import structlog
+    logger = structlog.get_logger()
+    
     check_project_permission(project_id, current_user, db)
     
     # Find the user's My Folder - don't filter by privacy since user might have changed it
@@ -409,6 +412,12 @@ async def get_my_folder(
         FileNode.parent_id == None,
         FileNode.type == FileNodeType.FOLDER
     ).first()
+    
+    logger.info("get_my_folder", 
+                project_id=project_id, 
+                user_id=current_user.id, 
+                found=my_folder is not None,
+                folder_id=my_folder.id if my_folder else None)
     
     return my_folder
 
