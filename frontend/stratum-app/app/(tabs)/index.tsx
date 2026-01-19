@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { projectService, activityService } from '../../src/services/projectService';
+import { projectService } from '../../src/services/projectService';
+import { activityService } from '../../src/services/activityService';
 import { ProjectActionModal } from '../../src/components/project/modals/ProjectActionModal';
 import type { Project } from '../../src/services/projectService.types';
 

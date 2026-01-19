@@ -560,13 +560,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#2A2A2A',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#3A3A3A',
   },
   filterChipActive: {
     backgroundColor: '#FF2A2A',
+    borderColor: '#FF2A2A',
   },
   filterChipIcon: {
     fontSize: 14,

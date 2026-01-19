@@ -22,6 +22,7 @@ import FileGallery from '../../src/components/project/FileGallery';
 import ArtefactsTab from '../../src/components/project/ArtefactsTab';
 import TimeMachineTab from '../../src/components/project/TimeMachineTab';
 import ToolsTab from '../../src/components/project/ToolsTab';
+import Timeline from '../../src/components/timeline/Timeline';
 import MapEditor from '../../src/components/map/MapEditor';
 // Harris Matrix (web only) dynamic require later to avoid SSR issues
 import ProjectMenuModal from '../../src/components/project/modals/ProjectMenuModal';
@@ -91,8 +92,6 @@ export default function ProjectDetailScreen() {
   const [HarrisMatrixComponent, setHarrisMatrixComponent] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [timelineLoading, setTimelineLoading] = useState(false);
   
   // Conflict resolution state
   const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
@@ -190,10 +189,7 @@ export default function ProjectDetailScreen() {
     // Listen for timeline updates
     const handleTimelineUpdated = (data: any) => {
       console.log('[Project] Received timeline_updated event:', data);
-      if (data.project_id === id) {
-        // Refresh timeline
-        loadTimeline();
-      }
+      // Timeline component handles its own data loading
     };
     
     socket.on('member_kicked', handleMemberKicked);
@@ -299,9 +295,6 @@ export default function ProjectDetailScreen() {
       } catch (cacheError) {
         console.warn('[Project] Failed to cache project for offline:', cacheError);
       }
-      
-      // Also load timeline when loading project
-      loadTimeline();
     } catch (error) {
       console.error('Error loading project:', error);
       
@@ -366,32 +359,6 @@ export default function ProjectDetailScreen() {
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to resolve conflict');
-    }
-  };
-
-  const loadTimeline = async () => {
-    if (!id) return;
-    try {
-      setTimelineLoading(true);
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const token = await AsyncStorage.getItem('authToken');
-      const { config } = await import('../../src/config/config');
-      const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
-      
-      const response = await fetch(`${apiBaseUrl}/api/activities/project/${id}?limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setActivities(data);
-      }
-    } catch (error) {
-      console.error('Error loading timeline:', error);
-    } finally {
-      setTimelineLoading(false);
     }
   };
 
@@ -885,62 +852,17 @@ export default function ProjectDetailScreen() {
                 </View>
               )}
 
-              {/* Timeline */}
+              {/* Interactive Timeline */}
               <View style={styles.overviewCard}>
                 <View style={styles.overviewCardHeader}>
                   <View style={styles.overviewIconCircle}>
                     <Text style={styles.overviewIcon}>📅</Text>
                   </View>
-                  <Text style={styles.overviewCardTitle}>Timeline</Text>
+                  <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
                 </View>
-                {timelineLoading ? (
-                  <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 16 }} />
-                ) : activities.length === 0 ? (
-                  <View style={styles.overviewTimelineItem}>
-                    <View style={styles.overviewTimelineDot} />
-                    <View style={styles.overviewTimelineContent}>
-                      <Text style={styles.overviewTimelineLabel}>Project Created</Text>
-                      <Text style={styles.overviewTimelineDate}>
-                        {new Date(project.created_at).toLocaleDateString(undefined, { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric', 
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'UTC' 
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                ) : (
-                  <ScrollView 
-                    style={styles.timelineList}
-                    contentContainerStyle={styles.timelineListContent}
-                    nestedScrollEnabled={true}
-                    showsVerticalScrollIndicator={true}
-                  >
-                    {activities.map((item) => (
-                      <View key={item.id} style={styles.overviewTimelineItem}>
-                        <View style={styles.overviewTimelineDot} />
-                        <View style={styles.overviewTimelineContent}>
-                          <Text style={styles.overviewTimelineLabel}>{item.description}</Text>
-                          {item.user_name && (
-                            <Text style={styles.overviewTimelineUser}>by {item.user_name}</Text>
-                          )}
-                          <Text style={styles.overviewTimelineDate}>
-                            {new Date(item.created_at).toLocaleDateString(undefined, { 
-                              year: 'numeric', 
-                              month: 'short', 
-                              day: 'numeric', 
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
-                )}
+                <View style={{ height: 400, marginTop: 12 }}>
+                  <Timeline projectId={parseInt(project.id)} maxHeight={400} />
+                </View>
               </View>
             </View>
           ) : activeTab === 'gallery' ? (
