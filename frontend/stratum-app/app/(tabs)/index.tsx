@@ -30,10 +30,23 @@ export default function ProjectsScreen() {
   // Reload projects when screen comes back into focus (after creating a project)
   useFocusEffect(
     React.useCallback(() => {
-      loadProjects();
-      if (activeSubTab === 'mystuff') {
-        loadMyActivities();
-      }
+      // Don't run on initial mount - useEffect handles that
+      let isActive = true;
+      
+      const refresh = async () => {
+        if (isActive) {
+          await loadProjects();
+          if (activeSubTab === 'mystuff') {
+            await loadMyActivities();
+          }
+        }
+      };
+      
+      refresh();
+      
+      return () => {
+        isActive = false;
+      };
     }, [activeSubTab])
   );
 

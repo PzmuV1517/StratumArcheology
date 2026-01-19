@@ -235,12 +235,14 @@ async def create_my_folder(
             detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder."
         )
     
-    # Check if user already has a My Folder in this project (use flexible match like GET endpoint)
+    # Ensure the /users folder exists
+    users_folder = await ensure_users_folder(project_id, db)
+    
+    # Check if user already has a folder in /users (by owner_id)
     existing = db.query(FileNode).filter(
         FileNode.project_id == project_id,
         FileNode.owner_id == current_user.id,
-        FileNode.name.like("My Folder%"),
-        FileNode.parent_id == None,
+        FileNode.parent_id == users_folder.id,
         FileNode.type == FileNodeType.FOLDER
     ).first()
     
@@ -250,12 +252,14 @@ async def create_my_folder(
             detail="You already have a personal folder in this project"
         )
     
-    # Create the personal folder
-    folder_name = f"My Folder ({current_user.display_name or current_user.email})"
+    # Create the personal folder inside /users
+    # Use user ID as folder name (prevents issues with username changes)
+    # Frontend will display as username
+    folder_name = current_user.id
     
     my_folder = FileNode(
         project_id=project_id,
-        parent_id=None,  # Root level
+        parent_id=users_folder.id,  # Inside /users folder
         name=folder_name,
         type=FileNodeType.FOLDER,
         owner_id=current_user.id,
@@ -298,12 +302,22 @@ async def update_my_folder_permissions(
     """Update permissions for the user's personal folder"""
     check_project_permission(project_id, current_user, db)
     
-    # Find the user's personal folder
+    # Get the /users folder first
+    users_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.parent_id == None,
+        FileNode.name == "users",
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
+    
+    if not users_folder:
+        raise HTTPException(status_code=404, detail="Personal folder not found")
+    
+    # Find the user's personal folder inside /users
     my_folder = db.query(FileNode).filter(
         FileNode.project_id == project_id,
         FileNode.owner_id == current_user.id,
-        FileNode.name.like("My Folder%"),
-        FileNode.parent_id == None,
+        FileNode.parent_id == users_folder.id,
         FileNode.type == FileNodeType.FOLDER
     ).first()
     
@@ -355,11 +369,28 @@ async def get_my_folder_permissions(
     """Get current permission settings for the user's personal folder"""
     check_project_permission(project_id, current_user, db)
     
+    # Get the /users folder first
+    users_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.parent_id == None,
+        FileNode.name == "users",
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
+    
+    if not users_folder:
+        # Return default settings - no users folder means no personal folders
+        return {
+            'folder_id': None,
+            'default_can_view': True,
+            'default_can_edit': False,
+            'member_permissions': []
+        }
+    
+    # Find the user's personal folder inside /users
     my_folder = db.query(FileNode).filter(
         FileNode.project_id == project_id,
         FileNode.owner_id == current_user.id,
-        FileNode.name.like("My Folder%"),
-        FileNode.parent_id == None,
+        FileNode.parent_id == users_folder.id,
         FileNode.type == FileNodeType.FOLDER
     ).first()
     
@@ -399,25 +430,26 @@ async def get_my_folder(
     db: Session = Depends(get_db)
 ):
     """Get the current user's personal folder in a project, if it exists"""
-    import structlog
-    logger = structlog.get_logger()
-    
     check_project_permission(project_id, current_user, db)
     
-    # Find the user's My Folder - don't filter by privacy since user might have changed it
-    my_folder = db.query(FileNode).filter(
+    # Get the /users folder first
+    users_folder = db.query(FileNode).filter(
         FileNode.project_id == project_id,
-        FileNode.owner_id == current_user.id,
-        FileNode.name.like("My Folder%"),
         FileNode.parent_id == None,
+        FileNode.name == "users",
         FileNode.type == FileNodeType.FOLDER
     ).first()
     
-    logger.info("get_my_folder", 
-                project_id=project_id, 
-                user_id=current_user.id, 
-                found=my_folder is not None,
-                folder_id=my_folder.id if my_folder else None)
+    if not users_folder:
+        return None  # No users folder means no personal folders exist yet
+    
+    # Find the user's folder inside /users by owner_id
+    my_folder = db.query(FileNode).filter(
+        FileNode.project_id == project_id,
+        FileNode.owner_id == current_user.id,
+        FileNode.parent_id == users_folder.id,
+        FileNode.type == FileNodeType.FOLDER
+    ).first()
     
     return my_folder
 

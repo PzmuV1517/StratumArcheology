@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileService } from '../../services/fileService';
 import { offlineFilesStorage } from '../../services/offlineService';
 import FileUploadMenu, { SelectedFile } from '../files/FileUploadMenu';
+import MyFolderSettingsModal from './MyFolderSettingsModal';
 
 interface FileNode {
   id: string;
@@ -43,9 +44,11 @@ interface Props {
   onBulkDownload?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk download
   canEdit?: boolean; // Permissions: disable editing for guests
   autoOpenMyFolder?: boolean; // When true, automatically navigate to My Folder on open
+  projectMembers?: { id: string; display_name: string; email: string; role: string }[]; // For My Folder settings
+  currentUserId?: string; // For My Folder settings
 }
 
-export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onFileSelected, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true, autoOpenMyFolder = false }: Props) {
+export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onFileSelected, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true, autoOpenMyFolder = false, projectMembers = [], currentUserId }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
   if (!visible) return null;
@@ -55,6 +58,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showMyFolderSettings, setShowMyFolderSettings] = useState(false);
   const [multiSelect, setMultiSelect] = useState(false);
   const [showInfoTip, setShowInfoTip] = useState(false);
   const [isSavingOffline, setIsSavingOffline] = useState(false);
@@ -138,6 +142,22 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       setIsLoadingMyFolder(false);
     }
   }, [projectId, onOpenFolder, isInMyFolder]);
+
+  // Handle saving My Folder privacy settings
+  const handleSaveMyFolderSettings = useCallback(async (settings: {
+    default_can_view: boolean;
+    default_can_edit: boolean;
+    member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
+  }) => {
+    if (!projectId) return;
+    try {
+      await fileService.updateMyFolderPermissions(projectId, settings);
+      Alert.alert('Success', 'Privacy settings updated');
+    } catch (error: any) {
+      console.error('Failed to update My Folder settings:', error);
+      throw error; // Let the modal handle the error display
+    }
+  }, [projectId]);
 
   // Handle file selected from upload menu
   const handleFileSelected = useCallback(async (file: SelectedFile) => {
@@ -537,24 +557,46 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
           onFileSelected={handleFileSelected}
         />
       )}
+      {/* My Folder Settings Modal */}
+      {projectId && currentUserId && (
+        <MyFolderSettingsModal
+          visible={showMyFolderSettings}
+          projectId={projectId}
+          members={projectMembers}
+          currentUserId={currentUserId}
+          onClose={() => setShowMyFolderSettings(false)}
+          onSave={handleSaveMyFolderSettings}
+        />
+      )}
       <ScrollView style={{ flex: 1, padding: 24 }}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={styles.actionRow}>
-            {/* My Folder button - disabled when already inside */}
-            <TouchableOpacity 
-              style={[
-                styles.actionButton, 
-                styles.myFolderButton, 
-                (isLoadingMyFolder || isInMyFolder) && { opacity: 0.5 }
-              ]} 
-              onPress={handleGoToMyFolder}
-              disabled={isLoadingMyFolder || isInMyFolder}
-            >
-              <Text style={styles.actionButtonText}>
-                {isLoadingMyFolder ? '...' : isInMyFolder ? '✓ My Folder' : '👤 My Folder'}
-              </Text>
-            </TouchableOpacity>
+            {/* My Folder button with settings gear */}
+            <View style={styles.myFolderContainer}>
+              <TouchableOpacity 
+                style={[
+                  styles.actionButton, 
+                  styles.myFolderButton, 
+                  (isLoadingMyFolder || isInMyFolder) && { opacity: 0.5 }
+                ]} 
+                onPress={handleGoToMyFolder}
+                disabled={isLoadingMyFolder || isInMyFolder}
+              >
+                <Text style={styles.actionButtonText}>
+                  {isLoadingMyFolder ? '...' : isInMyFolder ? '✓ My Folder' : '👤 My Folder'}
+                </Text>
+              </TouchableOpacity>
+              {/* Settings gear - only show when My Folder exists */}
+              {(myFolderId || isInMyFolder) && currentUserId && (
+                <TouchableOpacity 
+                  style={styles.myFolderSettingsBtn}
+                  onPress={() => setShowMyFolderSettings(true)}
+                >
+                  <Text style={styles.myFolderSettingsIcon}>⚙️</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {canEdit && (
               <>
                 <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
@@ -853,6 +895,9 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   actionButton: { backgroundColor: '#FF2A2A', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   myFolderButton: { backgroundColor: '#2A6AFF' },
+  myFolderContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  myFolderSettingsBtn: { padding: 4, borderRadius: 6, backgroundColor: '#1A1A1A' },
+  myFolderSettingsIcon: { fontSize: 14 },
   actionButtonText: { fontSize: 12, color: '#F5F5F5', fontWeight: '600', letterSpacing: 0.5 },
   multiToggle: { backgroundColor: '#222', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
   multiToggleActive: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A' },
