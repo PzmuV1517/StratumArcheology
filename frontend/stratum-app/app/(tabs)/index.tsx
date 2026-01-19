@@ -51,24 +51,9 @@ export default function ProjectsScreen() {
 
   const loadMyActivities = async () => {
     try {
-      // Get activities from all projects
-      const allActivities: Activity[] = [];
-      for (const project of projects) {
-        try {
-          const projectActivities = await activityService.getProjectActivities(project.id);
-          // Add project name to each activity
-          const withProjectName = projectActivities.map((a: Activity) => ({
-            ...a,
-            project_name: project.name,
-          }));
-          allActivities.push(...withProjectName);
-        } catch {
-          // ignore errors for individual projects
-        }
-      }
-      // Sort by created_at descending
-      allActivities.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setActivities(allActivities.slice(0, 50)); // Limit to 50 most recent
+      // Use the dedicated endpoint for personal activities
+      const myActivities = await activityService.getMyActivities(50);
+      setActivities(myActivities);
     } catch (error) {
       console.error('Failed to load activities:', error);
     }

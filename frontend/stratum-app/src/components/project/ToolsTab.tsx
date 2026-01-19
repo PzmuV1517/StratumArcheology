@@ -45,6 +45,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [heading, setHeading] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [acquiringGPS, setAcquiringGPS] = useState(false); // True when getting fresh GPS fix
   const [watchingLocation, setWatchingLocation] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,10 +111,14 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       }
       
       setLocationPermission(true);
+      setAcquiringGPS(true);
       
-      // Get initial location
+      // Get fresh location with high accuracy (not cached)
+      // Using maximumAge: 0 forces a fresh GPS fix instead of cached data
       const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
         accuracy: LocationModule.Accuracy.BestForNavigation,
+        maximumAge: 0, // Don't use cached location
+        timeout: 15000, // 15 second timeout
       });
       
       setLocation({
@@ -126,6 +131,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         timestamp: currentLocation.timestamp,
       });
       
+      setAcquiringGPS(false);
+      
       // Start heading updates for compass (mobile only)
       if (Platform.OS !== 'web') {
         const headingSub = await LocationModule.watchHeadingAsync((headingData: HeadingObject) => {
@@ -137,6 +144,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       setLoading(false);
     } catch (error) {
       console.error('Error getting location:', error);
+      setAcquiringGPS(false);
       setLocationPermission(false);
       setLoading(false);
     }
@@ -184,9 +192,11 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
     if (!LocationModule) return;
     
     try {
-      setLoading(true);
+      setAcquiringGPS(true);
       const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
         accuracy: LocationModule.Accuracy.BestForNavigation,
+        maximumAge: 0, // Force fresh GPS fix
+        timeout: 15000,
       });
       
       setLocation({
@@ -200,9 +210,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       });
     } catch (error) {
       console.error('Error refreshing location:', error);
-      Alert.alert('Error', 'Failed to refresh location');
+      Alert.alert('Error', 'Failed to refresh location. Make sure GPS is enabled.');
     } finally {
-      setLoading(false);
+      setAcquiringGPS(false);
     }
   };
 
@@ -414,13 +424,32 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
                 {copyFeedback === 'Coordinates' ? '✓ Copied!' : '📋 Copy Coordinates'}
               </Text>
             </TouchableOpacity>
+            
+            {/* Last Updated Timestamp */}
+            <Text style={styles.timestampText}>
+              Last updated: {new Date(location.timestamp).toLocaleTimeString()}
+            </Text>
+          </View>
+        )}
+        
+        {/* Acquiring GPS indicator */}
+        {acquiringGPS && (
+          <View style={styles.acquiringContainer}>
+            <ActivityIndicator size="small" color="#FF2A2A" />
+            <Text style={styles.acquiringText}>Acquiring GPS signal...</Text>
           </View>
         )}
 
         {/* Refresh Button */}
         {!watchingLocation && (
-          <TouchableOpacity style={styles.refreshButton} onPress={refreshLocation}>
-            <Text style={styles.refreshButtonText}>🔄 Refresh Location</Text>
+          <TouchableOpacity 
+            style={[styles.refreshButton, acquiringGPS && styles.refreshButtonDisabled]} 
+            onPress={refreshLocation}
+            disabled={acquiringGPS}
+          >
+            <Text style={styles.refreshButtonText}>
+              {acquiringGPS ? '📡 Acquiring...' : '🔄 Refresh Location'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -705,9 +734,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
   },
+  refreshButtonDisabled: {
+    backgroundColor: '#4A2020',
+    opacity: 0.7,
+  },
   refreshButtonText: {
     color: '#F5F5F5',
     fontSize: 14,
     fontWeight: '600',
+  },
+  timestampText: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  acquiringContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  acquiringText: {
+    fontSize: 13,
+    color: '#FF2A2A',
+    fontWeight: '500',
   },
 });

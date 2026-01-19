@@ -42,9 +42,10 @@ interface Props {
   onBulkDelete?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk delete
   onBulkDownload?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk download
   canEdit?: boolean; // Permissions: disable editing for guests
+  autoOpenMyFolder?: boolean; // When true, automatically navigate to My Folder on open
 }
 
-export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onFileSelected, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true }: Props) {
+export default function FilesOverlay({ visible, title = 'Files', currentFolder, fileNodes, fileLoading, breadcrumbs, onNavigateBreadcrumb, onClose, onLoadRoot, onOpenFolder, onUpload, onFileSelected, onCreateFolder, onDownload, onRename, onMove, onDelete, onOpenFile, projectId, onRefreshAfterUpload, onDropFiles, onBulkMove, onBulkDelete, onBulkDownload, canEdit = true, autoOpenMyFolder = false }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
   if (!visible) return null;
@@ -176,6 +177,7 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
     }
   }, [projectId, fileNodes]);
 
+
   // Prune any locked selections if file list changes
   useEffect(() => {
     const allowed = new Set(fileNodes.filter(n => !n.is_locked).map(n => n.id));
@@ -185,6 +187,15 @@ export default function FilesOverlay({ visible, title = 'Files', currentFolder, 
       return next;
     });
   }, [fileNodes]);
+
+  // Auto-navigate to My Folder if requested
+  useEffect(() => {
+    if (visible && autoOpenMyFolder && !isInMyFolder && !isLoadingMyFolder) {
+      handleGoToMyFolder();
+    }
+    // Only run when overlay becomes visible or autoOpenMyFolder changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, autoOpenMyFolder]);
 
   const handleFilesUpload = useCallback(async (dropped: File[]) => {
     if (onDropFiles) {

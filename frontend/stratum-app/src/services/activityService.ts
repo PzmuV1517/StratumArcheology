@@ -48,6 +48,24 @@ export const activityService = {
   },
 
   /**
+   * Get personal activities across all projects for the current user
+   */
+  getMyActivities: async (
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<ProjectActivity[]> => {
+    try {
+      const res = await api.get('/activities/me', {
+        params: { limit, offset },
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error('Failed to fetch my activities:', error);
+      return [];
+    }
+  },
+
+  /**
    * Get activity icon based on type
    */
   getActivityIcon: (activityType: ActivityType | string): string => {

@@ -3,11 +3,12 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect } from 'react';
+import { View, Platform, StyleSheet } from 'react-native';
 import AuthRedirector from './AuthRedirector';
-import { Platform } from 'react-native';
 
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { WebSocketProvider } from '../src/contexts/WebSocketContext';
+import OfflineBanner from '../src/components/common/OfflineBanner';
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -55,21 +56,30 @@ function RootLayoutNav() {
   return (
     <AuthRedirector>
       <ThemeProvider value={StratumDarkTheme}>
-        <Stack screenOptions={{ 
-          headerShown: false,
-          // Enable iOS swipe-back gesture from anywhere on screen
-          gestureEnabled: true,
-          fullScreenGestureEnabled: true,
-        }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
+        <View style={styles.container}>
+          <Stack screenOptions={{ 
+            headerShown: false,
+            // Enable iOS swipe-back gesture from anywhere on screen
+            gestureEnabled: true,
+            fullScreenGestureEnabled: true,
+          }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <OfflineBanner />
+        </View>
         <StatusBar style="light" />
       </ThemeProvider>
     </AuthRedirector>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 export default function RootLayout() {
   return (

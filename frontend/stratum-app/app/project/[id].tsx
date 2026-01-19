@@ -56,7 +56,7 @@ interface Member {
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const globalParams = useGlobalSearchParams<{ tab?: string }>();
+  const globalParams = useGlobalSearchParams<{ tab?: string; openFiles?: string }>();
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -251,6 +251,19 @@ export default function ProjectDetailScreen() {
     else if (tabParam === 'files') setShowFilesOverlay(true);
     else if (tabParam === 'members') setShowMembersModal(true);
   }, [globalParams?.tab]);
+
+  // Handle openFiles param - especially for opening My Folder directly
+  useEffect(() => {
+    const openFilesParam = globalParams?.openFiles;
+    if (openFilesParam === 'myFolder' && id && !loading) {
+      // Open files overlay and navigate to My Folder
+      setShowFilesOverlay(true);
+      // The FilesOverlay will detect the myFolder mode via a ref
+      myFolderOnOpenRef.current = true;
+    }
+  }, [globalParams?.openFiles, id, loading]);
+  
+  const myFolderOnOpenRef = useRef(false);
 
   const loadProjectData = async () => {
     try {
