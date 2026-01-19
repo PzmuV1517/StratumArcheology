@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,10 @@ import { useActivity } from '../../hooks';
 import { activityService, ProjectActivity } from '../../services';
 import { Loading, Card } from '../common';
 
+type TimelineMode = 'project' | 'personal';
+
 interface TimelineProps {
-  projectId: number;
+  projectId: string;
   maxHeight?: number;
   onActivityPress?: (activity: ProjectActivity) => void;
 }
@@ -27,8 +29,9 @@ export default function Timeline({
   maxHeight,
   onActivityPress,
 }: TimelineProps) {
+  const [mode, setMode] = useState<TimelineMode>('project');
   const { activities, isLoading, hasMore, loadMore, refresh, error } =
-    useActivity(projectId);
+    useActivity(projectId, mode === 'personal');
 
   const renderActivity = ({ item, index }: { item: ProjectActivity; index: number }) => {
     const icon = activityService.getActivityIcon(item.activity_type);
