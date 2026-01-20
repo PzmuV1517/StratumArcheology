@@ -27,29 +27,21 @@ def upgrade():
     privacy_enum.create(op.get_bind(), checkfirst=True)
 
     # Add versioning and privacy columns to file_nodes
-    op.add_column(
-        "file_nodes", sa.Column("version", sa.Integer(), nullable=False, server_default="1")
-    )
+    op.add_column("file_nodes", sa.Column("version", sa.Integer(), nullable=False, server_default="1"))
     op.add_column("file_nodes", sa.Column("checksum", sa.String(), nullable=True))
     op.add_column("file_nodes", sa.Column("owner_id", sa.String(), nullable=True))
-    op.add_column(
-        "file_nodes", sa.Column("privacy", privacy_enum, nullable=False, server_default="project")
-    )
+    op.add_column("file_nodes", sa.Column("privacy", privacy_enum, nullable=False, server_default="project"))
     op.add_column("file_nodes", sa.Column("shared_with", sa.JSON(), nullable=True))
 
     # Add foreign key for owner_id
-    op.create_foreign_key(
-        "fk_file_nodes_owner_id", "file_nodes", "users", ["owner_id"], ["id"], ondelete="SET NULL"
-    )
+    op.create_foreign_key("fk_file_nodes_owner_id", "file_nodes", "users", ["owner_id"], ["id"], ondelete="SET NULL")
 
     # Add index for owner_id
     op.create_index("ix_file_nodes_owner", "file_nodes", ["owner_id"])
 
     # Add versioning and privacy columns to notes
     op.add_column("notes", sa.Column("version", sa.Integer(), nullable=False, server_default="1"))
-    op.add_column(
-        "notes", sa.Column("privacy", privacy_enum, nullable=False, server_default="project")
-    )
+    op.add_column("notes", sa.Column("privacy", privacy_enum, nullable=False, server_default="project"))
     op.add_column("notes", sa.Column("shared_with", sa.JSON(), nullable=True))
 
     # Create file_versions table
@@ -67,9 +59,7 @@ def upgrade():
         sa.Column("size", sa.String(), nullable=True),
         sa.Column("checksum", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column(
-            "created_by", sa.String(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-        ),
+        sa.Column("created_by", sa.String(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
         sa.UniqueConstraint("file_node_id", "version", name="uq_file_version"),
     )
     op.create_index("ix_file_versions_file_node", "file_versions", ["file_node_id"])

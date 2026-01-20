@@ -9,17 +9,15 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Stack } from 'expo-router';
+ Platform } from 'react-native';
+import { useLocalSearchParams, useRouter , Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
-import { Platform } from 'react-native';
 import { useAutoSave } from '../src/hooks/useAutoSave';
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
 if (Platform.OS !== 'web') {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     Audio = require('expo-av').Audio;
   } catch {}
 }

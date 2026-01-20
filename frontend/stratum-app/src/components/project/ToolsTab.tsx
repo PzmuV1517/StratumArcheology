@@ -48,7 +48,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const [acquiringGPS, setAcquiringGPS] = useState(false); // True when getting fresh GPS fix
   const [watchingLocation, setWatchingLocation] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [LocationModule, setLocationModule] = useState<any>(null);
 
   const compassRotation = useRef(new Animated.Value(0)).current;

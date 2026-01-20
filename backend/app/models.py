@@ -149,9 +149,7 @@ class Note(Base):
     # Relationships
     project = relationship("Project", back_populates="notes")
     author = relationship("User", back_populates="notes")
-    attachments = relationship(
-        "NoteAttachment", back_populates="note", cascade="all, delete-orphan"
-    )
+    attachments = relationship("NoteAttachment", back_populates="note", cascade="all, delete-orphan")
 
 
 class FileNodeType(str, enum.Enum):
@@ -164,37 +162,27 @@ class FileNode(Base):
     __tablename__ = "file_nodes"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    parent_id = Column(
-        String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=True, index=True
-    )
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    parent_id = Column(String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=True, index=True)
     name = Column(String, nullable=False)
     type = Column(SQLEnum(FileNodeType), nullable=False, default=FileNodeType.FILE)
     mime_type = Column(String, nullable=True)
     size = Column(String, nullable=True)
     storage_path = Column(String, nullable=True)  # object key/path in MinIO for uploaded files
-    is_locked = Column(
-        Boolean, default=False
-    )  # for non-deletable/non-movable nodes like Notes folder or note nodes
+    is_locked = Column(Boolean, default=False)  # for non-deletable/non-movable nodes like Notes folder or note nodes
 
     # Versioning fields
     version = Column(Integer, default=1, nullable=False)  # Incremented on each update
     checksum = Column(String, nullable=True)  # MD5/SHA256 hash for integrity checking
 
     # Privacy/Ownership fields
-    owner_id = Column(
-        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-    )  # File owner
+    owner_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)  # File owner
     privacy = Column(
         SQLEnum(PrivacyLevel, values_callable=lambda x: [e.value for e in x]),
         default=PrivacyLevel.PROJECT,
         nullable=False,
     )
-    shared_with = Column(
-        JSON, nullable=True
-    )  # List of user IDs for SHARED privacy: ["user_id_1", "user_id_2"]
+    shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy: ["user_id_1", "user_id_2"]
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -222,9 +210,7 @@ class FileVersion(Base):
     __tablename__ = "file_versions"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    file_node_id = Column(
-        String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    file_node_id = Column(String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=False, index=True)
     version = Column(Integer, nullable=False)
     storage_path = Column(String, nullable=False)  # MinIO path for this version
     size = Column(String, nullable=True)
@@ -246,17 +232,11 @@ class NoteFileLink(Base):
     __tablename__ = "note_file_links"
 
     note_id = Column(String, ForeignKey("notes.id", ondelete="CASCADE"), primary_key=True)
-    file_node_id = Column(
-        String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=False, unique=True
-    )
+    file_node_id = Column(String, ForeignKey("file_nodes.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     # Relationships
-    note = relationship(
-        "Note", backref=backref("file_link", uselist=False, cascade="all, delete-orphan")
-    )
-    file_node = relationship(
-        "FileNode", backref=backref("note_link", uselist=False, cascade="all, delete-orphan")
-    )
+    note = relationship("Note", backref=backref("file_link", uselist=False, cascade="all, delete-orphan"))
+    file_node = relationship("FileNode", backref=backref("note_link", uselist=False, cascade="all, delete-orphan"))
 
 
 class NoteAttachment(Base):
@@ -279,15 +259,11 @@ class ProjectGPS(Base):
 
     # One row per project
     project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
-    data = Column(
-        Text, nullable=False, default="{}"
-    )  # JSON blob: { work: {points, closed}, sites: [{points, closed}] }
+    data = Column(Text, nullable=False, default="{}")  # JSON blob: { work: {points, closed}, sites: [{points, closed}] }
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship not strictly needed, but can be useful
-    project = relationship(
-        "Project", backref=backref("gps", uselist=False, cascade="all, delete-orphan")
-    )
+    project = relationship("Project", backref=backref("gps", uselist=False, cascade="all, delete-orphan"))
 
 
 class ProjectInvite(Base):
@@ -295,9 +271,7 @@ class ProjectInvite(Base):
 
     token = Column(String, primary_key=True, default=generate_uuid)
     code = Column(String, unique=True, nullable=True, index=True)  # Short code like "PRJ-ABC123"
-    project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.GUEST)
     created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -317,12 +291,8 @@ class ProjectActivity(Base):
     __tablename__ = "project_activities"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    user_id = Column(
-        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )  # Can be null if user deleted
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # Can be null if user deleted
     activity_type = Column(SQLEnum(ActivityType), nullable=False)
     description = Column(Text, nullable=False)  # Human-readable description
     extra_data = Column(Text, nullable=True)  # JSON blob for additional data

@@ -45,12 +45,12 @@ export default function ArtefactsTab({
   const [loading, setLoading] = useState(false);
   const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
-    Array<{ folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }>
+    { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[]
   >([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [pickedImages, setPickedImages] = useState<
-    Array<{ uri: string; name: string; mime: string }>
+    { uri: string; name: string; mime: string }[]
   >([]);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
   const [notes, setNotes] = useState<string[]>(['']);
@@ -74,7 +74,7 @@ export default function ArtefactsTab({
       // List child folders as artefacts
       const children = await fileService.listChildren(af.id);
       const folders = children.filter((c: any) => c.type === 'folder');
-      const out: Array<{ folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }> = [];
+      const out: { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[] = [];
       for (const f of folders) {
         let meta: ArtefactMeta | null = null;
         let previewUrl: string | undefined = undefined;

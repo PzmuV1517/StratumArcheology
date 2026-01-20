@@ -25,9 +25,7 @@ def generate_short_code(project_id: str, length: int = 6) -> str:
     """Generate a short invite code like 'PRJ-ABC123' using first 3 chars of project ID as prefix."""
     prefix = project_id[:3].upper()
     # Use uppercase letters and digits for the random part (excluding confusing chars)
-    chars = string.ascii_uppercase.replace("O", "").replace("I", "") + string.digits.replace(
-        "0", ""
-    ).replace("1", "")
+    chars = string.ascii_uppercase.replace("O", "").replace("I", "") + string.digits.replace("0", "").replace("1", "")
     random_part = "".join(secrets.choice(chars) for _ in range(length))
     return f"{prefix}-{random_part}"
 
@@ -112,9 +110,7 @@ async def accept_invite(
 
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses")
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already used")
@@ -136,11 +132,7 @@ async def accept_invite(
 
     # Add membership
     role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
-    db.execute(
-        project_members.insert().values(
-            project_id=invite.project_id, user_id=current_user.id, role=role_value
-        )
-    )
+    db.execute(project_members.insert().values(project_id=invite.project_id, user_id=current_user.id, role=role_value))
 
     # Update invite usage
     invite.use_count = (invite.use_count or 0) + 1
@@ -186,14 +178,10 @@ async def join_by_code(
 
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses")
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used")
     if invite.expires_at and invite.expires_at < datetime.utcnow():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code expired")
 
@@ -212,11 +200,7 @@ async def join_by_code(
 
     # Add membership
     role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
-    db.execute(
-        project_members.insert().values(
-            project_id=invite.project_id, user_id=current_user.id, role=role_value
-        )
-    )
+    db.execute(project_members.insert().values(project_id=invite.project_id, user_id=current_user.id, role=role_value))
 
     # Update invite usage
     invite.use_count = (invite.use_count or 0) + 1
@@ -240,6 +224,4 @@ async def join_by_code(
         metadata={"role": role_value},
     )
 
-    return InviteAcceptResponse(
-        project_id=invite.project_id, user_id=current_user.id, role=role_value
-    )
+    return InviteAcceptResponse(project_id=invite.project_id, user_id=current_user.id, role=role_value)

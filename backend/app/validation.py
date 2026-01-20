@@ -199,9 +199,7 @@ def detect_mime_type_from_bytes(file_data: bytes) -> str | None:
     return None
 
 
-def validate_file_type(
-    file_data: bytes, filename: str, claimed_mime_type: str | None = None
-) -> str:
+def validate_file_type(file_data: bytes, filename: str, claimed_mime_type: str | None = None) -> str:
     """
     Validate file type using magic bytes and extension.
 
@@ -220,9 +218,7 @@ def validate_file_type(
     _, ext = os.path.splitext(filename.lower())
 
     if ext in BLOCKED_EXTENSIONS:
-        raise ValidationError(
-            "file", f"File type '{ext}' is not allowed for security reasons", filename
-        )
+        raise ValidationError("file", f"File type '{ext}' is not allowed for security reasons", filename)
 
     # Detect actual type from content
     detected_mime = detect_mime_type_from_bytes(file_data)
@@ -236,9 +232,7 @@ def validate_file_type(
     # Fall back to claimed MIME type if detection failed
     if claimed_mime_type:
         if claimed_mime_type not in ALLOWED_MIME_TYPES:
-            raise ValidationError(
-                "file", f"File type '{claimed_mime_type}' is not allowed", filename
-            )
+            raise ValidationError("file", f"File type '{claimed_mime_type}' is not allowed", filename)
         return claimed_mime_type
 
     # Default to octet-stream for unknown types

@@ -108,9 +108,7 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        "app.main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=settings.APP_DEBUG
-    )
+    uvicorn.run("app.main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=settings.APP_DEBUG)
 
 
 # Mount Socket.IO app

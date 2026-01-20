@@ -33,9 +33,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         # Try to get user by email first to check if they exist
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
         # For now, we'll create a Firebase custom token and verify the user exists
         # In a real implementation, you'd verify the password with Firebase
@@ -62,16 +60,12 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             return AuthResponse(access_token=jwt_token, user=UserResponse.model_validate(user))
 
         except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed")
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -81,9 +75,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == request.email).first()
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
@@ -116,13 +108,9 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         return AuthResponse(access_token=jwt_token, user=UserResponse.model_validate(user))
 
     except firebase_auth.EmailAlreadyExistsError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed")
 
 
 @router.post("/verify-token", response_model=AuthResponse)
@@ -172,14 +160,10 @@ async def verify_firebase_token(request: FirebaseTokenRequest, db: Session = Dep
         return AuthResponse(access_token=access_token, user=user)
 
     except firebase_auth.InvalidIdTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Firebase token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Firebase token")
     except Exception as e:
         print(f"Auth error: {e}")  # For debugging
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed")
 
 
 @router.get("/me", response_model=UserResponse)
@@ -206,9 +190,7 @@ async def update_profile(
 
 
 @router.get("/users/search")
-async def search_users(
-    query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def search_users(query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Search users by email or display name"""
     if len(query) < 3:
         raise HTTPException(
@@ -216,11 +198,6 @@ async def search_users(
             detail="Search query must be at least 3 characters",
         )
 
-    users = (
-        db.query(User)
-        .filter((User.email.ilike(f"%{query}%")) | (User.display_name.ilike(f"%{query}%")))
-        .limit(10)
-        .all()
-    )
+    users = db.query(User).filter((User.email.ilike(f"%{query}%")) | (User.display_name.ilike(f"%{query}%"))).limit(10).all()
 
     return users

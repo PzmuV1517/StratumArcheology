@@ -11,8 +11,7 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect , Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
 
 interface Note {
@@ -23,13 +22,13 @@ interface Note {
   updated_at: string;
   author_id: string;
   project_id: string;
-  attachments?: Array<{
+  attachments?: {
     id: string;
     filename?: string;
     file_path?: string;
     mime_type?: string;
     url?: string;
-  }>;
+  }[];
 }
 
 export default function NoteDetailScreen() {

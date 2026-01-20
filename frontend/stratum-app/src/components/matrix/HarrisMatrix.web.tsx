@@ -124,12 +124,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       // Data Model (base Harris Matrix + digitized supplementary forms)
       let contexts: Map<string, any> = new Map();
-      let relationships: Array<any> = [];
+      let relationships: any[] = [];
       let groups: Map<string, any> = new Map();
       let subGroups: Map<string, any> = new Map();
       let phases: Map<string, any> = new Map();
       let nodePositions: Record<string, { x: number; y: number }> = {};
-      let temporalConflicts: Array<any> = [];
+      let temporalConflicts: any[] = [];
       // Digitized form stores
       let contextForms: Map<string, ContextFeatureRecord> = new Map();
       let stratigraphicUnits: Map<string, StratigraphicUnitRecord> = new Map();
@@ -1123,7 +1123,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             .join('');
 
           // Artefact entries across all categories
-          const artefactFlat: Array<{
+          const artefactFlat: {
             id: string;
             category: string;
             number?: string;
@@ -1131,7 +1131,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             su?: string;
             feature?: string;
             qty?: number;
-          }> = [];
+          }[] = [];
           (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
             (arr || []).forEach((r: any) =>
               artefactFlat.push({

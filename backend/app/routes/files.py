@@ -238,9 +238,7 @@ async def get_project_time_machine(
     response_model=FileNodeBase,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_my_folder(
-    project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def create_my_folder(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Create a personal "My Folder" for the current user in a project.
 
@@ -295,9 +293,7 @@ async def create_my_folder(
     )
 
     if existing:
-        raise HTTPException(
-            status_code=400, detail="You already have a personal folder in this project"
-        )
+        raise HTTPException(status_code=400, detail="You already have a personal folder in this project")
 
     # Create the personal folder inside /users
     # Use user ID as folder name (prevents issues with username changes)
@@ -475,16 +471,13 @@ async def get_my_folder_permissions(
         "default_can_view": my_folder.privacy != PrivacyLevel.PRIVATE,
         "default_can_edit": False,
         "member_permissions": [
-            {"user_id": uid, "can_view": True, "can_edit": False}
-            for uid in (my_folder.shared_with or [])
+            {"user_id": uid, "can_view": True, "can_edit": False} for uid in (my_folder.shared_with or [])
         ],
     }
 
 
 @router.get("/project/{project_id}/my-folder", response_model=Optional[FileNodeBase])
-async def get_my_folder(
-    project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def get_my_folder(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get the current user's personal folder in a project, if it exists"""
     check_project_permission(project_id, current_user, db)
 
@@ -519,9 +512,7 @@ async def get_my_folder(
 
 
 @router.get("/project/{project_id}", response_model=list[FileNodeBase])
-async def list_project_root(
-    project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def list_project_root(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """List root-level file nodes for a project, filtering by privacy settings"""
     check_project_permission(project_id, current_user, db)
 
@@ -540,9 +531,7 @@ async def list_project_root(
 
 
 @router.get("/{node_id}/children", response_model=list[FileNodeBase])
-async def list_children(
-    node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def list_children(node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Folder not found")
@@ -553,10 +542,7 @@ async def list_children(
         raise HTTPException(status_code=403, detail="Access denied to this folder")
 
     children = (
-        db.query(FileNode)
-        .filter(FileNode.parent_id == node_id)
-        .order_by(FileNode.type.desc(), FileNode.name.asc())
-        .all()
+        db.query(FileNode).filter(FileNode.parent_id == node_id).order_by(FileNode.type.desc(), FileNode.name.asc()).all()
     )
 
     # Filter children based on privacy
@@ -579,11 +565,7 @@ async def create_folder(
     check_project_permission(project_id, current_user, db)
     parent = None
     if folder.parent_id:
-        parent = (
-            db.query(FileNode)
-            .filter(FileNode.id == folder.parent_id, FileNode.project_id == project_id)
-            .first()
-        )
+        parent = db.query(FileNode).filter(FileNode.id == folder.parent_id, FileNode.project_id == project_id).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent folder not found")
         if parent.type != FileNodeType.FOLDER:
@@ -632,9 +614,7 @@ async def move_node(
     new_parent = None
     if move.new_parent_id:
         new_parent = (
-            db.query(FileNode)
-            .filter(FileNode.id == move.new_parent_id, FileNode.project_id == node.project_id)
-            .first()
+            db.query(FileNode).filter(FileNode.id == move.new_parent_id, FileNode.project_id == node.project_id).first()
         )
         if not new_parent:
             raise HTTPException(status_code=404, detail="New parent not found")
@@ -726,9 +706,7 @@ async def rename_node(
 
 
 @router.delete("/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_node(
-    node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def delete_node(node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -769,9 +747,7 @@ async def delete_node(
     return None
 
 
-@router.post(
-    "/project/{project_id}/upload", response_model=FileNodeBase, status_code=status.HTTP_201_CREATED
-)
+@router.post("/project/{project_id}/upload", response_model=FileNodeBase, status_code=status.HTTP_201_CREATED)
 async def upload_file(
     project_id: str,
     request: Request,
@@ -794,23 +770,15 @@ async def upload_file(
         )
         if hasattr(value, "file"):  # UploadFile check
             file = value
-            print(
-                f"DEBUG: Found file in field '{key}': {file.filename}, content_type: {file.content_type}"
-            )
+            print(f"DEBUG: Found file in field '{key}': {file.filename}, content_type: {file.content_type}")
             break
 
     if file is None:
-        raise HTTPException(
-            status_code=422, detail=f"No file uploaded. Received keys: {list(form.keys())}"
-        )
+        raise HTTPException(status_code=422, detail=f"No file uploaded. Received keys: {list(form.keys())}")
 
     parent = None
     if parent_id:
-        parent = (
-            db.query(FileNode)
-            .filter(FileNode.id == parent_id, FileNode.project_id == project_id)
-            .first()
-        )
+        parent = db.query(FileNode).filter(FileNode.id == parent_id, FileNode.project_id == project_id).first()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent folder not found")
         if parent.type != FileNodeType.FOLDER:
@@ -1023,9 +991,7 @@ async def update_file_privacy(
     # Only owner or project leader can change privacy
     project = db.query(Project).filter(Project.id == node.project_id).first()
     if node.owner_id != current_user.id and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Only file owner or project leader can change privacy"
-        )
+        raise HTTPException(status_code=403, detail="Only file owner or project leader can change privacy")
 
     node.privacy = PrivacyLevel(privacy_update.privacy.value)
     node.shared_with = privacy_update.shared_with
@@ -1047,9 +1013,7 @@ async def update_file_privacy(
 
 
 @router.get("/{node_id}/versions", response_model=list[FileVersionResponse])
-async def get_file_versions(
-    node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def get_file_versions(node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get version history for a file"""
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
@@ -1060,12 +1024,7 @@ async def get_file_versions(
     if not can_access_file(node, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    versions = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id)
-        .order_by(FileVersion.version.desc())
-        .all()
-    )
+    versions = db.query(FileVersion).filter(FileVersion.file_node_id == node_id).order_by(FileVersion.version.desc()).all()
     return versions
 
 
@@ -1089,11 +1048,7 @@ async def download_file_version(
     if not can_access_file(node, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    file_version = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id, FileVersion.version == version)
-        .first()
-    )
+    file_version = db.query(FileVersion).filter(FileVersion.file_node_id == node_id, FileVersion.version == version).first()
 
     if not file_version:
         raise HTTPException(status_code=404, detail="Version not found")
@@ -1141,15 +1096,9 @@ async def restore_file_version(
     if node.owner_id != current_user.id:
         project = db.query(Project).filter(Project.id == node.project_id).first()
         if project.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=403, detail="Only file owner or project leader can restore versions"
-            )
+            raise HTTPException(status_code=403, detail="Only file owner or project leader can restore versions")
 
-    file_version = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id, FileVersion.version == version)
-        .first()
-    )
+    file_version = db.query(FileVersion).filter(FileVersion.file_node_id == node_id, FileVersion.version == version).first()
 
     if not file_version:
         raise HTTPException(status_code=404, detail="Version not found")
@@ -1273,9 +1222,7 @@ async def get_files_shared_by_me(
 
 
 @router.get("/project/{project_id}/users-folder", response_model=list[FileNodeBase])
-async def list_users_folder(
-    project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def list_users_folder(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """List contents of users folder with privacy filtering"""
     check_project_permission(project_id, current_user, db)
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -1284,9 +1231,7 @@ async def list_users_folder(
 
     # Get all user folders
     user_folders = (
-        db.query(FileNode)
-        .filter(FileNode.parent_id == users_folder.id, FileNode.type == FileNodeType.FOLDER)
-        .all()
+        db.query(FileNode).filter(FileNode.parent_id == users_folder.id, FileNode.type == FileNodeType.FOLDER).all()
     )
 
     # Project leader can see all folders
@@ -1299,9 +1244,7 @@ async def list_users_folder(
 
 
 @router.get("/info/{node_id}", response_model=FileNodeBase)
-async def get_file_info(
-    node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def get_file_info(node_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get file info including version and privacy"""
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:

@@ -76,9 +76,7 @@ class LogContext:
         return self.__exit__(exc_type, exc_val, exc_tb)
 
 
-def add_log_context(
-    logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def add_log_context(logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Structlog processor that adds contextual information to log events.
 

@@ -10,8 +10,7 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter , Stack } from 'expo-router';
 import { noteService } from '../src/services/noteService';
 import { useAutoSave, SaveStatus } from '../src/hooks/useAutoSave';
 

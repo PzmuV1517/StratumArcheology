@@ -166,9 +166,7 @@ async def emit_role_changed(project_id: str, user_id: str, new_role: str):
             },
             room=room,
         )
-        logger.info(
-            f"Emitted role_changed for user {user_id} to {new_role} in project {project_id}"
-        )
+        logger.info(f"Emitted role_changed for user {user_id} to {new_role} in project {project_id}")
     except Exception as e:
         logger.error(f"Error emitting role_changed: {e}")
 

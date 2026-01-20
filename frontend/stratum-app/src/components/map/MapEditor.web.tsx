@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
+import { projectService } from '../../services/projectService';
+
 // Avoid importing 'leaflet' at module scope to prevent SSR "window is not defined".
 // We'll dynamic-import it on the client inside useEffect.
 type LatLngLiteral = { lat: number; lng: number };
@@ -34,8 +36,6 @@ function pixelDist(a: any, b: any) {
     dy = a.y - b.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
-
-import { projectService } from '../../services/projectService';
 
 export default function MapEditor({
   projectId,

@@ -30,9 +30,7 @@ async def fetch_bytes(url: str) -> bytes:
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as resp:
             if resp.status != 200:
-                raise HTTPException(
-                    status_code=502, detail=f"Upstream fetch failed: HTTP {resp.status}"
-                )
+                raise HTTPException(status_code=502, detail=f"Upstream fetch failed: HTTP {resp.status}")
             return await resp.read()
 
 
@@ -306,15 +304,9 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
                     return j
         return -1
 
-    x_idx = find_idx_heur(
-        ["X", "XCOORD", "X_COORD", "X-COORD", "EASTING", "EAST", "UTME", "EASTINGUTM", "E", "XE"]
-    )
-    y_idx = find_idx_heur(
-        ["Y", "YCOORD", "Y_COORD", "Y-COORD", "NORTHING", "NORTH", "UTMN", "NORTHINGUTM", "N", "YN"]
-    )
-    z_idx = find_idx_heur(
-        ["Z", "ELEV", "ELEVATION", "HEIGHT", "TVD", "TVDSS", "MD", "DEPT", "DEPTH"]
-    )
+    x_idx = find_idx_heur(["X", "XCOORD", "X_COORD", "X-COORD", "EASTING", "EAST", "UTME", "EASTINGUTM", "E", "XE"])
+    y_idx = find_idx_heur(["Y", "YCOORD", "Y_COORD", "Y-COORD", "NORTHING", "NORTH", "UTMN", "NORTHINGUTM", "N", "YN"])
+    z_idx = find_idx_heur(["Z", "ELEV", "ELEVATION", "HEIGHT", "TVD", "TVDSS", "MD", "DEPT", "DEPTH"])
 
     # Latitude/Longitude fallback to XY (meters) if needed
     lat_idx = find_idx_heur(["LAT", "LATITUDE", "LATD"])
@@ -464,9 +456,7 @@ def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
 
 
 @router.get("/pointcloud")
-async def convert_pointcloud(
-    src: str = Query(..., description="Source URL to point cloud"), name: str | None = None
-):
+async def convert_pointcloud(src: str = Query(..., description="Source URL to point cloud"), name: str | None = None):
     ext = detect_ext(name or src)
     extU = ext.upper()
     # Fast-path: pass-through formats

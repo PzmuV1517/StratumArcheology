@@ -25,7 +25,7 @@ export interface ArtefactManifest {
   qr?: { url?: string; imageFileId?: string };
   files: ManifestFileEntry[]; // images and other files
   notes: ManifestFileEntry[]; // .txt notes
-  history?: Array<{ type: string; at: string; by?: ManifestUser; details?: any }>;
+  history?: { type: string; at: string; by?: ManifestUser; details?: any }[];
 }
 
 export type FileNode = {

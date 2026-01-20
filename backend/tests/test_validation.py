@@ -235,9 +235,7 @@ class TestPydanticModels:
 
     def test_note_create_validates(self):
         """Test NoteCreateValidated sanitizes input"""
-        note = NoteCreateValidated(
-            title="  Test Note  ", content='<script>alert("xss")</script>', project_id="abc123"
-        )
+        note = NoteCreateValidated(title="  Test Note  ", content='<script>alert("xss")</script>', project_id="abc123")
         assert note.title == "Test Note"
 
     def test_note_create_empty_title_fails(self):
@@ -250,9 +248,7 @@ class TestPydanticModels:
 
     def test_project_create_validates(self):
         """Test ProjectCreateValidated validates input"""
-        project = ProjectCreateValidated(
-            name="Test Project", description="A test project", ran_lmi_id="RAN-123"
-        )
+        project = ProjectCreateValidated(name="Test Project", description="A test project", ran_lmi_id="RAN-123")
         assert project.name == "Test Project"
         assert project.ran_lmi_id == "RAN-123"
 

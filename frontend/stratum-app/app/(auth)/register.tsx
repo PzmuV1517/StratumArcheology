@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { FaEyeSlash } from 'react-icons/fa';
-import { FaEye } from 'react-icons/fa';
+import { FaEyeSlash , FaEye } from 'react-icons/fa';
 import {
   View,
   Text,
@@ -10,8 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-} from 'react-native';
-import { Platform } from 'react-native';
+ Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';

@@ -62,9 +62,7 @@ async def get_current_user(
 
 async def get_current_user_or_token(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    token: str | None = Query(
-        None, description="JWT token as query parameter (alternative to Authorization header)"
-    ),
+    token: str | None = Query(None, description="JWT token as query parameter (alternative to Authorization header)"),
     db: Session = Depends(get_db),
 ) -> User:
     """
@@ -124,9 +122,7 @@ async def get_current_user_or_token(
         )
 
 
-def check_project_permission(
-    project_id: str, user: User, db: Session, required_role: str = None
-) -> bool:
+def check_project_permission(project_id: str, user: User, db: Session, required_role: str = None) -> bool:
     """Check if user has permission to access a project"""
     from sqlalchemy import select
 
@@ -142,15 +138,11 @@ def check_project_permission(
         return True
 
     # Check if user is a member
-    stmt = select(project_members).where(
-        project_members.c.project_id == project_id, project_members.c.user_id == user.id
-    )
+    stmt = select(project_members).where(project_members.c.project_id == project_id, project_members.c.user_id == user.id)
     result = db.execute(stmt).first()
 
     if not result:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this project"
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access to this project")
 
     # If specific role is required, check it
     if required_role:

@@ -14,9 +14,7 @@ from app.websocket import emit_content_update, log_activity
 router = APIRouter(prefix="/forms", tags=["forms"])
 
 
-def _find_child_by_name(
-    db: Session, project_id: str, parent_id: str | None, name: str
-) -> FileNode | None:
+def _find_child_by_name(db: Session, project_id: str, parent_id: str | None, name: str) -> FileNode | None:
     q = db.query(FileNode).filter(FileNode.project_id == project_id, FileNode.name == name)
     if parent_id:
         q = q.filter(FileNode.parent_id == parent_id)
@@ -25,9 +23,7 @@ def _find_child_by_name(
     return q.first()
 
 
-def _ensure_locked_folder(
-    db: Session, project_id: str, name: str, parent_id: str | None = None
-) -> FileNode:
+def _ensure_locked_folder(db: Session, project_id: str, name: str, parent_id: str | None = None) -> FileNode:
     node = _find_child_by_name(db, project_id, parent_id, name)
     if node is None:
         node = FileNode(
@@ -258,9 +254,7 @@ async def append_context_feature(
     ]
 
     # Ensure file and existing rows
-    node, existing = _ensure_locked_csv_file(
-        db, project_id, forms_folder.id, "context_features.csv", header
-    )
+    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "context_features.csv", header)
 
     # Append new row and upload entire content
     output = io.StringIO()
@@ -440,9 +434,7 @@ async def append_stratigraphic_unit(
         payload.get("dateChecked", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(
-        db, project_id, forms_folder.id, "stratigraphic_units.csv", header
-    )
+    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "stratigraphic_units.csv", header)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -515,9 +507,7 @@ async def append_artefact(
         payload.get("otherObservations", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(
-        db, project_id, forms_folder.id, "artefacts.csv", header
-    )
+    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "artefacts.csv", header)
 
     output = io.StringIO()
     writer = csv.writer(output)

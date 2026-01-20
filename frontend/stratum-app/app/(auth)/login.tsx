@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaEyeSlash } from 'react-icons/fa';
-import { FaEye } from 'react-icons/fa';
+import { FaEyeSlash , FaEye } from 'react-icons/fa';
 import {
   View,
   Text,
@@ -20,7 +19,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../src/services/api';
 import { config } from '../../src/config/config';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 const FaultyTerminal = require('../../components/FaultyTerminal.jsx').default;
 // Prevent unnecessary re-renders of the heavy background
 const MemoFaultyTerminal = React.memo(FaultyTerminal);

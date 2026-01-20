@@ -12,7 +12,7 @@ import { Platform } from 'react-native';
 // Note: The bundler (Metro/webpack) handles .web.tsx and .native.tsx extensions
 // This file serves as a TypeScript type reference
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+ 
 const HarrisMatrix = Platform.select({
   web: () => require('./HarrisMatrix.web').default,
   default: () => require('./HarrisMatrix.native').default,
