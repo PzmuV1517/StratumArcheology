@@ -8,7 +8,7 @@ import AuthRedirector from './AuthRedirector';
 
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { WebSocketProvider } from '../src/contexts/WebSocketContext';
-import OfflineBanner from '../src/components/common/OfflineBanner';
+import ConnectionStatusIndicator from '../src/components/common/OfflineBanner';
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -68,7 +68,7 @@ function RootLayoutNav() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
-          <OfflineBanner />
+          <ConnectionStatusIndicator />
         </View>
         <StatusBar style="light" />
       </ThemeProvider>

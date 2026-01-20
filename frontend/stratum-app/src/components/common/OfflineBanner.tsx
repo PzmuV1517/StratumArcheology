@@ -1,129 +1,167 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
   Platform,
   TouchableOpacity,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface OfflineBannerProps {
-  /** Optional custom message */
-  message?: string;
+/**
+ * ConnectionStatusIndicator - Shows connection status as a small icon
+ *
+ * Displays a persistent indicator in the top-left corner:
+ * - Green checkmark when connected to backend
+ * - Red X when disconnected
+ * Tap to see more details about connection status.
+ * 
+ * Only shown on mobile (iOS/Android) - not on web.
+ */
+export default function ConnectionStatusIndicator() {
+  // Don't show on web - offline sync is mobile-only
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
+  return <ConnectionStatusIndicatorInner />;
 }
 
-/**
- * OfflineBanner - Shows a small icon when the device is offline
- *
- * Displays a subtle cloud-off icon in the top-right corner.
- * Tap to see more details about offline status.
- */
-export default function OfflineBanner({ message = 'No Internet Connection' }: OfflineBannerProps) {
-  const [isOffline, setIsOffline] = useState(false);
+function ConnectionStatusIndicatorInner() {
+  const [isConnected, setIsConnected] = useState<boolean | null>(null); // null = checking
+  const [isChecking, setIsChecking] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showIndicator, setShowIndicator] = useState(false);
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    let cleanup: (() => void) | undefined;
-
-    // Check network status
-    const checkNetwork = async () => {
+  const checkConnection = useCallback(async () => {
+    setIsChecking(true);
+    try {
+      // First check device network connectivity
       if (Platform.OS === 'web') {
-        // Web: use navigator.onLine
-        setIsOffline(!navigator.onLine);
-
-        const handleOnline = () => setIsOffline(false);
-        const handleOffline = () => setIsOffline(true);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        cleanup = () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-        };
+        if (!navigator.onLine) {
+          setIsConnected(false);
+          setLastChecked(new Date());
+          setIsChecking(false);
+          return;
+        }
       } else {
-        // Native: use @react-native-community/netinfo
         try {
           const NetInfo = await import('@react-native-community/netinfo');
-
-          // Get initial state
           const state = await NetInfo.default.fetch();
-          setIsOffline(!state.isConnected);
+          if (!state.isConnected) {
+            setIsConnected(false);
+            setLastChecked(new Date());
+            setIsChecking(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('[ConnectionStatus] NetInfo not available:', e);
+        }
+      }
 
-          // Subscribe to changes
-          const unsubscribe = NetInfo.default.addEventListener((state) => {
-            setIsOffline(!state.isConnected);
+      // Try to reach the backend
+      const { default: api } = await import('../../services/api');
+      const response = await api.get('/health');
+      setIsConnected(response.status === 200);
+    } catch (error) {
+      setIsConnected(false);
+    } finally {
+      setLastChecked(new Date());
+      setIsChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial check
+    checkConnection();
+
+    // Set up periodic checks every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+
+    // Also listen for network changes on native
+    let cleanup: (() => void) | undefined;
+
+    const setupNetworkListener = async () => {
+      if (Platform.OS === 'web') {
+        const handleChange = () => checkConnection();
+        window.addEventListener('online', handleChange);
+        window.addEventListener('offline', handleChange);
+        cleanup = () => {
+          window.removeEventListener('online', handleChange);
+          window.removeEventListener('offline', handleChange);
+        };
+      } else {
+        try {
+          const NetInfo = await import('@react-native-community/netinfo');
+          const unsubscribe = NetInfo.default.addEventListener(() => {
+            checkConnection();
           });
-
           cleanup = unsubscribe;
-        } catch (error) {
-          console.warn('[OfflineBanner] NetInfo not available:', error);
+        } catch (e) {
+          console.warn('[ConnectionStatus] Could not set up network listener:', e);
         }
       }
     };
 
-    checkNetwork();
+    setupNetworkListener();
 
     return () => {
-      if (cleanup) {
-        cleanup();
-      }
+      clearInterval(interval);
+      if (cleanup) cleanup();
     };
-  }, []);
+  }, [checkConnection]);
 
-  // Animate indicator in/out
-  useEffect(() => {
-    if (isOffline) {
-      setShowIndicator(true);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => {
-        setShowIndicator(false);
-      });
+  const getStatusColor = () => {
+    if (isChecking || isConnected === null) return '#666666'; // Gray while checking
+    return isConnected ? '#22c55e' : '#ef4444'; // Green or Red
+  };
+
+  const getStatusIcon = () => {
+    if (isChecking || isConnected === null) return '...';
+    return isConnected ? '✓' : '✕';
+  };
+
+  const getStatusText = () => {
+    if (isChecking) return 'Checking connection...';
+    return isConnected ? 'Connected to STRATUM' : 'Not connected';
+  };
+
+  const getDetailText = () => {
+    if (isChecking) return 'Verifying backend connection...';
+    if (isConnected) {
+      return 'Your device is connected to the STRATUM backend. All features are available.';
     }
-  }, [isOffline, fadeAnim]);
-
-  if (!showIndicator) return null;
+    return 'Cannot reach the STRATUM backend. You can still work offline - your changes will sync when connection is restored.';
+  };
 
   return (
     <>
-      {/* Small icon indicator in top-right */}
-      <Animated.View
+      {/* Small icon indicator in top-left */}
+      <View
         style={[
           styles.indicator,
           {
             top: insets.top + 8,
-            opacity: fadeAnim,
           },
         ]}
       >
         <TouchableOpacity
-          style={styles.iconButton}
+          style={[styles.iconButton, { backgroundColor: getStatusColor() }]}
           onPress={() => setShowModal(true)}
-          accessibilityLabel="Offline indicator. Tap for details."
+          accessibilityLabel={`Connection status: ${getStatusText()}. Tap for details.`}
           accessibilityRole="button"
         >
-          <Text style={styles.offlineIcon}>☁️</Text>
-          <View style={styles.slashOverlay}>
-            <Text style={styles.slash}>╲</Text>
-          </View>
+          {isChecking ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.statusIcon}>{getStatusIcon()}</Text>
+          )}
         </TouchableOpacity>
-      </Animated.View>
+      </View>
 
       {/* Details modal */}
       <Modal
@@ -135,16 +173,34 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
         <Pressable style={styles.modalOverlay} onPress={() => setShowModal(false)}>
           <View style={[styles.modalContent, { marginTop: insets.top + 60 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalIcon}>📡</Text>
-              <Text style={styles.modalTitle}>{message}</Text>
+              <View style={[styles.modalStatusDot, { backgroundColor: getStatusColor() }]}>
+                {isChecking ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalStatusIcon}>{getStatusIcon()}</Text>
+                )}
+              </View>
+              <Text style={styles.modalTitle}>{getStatusText()}</Text>
             </View>
-            <Text style={styles.modalText}>
-              You're currently offline. Any changes you make will be saved locally and synced
-              automatically when your connection is restored.
-            </Text>
-            <TouchableOpacity style={styles.dismissButton} onPress={() => setShowModal(false)}>
-              <Text style={styles.dismissText}>Got it</Text>
-            </TouchableOpacity>
+            <Text style={styles.modalText}>{getDetailText()}</Text>
+            {lastChecked && (
+              <Text style={styles.lastCheckedText}>
+                Last checked: {lastChecked.toLocaleTimeString()}
+              </Text>
+            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={() => {
+                  checkConnection();
+                }}
+              >
+                <Text style={styles.refreshText}>Refresh</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dismissButton} onPress={() => setShowModal(false)}>
+                <Text style={styles.dismissText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -155,15 +211,14 @@ export default function OfflineBanner({ message = 'No Internet Connection' }: Of
 const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
-    right: 16,
+    left: 16,
     zIndex: 9999,
     elevation: 10,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(183, 28, 28, 0.9)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -172,22 +227,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  offlineIcon: {
+  statusIcon: {
     fontSize: 18,
-  },
-  slashOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  slash: {
-    fontSize: 28,
-    color: '#B71C1C',
     fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
@@ -201,6 +244,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginHorizontal: 20,
     maxWidth: 340,
+    width: '90%',
     borderWidth: 1,
     borderColor: '#333',
     shadowColor: '#000',
@@ -214,27 +258,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  modalIcon: {
-    fontSize: 24,
-    marginRight: 10,
+  modalStatusDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalStatusIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   modalTitle: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
+    flex: 1,
   },
   modalText: {
     color: '#AAAAAA',
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  lastCheckedText: {
+    color: '#666666',
+    fontSize: 12,
     marginBottom: 16,
   },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  refreshButton: {
+    backgroundColor: '#333333',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  refreshText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   dismissButton: {
-    backgroundColor: '#B71C1C',
+    backgroundColor: '#C41E3A',
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    alignSelf: 'flex-end',
   },
   dismissText: {
     color: '#FFFFFF',
