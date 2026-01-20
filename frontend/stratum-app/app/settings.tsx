@@ -288,7 +288,7 @@ export default function SettingsScreen() {
         return;
       }
 
-      // Now try to reach the STRATUM backend
+      // Now try to reach the STRATUM backend using the health endpoint
       const response = await api.get('/health');
       if (response.status === 200) {
         setConnectionStatus('connected');
