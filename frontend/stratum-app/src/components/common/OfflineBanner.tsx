@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const MIN_CHECK_INTERVAL = 60000; // 60 seconds minimum between manual checks
+
 /**
- * ConnectionStatusIndicator - Shows connection status as a small icon
+ * ConnectionStatusIndicator - Shows connection status as a tiny dot
  *
- * Displays a persistent indicator in the top-left corner:
- * - Green checkmark when connected to backend
- * - Red X when disconnected
+ * Displays a small, unobtrusive indicator in the bottom-right corner:
+ * - Green dot when connected to backend
+ * - Red dot when disconnected
  * Tap to see more details about connection status.
- * 
+ *
  * Only shown on mobile (iOS/Android) - not on web.
  */
 export default function ConnectionStatusIndicator() {
@@ -35,39 +37,46 @@ function ConnectionStatusIndicatorInner() {
   const [isChecking, setIsChecking] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [canRefresh, setCanRefresh] = useState(true);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const lastManualCheckRef = useRef<number>(0);
   const insets = useSafeAreaInsets();
 
-  const checkConnection = useCallback(async () => {
+  const checkConnection = useCallback(async (isManual = false) => {
+    // For manual checks, enforce cooldown
+    if (isManual) {
+      const now = Date.now();
+      const timeSinceLastCheck = now - lastManualCheckRef.current;
+      if (timeSinceLastCheck < MIN_CHECK_INTERVAL) {
+        // Still in cooldown, don't check
+        return;
+      }
+      lastManualCheckRef.current = now;
+      setCanRefresh(false);
+      setCooldownRemaining(60);
+    }
+
     setIsChecking(true);
     try {
       // First check device network connectivity
-      if (Platform.OS === 'web') {
-        if (!navigator.onLine) {
+      try {
+        const NetInfo = await import('@react-native-community/netinfo');
+        const state = await NetInfo.default.fetch();
+        if (!state.isConnected) {
           setIsConnected(false);
           setLastChecked(new Date());
           setIsChecking(false);
           return;
         }
-      } else {
-        try {
-          const NetInfo = await import('@react-native-community/netinfo');
-          const state = await NetInfo.default.fetch();
-          if (!state.isConnected) {
-            setIsConnected(false);
-            setLastChecked(new Date());
-            setIsChecking(false);
-            return;
-          }
-        } catch (e) {
-          console.warn('[ConnectionStatus] NetInfo not available:', e);
-        }
+      } catch (e) {
+        console.warn('[ConnectionStatus] NetInfo not available:', e);
       }
 
       // Try to reach the backend
       const { default: api } = await import('../../services/api');
       const response = await api.get('/health');
       setIsConnected(response.status === 200);
-    } catch (error) {
+    } catch {
       setIsConnected(false);
     } finally {
       setLastChecked(new Date());
@@ -75,35 +84,41 @@ function ConnectionStatusIndicatorInner() {
     }
   }, []);
 
+  // Cooldown timer for manual refresh
+  useEffect(() => {
+    if (!canRefresh && cooldownRemaining > 0) {
+      const timer = setInterval(() => {
+        setCooldownRemaining((prev) => {
+          if (prev <= 1) {
+            setCanRefresh(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [canRefresh, cooldownRemaining]);
+
   useEffect(() => {
     // Initial check
     checkConnection();
 
-    // Set up periodic checks every 30 seconds
-    const interval = setInterval(checkConnection, 30000);
+    // Set up periodic checks every 60 seconds (automatic, not manual)
+    const interval = setInterval(() => checkConnection(false), 60000);
 
     // Also listen for network changes on native
     let cleanup: (() => void) | undefined;
 
     const setupNetworkListener = async () => {
-      if (Platform.OS === 'web') {
-        const handleChange = () => checkConnection();
-        window.addEventListener('online', handleChange);
-        window.addEventListener('offline', handleChange);
-        cleanup = () => {
-          window.removeEventListener('online', handleChange);
-          window.removeEventListener('offline', handleChange);
-        };
-      } else {
-        try {
-          const NetInfo = await import('@react-native-community/netinfo');
-          const unsubscribe = NetInfo.default.addEventListener(() => {
-            checkConnection();
-          });
-          cleanup = unsubscribe;
-        } catch (e) {
-          console.warn('[ConnectionStatus] Could not set up network listener:', e);
-        }
+      try {
+        const NetInfo = await import('@react-native-community/netinfo');
+        const unsubscribe = NetInfo.default.addEventListener(() => {
+          checkConnection(false);
+        });
+        cleanup = unsubscribe;
+      } catch (e) {
+        console.warn('[ConnectionStatus] Could not set up network listener:', e);
       }
     };
 
@@ -121,31 +136,37 @@ function ConnectionStatusIndicatorInner() {
   };
 
   const getStatusIcon = () => {
-    if (isChecking || isConnected === null) return '...';
+    if (isChecking || isConnected === null) return '•';
     return isConnected ? '✓' : '✕';
   };
 
   const getStatusText = () => {
-    if (isChecking) return 'Checking connection...';
-    return isConnected ? 'Connected to STRATUM' : 'Not connected';
+    if (isChecking) return 'Checking...';
+    return isConnected ? 'Connected' : 'Offline';
   };
 
   const getDetailText = () => {
     if (isChecking) return 'Verifying backend connection...';
     if (isConnected) {
-      return 'Your device is connected to the STRATUM backend. All features are available.';
+      return 'Your device is connected to STRATUM. All features are available.';
     }
-    return 'Cannot reach the STRATUM backend. You can still work offline - your changes will sync when connection is restored.';
+    return 'Cannot reach the backend. You can still work offline — changes will sync when connection is restored.';
+  };
+
+  const handleRefresh = () => {
+    if (canRefresh) {
+      checkConnection(true);
+    }
   };
 
   return (
     <>
-      {/* Small icon indicator in top-left */}
+      {/* Tiny dot indicator in bottom-right */}
       <View
         style={[
           styles.indicator,
           {
-            top: insets.top + 8,
+            bottom: insets.bottom + 12,
           },
         ]}
       >
@@ -156,14 +177,14 @@ function ConnectionStatusIndicatorInner() {
           accessibilityRole="button"
         >
           {isChecking ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color="#FFFFFF" style={{ transform: [{ scale: 0.6 }] }} />
           ) : (
             <Text style={styles.statusIcon}>{getStatusIcon()}</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Details modal */}
+      {/* Centered details modal */}
       <Modal
         visible={showModal}
         transparent
@@ -171,7 +192,11 @@ function ConnectionStatusIndicatorInner() {
         onRequestClose={() => setShowModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowModal(false)}>
-          <View style={[styles.modalContent, { marginTop: insets.top + 60 }]}>
+          <View
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
             <View style={styles.modalHeader}>
               <View style={[styles.modalStatusDot, { backgroundColor: getStatusColor() }]}>
                 {isChecking ? (
@@ -190,12 +215,13 @@ function ConnectionStatusIndicatorInner() {
             )}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.refreshButton}
-                onPress={() => {
-                  checkConnection();
-                }}
+                style={[styles.refreshButton, !canRefresh && styles.refreshButtonDisabled]}
+                onPress={handleRefresh}
+                disabled={!canRefresh}
               >
-                <Text style={styles.refreshText}>Refresh</Text>
+                <Text style={[styles.refreshText, !canRefresh && styles.refreshTextDisabled]}>
+                  {canRefresh ? 'Refresh' : `Wait ${cooldownRemaining}s`}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.dismissButton} onPress={() => setShowModal(false)}>
                 <Text style={styles.dismissText}>Close</Text>
@@ -211,31 +237,32 @@ function ConnectionStatusIndicatorInner() {
 const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
-    left: 16,
+    right: 12,
     zIndex: 9999,
     elevation: 10,
   },
   iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    opacity: 0.8,
   },
   statusIcon: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
@@ -299,10 +326,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
+  refreshButtonDisabled: {
+    backgroundColor: '#222222',
+  },
   refreshText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  refreshTextDisabled: {
+    color: '#666666',
   },
   dismissButton: {
     backgroundColor: '#C41E3A',

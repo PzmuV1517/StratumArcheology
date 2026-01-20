@@ -69,7 +69,7 @@ export default function TextFilePanel({
           {isEmpty ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>This file is empty</Text>
-              <Text style={styles.emptyStateHint}>Click "Edit" to add content</Text>
+              <Text style={styles.emptyStateHint}>Click `Edit` to add content</Text>
             </View>
           ) : ext.endsWith('.md') && Platform.OS === 'web' ? (
             <MarkdownView content={textContent || ''} />
