@@ -25,12 +25,16 @@ def generate_short_code(project_id: str, length: int = 6) -> str:
     """Generate a short invite code like 'PRJ-ABC123' using first 3 chars of project ID as prefix."""
     prefix = project_id[:3].upper()
     # Use uppercase letters and digits for the random part (excluding confusing chars)
-    chars = string.ascii_uppercase.replace("O", "").replace("I", "") + string.digits.replace("0", "").replace("1", "")
+    chars = string.ascii_uppercase.replace("O", "").replace(
+        "I", ""
+    ) + string.digits.replace("0", "").replace("1", "")
     random_part = "".join(secrets.choice(chars) for _ in range(length))
     return f"{prefix}-{random_part}"
 
 
-def generate_unique_code(db: Session, project_id: str, max_attempts: int = 10) -> str:
+def generate_unique_code(
+    db: Session, project_id: str, max_attempts: int = 10
+) -> str:
     """Generate a unique short code that doesn't exist in the database."""
     for _ in range(max_attempts):
         code = generate_short_code(project_id)
@@ -58,7 +62,9 @@ async def create_invite(
     # Validate project exists
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     expires_at: datetime | None = None
     if body.ttl_hours and body.ttl_hours > 0:
@@ -87,7 +93,9 @@ async def create_invite(
         token=invite.token,
         code=invite.code,
         project_id=project_id,
-        role=invite.role.value if hasattr(invite.role, "value") else str(invite.role),
+        role=invite.role.value
+        if hasattr(invite.role, "value")
+        else str(invite.role),
         expires_at=invite.expires_at,
         max_uses=invite.max_uses,
         use_count=invite.use_count,
@@ -104,18 +112,29 @@ async def accept_invite(
     """Accept an invite token and join the project with the invited role."""
     token = body.token
 
-    invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.token == token).first()
+    invite: ProjectInvite = (
+        db.query(ProjectInvite).filter(ProjectInvite.token == token).first()
+    )
     if not invite:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
+        )
 
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite has reached maximum uses")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invite has reached maximum uses",
+        )
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already used")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite already used"
+        )
     if invite.expires_at and invite.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite expired")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite expired"
+        )
 
     # Check if user already a member
     stmt = select(project_members).where(
@@ -131,8 +150,14 @@ async def accept_invite(
         )
 
     # Add membership
-    role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
-    db.execute(project_members.insert().values(project_id=invite.project_id, user_id=current_user.id, role=role_value))
+    role_value = (
+        invite.role.value if hasattr(invite.role, "value") else str(invite.role)
+    )
+    db.execute(
+        project_members.insert().values(
+            project_id=invite.project_id, user_id=current_user.id, role=role_value
+        )
+    )
 
     # Update invite usage
     invite.use_count = (invite.use_count or 0) + 1
@@ -159,7 +184,9 @@ async def accept_invite(
     return InviteAcceptResponse(
         project_id=invite.project_id,
         user_id=current_user.id,
-        role=invite.role.value if hasattr(invite.role, "value") else str(invite.role),
+        role=invite.role.value
+        if hasattr(invite.role, "value")
+        else str(invite.role),
     )
 
 
@@ -172,18 +199,30 @@ async def join_by_code(
     """Join a project using a short invite code."""
     code = body.code.strip().upper()
 
-    invite: ProjectInvite = db.query(ProjectInvite).filter(ProjectInvite.code == code).first()
+    invite: ProjectInvite = (
+        db.query(ProjectInvite).filter(ProjectInvite.code == code).first()
+    )
     if not invite:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite code")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite code"
+        )
 
     # Check if invite has reached max uses (if max_uses is set)
     if invite.max_uses is not None and invite.use_count >= invite.max_uses:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code has reached maximum uses")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invite code has reached maximum uses",
+        )
     # Legacy support: also check used flag for old single-use invites
     if invite.used and invite.max_uses is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code already used")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invite code already used",
+        )
     if invite.expires_at and invite.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code expired")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invite code expired"
+        )
 
     # Check if user already a member
     stmt = select(project_members).where(
@@ -199,8 +238,14 @@ async def join_by_code(
         )
 
     # Add membership
-    role_value = invite.role.value if hasattr(invite.role, "value") else str(invite.role)
-    db.execute(project_members.insert().values(project_id=invite.project_id, user_id=current_user.id, role=role_value))
+    role_value = (
+        invite.role.value if hasattr(invite.role, "value") else str(invite.role)
+    )
+    db.execute(
+        project_members.insert().values(
+            project_id=invite.project_id, user_id=current_user.id, role=role_value
+        )
+    )
 
     # Update invite usage
     invite.use_count = (invite.use_count or 0) + 1
@@ -224,4 +269,6 @@ async def join_by_code(
         metadata={"role": role_value},
     )
 
-    return InviteAcceptResponse(project_id=invite.project_id, user_id=current_user.id, role=role_value)
+    return InviteAcceptResponse(
+        project_id=invite.project_id, user_id=current_user.id, role=role_value
+    )

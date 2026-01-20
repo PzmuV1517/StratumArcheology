@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     FIREBASE_CLIENT_ID: str
     FIREBASE_AUTH_URI: str = "https://accounts.google.com/o/oauth2/auth"
     FIREBASE_TOKEN_URI: str = "https://oauth2.googleapis.com/token"
-    FIREBASE_AUTH_PROVIDER_CERT_URL: str = "https://www.googleapis.com/oauth2/v1/certs"
+    FIREBASE_AUTH_PROVIDER_CERT_URL: str = (
+        "https://www.googleapis.com/oauth2/v1/certs"
+    )
     FIREBASE_CLIENT_CERT_URL: str
 
     # PostgreSQL

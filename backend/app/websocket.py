@@ -140,7 +140,9 @@ async def emit_member_kicked(project_id: str, user_id: str):
             },
             room=room,
         )
-        logger.info(f"Emitted member_kicked for user {user_id} in project {project_id}")
+        logger.info(
+            f"Emitted member_kicked for user {user_id} in project {project_id}"
+        )
     except Exception as e:
         logger.error(f"Error emitting member_kicked: {e}")
 
@@ -166,7 +168,9 @@ async def emit_role_changed(project_id: str, user_id: str, new_role: str):
             },
             room=room,
         )
-        logger.info(f"Emitted role_changed for user {user_id} to {new_role} in project {project_id}")
+        logger.info(
+            f"Emitted role_changed for user {user_id} to {new_role} in project {project_id}"
+        )
     except Exception as e:
         logger.error(f"Error emitting role_changed: {e}")
 
@@ -182,7 +186,10 @@ async def emit_member_update(project_id: str):
         room = f"project_{project_id}"
         await sio.emit(
             "members_updated",
-            {"project_id": project_id, "message": "Project members have been updated"},
+            {
+                "project_id": project_id,
+                "message": "Project members have been updated",
+            },
             room=room,
         )
         logger.info(f"Emitted members_updated for project {project_id}")
@@ -210,7 +217,9 @@ async def emit_content_update(project_id: str, content_type: str = "general"):
             },
             room=room,
         )
-        logger.info(f"Emitted content_updated ({content_type}) for project {project_id}")
+        logger.info(
+            f"Emitted content_updated ({content_type}) for project {project_id}"
+        )
     except Exception as e:
         logger.error(f"Error emitting content_update: {e}")
 
@@ -286,7 +295,10 @@ async def emit_timeline_update(project_id: str):
         room = f"project_{project_id}"
         await sio.emit(
             "timeline_updated",
-            {"project_id": project_id, "message": "Project timeline has been updated"},
+            {
+                "project_id": project_id,
+                "message": "Project timeline has been updated",
+            },
             room=room,
         )
         logger.info(f"Emitted timeline_updated for project {project_id}")

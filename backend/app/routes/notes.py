@@ -7,7 +7,14 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
 from app.minio_client import minio_client
-from app.models import FileNode, FileNodeType, Note, NoteAttachment, NoteFileLink, User
+from app.models import (
+    FileNode,
+    FileNodeType,
+    Note,
+    NoteAttachment,
+    NoteFileLink,
+    User,
+)
 from app.schemas import NoteCreate, NoteResponse, NoteUpdate
 from app.websocket import emit_content_update, log_activity
 
@@ -65,7 +72,9 @@ async def create_note(
         # Upload .txt content to object storage
         filename = f"{note.title}.txt"
         storage_path = f"notes/{note.project_id}/{note.id}.txt"
-        await minio_client.upload_file((note.content or "").encode("utf-8"), storage_path, "text/plain")
+        await minio_client.upload_file(
+            (note.content or "").encode("utf-8"), storage_path, "text/plain"
+        )
 
         # Mirror as FileNode
         note_node = FileNode(
@@ -103,11 +112,20 @@ async def create_note(
 
 
 @router.get("/project/{project_id}", response_model=list[NoteResponse])
-async def get_project_notes(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_project_notes(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Get all notes for a project"""
     check_project_permission(project_id, current_user, db)
 
-    notes = db.query(Note).filter(Note.project_id == project_id).order_by(Note.updated_at.desc()).all()
+    notes = (
+        db.query(Note)
+        .filter(Note.project_id == project_id)
+        .order_by(Note.updated_at.desc())
+        .all()
+    )
 
     # Add presigned URLs to attachments
     for note in notes:
@@ -118,17 +136,25 @@ async def get_project_notes(project_id: str, current_user: User = Depends(get_cu
 
 
 @router.get("/{note_id}", response_model=NoteResponse)
-async def get_note(note_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_note(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Get a specific note"""
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
     # Try to sync content from txt file if it exists
-    file_link = db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    file_link = (
+        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    )
     if file_link and file_link.file_node and file_link.file_node.storage_path:
         try:
             # Get content from txt file
@@ -163,12 +189,16 @@ async def update_note(
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
     # Get the linked file node
-    file_link = db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    file_link = (
+        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    )
     file_node = file_link.file_node if file_link else None
 
     # Update fields
@@ -184,7 +214,9 @@ async def update_note(
         # Update txt file content in MinIO
         if file_node and file_node.storage_path:
             content_bytes = (note_data.content or "").encode("utf-8")
-            await minio_client.upload_file(content_bytes, file_node.storage_path, "text/plain")
+            await minio_client.upload_file(
+                content_bytes, file_node.storage_path, "text/plain"
+            )
             file_node.size = str(len(content_bytes))
             file_node.updated_at = datetime.utcnow()
 
@@ -210,19 +242,34 @@ async def update_note(
 
 
 @router.post("/{note_id}/sync-from-file", response_model=NoteResponse)
-async def sync_note_from_file(note_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def sync_note_from_file(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Sync note content from its associated txt file"""
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
     # Get the linked file node
-    file_link = db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    if not file_link or not file_link.file_node or not file_link.file_node.storage_path:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No associated txt file found")
+    file_link = (
+        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    )
+    if (
+        not file_link
+        or not file_link.file_node
+        or not file_link.file_node.storage_path
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No associated txt file found",
+        )
 
     try:
         # Get content from txt file
@@ -249,21 +296,31 @@ async def sync_note_from_file(note_id: str, current_user: User = Depends(get_cur
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_note(note_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def delete_note(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Delete a note"""
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
     # Only author or project leader can delete
     if note.author_id != current_user.id:
-        check_project_permission(note.project_id, current_user, db, required_role="leader")
+        check_project_permission(
+            note.project_id, current_user, db, required_role="leader"
+        )
 
     # Delete txt file from MinIO
-    file_link = db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    file_link = (
+        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
+    )
     if file_link and file_link.file_node and file_link.file_node.storage_path:
         await minio_client.delete_file(file_link.file_node.storage_path)
         db.delete(file_link.file_node)
@@ -304,7 +361,9 @@ async def add_note_attachment(
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
@@ -324,13 +383,17 @@ async def add_note_attachment(
         "audio/m4a",
     }
     if (file.content_type or "") not in allowed:
-        raise HTTPException(status_code=400, detail=f"File type {file.content_type} not allowed")
+        raise HTTPException(
+            status_code=400, detail=f"File type {file.content_type} not allowed"
+        )
 
     # Upload to MinIO
     raw = await file.read()
     ext = (file.filename or "blob").split(".")[-1]
     object_name = f"notes/{note_id}/{uuid.uuid4()}.{ext}"
-    await minio_client.upload_file(raw, object_name, file.content_type or "application/octet-stream")
+    await minio_client.upload_file(
+        raw, object_name, file.content_type or "application/octet-stream"
+    )
 
     # Save attachment row
     attachment = NoteAttachment(
@@ -382,7 +445,9 @@ async def add_note_attachment(
         )
         .first()
     ):
-        candidate = f"{base or node_name} ({i}){dot}{ext2}" if dot else f"{node_name} ({i})"
+        candidate = (
+            f"{base or node_name} ({i}){dot}{ext2}" if dot else f"{node_name} ({i})"
+        )
         i += 1
 
     mirrored_node = FileNode(
@@ -422,7 +487,9 @@ async def add_note_attachment(
     }
 
 
-@router.delete("/{note_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{note_id}/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_note_attachment(
     note_id: str,
     attachment_id: str,
@@ -433,16 +500,24 @@ async def delete_note_attachment(
     note = db.query(Note).filter(Note.id == note_id).first()
 
     if not note:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
 
     check_project_permission(note.project_id, current_user, db)
 
     attachment = (
-        db.query(NoteAttachment).filter(NoteAttachment.id == attachment_id, NoteAttachment.note_id == note_id).first()
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.id == attachment_id, NoteAttachment.note_id == note_id
+        )
+        .first()
     )
 
     if not attachment:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
+        )
 
     # Delete from MinIO
     await minio_client.delete_file(attachment.file_path)

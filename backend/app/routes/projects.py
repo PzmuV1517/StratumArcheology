@@ -13,13 +13,25 @@ from app.schemas import (
     ProjectWithMembers,
     UserResponse,
 )
-from app.websocket import emit_member_kicked, emit_member_update, emit_role_changed, log_activity
+from app.websocket import (
+    emit_member_kicked,
+    emit_member_update,
+    emit_role_changed,
+    log_activity,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
-@router.post("/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
-@router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+@router.post(
+    "/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED
+)
+@router.post(
+    "",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 async def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
@@ -67,13 +79,19 @@ async def create_project(
 
 @router.get("/", response_model=list[ProjectResponse])
 @router.get("", response_model=list[ProjectResponse], include_in_schema=False)
-async def get_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_projects(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
     """Get all projects the user has access to"""
     # Get owned projects
     owned = db.query(Project).filter(Project.owner_id == current_user.id).all()
 
     # Get projects where user is a member
-    stmt = select(Project).join(project_members).where(project_members.c.user_id == current_user.id)
+    stmt = (
+        select(Project)
+        .join(project_members)
+        .where(project_members.c.user_id == current_user.id)
+    )
     member_projects = db.execute(stmt).scalars().all()
 
     # Combine and deduplicate
@@ -83,7 +101,11 @@ async def get_projects(current_user: User = Depends(get_current_user), db: Sessi
 
 
 @router.get("/{project_id}", response_model=ProjectWithMembers)
-async def get_project(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Get project details with members and their roles"""
 
     check_project_permission(project_id, current_user, db)
@@ -91,7 +113,9 @@ async def get_project(project_id: str, current_user: User = Depends(get_current_
     project = db.query(Project).filter(Project.id == project_id).first()
 
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     # Fetch members with their roles from the join table
     members_with_roles = db.execute(
@@ -104,7 +128,11 @@ async def get_project(project_id: str, current_user: User = Depends(get_current_
     members_list = []
     for user, role in members_with_roles:
         # Owner always has LEADER role
-        member_role = "leader" if user.id == project.owner_id else (role.value if role else "guest")
+        member_role = (
+            "leader"
+            if user.id == project.owner_id
+            else (role.value if role else "guest")
+        )
         members_list.append(
             {
                 "id": user.id,
@@ -140,7 +168,9 @@ async def update_project(
     project = db.query(Project).filter(Project.id == project_id).first()
 
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     if project.owner_id != current_user.id:
         raise HTTPException(
@@ -159,12 +189,18 @@ async def update_project(
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_project(project_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def delete_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Delete a project (owner only)"""
     project = db.query(Project).filter(Project.id == project_id).first()
 
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     if project.owner_id != current_user.id:
         raise HTTPException(
@@ -178,7 +214,11 @@ async def delete_project(project_id: str, current_user: User = Depends(get_curre
     return None
 
 
-@router.post("/{project_id}/members", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{project_id}/members",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_project_member(
     project_id: str,
     member_data: ProjectMemberAdd,
@@ -191,11 +231,14 @@ async def add_project_member(
     # Check if user exists
     user = db.query(User).filter(User.id == member_data.user_id).first()
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     # Check if already a member
     stmt = select(project_members).where(
-        project_members.c.project_id == project_id, project_members.c.user_id == member_data.user_id
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == member_data.user_id,
     )
     existing = db.execute(stmt).first()
 
@@ -206,7 +249,9 @@ async def add_project_member(
         )
 
     # Add member
-    stmt = project_members.insert().values(project_id=project_id, user_id=member_data.user_id, role=member_data.role)
+    stmt = project_members.insert().values(
+        project_id=project_id, user_id=member_data.user_id, role=member_data.role
+    )
     db.execute(stmt)
     db.commit()
 
@@ -223,7 +268,9 @@ async def add_project_member(
     return user
 
 
-@router.delete("/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{project_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def remove_project_member(
     project_id: str,
     user_id: str,
@@ -241,32 +288,42 @@ async def remove_project_member(
         current_user_role = "leader"
     else:
         stmt = select(project_members).where(
-            project_members.c.project_id == project_id, project_members.c.user_id == current_user.id
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == current_user.id,
         )
         result = db.execute(stmt).first()
         current_user_role = result.role.value if result else "guest"
 
     # Get target user's role
     target_stmt = select(project_members).where(
-        project_members.c.project_id == project_id, project_members.c.user_id == user_id
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == user_id,
     )
     target_result = db.execute(target_stmt).first()
 
     if not target_result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found in project")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found in project",
+        )
 
     target_role = target_result.role.value
 
     # Role hierarchy check: can only remove members with lower roles
     role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
 
-    if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(target_role, 0):
+    if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(
+        target_role, 0
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only remove members with lower roles than yours",
         )
 
-    stmt = project_members.delete().where(project_members.c.project_id == project_id, project_members.c.user_id == user_id)
+    stmt = project_members.delete().where(
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == user_id,
+    )
     db.execute(stmt)
     db.commit()
 
@@ -309,22 +366,31 @@ async def update_member_role(
         current_user_role = "leader"
     else:
         stmt = select(project_members).where(
-            project_members.c.project_id == project_id, project_members.c.user_id == current_user.id
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == current_user.id,
         )
         result = db.execute(stmt).first()
         current_user_role = result.role.value if result else "guest"
 
     # Get target user's current role
     target_stmt = select(project_members).where(
-        project_members.c.project_id == project_id, project_members.c.user_id == user_id
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == user_id,
     )
     target_result = db.execute(target_stmt).first()
 
     if not target_result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found in project")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found in project",
+        )
 
     target_current_role = target_result.role.value
-    new_role = role_data.role.lower() if isinstance(role_data.role, str) else role_data.role.value
+    new_role = (
+        role_data.role.lower()
+        if isinstance(role_data.role, str)
+        else role_data.role.value
+    )
 
     role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
 
@@ -348,11 +414,17 @@ async def update_member_role(
                 detail="Researchers can only promote guests to researcher",
             )
     else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Guests cannot modify member roles")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Guests cannot modify member roles",
+        )
 
     stmt = (
         project_members.update()
-        .where(project_members.c.project_id == project_id, project_members.c.user_id == user_id)
+        .where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == user_id,
+        )
         .values(role=new_role)
     )
 
@@ -367,7 +439,11 @@ async def update_member_role(
         activity_type="member_role_changed",
         description=f"{target_user.display_name if target_user else 'User'} role changed from {target_current_role} to {new_role}",
         user_id=current_user.id,
-        metadata={"member_id": user_id, "old_role": target_current_role, "new_role": new_role},
+        metadata={
+            "member_id": user_id,
+            "old_role": target_current_role,
+            "new_role": new_role,
+        },
     )
 
     # Emit WebSocket event to notify the user their role changed
@@ -391,7 +467,9 @@ async def transfer_ownership(
     project = db.query(Project).filter(Project.id == project_id).first()
 
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     if project.owner_id != current_user.id:
         raise HTTPException(
@@ -400,16 +478,23 @@ async def transfer_ownership(
         )
 
     if not new_owner_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New owner ID is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New owner ID is required",
+        )
 
     # Check if new owner is a member
     stmt = select(project_members).where(
-        project_members.c.project_id == project_id, project_members.c.user_id == new_owner_id
+        project_members.c.project_id == project_id,
+        project_members.c.user_id == new_owner_id,
     )
     new_owner_membership = db.execute(stmt).first()
 
     if not new_owner_membership:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New owner must be a project member")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New owner must be a project member",
+        )
 
     # Update project owner
     old_owner_id = project.owner_id
@@ -418,7 +503,10 @@ async def transfer_ownership(
     # Update new owner's role to leader
     stmt = (
         project_members.update()
-        .where(project_members.c.project_id == project_id, project_members.c.user_id == new_owner_id)
+        .where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == new_owner_id,
+        )
         .values(role="leader")
     )
     db.execute(stmt)
@@ -426,11 +514,17 @@ async def transfer_ownership(
     # Update old owner's role to researcher
     stmt = (
         project_members.update()
-        .where(project_members.c.project_id == project_id, project_members.c.user_id == old_owner_id)
+        .where(
+            project_members.c.project_id == project_id,
+            project_members.c.user_id == old_owner_id,
+        )
         .values(role="researcher")
     )
     db.execute(stmt)
 
     db.commit()
 
-    return {"message": "Ownership transferred successfully", "new_owner_id": new_owner_id}
+    return {
+        "message": "Ownership transferred successfully",
+        "new_owner_id": new_owner_id,
+    }

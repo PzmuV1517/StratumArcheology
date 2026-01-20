@@ -14,8 +14,12 @@ from app.websocket import emit_content_update, log_activity
 router = APIRouter(prefix="/forms", tags=["forms"])
 
 
-def _find_child_by_name(db: Session, project_id: str, parent_id: str | None, name: str) -> FileNode | None:
-    q = db.query(FileNode).filter(FileNode.project_id == project_id, FileNode.name == name)
+def _find_child_by_name(
+    db: Session, project_id: str, parent_id: str | None, name: str
+) -> FileNode | None:
+    q = db.query(FileNode).filter(
+        FileNode.project_id == project_id, FileNode.name == name
+    )
     if parent_id:
         q = q.filter(FileNode.parent_id == parent_id)
     else:
@@ -23,7 +27,9 @@ def _find_child_by_name(db: Session, project_id: str, parent_id: str | None, nam
     return q.first()
 
 
-def _ensure_locked_folder(db: Session, project_id: str, name: str, parent_id: str | None = None) -> FileNode:
+def _ensure_locked_folder(
+    db: Session, project_id: str, name: str, parent_id: str | None = None
+) -> FileNode:
     node = _find_child_by_name(db, project_id, parent_id, name)
     if node is None:
         node = FileNode(
@@ -62,7 +68,9 @@ def _ensure_locked_csv_file(
         writer.writerow(header)
         data_bytes = output.getvalue().encode("utf-8")
         # Upload and create node
-        awaitable = minio_client.upload_file(data_bytes, object_path, content_type="text/csv")
+        awaitable = minio_client.upload_file(
+            data_bytes, object_path, content_type="text/csv"
+        )
         # minio_client methods are async; but FastAPI handlers will call this inside async context
         # We'll execute upload in the handler; here we just prepare
         node = FileNode(
@@ -100,7 +108,9 @@ def _ensure_locked_csv_file(
         try:
             data = None
             # minio get_file returns None if missing
-            data = minio_client.client.get_object(minio_client.bucket_name, node.storage_path)
+            data = minio_client.client.get_object(
+                minio_client.bucket_name, node.storage_path
+            )
             # Stream read
             buf = data.read()
             data.close()
@@ -122,7 +132,9 @@ def _serialize_bool(v: bool | None) -> str:
     return "1" if v else "0"
 
 
-@router.post("/project/{project_id}/context-feature", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/project/{project_id}/context-feature", status_code=status.HTTP_201_CREATED
+)
 async def append_context_feature(
     project_id: str,
     payload: dict,
@@ -254,7 +266,9 @@ async def append_context_feature(
     ]
 
     # Ensure file and existing rows
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "context_features.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "context_features.csv", header
+    )
 
     # Append new row and upload entire content
     output = io.StringIO()
@@ -291,7 +305,9 @@ async def append_context_feature(
     return {"status": "ok"}
 
 
-@router.post("/project/{project_id}/stratigraphic-unit", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/project/{project_id}/stratigraphic-unit", status_code=status.HTTP_201_CREATED
+)
 async def append_stratigraphic_unit(
     project_id: str,
     payload: dict,
@@ -434,7 +450,9 @@ async def append_stratigraphic_unit(
         payload.get("dateChecked", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "stratigraphic_units.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "stratigraphic_units.csv", header
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -507,7 +525,9 @@ async def append_artefact(
         payload.get("otherObservations", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "artefacts.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "artefacts.csv", header
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)

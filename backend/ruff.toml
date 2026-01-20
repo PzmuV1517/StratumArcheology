@@ -1,9 +1,11 @@
 # Ruff configuration for STRATUM backend
 
-line-length = 125
-target-version = "py312"
+
 
 [lint]
+line-length = 85
+extend-select = ["I"]
+target-version = "py313"
 select = [
   "E",      # pycodestyle errors
   "W",      # pycodestyle warnings

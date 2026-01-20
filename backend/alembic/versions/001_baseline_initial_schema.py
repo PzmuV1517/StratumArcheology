@@ -49,8 +49,12 @@ def upgrade() -> None:
         sa.Column("email", sa.String(), nullable=False, unique=True),
         sa.Column("display_name", sa.String(), nullable=True),
         sa.Column("photo_url", sa.String(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
         sa.Column("last_login", sa.DateTime(), nullable=True),
     )
     op.create_index("ix_users_firebase_uid", "users", ["firebase_uid"])
@@ -63,17 +67,32 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("ran_lmi_id", sa.String(), nullable=True),
-        sa.Column("owner_id", sa.String(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
+        sa.Column(
+            "owner_id",
+            sa.String(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
         sa.Column("is_active", sa.Boolean(), default=True),
     )
 
     # Create project_members association table
     op.create_table(
         "project_members",
-        sa.Column("project_id", sa.String(), sa.ForeignKey("projects.id", ondelete="CASCADE")),
-        sa.Column("user_id", sa.String(), sa.ForeignKey("users.id", ondelete="CASCADE")),
+        sa.Column(
+            "project_id",
+            sa.String(),
+            sa.ForeignKey("projects.id", ondelete="CASCADE"),
+        ),
+        sa.Column(
+            "user_id", sa.String(), sa.ForeignKey("users.id", ondelete="CASCADE")
+        ),
         sa.Column("role", sa.String(), default="guest"),
         sa.Column("joined_at", sa.DateTime(), server_default=sa.func.now()),
     )
@@ -90,9 +109,18 @@ def upgrade() -> None:
             sa.ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("author_id", sa.String(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()),
+        sa.Column(
+            "author_id",
+            sa.String(),
+            sa.ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(), nullable=True, server_default=sa.func.now()
+        ),
         sa.Column("last_synced", sa.DateTime(), nullable=True),
     )
 
@@ -100,7 +128,12 @@ def upgrade() -> None:
     op.create_table(
         "note_attachments",
         sa.Column("id", sa.String(), primary_key=True),
-        sa.Column("note_id", sa.String(), sa.ForeignKey("notes.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "note_id",
+            sa.String(),
+            sa.ForeignKey("notes.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("filename", sa.String(), nullable=False),
         sa.Column("file_path", sa.String(), nullable=False),
         sa.Column("file_type", sa.String(), nullable=False),
@@ -135,13 +168,24 @@ def upgrade() -> None:
     )
     op.create_index("ix_file_nodes_project_id", "file_nodes", ["project_id"])
     op.create_index("ix_file_nodes_parent_id", "file_nodes", ["parent_id"])
-    op.create_index("ix_file_nodes_project_parent", "file_nodes", ["project_id", "parent_id"])
-    op.create_unique_constraint("uq_file_nodes_sibling_name", "file_nodes", ["project_id", "parent_id", "name"])
+    op.create_index(
+        "ix_file_nodes_project_parent", "file_nodes", ["project_id", "parent_id"]
+    )
+    op.create_unique_constraint(
+        "uq_file_nodes_sibling_name",
+        "file_nodes",
+        ["project_id", "parent_id", "name"],
+    )
 
     # Create note_file_links table
     op.create_table(
         "note_file_links",
-        sa.Column("note_id", sa.String(), sa.ForeignKey("notes.id", ondelete="CASCADE"), primary_key=True),
+        sa.Column(
+            "note_id",
+            sa.String(),
+            sa.ForeignKey("notes.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
         sa.Column(
             "file_node_id",
             sa.String(),
@@ -176,7 +220,12 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("role", sa.String(), nullable=False, server_default="guest"),
-        sa.Column("created_by", sa.String(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "created_by",
+            sa.String(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("expires_at", sa.DateTime(), nullable=True),
         sa.Column(
@@ -188,7 +237,9 @@ def upgrade() -> None:
         sa.Column("redeemed_at", sa.DateTime(), nullable=True),
     )
     op.create_index("ix_project_invites_code", "project_invites", ["code"])
-    op.create_index("ix_project_invites_project_id", "project_invites", ["project_id"])
+    op.create_index(
+        "ix_project_invites_project_id", "project_invites", ["project_id"]
+    )
 
     # Create project_activities table
     op.create_table(
@@ -200,13 +251,22 @@ def upgrade() -> None:
             sa.ForeignKey("projects.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("user_id", sa.String(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "user_id",
+            sa.String(),
+            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
         sa.Column("activity_type", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("extra_data", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
     )
-    op.create_index("ix_project_activities_project_created", "project_activities", ["project_id", "created_at"])
+    op.create_index(
+        "ix_project_activities_project_created",
+        "project_activities",
+        ["project_id", "created_at"],
+    )
 
 
 def downgrade() -> None:

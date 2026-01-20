@@ -46,7 +46,12 @@ class MinIOClient:
             print(f"✗ MinIO bucket error: {e}")
             raise
 
-    async def upload_file(self, file_data: bytes, object_name: str, content_type: str = "application/octet-stream") -> str:
+    async def upload_file(
+        self,
+        file_data: bytes,
+        object_name: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
         """Upload file to MinIO"""
         if not self.client:
             raise RuntimeError("MinIO client unavailable")
@@ -100,7 +105,9 @@ class MinIOClient:
         try:
             from datetime import timedelta
 
-            url = self.client.presigned_get_object(self.bucket_name, object_name, expires=timedelta(seconds=expiry))
+            url = self.client.presigned_get_object(
+                self.bucket_name, object_name, expires=timedelta(seconds=expiry)
+            )
             return url
         except S3Error as e:
             print(f"✗ Presigned URL error: {e}")

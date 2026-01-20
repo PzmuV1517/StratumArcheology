@@ -98,7 +98,11 @@ async def get_my_activities(
     from app.models import Project, project_members
 
     # Get all project IDs where user is a member
-    user_project_ids = db.query(project_members.c.project_id).filter(project_members.c.user_id == current_user.id).all()
+    user_project_ids = (
+        db.query(project_members.c.project_id)
+        .filter(project_members.c.user_id == current_user.id)
+        .all()
+    )
     project_ids = [p[0] for p in user_project_ids]
 
     if not project_ids:
@@ -107,7 +111,10 @@ async def get_my_activities(
     # Get activities by this user in their projects
     activities = (
         db.query(ProjectActivity)
-        .filter(ProjectActivity.user_id == current_user.id, ProjectActivity.project_id.in_(project_ids))
+        .filter(
+            ProjectActivity.user_id == current_user.id,
+            ProjectActivity.project_id.in_(project_ids),
+        )
         .order_by(ProjectActivity.created_at.desc())
         .limit(limit)
         .offset(offset)

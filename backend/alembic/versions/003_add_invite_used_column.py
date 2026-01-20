@@ -22,13 +22,21 @@ depends_on = None
 def upgrade():
     # Add the 'used' column to project_invites table
     # This column tracks whether a single-use invite has been redeemed
-    op.add_column("project_invites", sa.Column("used", sa.Boolean(), nullable=False, server_default="false"))
+    op.add_column(
+        "project_invites",
+        sa.Column("used", sa.Boolean(), nullable=False, server_default="false"),
+    )
 
     # Add 'max_uses' column for multi-use invites (None = unlimited)
-    op.add_column("project_invites", sa.Column("max_uses", sa.Integer(), nullable=True))
+    op.add_column(
+        "project_invites", sa.Column("max_uses", sa.Integer(), nullable=True)
+    )
 
     # Add 'use_count' column to track how many times an invite has been used
-    op.add_column("project_invites", sa.Column("use_count", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "project_invites",
+        sa.Column("use_count", sa.Integer(), nullable=False, server_default="0"),
+    )
 
 
 def downgrade():

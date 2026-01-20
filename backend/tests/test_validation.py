@@ -221,7 +221,9 @@ class TestPydanticModels:
 
     def test_file_upload_sanitizes_filename(self):
         """Test FileUploadRequest sanitizes filename"""
-        request = FileUploadRequest(filename="../../../etc/passwd", mime_type="text/plain")
+        request = FileUploadRequest(
+            filename="../../../etc/passwd", mime_type="text/plain"
+        )
         assert request.filename == "passwd"
 
     def test_file_upload_size_limit(self):
@@ -235,7 +237,11 @@ class TestPydanticModels:
 
     def test_note_create_validates(self):
         """Test NoteCreateValidated sanitizes input"""
-        note = NoteCreateValidated(title="  Test Note  ", content='<script>alert("xss")</script>', project_id="abc123")
+        note = NoteCreateValidated(
+            title="  Test Note  ",
+            content='<script>alert("xss")</script>',
+            project_id="abc123",
+        )
         assert note.title == "Test Note"
 
     def test_note_create_empty_title_fails(self):
@@ -248,7 +254,9 @@ class TestPydanticModels:
 
     def test_project_create_validates(self):
         """Test ProjectCreateValidated validates input"""
-        project = ProjectCreateValidated(name="Test Project", description="A test project", ran_lmi_id="RAN-123")
+        project = ProjectCreateValidated(
+            name="Test Project", description="A test project", ran_lmi_id="RAN-123"
+        )
         assert project.name == "Test Project"
         assert project.ran_lmi_id == "RAN-123"
 
@@ -260,7 +268,9 @@ class TestPydanticModels:
     def test_project_ran_lmi_invalid_chars(self):
         """Test RAN-LMI ID rejects invalid characters"""
         with pytest.raises(PydanticValidationError):
-            ProjectCreateValidated(name="Test Project", ran_lmi_id="RAN; DROP TABLE--")
+            ProjectCreateValidated(
+                name="Test Project", ran_lmi_id="RAN; DROP TABLE--"
+            )
 
 
 class TestEdgeCases:

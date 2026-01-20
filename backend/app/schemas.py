@@ -264,7 +264,9 @@ class SharedNotesResponse(BaseModel):
 class InviteCreateRequest(BaseModel):
     role: UserRole = UserRole.GUEST
     ttl_hours: int | None = None  # optional time-to-live in hours, default 14 days
-    max_uses: int | None = None  # None = unlimited uses, otherwise limit to this many redemptions
+    max_uses: int | None = (
+        None  # None = unlimited uses, otherwise limit to this many redemptions
+    )
 
 
 class InviteResponse(BaseModel):

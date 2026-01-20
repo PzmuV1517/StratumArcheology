@@ -33,7 +33,10 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         # Try to get user by email first to check if they exist
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
 
         # For now, we'll create a Firebase custom token and verify the user exists
         # In a real implementation, you'd verify the password with Firebase
@@ -52,20 +55,31 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 "user_id": user.id,
                 "firebase_uid": user.firebase_uid,
                 "email": user.email,
-                "exp": datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
+                "exp": datetime.utcnow()
+                + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
             }
 
-            jwt_token = jwt.encode(jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+            jwt_token = jwt.encode(
+                jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+            )
 
-            return AuthResponse(access_token=jwt_token, user=UserResponse.model_validate(user))
+            return AuthResponse(
+                access_token=jwt_token, user=UserResponse.model_validate(user)
+            )
 
         except Exception:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
 
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication failed",
+        )
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -75,11 +89,16 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == request.email).first()
         if existing_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
 
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
-            email=request.email, password=request.password, display_name=request.display_name
+            email=request.email,
+            password=request.password,
+            display_name=request.display_name,
         )
 
         # Create user in our database
@@ -100,21 +119,34 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             "user_id": user.id,
             "firebase_uid": user.firebase_uid,
             "email": user.email,
-            "exp": datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
+            "exp": datetime.utcnow()
+            + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
         }
 
-        jwt_token = jwt.encode(jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+        jwt_token = jwt.encode(
+            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        )
 
-        return AuthResponse(access_token=jwt_token, user=UserResponse.model_validate(user))
+        return AuthResponse(
+            access_token=jwt_token, user=UserResponse.model_validate(user)
+        )
 
     except firebase_auth.EmailAlreadyExistsError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Registration failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed",
+        )
 
 
 @router.post("/verify-token", response_model=AuthResponse)
-async def verify_firebase_token(request: FirebaseTokenRequest, db: Session = Depends(get_db)):
+async def verify_firebase_token(
+    request: FirebaseTokenRequest, db: Session = Depends(get_db)
+):
     """Verify Firebase ID token and return user data"""
     try:
         # Verify the Firebase ID token
@@ -124,7 +156,9 @@ async def verify_firebase_token(request: FirebaseTokenRequest, db: Session = Dep
         display_name = request.display_name or decoded_token.get("name", "")
 
         if not email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required"
+            )
 
         # Check if user exists in our database
         user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
@@ -155,15 +189,22 @@ async def verify_firebase_token(request: FirebaseTokenRequest, db: Session = Dep
             "exp": datetime.utcnow().timestamp() + (24 * 60 * 60),  # 24 hours
         }
 
-        access_token = jwt.encode(jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+        access_token = jwt.encode(
+            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        )
 
         return AuthResponse(access_token=access_token, user=user)
 
     except firebase_auth.InvalidIdTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Firebase token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Firebase token"
+        )
     except Exception as e:
         print(f"Auth error: {e}")  # For debugging
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Authentication failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication failed",
+        )
 
 
 @router.get("/me", response_model=UserResponse)
@@ -190,7 +231,11 @@ async def update_profile(
 
 
 @router.get("/users/search")
-async def search_users(query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def search_users(
+    query: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Search users by email or display name"""
     if len(query) < 3:
         raise HTTPException(
@@ -198,6 +243,14 @@ async def search_users(query: str, current_user: User = Depends(get_current_user
             detail="Search query must be at least 3 characters",
         )
 
-    users = db.query(User).filter((User.email.ilike(f"%{query}%")) | (User.display_name.ilike(f"%{query}%"))).limit(10).all()
+    users = (
+        db.query(User)
+        .filter(
+            (User.email.ilike(f"%{query}%"))
+            | (User.display_name.ilike(f"%{query}%"))
+        )
+        .limit(10)
+        .all()
+    )
 
     return users

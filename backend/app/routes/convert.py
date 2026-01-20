@@ -30,7 +30,10 @@ async def fetch_bytes(url: str) -> bytes:
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(url) as resp:
             if resp.status != 200:
-                raise HTTPException(status_code=502, detail=f"Upstream fetch failed: HTTP {resp.status}")
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Upstream fetch failed: HTTP {resp.status}",
+                )
             return await resp.read()
 
 
@@ -72,7 +75,9 @@ def write_ply_ascii(positions, colors=None) -> bytes:
     return "\n".join(header).encode("utf-8") + body
 
 
-def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
+def parse_las_python(
+    buf: bytes, max_points: int = 2_000_000
+) -> tuple[list, list | None]:
     # Minimal LAS parser similar to frontend; supports common formats 0-3 (no compression)
     import struct
 
@@ -91,7 +96,9 @@ def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> tuple[list, lis
             break
     if base < 0:
         peek = bytes(b[: min(n, 16)]).hex(" ")
-        raise ValueError(f"Not a LAS file (signature not found). First bytes: {peek}")
+        raise ValueError(
+            f"Not a LAS file (signature not found). First bytes: {peek}"
+        )
 
     def u8(off):
         return b[off]
@@ -193,7 +200,9 @@ def parse_las_python(buf: bytes, max_points: int = 2_000_000) -> tuple[list, lis
     return positions, colors
 
 
-def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
+def parse_las_ascii(
+    buf: bytes, max_points: int = 2_000_000
+) -> tuple[list, list | None]:
     """Very tolerant parser for LAS (Log ASCII Standard) well log files.
     This is NOT LiDAR LAS. We attempt to extract X/Y/Z-like columns from the ~ASCII section
     according to curve names defined in the ~Curves section. If suitable columns are not found,
@@ -233,7 +242,9 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
             ln = lines[i].strip()
             if ln.startswith("~"):  # next section
                 break
-            if ln and not ln.startswith("#"):  # typical curve line: NAME .UNIT : description
+            if ln and not ln.startswith(
+                "#"
+            ):  # typical curve line: NAME .UNIT : description
                 # take name up to first space or '.'
                 name = ln.split(":", 1)[0].strip()
                 name = name.split(".", 1)[0].strip()
@@ -304,9 +315,37 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
                     return j
         return -1
 
-    x_idx = find_idx_heur(["X", "XCOORD", "X_COORD", "X-COORD", "EASTING", "EAST", "UTME", "EASTINGUTM", "E", "XE"])
-    y_idx = find_idx_heur(["Y", "YCOORD", "Y_COORD", "Y-COORD", "NORTHING", "NORTH", "UTMN", "NORTHINGUTM", "N", "YN"])
-    z_idx = find_idx_heur(["Z", "ELEV", "ELEVATION", "HEIGHT", "TVD", "TVDSS", "MD", "DEPT", "DEPTH"])
+    x_idx = find_idx_heur(
+        [
+            "X",
+            "XCOORD",
+            "X_COORD",
+            "X-COORD",
+            "EASTING",
+            "EAST",
+            "UTME",
+            "EASTINGUTM",
+            "E",
+            "XE",
+        ]
+    )
+    y_idx = find_idx_heur(
+        [
+            "Y",
+            "YCOORD",
+            "Y_COORD",
+            "Y-COORD",
+            "NORTHING",
+            "NORTH",
+            "UTMN",
+            "NORTHINGUTM",
+            "N",
+            "YN",
+        ]
+    )
+    z_idx = find_idx_heur(
+        ["Z", "ELEV", "ELEVATION", "HEIGHT", "TVD", "TVDSS", "MD", "DEPT", "DEPTH"]
+    )
 
     # Latitude/Longitude fallback to XY (meters) if needed
     lat_idx = find_idx_heur(["LAT", "LATITUDE", "LATD"])
@@ -414,7 +453,9 @@ def parse_las_ascii(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
     return positions, None
 
 
-def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list | None]:
+def parse_laz_laspy(
+    buf: bytes, max_points: int = 2_000_000
+) -> tuple[list, list | None]:
     """Parse LAZ (compressed LAS) using laspy + lazrs, return positions and optional RGB colors.
     Falls back to elevation-only coloring on the frontend if RGB is absent.
     """
@@ -450,13 +491,18 @@ def parse_laz_laspy(buf: bytes, max_points: int = 2_000_000) -> tuple[list, list
         b = las.blue[::step]
         colors = []
         for ri, gi, bi in zip(r, g, b):
-            colors.extend([float(ri) / 65535.0, float(gi) / 65535.0, float(bi) / 65535.0])
+            colors.extend(
+                [float(ri) / 65535.0, float(gi) / 65535.0, float(bi) / 65535.0]
+            )
 
     return positions, colors
 
 
 @router.get("/pointcloud")
-async def convert_pointcloud(src: str = Query(..., description="Source URL to point cloud"), name: str | None = None):
+async def convert_pointcloud(
+    src: str = Query(..., description="Source URL to point cloud"),
+    name: str | None = None,
+):
     ext = detect_ext(name or src)
     extU = ext.upper()
     # Fast-path: pass-through formats
@@ -485,7 +531,9 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
         # store to MinIO
         key_base = hashlib.sha1((src or name or "").encode("utf-8")).hexdigest()
         object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        await minio_client.upload_file(
+            ply_bytes, object_name, "application/octet-stream"
+        )
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
@@ -501,11 +549,15 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"LAZ parse failed: {e}")
         if not positions:
-            raise HTTPException(status_code=400, detail="LAZ parse produced no points")
+            raise HTTPException(
+                status_code=400, detail="LAZ parse produced no points"
+            )
         ply_bytes = write_ply_ascii(positions, colors)
         key_base = hashlib.sha1((src or name or "").encode("utf-8")).hexdigest()
         object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        await minio_client.upload_file(
+            ply_bytes, object_name, "application/octet-stream"
+        )
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
@@ -517,7 +569,9 @@ async def convert_pointcloud(src: str = Query(..., description="Source URL to po
             detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.",
         )
 
-    raise HTTPException(status_code=400, detail=f"Unsupported point cloud format: {extU}")
+    raise HTTPException(
+        status_code=400, detail=f"Unsupported point cloud format: {extU}"
+    )
 
 
 @router.post("/pointcloud")
@@ -539,7 +593,9 @@ async def convert_pointcloud_upload(
 
     # Fast-path for PLY/PCD: store and return presigned URL
     if ext in ("ply", "pcd"):
-        key_base = hashlib.sha1((provided_name + str(len(data))).encode("utf-8")).hexdigest()
+        key_base = hashlib.sha1(
+            (provided_name + str(len(data))).encode("utf-8")
+        ).hexdigest()
         object_name = f"uploads/{key_base}.{ext}"
         await minio_client.upload_file(data, object_name, "application/octet-stream")
         url = minio_client.get_presigned_url(object_name, expiry=3600)
@@ -555,9 +611,13 @@ async def convert_pointcloud_upload(
             except Exception:
                 raise HTTPException(status_code=400, detail=f"LAS parse failed: {e}")
         ply_bytes = write_ply_ascii(positions, colors)
-        key_base = hashlib.sha1((provided_name + str(len(ply_bytes))).encode("utf-8")).hexdigest()
+        key_base = hashlib.sha1(
+            (provided_name + str(len(ply_bytes))).encode("utf-8")
+        ).hexdigest()
         object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        await minio_client.upload_file(
+            ply_bytes, object_name, "application/octet-stream"
+        )
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
@@ -567,11 +627,17 @@ async def convert_pointcloud_upload(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"LAZ parse failed: {e}")
         if not positions:
-            raise HTTPException(status_code=400, detail="LAZ parse produced no points")
+            raise HTTPException(
+                status_code=400, detail="LAZ parse produced no points"
+            )
         ply_bytes = write_ply_ascii(positions, colors)
-        key_base = hashlib.sha1((provided_name + str(len(ply_bytes))).encode("utf-8")).hexdigest()
+        key_base = hashlib.sha1(
+            (provided_name + str(len(ply_bytes))).encode("utf-8")
+        ).hexdigest()
         object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(ply_bytes, object_name, "application/octet-stream")
+        await minio_client.upload_file(
+            ply_bytes, object_name, "application/octet-stream"
+        )
         url = minio_client.get_presigned_url(object_name, expiry=3600)
         return JSONResponse({"ok": True, "format": "PLY", "url": url})
 
@@ -581,4 +647,6 @@ async def convert_pointcloud_upload(
             detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.",
         )
 
-    raise HTTPException(status_code=400, detail=f"Unsupported point cloud format: {extU}")
+    raise HTTPException(
+        status_code=400, detail=f"Unsupported point cloud format: {extU}"
+    )

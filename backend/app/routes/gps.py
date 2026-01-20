@@ -74,7 +74,10 @@ async def put_project_gps(
         activity_type="gps_updated",
         description="Updated GPS coordinates",
         user_id=current_user.id,
-        metadata={"has_work_area": state.work is not None, "sites_count": len(state.sites)},
+        metadata={
+            "has_work_area": state.work is not None,
+            "sites_count": len(state.sites),
+        },
     )
 
     return state

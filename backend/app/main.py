@@ -18,7 +18,17 @@ from app.config import settings
 from app.firebase_config import initialize_firebase
 from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
 from app.minio_client import minio_client
-from app.routes import activities, auth, convert, files, forms, gps, invites, notes, projects
+from app.routes import (
+    activities,
+    auth,
+    convert,
+    files,
+    forms,
+    gps,
+    invites,
+    notes,
+    projects,
+)
 from app.websocket import sio_app
 
 # Configure structured logging based on environment
@@ -108,7 +118,12 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app.main:app", host=settings.APP_HOST, port=settings.APP_PORT, reload=settings.APP_DEBUG)
+    uvicorn.run(
+        "app.main:app",
+        host=settings.APP_HOST,
+        port=settings.APP_PORT,
+        reload=settings.APP_DEBUG,
+    )
 
 
 # Mount Socket.IO app

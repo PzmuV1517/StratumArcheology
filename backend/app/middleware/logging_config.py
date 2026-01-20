@@ -22,7 +22,9 @@ import structlog
 
 # Context variables for request-scoped logging context
 # These allow us to attach user/project context to all log messages within a request
-_log_context: ContextVar[dict[str, Any] | None] = ContextVar("log_context", default=None)
+_log_context: ContextVar[dict[str, Any] | None] = ContextVar(
+    "log_context", default=None
+)
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
@@ -76,7 +78,9 @@ class LogContext:
         return self.__exit__(exc_type, exc_val, exc_tb)
 
 
-def add_log_context(logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+def add_log_context(
+    logger: structlog.BoundLogger, method_name: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
     """
     Structlog processor that adds contextual information to log events.
 

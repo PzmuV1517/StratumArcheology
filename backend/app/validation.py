@@ -154,7 +154,9 @@ def validate_gps_longitude(lon: float) -> float:
         ValueError: If longitude is out of range
     """
     if lon < -180 or lon > 180:
-        raise ValueError(f"Longitude must be between -180 and 180 degrees, got {lon}")
+        raise ValueError(
+            f"Longitude must be between -180 and 180 degrees, got {lon}"
+        )
     return lon
 
 
@@ -189,17 +191,27 @@ def detect_mime_type_from_bytes(file_data: bytes) -> str | None:
             return mime
 
     # Special case for WebP (RIFF....WEBP)
-    if file_data[:4] == b"RIFF" and len(file_data) >= 12 and file_data[8:12] == b"WEBP":
+    if (
+        file_data[:4] == b"RIFF"
+        and len(file_data) >= 12
+        and file_data[8:12] == b"WEBP"
+    ):
         return "image/webp"
 
     # Special case for WAV (RIFF....WAVE)
-    if file_data[:4] == b"RIFF" and len(file_data) >= 12 and file_data[8:12] == b"WAVE":
+    if (
+        file_data[:4] == b"RIFF"
+        and len(file_data) >= 12
+        and file_data[8:12] == b"WAVE"
+    ):
         return "audio/wav"
 
     return None
 
 
-def validate_file_type(file_data: bytes, filename: str, claimed_mime_type: str | None = None) -> str:
+def validate_file_type(
+    file_data: bytes, filename: str, claimed_mime_type: str | None = None
+) -> str:
     """
     Validate file type using magic bytes and extension.
 
@@ -218,7 +230,11 @@ def validate_file_type(file_data: bytes, filename: str, claimed_mime_type: str |
     _, ext = os.path.splitext(filename.lower())
 
     if ext in BLOCKED_EXTENSIONS:
-        raise ValidationError("file", f"File type '{ext}' is not allowed for security reasons", filename)
+        raise ValidationError(
+            "file",
+            f"File type '{ext}' is not allowed for security reasons",
+            filename,
+        )
 
     # Detect actual type from content
     detected_mime = detect_mime_type_from_bytes(file_data)
@@ -226,13 +242,17 @@ def validate_file_type(file_data: bytes, filename: str, claimed_mime_type: str |
     # If we detected a type, verify it's allowed
     if detected_mime:
         if detected_mime not in ALLOWED_MIME_TYPES:
-            raise ValidationError("file", f"File type '{detected_mime}' is not allowed", filename)
+            raise ValidationError(
+                "file", f"File type '{detected_mime}' is not allowed", filename
+            )
         return detected_mime
 
     # Fall back to claimed MIME type if detection failed
     if claimed_mime_type:
         if claimed_mime_type not in ALLOWED_MIME_TYPES:
-            raise ValidationError("file", f"File type '{claimed_mime_type}' is not allowed", filename)
+            raise ValidationError(
+                "file", f"File type '{claimed_mime_type}' is not allowed", filename
+            )
         return claimed_mime_type
 
     # Default to octet-stream for unknown types

@@ -74,7 +74,11 @@ class UploadCleanupTracker:
                     cleaned.append(obj)
                     logger.info("Cleaned up orphaned upload", object_name=obj)
             except Exception as e:
-                logger.warning("Failed to cleanup orphaned upload", object_name=obj, error=str(e))
+                logger.warning(
+                    "Failed to cleanup orphaned upload",
+                    object_name=obj,
+                    error=str(e),
+                )
         self._uploads.clear()
         return cleaned
 
@@ -214,7 +218,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         if hasattr(exc, "detail"):
             return str(exc.detail)
 
-        return messages.get(exc_type, "An unexpected error occurred. Please try again.")
+        return messages.get(
+            exc_type, "An unexpected error occurred. Please try again."
+        )
 
     def _get_status_code(self, exc: Exception) -> int:
         """
