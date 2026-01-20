@@ -309,7 +309,7 @@ export default function ProjectDetailScreen() {
           setProject(cached.project);
           setNotes(cached.notes);
           setMembers(cached.members);
-          Alert.alert('Offline Mode', 'Loaded cached version. Some data may be outdated.');
+          // Silent load from cache - user can see offline icon if they're offline
         } else {
           Alert.alert('Error', 'Failed to load project details and no offline cache available.');
         }

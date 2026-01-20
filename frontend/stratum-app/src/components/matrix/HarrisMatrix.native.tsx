@@ -187,7 +187,8 @@ export default function HarrisMatrix({ projectId, canEdit = true }: HarrisMatrix
             if (isOnline) {
               syncToServer();
             } else {
-              Alert.alert('Offline', 'Cannot sync while offline. Changes are saved locally.');
+              // Silent fail - user can see offline icon
+              console.log('[HarrisMatrix] Cannot sync while offline - changes saved locally');
             }
             break;
         }

@@ -5,7 +5,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Platform,
@@ -39,7 +38,8 @@ export default function ProjectsScreen() {
       const data = await projectService.getProjects();
       setProjects(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load projects');
+      // Silent fail - user can see offline icon if they're offline
+      console.error('Failed to load projects:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
