@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useGlobalSearchParams, Stack } from 'expo-router';
 import { projectService } from '../../src/services/projectService';
@@ -98,6 +99,7 @@ export default function ProjectDetailScreen() {
   const [HarrisMatrixComponent, setHarrisMatrixComponent] = useState<any>(null);
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Conflict resolution state
   const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
@@ -340,6 +342,24 @@ export default function ProjectDetailScreen() {
       setLoading(false);
     }
   };
+
+  // Pull-to-refresh handler for mobile
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const [projectData, notesData] = await Promise.all([
+        projectService.getProject(id),
+        noteService.getNotes(id),
+      ]);
+      setProject(projectData);
+      setNotes(notesData);
+      setMembers(projectData.members || []);
+    } catch (error) {
+      console.error('Error refreshing project:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [id]);
 
   // Check for file conflicts
   const checkForConflicts = async () => {
@@ -962,7 +982,21 @@ export default function ProjectDetailScreen() {
         }}
       />
 
-      <ScrollView style={styles.content} scrollEnabled={activeTab !== 'matrix'}>
+      <ScrollView
+        style={styles.content}
+        scrollEnabled={activeTab !== 'matrix'}
+        refreshControl={
+          Platform.OS !== 'web' ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#C41E3A"
+              colors={['#C41E3A']}
+              progressBackgroundColor="#1C1C1E"
+            />
+          ) : undefined
+        }
+      >
         {/* Tab Content */}
         <View style={styles.tabContent}>
           {activeTab === 'overview' ? (

@@ -202,18 +202,21 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         }
         
         .modal-content {
-            background: white;
+            background: var(--panel-bg, #151a23);
             padding: 20px;
             border-radius: 12px;
             width: 90%;
             max-width: 400px;
             max-height: 80vh;
             overflow-y: auto;
+            color: var(--text-color, #d3d8e4);
+            border: 1px solid var(--border-color, #283041);
         }
         
         .modal-content h4 {
             margin: 0 0 15px 0;
             font-size: 18px;
+            color: var(--header-color, #e6eaf2);
         }
         
         .modal-content input,
@@ -225,6 +228,8 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 16px;
+            background: var(--container-bg, #141820);
+            color: var(--text-color, #d3d8e4);
         }
         
         .modal-content label {
@@ -232,6 +237,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             margin-bottom: 5px;
             font-weight: 600;
             font-size: 14px;
+            color: var(--text-color, #d3d8e4);
         }
         
         .modal-buttons {
@@ -260,13 +266,15 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             bottom: 70px;
             left: 10px;
             right: 10px;
-            background: white;
+            background: var(--panel-bg, #151a23);
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             max-height: 200px;
             overflow-y: auto;
             display: none;
+            color: var(--text-color, #d3d8e4);
+            border: 1px solid var(--border-color, #283041);
         }
         
         .info-panel.visible { display: block; }
@@ -277,6 +285,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: var(--header-color, #e6eaf2);
         }
         
         .close-btn {
@@ -286,6 +295,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             cursor: pointer;
             padding: 0;
             line-height: 1;
+            color: var(--text-color, #d3d8e4);
         }
         
         .stats-grid {
@@ -297,7 +307,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         
         .stat-item {
             padding: 10px;
-            background: var(--panel-bg);
+            background: var(--container-bg, #141820);
             border-radius: 8px;
         }
         
@@ -309,7 +319,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         
         .stat-label {
             font-size: 12px;
-            color: #6c757d;
+            color: var(--muted-text, #9aa4b2);
         }
     </style>
 </head>

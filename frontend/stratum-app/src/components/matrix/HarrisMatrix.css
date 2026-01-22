@@ -764,16 +764,19 @@
   z-index: 1000;
 }
 .harris-matrix .modal-content {
-  background: white;
+  background: var(--panel-bg, #151a23);
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   width: 400px;
   max-height: 80vh;
   overflow-y: auto;
+  color: var(--text-color, #d3d8e4);
+  border: 1px solid var(--border-color, #283041);
 }
 .harris-matrix .modal-content h4 {
   margin: 0 0 12px 0;
+  color: var(--header-color, #e6eaf2);
 }
 .harris-matrix .modal-content input,
 .harris-matrix .modal-content select,
@@ -784,6 +787,8 @@
   border: 1px solid var(--border-color);
   border-radius: 4px;
   box-sizing: border-box;
+  background: var(--container-bg, #141820);
+  color: var(--text-color, #d3d8e4);
 }
 .harris-matrix .modal-buttons {
   display: flex;
