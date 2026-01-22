@@ -121,13 +121,100 @@ export default function FilesOverlay({
   const warnedMissingProject = useRef(false);
 
   // Check if we're already inside the user's personal folder (or a subfolder of it)
+  // This works both when using the My Folder button and when navigating manually
   const isInMyFolder = useMemo(() => {
-    if (!myFolderId) return false;
-    // Check if current folder IS the user's folder
-    if (currentFolder?.id === myFolderId) return true;
-    // Check if any breadcrumb is the user's folder (meaning we're in a subfolder)
-    return breadcrumbs?.some((b) => b.id === myFolderId) ?? false;
-  }, [myFolderId, currentFolder?.id, breadcrumbs]);
+    // Method 1: We've previously navigated via My Folder button and have the ID
+    if (myFolderId) {
+      if (currentFolder?.id === myFolderId) return true;
+      if (breadcrumbs?.some((b) => b.id === myFolderId)) return true;
+    }
+
+    // Method 2: Check if we're in a folder named after the current user ID
+    // (for when navigating manually through /users/[userId])
+    if (currentUserId) {
+      // Check if current folder name is the user's ID
+      if (currentFolder?.name === currentUserId) {
+        // Also store the folder ID for future reference
+        if (currentFolder?.id && !myFolderId) {
+          setMyFolderId(currentFolder.id);
+        }
+        return true;
+      }
+      // Check if any breadcrumb has a folder named after the user ID
+      const userFolderBreadcrumb = breadcrumbs?.find(
+        (b) => b.name === currentUserId,
+      );
+      if (userFolderBreadcrumb) {
+        // Store the folder ID for future reference
+        if (userFolderBreadcrumb.id && !myFolderId) {
+          setMyFolderId(userFolderBreadcrumb.id);
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }, [myFolderId, currentFolder?.id, currentFolder?.name, breadcrumbs, currentUserId]);
+
+  // Check if we're inside the /users folder (where personal folders are stored)
+  const isInsideUsersFolder = useMemo(() => {
+    // We're in the users folder if the current folder is named "users" (root level)
+    // or if "users" appears in the breadcrumbs (but not as the current folder itself)
+    if (currentFolder?.name?.toLowerCase() === "users") return true;
+    return breadcrumbs?.some((b) => b.name?.toLowerCase() === "users") ?? false;
+  }, [currentFolder?.name, breadcrumbs]);
+
+  // Helper to get username from user ID
+  const getUsernameForId = useCallback(
+    (userId: string): string | null => {
+      const member = projectMembers.find((m) => m.id === userId);
+      return member?.display_name || null;
+    },
+    [projectMembers],
+  );
+
+  // Get display name for a node (handles user ID -> username transformation for /users subfolders)
+  const getDisplayName = useCallback(
+    (node: FileNode): string => {
+      // If we're inside the /users folder and this is a folder, check if the name is a user ID
+      if (isInsideUsersFolder && node.type === "folder") {
+        // Check if this folder name looks like a user ID (UUID format or Firebase ID)
+        const isLikelyUserId =
+          /^[a-f0-9-]{36}$/i.test(node.name) || // UUID
+          /^[a-zA-Z0-9]{20,}$/.test(node.name); // Firebase UID
+
+        if (isLikelyUserId) {
+          const username = getUsernameForId(node.name);
+          if (username) return username;
+        }
+      }
+      return node.name;
+    },
+    [isInsideUsersFolder, getUsernameForId],
+  );
+
+  // Get display name for a breadcrumb (handles user ID -> username transformation)
+  const getBreadcrumbDisplayName = useCallback(
+    (crumbName: string, crumbIndex: number): string => {
+      // Check if any earlier breadcrumb is "users" - meaning this crumb is inside /users
+      const hasUsersInPath = breadcrumbs?.some(
+        (b, i) => i < crumbIndex && b.name?.toLowerCase() === "users",
+      );
+
+      if (hasUsersInPath) {
+        const isLikelyUserId =
+          /^[a-f0-9-]{36}$/i.test(crumbName) || // UUID
+          /^[a-zA-Z0-9]{20,}$/.test(crumbName); // Firebase UID
+
+        if (isLikelyUserId) {
+          const username = getUsernameForId(crumbName);
+          if (username) return username;
+        }
+      }
+      return crumbName;
+    },
+    [breadcrumbs, getUsernameForId],
+  );
 
   // Navigate to user's personal folder (creates if doesn't exist)
   const handleGoToMyFolder = useCallback(async () => {
@@ -919,32 +1006,34 @@ export default function FilesOverlay({
                     { id: null, name: "Root" },
                     ...(currentFolder ? [currentFolder] : []),
                   ]
-              ).map((crumb, idx, arr) => (
-                <View
-                  key={`${crumb.id ?? "root"}-${idx}`}
-                  style={{ flexDirection: "row", alignItems: "center" }}
-                >
-                  {idx < arr.length - 1 ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (idx === 0) onLoadRoot();
-                        if (onNavigateBreadcrumb) onNavigateBreadcrumb(idx);
-                      }}
-                    >
-                      <Text style={{ color: "#FF2A2A" }}>
-                        {idx === 0 ? "Root" : crumb.name}
+              ).map((crumb, idx, arr) => {
+                const displayName =
+                  idx === 0 ? "Root" : getBreadcrumbDisplayName(crumb.name, idx);
+                return (
+                  <View
+                    key={`${crumb.id ?? "root"}-${idx}`}
+                    style={{ flexDirection: "row", alignItems: "center" }}
+                  >
+                    {idx < arr.length - 1 ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (idx === 0) onLoadRoot();
+                          if (onNavigateBreadcrumb) onNavigateBreadcrumb(idx);
+                        }}
+                      >
+                        <Text style={{ color: "#FF2A2A" }}>{displayName}</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={{ color: "#9A9A9A" }}>{displayName}</Text>
+                    )}
+                    {idx < arr.length - 1 && (
+                      <Text style={{ color: "#9A9A9A", marginHorizontal: 6 }}>
+                        /
                       </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={{ color: "#9A9A9A" }}>
-                      {idx === 0 ? "Root" : crumb.name}
-                    </Text>
-                  )}
-                  {idx < arr.length - 1 && (
-                    <Text style={{ color: "#9A9A9A", marginHorizontal: 6 }}>/</Text>
-                  )}
-                </View>
-              ))}
+                    )}
+                  </View>
+                );
+              })}
             </View>
 
             {fileNodes.length > 0 ? (
@@ -1046,7 +1135,11 @@ export default function FilesOverlay({
                           : onOpenFile(node)
                       }
                     >
-                      {renderNameWithExtension(node.name, searchQuery, exactOnly)}
+                      {renderNameWithExtension(
+                        getDisplayName(node),
+                        searchQuery,
+                        exactOnly,
+                      )}
                     </TouchableOpacity>
                     {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
                     {offlineFileIds.has(node.id) && (

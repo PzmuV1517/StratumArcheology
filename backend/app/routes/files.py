@@ -637,10 +637,43 @@ async def create_folder(
         if parent.type != FileNodeType.FOLDER:
             raise HTTPException(status_code=400, detail="Parent must be a folder")
 
+    # Handle duplicate folder names by appending (1), (2), etc.
+    base_name = folder.name
+    final_name = base_name
+
+    existing = (
+        db.query(FileNode)
+        .filter(
+            FileNode.project_id == project_id,
+            FileNode.parent_id == folder.parent_id,
+            FileNode.name == final_name,
+            FileNode.type == FileNodeType.FOLDER,
+        )
+        .first()
+    )
+
+    if existing:
+        counter = 1
+        while True:
+            final_name = f"{base_name} ({counter})"
+            exists = (
+                db.query(FileNode)
+                .filter(
+                    FileNode.project_id == project_id,
+                    FileNode.parent_id == folder.parent_id,
+                    FileNode.name == final_name,
+                    FileNode.type == FileNodeType.FOLDER,
+                )
+                .first()
+            )
+            if not exists:
+                break
+            counter += 1
+
     node = FileNode(
         project_id=project_id,
         parent_id=folder.parent_id,
-        name=folder.name,
+        name=final_name,
         type=FileNodeType.FOLDER,
     )
     db.add(node)
@@ -887,10 +920,53 @@ async def upload_file(
     # Calculate checksum for integrity checking
     file_checksum = hashlib.md5(data).hexdigest()
 
+    # Handle duplicate file names by appending (1), (2), etc.
+    base_name = file.filename or "file"
+    final_name = base_name
+
+    # Check if a file with this name already exists in the same folder
+    existing = (
+        db.query(FileNode)
+        .filter(
+            FileNode.project_id == project_id,
+            FileNode.parent_id == parent_id,
+            FileNode.name == final_name,
+            FileNode.type == FileNodeType.FILE,
+        )
+        .first()
+    )
+
+    if existing:
+        # Split name and extension
+        if "." in base_name:
+            name_part, ext_part = base_name.rsplit(".", 1)
+            ext_part = "." + ext_part
+        else:
+            name_part = base_name
+            ext_part = ""
+
+        # Find next available number
+        counter = 1
+        while True:
+            final_name = f"{name_part} ({counter}){ext_part}"
+            exists = (
+                db.query(FileNode)
+                .filter(
+                    FileNode.project_id == project_id,
+                    FileNode.parent_id == parent_id,
+                    FileNode.name == final_name,
+                    FileNode.type == FileNodeType.FILE,
+                )
+                .first()
+            )
+            if not exists:
+                break
+            counter += 1
+
     node = FileNode(
         project_id=project_id,
         parent_id=parent_id,
-        name=file.filename or "file",
+        name=final_name,
         type=FileNodeType.FILE,
         mime_type=file.content_type,
         size=str(len(data)),
