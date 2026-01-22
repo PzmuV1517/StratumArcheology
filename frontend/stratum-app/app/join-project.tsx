@@ -249,7 +249,7 @@ export default function JoinProjectScreen() {
         <View style={styles.infoSection}>
           <Ionicons name="information-circle-outline" size={20} color="#666" />
           <Text style={styles.infoText}>
-            Ask the project leader for an invite link or code. Once you join, you'll be able to view
+            Ask the project leader for an invite link or code. Once you join, you will be able to view
             and contribute to the project based on your assigned role.
           </Text>
         </View>
