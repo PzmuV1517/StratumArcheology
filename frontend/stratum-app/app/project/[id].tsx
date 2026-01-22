@@ -531,7 +531,13 @@ export default function ProjectDetailScreen() {
           else if (lower.endsWith(".png")) mime = "image/png";
           else if (lower.endsWith(".heic")) mime = "image/heic";
         }
-        const fileName = asset.name || asset.uri.split("/").pop() || "upload";
+        // Decode URL-encoded characters in filename (e.g., %20 -> space)
+        let fileName = asset.name || asset.uri.split("/").pop() || "upload";
+        try {
+          fileName = decodeURIComponent(fileName);
+        } catch {
+          // Already decoded or invalid encoding, use as-is
+        }
         const file = new File([blob], fileName, { type: mime });
         formData.append("file", file, fileName);
         console.log("DEBUG: Appended File to FormData:", {
@@ -541,7 +547,13 @@ export default function ProjectDetailScreen() {
         });
       } else {
         // On native, use the { uri, name, type } shape that RN FormData accepts
-        const fileName = asset.name || asset.uri.split("/").pop() || "upload";
+        // Decode URL-encoded characters in filename (e.g., %20 -> space)
+        let fileName = asset.name || asset.uri.split("/").pop() || "upload";
+        try {
+          fileName = decodeURIComponent(fileName);
+        } catch {
+          // Already decoded or invalid encoding, use as-is
+        }
 
         // Properly detect MIME type from file extension
         const getMimeType = (filename: string, fallbackMime?: string): string => {
@@ -711,6 +723,16 @@ export default function ProjectDetailScreen() {
       node.mime_type?.startsWith("video/") || /\.(mp4|webm|ogg|mov)$/i.test(lower2);
     const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
     const isMesh = /\.(glb|gltf)$/i.test(lower2);
+    const isUnsupported3D = /\.(obj|fbx|dae|3ds|stl)$/i.test(lower2);
+
+    if (isUnsupported3D) {
+      Alert.alert(
+        "Unsupported Format",
+        `${lower2.split(".").pop()?.toUpperCase()} files cannot be previewed yet. Only GLB and GLTF 3D formats are currently supported.\n\nYou can still download this file.`,
+        [{ text: "OK" }],
+      );
+      return;
+    }
 
     if (isMesh) {
       router.push({

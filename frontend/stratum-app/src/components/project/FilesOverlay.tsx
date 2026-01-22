@@ -342,7 +342,15 @@ export default function FilesOverlay({
       try {
         for (const file of files) {
           // Use the file's actual name - DocumentPicker provides it correctly
+          // Decode URL-encoded characters (e.g., %20 -> space)
           let fileName = file.name;
+          if (fileName) {
+            try {
+              fileName = decodeURIComponent(fileName);
+            } catch {
+              // Already decoded or invalid encoding, use as-is
+            }
+          }
 
           // Only generate a name if truly missing (camera photos without name)
           if (!fileName || fileName === "undefined") {
@@ -354,7 +362,12 @@ export default function FilesOverlay({
             } else {
               // For other files, try to get from URI or use generic name
               const uriParts = file.uri.split("/");
-              const lastPart = uriParts[uriParts.length - 1];
+              let lastPart = uriParts[uriParts.length - 1];
+              try {
+                lastPart = decodeURIComponent(lastPart);
+              } catch {
+                // Already decoded
+              }
               if (lastPart && lastPart.includes(".")) {
                 fileName = lastPart;
               } else {

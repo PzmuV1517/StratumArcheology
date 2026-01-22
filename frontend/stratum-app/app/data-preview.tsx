@@ -662,8 +662,16 @@ export default function DataPreviewScreen() {
 
   const isMesh = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || "";
+    // Note: OBJ files are not supported by model-viewer, only glTF/GLB
+    // OBJ would need conversion or a different viewer (e.g., three.js with OBJLoader)
     return /\.(glb|gltf)$/.test(ext) || kind === "mesh";
   }, [name, kind]);
+
+  // Check if this is an unsupported 3D format
+  const isUnsupported3D = useMemo(() => {
+    const ext = (name as string)?.toLowerCase() || "";
+    return /\.(obj|fbx|dae|3ds|stl)$/.test(ext);
+  }, [name]);
 
   const isAudio = useMemo(() => {
     const ext = (name as string)?.toLowerCase() || "";
