@@ -627,7 +627,7 @@ export default function ProjectDetailScreen() {
       }
 
       // Call the API directly with formData
-      const response = await fileService.uploadFile(id as string, formData);
+      const response = await fileService.uploadFormData(id as string, formData);
       console.log("Upload success:", response);
 
       if (currentFolder?.id)

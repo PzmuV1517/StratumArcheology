@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -19,7 +20,7 @@ class ActivityResponse(BaseModel):
     user_name: str | None
     activity_type: str
     description: str
-    extra_data: str | None
+    extra_data: dict | None
     created_at: datetime
 
     class Config:
@@ -62,6 +63,14 @@ async def get_project_activities(
             if user:
                 user_name = user.display_name or user.email
 
+        # Parse extra_data from JSON string to dict
+        extra_data = None
+        if activity.extra_data:
+            try:
+                extra_data = json.loads(activity.extra_data)
+            except (json.JSONDecodeError, TypeError):
+                extra_data = None
+
         result.append(
             {
                 "id": activity.id,
@@ -70,7 +79,7 @@ async def get_project_activities(
                 "user_name": user_name,
                 "activity_type": activity.activity_type.value,
                 "description": activity.description,
-                "extra_data": activity.extra_data,
+                "extra_data": extra_data,
                 "created_at": activity.created_at,
             }
         )
@@ -127,6 +136,14 @@ async def get_my_activities(
 
     result = []
     for activity in activities:
+        # Parse extra_data from JSON string to dict
+        extra_data = None
+        if activity.extra_data:
+            try:
+                extra_data = json.loads(activity.extra_data)
+            except (json.JSONDecodeError, TypeError):
+                extra_data = None
+
         result.append(
             {
                 "id": activity.id,
@@ -136,7 +153,7 @@ async def get_my_activities(
                 "user_name": current_user.display_name or current_user.email,
                 "activity_type": activity.activity_type.value,
                 "description": activity.description,
-                "extra_data": activity.extra_data,
+                "extra_data": extra_data,
                 "created_at": activity.created_at,
             }
         )
