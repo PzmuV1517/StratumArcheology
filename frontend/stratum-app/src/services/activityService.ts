@@ -97,8 +97,10 @@ export const activityService = {
   /**
    * Get human-readable description for an activity
    */
-  getActivityDescription: (activity: ProjectActivity): string => {
-    const userName = activity.user_display_name || activity.user_email || 'Someone';
+  getActivityDescription: (activity: ProjectActivity, currentUserId?: string): string => {
+    // Show "You" for the current user's actions
+    const isCurrentUser = currentUserId && activity.user_id === currentUserId;
+    const userName = isCurrentUser ? 'You' : (activity.user_display_name || activity.user_email || 'Someone');
     const extra = activity.extra_data || {};
 
     const descriptions: Record<string, string> = {
@@ -110,7 +112,9 @@ export const activityService = {
       // Members
       [ActivityType.MEMBER_JOINED]: `${userName} joined the project`,
       [ActivityType.MEMBER_LEFT]: `${userName} left the project`,
-      [ActivityType.MEMBER_ROLE_CHANGED]: `${userName}'s role changed from ${extra.old_role} to ${extra.new_role}`,
+      [ActivityType.MEMBER_ROLE_CHANGED]: isCurrentUser 
+        ? `Your role changed from ${extra.old_role} to ${extra.new_role}`
+        : `${userName}'s role changed from ${extra.old_role} to ${extra.new_role}`,
       [ActivityType.OWNERSHIP_TRANSFERRED]: `${userName} transferred ownership`,
 
       // Files
@@ -144,14 +148,28 @@ export const activityService = {
    * Format activity timestamp
    */
   formatTimestamp: (timestamp: string): string => {
-    const date = new Date(timestamp);
+    // Parse the timestamp - backend may send UTC without timezone marker
+    let date: Date;
+    if (timestamp.endsWith('Z') || timestamp.includes('+') || timestamp.includes('-', 10)) {
+      // Already has timezone info
+      date = new Date(timestamp);
+    } else {
+      // Assume UTC if no timezone
+      date = new Date(timestamp + 'Z');
+    }
+    
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+    
+    // Handle negative differences (future dates or clock skew)
+    if (diffMs < 0) return 'Just now';
+    
+    const diffSecs = Math.floor(diffMs / 1000);
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffSecs < 60) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;

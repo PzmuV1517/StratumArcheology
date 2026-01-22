@@ -28,26 +28,48 @@ export default function ImagePreviewScreen() {
           const token = await AsyncStorage.getItem('authToken');
           try {
             const result: any = await fileService.downloadFileStream(nodeId, token, undefined);
-            const url = window.URL.createObjectURL(result.blob);
-            if (!revoked) setBlobUrl(url);
-          } catch {
-            const res = await fileService.downloadFile(nodeId);
-            const url = window.URL.createObjectURL(res.data);
-            if (!revoked) setBlobUrl(url);
+            if (result && result.blob) {
+              const url = window.URL.createObjectURL(result.blob);
+              if (!revoked) setBlobUrl(url);
+            } else {
+              throw new Error('No blob returned');
+            }
+          } catch (streamErr) {
+            console.warn('[ImagePreview] Stream download failed, trying fallback:', streamErr);
+            try {
+              const res = await fileService.downloadFile(nodeId);
+              if (res && res.data) {
+                const url = window.URL.createObjectURL(res.data);
+                if (!revoked) setBlobUrl(url);
+              } else {
+                throw new Error('No data returned from fallback');
+              }
+            } catch (fallbackErr) {
+              console.error('[ImagePreview] Fallback download failed:', fallbackErr);
+              if (!revoked) setError('Failed to load image');
+            }
           }
         } else {
           // On native, downloadFile returns { uri, contentLength, mimeType }
-          const res = await fileService.downloadFile(nodeId, name as string);
-          if (!revoked && res.uri) {
-            // Use the local file URI directly for native platforms
-            setBlobUrl(res.uri);
+          try {
+            const res = await fileService.downloadFile(nodeId, name as string);
+            console.log('[ImagePreview] Native download result:', res);
+            if (!revoked && res && res.uri) {
+              // Use the local file URI directly for native platforms
+              setBlobUrl(res.uri);
+            } else {
+              if (!revoked) setError('Failed to load image - no URI returned');
+            }
+          } catch (nativeErr) {
+            console.error('[ImagePreview] Native download failed:', nativeErr);
+            if (!revoked) setError('Failed to load image');
           }
         }
       } catch (e) {
-        console.error(e);
-        setError('Failed to load image');
+        console.error('[ImagePreview] Unexpected error:', e);
+        if (!revoked) setError('Failed to load image');
       } finally {
-        setLoading(false);
+        if (!revoked) setLoading(false);
       }
     })();
     return () => {
@@ -58,7 +80,7 @@ export default function ImagePreviewScreen() {
         } catch {}
       }
     };
-  }, [nodeId]);
+  }, [nodeId, name]);
 
   const handleDownload = async () => {
     if (!blobUrl) return;

@@ -174,8 +174,15 @@ export default function ProjectDetailScreen() {
     const handleMembersUpdated = (data: any) => {
       console.log('[Project] Received members_updated event:', data);
       if (data.project_id === id) {
-        // Refresh only members list, not entire project
-        loadProjectData();
+        // Silently refresh only members list without UI disruption
+        (async () => {
+          try {
+            const updated = await projectService.getProject(id as string);
+            setMembers(updated?.members || []);
+          } catch (e) {
+            console.warn('[Project] Silent members refresh failed:', e);
+          }
+        })();
       }
     };
 
@@ -183,8 +190,20 @@ export default function ProjectDetailScreen() {
     const handleContentUpdated = (data: any) => {
       console.log('[Project] Received content_updated event:', data);
       if (data.project_id === id) {
-        // Refresh project data when content changes
-        loadProjectData();
+        // Silently refresh data without UI disruption - only refresh relevant data
+        (async () => {
+          try {
+            const [projectData, notesData] = await Promise.all([
+              projectService.getProject(id as string),
+              noteService.getNotes(id as string),
+            ]);
+            setProject(projectData);
+            setNotes(notesData);
+            setMembers(projectData?.members || []);
+          } catch (e) {
+            console.warn('[Project] Silent content refresh failed:', e);
+          }
+        })();
       }
     };
 
@@ -468,13 +487,64 @@ export default function ProjectDetailScreen() {
       } else {
         // On native, use the { uri, name, type } shape that RN FormData accepts
         const fileName = asset.name || asset.uri.split('/').pop() || 'upload';
-        const fileType =
-          asset.mimeType ||
-          (fileName.toLowerCase().endsWith('.png')
-            ? 'image/png'
-            : fileName.toLowerCase().match(/\.jpe?g$/)
-              ? 'image/jpeg'
-              : 'application/octet-stream');
+        
+        // Properly detect MIME type from file extension
+        const getMimeType = (filename: string, fallbackMime?: string): string => {
+          const lower = filename.toLowerCase();
+          // Images
+          if (lower.endsWith('.png')) return 'image/png';
+          if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+          if (lower.endsWith('.gif')) return 'image/gif';
+          if (lower.endsWith('.webp')) return 'image/webp';
+          if (lower.endsWith('.heic') || lower.endsWith('.heif')) return 'image/heic';
+          if (lower.endsWith('.svg')) return 'image/svg+xml';
+          if (lower.endsWith('.bmp')) return 'image/bmp';
+          if (lower.endsWith('.ico')) return 'image/x-icon';
+          // Documents
+          if (lower.endsWith('.pdf')) return 'application/pdf';
+          if (lower.endsWith('.doc')) return 'application/msword';
+          if (lower.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          if (lower.endsWith('.xls')) return 'application/vnd.ms-excel';
+          if (lower.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          if (lower.endsWith('.ppt')) return 'application/vnd.ms-powerpoint';
+          if (lower.endsWith('.pptx')) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+          // Text
+          if (lower.endsWith('.txt')) return 'text/plain';
+          if (lower.endsWith('.csv')) return 'text/csv';
+          if (lower.endsWith('.json')) return 'application/json';
+          if (lower.endsWith('.xml')) return 'application/xml';
+          if (lower.endsWith('.md')) return 'text/markdown';
+          if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html';
+          // Audio
+          if (lower.endsWith('.mp3')) return 'audio/mpeg';
+          if (lower.endsWith('.wav')) return 'audio/wav';
+          if (lower.endsWith('.m4a')) return 'audio/mp4';
+          if (lower.endsWith('.aac')) return 'audio/aac';
+          if (lower.endsWith('.ogg') && !lower.includes('video')) return 'audio/ogg';
+          if (lower.endsWith('.webm') && !lower.includes('video')) return 'audio/webm';
+          // Video
+          if (lower.endsWith('.mp4')) return 'video/mp4';
+          if (lower.endsWith('.mov')) return 'video/quicktime';
+          if (lower.endsWith('.avi')) return 'video/x-msvideo';
+          if (lower.endsWith('.mkv')) return 'video/x-matroska';
+          if (lower.endsWith('.webm')) return 'video/webm';
+          // 3D/Point cloud
+          if (lower.endsWith('.obj')) return 'model/obj';
+          if (lower.endsWith('.glb')) return 'model/gltf-binary';
+          if (lower.endsWith('.gltf')) return 'model/gltf+json';
+          if (lower.endsWith('.las') || lower.endsWith('.laz')) return 'application/octet-stream';
+          if (lower.endsWith('.ply')) return 'application/x-ply';
+          // Archives
+          if (lower.endsWith('.zip')) return 'application/zip';
+          if (lower.endsWith('.rar')) return 'application/x-rar-compressed';
+          if (lower.endsWith('.7z')) return 'application/x-7z-compressed';
+          if (lower.endsWith('.tar')) return 'application/x-tar';
+          if (lower.endsWith('.gz')) return 'application/gzip';
+          // Use fallback or default
+          return fallbackMime || 'application/octet-stream';
+        };
+        
+        const fileType = getMimeType(fileName, asset.mimeType);
         formData.append('file', {
           uri: asset.uri,
           name: fileName,

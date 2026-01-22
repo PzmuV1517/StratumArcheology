@@ -232,10 +232,13 @@ export default function CreateNoteScreen() {
       }
       // Clear the draft after successful creation
       await markSubmitted();
-      // Show success and navigate back
-      Alert.alert('Success', 'Note created successfully!', [
-        { text: 'OK', onPress: () => setTimeout(() => navigateBackToNotes(), 100) },
-      ]);
+      // Navigate back first, then show alert (better UX on mobile)
+      // On web, we also navigate immediately to prevent duplicate submissions
+      navigateBackToNotes();
+      // Small delay before showing success alert so navigation happens first
+      setTimeout(() => {
+        Alert.alert('Success', 'Note created successfully!');
+      }, Platform.OS === 'web' ? 300 : 100);
     } catch (error: any) {
       console.error('Failed to create note:', error);
       const message = error?.detail || error?.message || 'Failed to create note. Please try again.';
