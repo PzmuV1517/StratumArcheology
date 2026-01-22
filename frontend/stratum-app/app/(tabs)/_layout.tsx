@@ -56,6 +56,7 @@ export default function TabLayout() {
           marginTop: 2,
         },
       }}
+      initialRouteName="overview"
     >
       {/* Overview - Landing tab */}
       <Tabs.Screen

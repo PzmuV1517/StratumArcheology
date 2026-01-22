@@ -278,7 +278,7 @@ export default function OverviewScreen() {
             style={styles.quickActionButton}
             onPress={() => router.push("/modal")}
           >
-            <Text style={styles.quickActionIcon}>➕</Text>
+            <Text style={styles.quickActionIcon}>⚙️</Text>
             <Text style={styles.quickActionText}>New Project</Text>
           </TouchableOpacity>
 
