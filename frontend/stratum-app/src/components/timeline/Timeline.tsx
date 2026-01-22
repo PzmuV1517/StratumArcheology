@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
   toggleButtonActive: {
-    backgroundColor: "#C41E3A",
+    backgroundColor: "#FF2A2A",
   },
   toggleText: {
     fontSize: 12,

@@ -1,3 +1,4 @@
+// file is deprecated. Explore screen has been removed from the app. Only for reference usage.
 import React, { useState, useEffect } from "react";
 import {
   View,
