@@ -95,6 +95,53 @@ export const activityService = {
   },
 
   /**
+   * Get activity color based on type
+   * Blue (#007AFF) - Info/Navigation actions (GPS, files moved)
+   * Green (#34C759) - Creation/positive actions (created, joined, uploaded)
+   * Yellow (#FFD60A) - Update/modification actions (updated, role changed)
+   * Red (#FF453A) - Deletion/negative actions (deleted, left)
+   */
+  getActivityColor: (activityType: ActivityType | string): string => {
+    const colorMap: Record<string, string> = {
+      // Project - Green for created, Yellow for updated, Red for deleted
+      [ActivityType.PROJECT_CREATED]: '#34C759',
+      [ActivityType.PROJECT_UPDATED]: '#FFD60A',
+      [ActivityType.PROJECT_DELETED]: '#FF453A',
+
+      // Members - Green for joined, Yellow for role change, Red for left
+      [ActivityType.MEMBER_JOINED]: '#34C759',
+      [ActivityType.MEMBER_LEFT]: '#FF453A',
+      [ActivityType.MEMBER_ROLE_CHANGED]: '#FFD60A',
+      [ActivityType.OWNERSHIP_TRANSFERRED]: '#FFD60A',
+
+      // Files - Green for upload/create, Blue for move, Red for delete
+      [ActivityType.FILE_UPLOADED]: '#34C759',
+      [ActivityType.FILE_DELETED]: '#FF453A',
+      [ActivityType.FILE_MOVED]: '#007AFF',
+      [ActivityType.FOLDER_CREATED]: '#34C759',
+      [ActivityType.FOLDER_DELETED]: '#FF453A',
+
+      // Notes - Green for created, Yellow for updated, Red for deleted
+      [ActivityType.NOTE_CREATED]: '#34C759',
+      [ActivityType.NOTE_UPDATED]: '#FFD60A',
+      [ActivityType.NOTE_DELETED]: '#FF453A',
+      [ActivityType.NOTE_ATTACHMENT_ADDED]: '#34C759',
+
+      // Forms - Green for all creation
+      [ActivityType.CONTEXT_FEATURE_CREATED]: '#34C759',
+      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: '#34C759',
+      [ActivityType.ARTEFACT_CREATED]: '#34C759',
+
+      // GPS - Blue for info/location actions
+      [ActivityType.GPS_ENABLED]: '#007AFF',
+      [ActivityType.GPS_DISABLED]: '#8E8E93',
+      [ActivityType.GPS_UPDATED]: '#007AFF',
+    };
+
+    return colorMap[activityType] || '#8E8E93';
+  },
+
+  /**
    * Get human-readable description for an activity
    */
   getActivityDescription: (activity: ProjectActivity, currentUserId?: string): string => {

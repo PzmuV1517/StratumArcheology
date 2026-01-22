@@ -14,22 +14,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const MIN_CHECK_INTERVAL = 60000; // 60 seconds minimum between manual checks
 
 /**
- * ConnectionStatusIndicator - Shows connection status as a tiny dot
+ * ConnectionStatusIndicator - DISABLED
  *
- * Displays a small, unobtrusive indicator in the bottom-right corner:
- * - Green dot when connected to backend
- * - Red dot when disconnected
- * Tap to see more details about connection status.
+ * Previously showed connection status as a tiny dot in the bottom-right corner.
+ * Removed per user request - the indicator was deemed unnecessary and distracting.
  *
- * Only shown on mobile (iOS/Android) - not on web.
+ * The offline sync functionality still works in the background without any UI indicator.
  */
 export default function ConnectionStatusIndicator() {
-  // Don't show on web - offline sync is mobile-only
-  if (Platform.OS === 'web') {
-    return null;
-  }
-
-  return <ConnectionStatusIndicatorInner />;
+  // Disabled - no longer shows any indicator
+  return null;
 }
 
 function ConnectionStatusIndicatorInner() {

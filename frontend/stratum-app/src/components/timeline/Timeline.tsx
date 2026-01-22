@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useActivity } from '../../hooks';
-import { activityService, ProjectActivity } from '../../services';
+import { activityService, ProjectActivity, authService } from '../../services';
 import { Loading, Card } from '../common';
 
 type TimelineMode = 'project' | 'personal';
@@ -26,15 +26,31 @@ interface TimelineProps {
  */
 export default function Timeline({ projectId, maxHeight, onActivityPress }: TimelineProps) {
   const [mode, setMode] = useState<TimelineMode>('project');
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const { activities, isLoading, hasMore, loadMore, refresh, error } = useActivity(
     projectId,
     mode === 'personal'
   );
 
+  // Get current user ID for "You" display
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = await authService.getCurrentUser();
+        if (user?.id) {
+          setCurrentUserId(user.id);
+        }
+      } catch (e) {
+        // Ignore - will just show usernames instead of "You"
+      }
+    })();
+  }, []);
+
   const renderActivity = ({ item, index }: { item: ProjectActivity; index: number }) => {
     const icon = activityService.getActivityIcon(item.activity_type);
-    const description = activityService.getActivityDescription(item);
+    const description = activityService.getActivityDescription(item, currentUserId);
     const timestamp = activityService.formatTimestamp(item.created_at);
+    const color = activityService.getActivityColor(item.activity_type);
     const isLast = index === activities.length - 1;
 
     return (
@@ -46,10 +62,10 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
       >
         {/* Timeline connector */}
         <View style={styles.timelineConnector}>
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, { borderColor: color, borderWidth: 2 }]}>
             <Text style={styles.icon}>{icon}</Text>
           </View>
-          {!isLast && <View style={styles.line} />}
+          {!isLast && <View style={[styles.line, { backgroundColor: color + '40' }]} />}
         </View>
 
         {/* Activity content */}
@@ -57,7 +73,7 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
           <Text style={styles.description} numberOfLines={2}>
             {description}
           </Text>
-          <Text style={styles.timestamp}>{timestamp}</Text>
+          <Text style={[styles.timestamp, { color }]}>{timestamp}</Text>
         </View>
       </TouchableOpacity>
     );
