@@ -95,7 +95,6 @@ export default function FilesOverlay({
 }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
-  if (!visible) return null;
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
   const lastDragEvent = useRef<number>(0);
@@ -154,7 +153,13 @@ export default function FilesOverlay({
     }
 
     return false;
-  }, [myFolderId, currentFolder?.id, currentFolder?.name, breadcrumbs, currentUserId]);
+  }, [
+    myFolderId,
+    currentFolder?.id,
+    currentFolder?.name,
+    breadcrumbs,
+    currentUserId,
+  ]);
 
   // Check if we're inside the /users folder (where personal folders are stored)
   const isInsideUsersFolder = useMemo(() => {
@@ -310,14 +315,18 @@ export default function FilesOverlay({
     [projectId],
   );
 
-  // Handle file selected from upload menu
+  // Handle file selected from upload menu (supports both single file and array)
   const handleFileSelected = useCallback(
-    async (file: SelectedFile) => {
+    async (filesInput: SelectedFile | SelectedFile[]) => {
       setShowUploadMenu(false);
 
-      // If parent provides handler, use it
+      // Normalize to array
+      const files = Array.isArray(filesInput) ? filesInput : [filesInput];
+      if (files.length === 0) return;
+
+      // If parent provides handler, use it (pass first file for backward compat)
       if (onFileSelected) {
-        onFileSelected(file);
+        onFileSelected(files[0]);
         return;
       }
 
@@ -328,25 +337,54 @@ export default function FilesOverlay({
       }
 
       setIsUploading(true);
-      setUploadCount(1);
+      setUploadCount(files.length);
 
       try {
-        // Ensure file has proper extension based on mime type
-        let fileName = file.name;
-        if (!fileName || fileName === "undefined" || !fileName.includes(".")) {
-          const ext = file.mimeType?.split("/")[1] || "jpg";
-          const cleanExt = ext === "jpeg" ? "jpg" : ext;
-          fileName = `photo_${Date.now()}.${cleanExt}`;
+        for (const file of files) {
+          // Use the file's actual name - DocumentPicker provides it correctly
+          let fileName = file.name;
+
+          // Only generate a name if truly missing (camera photos without name)
+          if (!fileName || fileName === "undefined") {
+            // For images, try to get extension from mime type
+            if (file.mimeType?.startsWith("image/")) {
+              const ext = file.mimeType.split("/")[1] || "jpg";
+              const cleanExt = ext === "jpeg" ? "jpg" : ext;
+              fileName = `photo_${Date.now()}.${cleanExt}`;
+            } else {
+              // For other files, try to get from URI or use generic name
+              const uriParts = file.uri.split("/");
+              const lastPart = uriParts[uriParts.length - 1];
+              if (lastPart && lastPart.includes(".")) {
+                fileName = lastPart;
+              } else {
+                const ext = file.mimeType?.split("/")[1] || "file";
+                fileName = `file_${Date.now()}.${ext}`;
+              }
+            }
+          }
+
+          console.log("[FilesOverlay] Uploading file:", {
+            originalName: file.name,
+            finalName: fileName,
+            mimeType: file.mimeType,
+            uri: file.uri,
+          });
+
+          await fileService.uploadFile(
+            projectId,
+            file.uri,
+            fileName,
+            file.mimeType,
+            currentFolder?.id || null,
+          );
         }
 
-        await fileService.uploadFile(
-          projectId,
-          file.uri,
-          fileName,
-          file.mimeType,
-          currentFolder?.id || null,
-        );
-        Alert.alert("Success", `${fileName} uploaded successfully`);
+        const msg =
+          files.length === 1
+            ? `${files[0].name || "File"} uploaded successfully`
+            : `${files.length} files uploaded successfully`;
+        Alert.alert("Success", msg);
         onRefreshAfterUpload?.();
       } catch (error: any) {
         console.error("File upload failed:", error);
@@ -560,6 +598,9 @@ export default function FilesOverlay({
   const selectableIds = filteredNodes.filter((n) => !n.is_locked).map((n) => n.id);
   const allSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+
+  // Early return AFTER all hooks (React requires hooks to be called unconditionally)
+  if (!visible) return null;
 
   return (
     <View
