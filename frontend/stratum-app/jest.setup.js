@@ -3,7 +3,7 @@
 
 // Mock expo-sqlite for testing (virtual mock for modules not installed)
 jest.mock(
-  'expo-sqlite',
+  "expo-sqlite",
   () => ({
     openDatabaseSync: jest.fn(() => ({
       execSync: jest.fn(),
@@ -12,27 +12,27 @@ jest.mock(
       getAllSync: jest.fn(() => []),
     })),
   }),
-  { virtual: true }
+  { virtual: true },
 );
 
 // Mock NetInfo (virtual mock)
 jest.mock(
-  '@react-native-community/netinfo',
+  "@react-native-community/netinfo",
   () => ({
     addEventListener: jest.fn(() => jest.fn()),
     fetch: jest.fn(() =>
       Promise.resolve({
-        type: 'wifi',
+        type: "wifi",
         isConnected: true,
         isInternetReachable: true,
-      })
+      }),
     ),
   }),
-  { virtual: true }
+  { virtual: true },
 );
 
 // Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
+jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),

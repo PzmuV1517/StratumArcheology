@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { fileService, FileNode, socketService } from '../services';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { fileService, FileNode, socketService } from "../services";
 
 interface FilesState {
   files: FileNode[];
@@ -25,7 +25,7 @@ export type UseFilesReturn = FilesState & FilesActions;
  */
 export function useFiles(projectId: number | undefined): UseFilesReturn {
   const [files, setFiles] = useState<FileNode[]>([]);
-  const [currentPath, setCurrentPath] = useState('');
+  const [currentPath, setCurrentPath] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -34,8 +34,8 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
   useEffect(() => {
     if (!projectId) return;
 
-    unsubscribeRef.current = socketService.on('content_updated', (data) => {
-      if (data.content_type === 'files') {
+    unsubscribeRef.current = socketService.on("content_updated", (data) => {
+      if (data.content_type === "files") {
         // Refresh files list on any file change
         loadFiles(currentPath);
       }
@@ -52,12 +52,12 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
   // Load files when projectId changes
   useEffect(() => {
     if (projectId) {
-      loadFiles('');
+      loadFiles("");
     }
   }, [projectId]);
 
   const loadFiles = useCallback(
-    async (path: string = ''): Promise<void> => {
+    async (path: string = ""): Promise<void> => {
       if (!projectId) return;
 
       setIsLoading(true);
@@ -65,7 +65,7 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
 
       try {
         let data: FileNode[];
-        if (path === '' || path === '/') {
+        if (path === "" || path === "/") {
           data = await fileService.listRoot(projectId);
         } else {
           data = await fileService.listChildren(projectId, path);
@@ -73,12 +73,12 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
         setFiles(data);
         setCurrentPath(path);
       } catch (e: any) {
-        setError(e.message || 'Failed to load files');
+        setError(e.message || "Failed to load files");
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   const createFolder = useCallback(
@@ -94,13 +94,13 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
         await loadFiles(currentPath);
         return true;
       } catch (e: any) {
-        setError(e.message || 'Failed to create folder');
+        setError(e.message || "Failed to create folder");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId, currentPath, loadFiles]
+    [projectId, currentPath, loadFiles],
   );
 
   const deleteFile = useCallback(
@@ -115,28 +115,28 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
         setFiles((prev) => prev.filter((f) => f.id !== nodeId));
         return true;
       } catch (e: any) {
-        setError(e.message || 'Failed to delete file');
+        setError(e.message || "Failed to delete file");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   const navigateToFolder = useCallback(
     (path: string): void => {
       loadFiles(path);
     },
-    [loadFiles]
+    [loadFiles],
   );
 
   const navigateUp = useCallback((): void => {
     if (!currentPath) return;
 
-    const parts = currentPath.split('/');
+    const parts = currentPath.split("/");
     parts.pop();
-    const parentPath = parts.join('/');
+    const parentPath = parts.join("/");
     loadFiles(parentPath);
   }, [currentPath, loadFiles]);
 

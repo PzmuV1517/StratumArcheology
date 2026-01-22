@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from "react-native";
 
 interface CardProps {
   title?: string;
@@ -10,7 +10,14 @@ interface CardProps {
   footer?: React.ReactNode;
 }
 
-export default function Card({ title, subtitle, children, style, onPress, footer }: CardProps) {
+export default function Card({
+  title,
+  subtitle,
+  children,
+  style,
+  onPress,
+  footer,
+}: CardProps) {
   const content = (
     <View style={[styles.card, style]}>
       {(title || subtitle) && (
@@ -37,27 +44,27 @@ export default function Card({ title, subtitle, children, style, onPress, footer
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: "#1C1C1E",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2C2C2E',
-    overflow: 'hidden',
+    borderColor: "#2C2C2E",
+    overflow: "hidden",
   },
   header: {
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    borderBottomColor: "#2C2C2E",
   },
   title: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
   subtitle: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: "#8E8E93",
     marginTop: 4,
   },
   body: {
@@ -67,7 +74,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#2C2C2E',
-    backgroundColor: '#0C0C0E',
+    borderTopColor: "#2C2C2E",
+    backgroundColor: "#0C0C0E",
   },
 });

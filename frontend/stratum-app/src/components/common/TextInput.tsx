@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   TextInput as RNTextInput,
   View,
@@ -9,7 +9,7 @@ import {
   TextStyle,
   StyleProp,
   Platform,
-} from 'react-native';
+} from "react-native";
 
 interface TextInputProps extends RNTextInputProps {
   label?: string;
@@ -42,7 +42,7 @@ export default function TextInput({
           inputStyles.input,
           error ? inputStyles.inputError : null,
           inputStyle,
-          Platform.OS === 'web' ? inputStyles.webInput : null,
+          Platform.OS === "web" ? inputStyles.webInput : null,
         ]}
         placeholderTextColor="#8E8E93"
         selectionColor="#007AFF"
@@ -63,33 +63,33 @@ const viewStyles = StyleSheet.create({
 const textStyles = StyleSheet.create({
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
+    fontWeight: "500",
+    color: "#FFFFFF",
     marginBottom: 6,
   },
   required: {
-    color: '#FF3B30',
+    color: "#FF3B30",
   },
   errorText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: "#FF3B30",
     marginTop: 4,
   },
 });
 
 const inputStyles = StyleSheet.create({
   input: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: "#2C2C2E",
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#3C3C3E',
+    borderColor: "#3C3C3E",
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: "#FF3B30",
   },
   webInput: {
     // Web-only property - TypeScript may complain but it works at runtime

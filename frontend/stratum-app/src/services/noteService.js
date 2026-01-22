@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 export const noteService = {
   // Get all notes for a project
@@ -24,7 +24,7 @@ export const noteService = {
   // Create a new note
   createNote: async (data) => {
     try {
-      const response = await api.post('/notes/', {
+      const response = await api.post("/notes/", {
         title: data.title,
         content: data.content,
         project_id: data.project_id,
@@ -59,15 +59,15 @@ export const noteService = {
   uploadPhoto: async (noteId, photoUri) => {
     try {
       const formData = new FormData();
-      formData.append('file', {
+      formData.append("file", {
         uri: photoUri,
-        type: 'image/jpeg',
-        name: 'photo.jpg',
+        type: "image/jpeg",
+        name: "photo.jpg",
       });
 
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       return response.data;
@@ -86,16 +86,16 @@ export const noteService = {
   },
 
   // Upload audio to a note
-  uploadAudio: async (noteId, audioUri, filename = 'voice-note.mp3') => {
+  uploadAudio: async (noteId, audioUri, filename = "voice-note.mp3") => {
     try {
       const formData = new FormData();
-      formData.append('file', {
+      formData.append("file", {
         uri: audioUri,
-        type: 'audio/mpeg',
+        type: "audio/mpeg",
         name: filename,
       });
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
     } catch (error) {
@@ -103,13 +103,13 @@ export const noteService = {
     }
   },
   // Upload audio blob (web MediaRecorder)
-  uploadAudioBlob: async (noteId, blob, filename = 'voice-note.webm') => {
+  uploadAudioBlob: async (noteId, blob, filename = "voice-note.webm") => {
     try {
       const formData = new FormData();
-      const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
-      formData.append('file', file, filename);
+      const file = new File([blob], filename, { type: blob.type || "audio/webm" });
+      formData.append("file", file, filename);
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
     } catch (error) {

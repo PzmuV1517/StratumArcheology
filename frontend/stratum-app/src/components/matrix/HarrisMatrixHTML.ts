@@ -360,8 +360,8 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         <div class="bottom-toolbar">
             <button class="toolbar-btn btn-primary" onclick="resetZoom()">Reset View</button>
             <button class="toolbar-btn btn-success" onclick="toggleInfoPanel()">Info</button>
-            ${canEdit ? '<button class="toolbar-btn btn-warning" onclick="analyzeTemporalConflicts()">Analyze</button>' : ''}
-            ${canEdit ? '<button class="toolbar-btn btn-danger" onclick="confirmClear()">Clear</button>' : ''}
+            ${canEdit ? '<button class="toolbar-btn btn-warning" onclick="analyzeTemporalConflicts()">Analyze</button>' : ""}
+            ${canEdit ? '<button class="toolbar-btn btn-danger" onclick="confirmClear()">Clear</button>' : ""}
         </div>
     </div>
     
@@ -420,7 +420,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
                 <button class="confirm" id="saveNodeBtn">Save</button>
                 <button class="cancel" onclick="hideModals()">Cancel</button>
             </div>
-            ${canEdit ? '<button class="toolbar-btn btn-danger" id="deleteNodeBtn" style="margin-top: 10px; width: 100%;">Delete Context</button>' : ''}
+            ${canEdit ? '<button class="toolbar-btn btn-danger" id="deleteNodeBtn" style="margin-top: 10px; width: 100%;">Delete Context</button>' : ""}
         </div>
     </div>
 
@@ -508,7 +508,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         };
         
         function loadInitialData() {
-            const initialData = ${initialData ? `'${initialData.replace(/'/g, "\\'").replace(/\n/g, '')}'` : 'null'};
+            const initialData = ${initialData ? `'${initialData.replace(/'/g, "\\'").replace(/\n/g, "")}'` : "null"};
             if (initialData) {
                 try {
                     window.loadHarrisMatrixData(initialData);

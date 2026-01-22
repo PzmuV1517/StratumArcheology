@@ -6,25 +6,25 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-} from 'react';
-import { Platform, View } from 'react-native';
-import gsap from 'gsap';
-import './CardSwap.css';
+} from "react";
+import { Platform, View } from "react-native";
+import gsap from "gsap";
+import "./CardSwap.css";
 
 // Web-only Card component
 export const Card = forwardRef(({ customClass, ...rest }, ref) => {
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== "web") {
     return <View ref={ref} {...rest} />;
   }
   return (
     <div
       ref={ref}
       {...rest}
-      className={`card ${customClass ?? ''} ${rest.className ?? ''}`.trim()}
+      className={`card ${customClass ?? ""} ${rest.className ?? ""}`.trim()}
     />
   );
 });
-Card.displayName = 'Card';
+Card.displayName = "Card";
 
 const makeSlot = (i, distX, distY, total) => ({
   x: i * distX,
@@ -40,7 +40,7 @@ const placeNow = (el, slot, skew) =>
     xPercent: -50,
     yPercent: -50,
     skewY: skew,
-    transformOrigin: 'center center',
+    transformOrigin: "center center",
     zIndex: slot.zIndex,
     force3D: true,
   });
@@ -54,13 +54,13 @@ const CardSwap = ({
   pauseOnHover = false,
   onCardClick,
   skewAmount = 6,
-  easing = 'elastic',
+  easing = "elastic",
   children,
 }) => {
   const config =
-    easing === 'elastic'
+    easing === "elastic"
       ? {
-          ease: 'elastic.out(0.6,0.9)',
+          ease: "elastic.out(0.6,0.9)",
           durDrop: 2,
           durMove: 2,
           durReturn: 2,
@@ -68,7 +68,7 @@ const CardSwap = ({
           returnDelay: 0.05,
         }
       : {
-          ease: 'power1.inOut',
+          ease: "power1.inOut",
           durDrop: 0.8,
           durMove: 0.8,
           durReturn: 0.8,
@@ -80,7 +80,7 @@ const CardSwap = ({
   const refs = useMemo(
     () => childArr.map(() => React.createRef()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [childArr.length]
+    [childArr.length],
   );
 
   const order = useRef(Array.from({ length: childArr.length }, (_, i) => i));
@@ -92,7 +92,11 @@ const CardSwap = ({
   useEffect(() => {
     const total = refs.length;
     refs.forEach((r, i) =>
-      placeNow(r.current, makeSlot(i, cardDistance, verticalDistance, total), skewAmount)
+      placeNow(
+        r.current,
+        makeSlot(i, cardDistance, verticalDistance, total),
+        skewAmount,
+      ),
     );
 
     const swap = () => {
@@ -104,16 +108,16 @@ const CardSwap = ({
       tlRef.current = tl;
 
       tl.to(elFront, {
-        y: '+=500',
+        y: "+=500",
         duration: config.durDrop,
         ease: config.ease,
       });
 
-      tl.addLabel('promote', `-=${config.durDrop * config.promoteOverlap}`);
+      tl.addLabel("promote", `-=${config.durDrop * config.promoteOverlap}`);
       rest.forEach((idx, i) => {
         const el = refs[idx].current;
         const slot = makeSlot(i, cardDistance, verticalDistance, refs.length);
-        tl.set(el, { zIndex: slot.zIndex }, 'promote');
+        tl.set(el, { zIndex: slot.zIndex }, "promote");
         tl.to(
           el,
           {
@@ -123,18 +127,23 @@ const CardSwap = ({
             duration: config.durMove,
             ease: config.ease,
           },
-          `promote+=${i * 0.15}`
+          `promote+=${i * 0.15}`,
         );
       });
 
-      const backSlot = makeSlot(refs.length - 1, cardDistance, verticalDistance, refs.length);
-      tl.addLabel('return', `promote+=${config.durMove * config.returnDelay}`);
+      const backSlot = makeSlot(
+        refs.length - 1,
+        cardDistance,
+        verticalDistance,
+        refs.length,
+      );
+      tl.addLabel("return", `promote+=${config.durMove * config.returnDelay}`);
       tl.call(
         () => {
           gsap.set(elFront, { zIndex: backSlot.zIndex });
         },
         undefined,
-        'return'
+        "return",
       );
       tl.to(
         elFront,
@@ -145,7 +154,7 @@ const CardSwap = ({
           duration: config.durReturn,
           ease: config.ease,
         },
-        'return'
+        "return",
       );
 
       tl.call(() => {
@@ -166,11 +175,11 @@ const CardSwap = ({
         tlRef.current?.play();
         intervalRef.current = window.setInterval(swap, delay);
       };
-      node.addEventListener('mouseenter', pause);
-      node.addEventListener('mouseleave', resume);
+      node.addEventListener("mouseenter", pause);
+      node.addEventListener("mouseleave", resume);
       return () => {
-        node.removeEventListener('mouseenter', pause);
-        node.removeEventListener('mouseleave', resume);
+        node.removeEventListener("mouseenter", pause);
+        node.removeEventListener("mouseleave", resume);
         clearInterval(intervalRef.current);
       };
     }
@@ -189,11 +198,11 @@ const CardSwap = ({
             onCardClick?.(i);
           },
         })
-      : child
+      : child,
   );
 
   // Only render on web - uses HTML div and gsap animations
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== "web") {
     return null;
   }
 

@@ -1,18 +1,18 @@
-import React from 'react';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
-import { View, StyleSheet } from 'react-native';
+import React from "react";
+import videojs from "video.js";
+import "video.js/dist/video-js.css";
+import { View, StyleSheet } from "react-native";
 
 interface Props {
   src: string | null;
 }
 
 const guessType = (url: string) => {
-  const u = url.split('?')[0].toLowerCase();
-  if (u.endsWith('.webm')) return 'video/webm';
-  if (u.endsWith('.ogg') || u.endsWith('.ogv')) return 'video/ogg';
-  if (u.endsWith('.mov')) return 'video/quicktime';
-  return 'video/mp4';
+  const u = url.split("?")[0].toLowerCase();
+  if (u.endsWith(".webm")) return "video/webm";
+  if (u.endsWith(".ogg") || u.endsWith(".ogv")) return "video/ogg";
+  if (u.endsWith(".mov")) return "video/quicktime";
+  return "video/mp4";
 };
 
 export default function VideoPanel({ src }: Props) {
@@ -39,7 +39,7 @@ export default function VideoPanel({ src }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

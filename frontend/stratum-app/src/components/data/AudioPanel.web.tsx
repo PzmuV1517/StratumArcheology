@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet } from "react-native";
 
 export interface AudioPanelProps {
   audioUrl: string;
@@ -24,7 +24,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
       analyser.connect(ctx.destination);
       const buffer = new Uint8Array(analyser.frequencyBinCount);
       const canvas = canvasRef.current;
-      const g = canvas.getContext('2d')!;
+      const g = canvas.getContext("2d")!;
       const draw = () => {
         raf = requestAnimationFrame(draw);
         analyser!.getByteFrequencyData(buffer);
@@ -33,13 +33,13 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
         for (let i = 0; i < buffer.length; i++) {
           const v = buffer[i] / 255;
           const h = v * canvas.height;
-          g.fillStyle = '#FF2A2A';
+          g.fillStyle = "#FF2A2A";
           g.fillRect(i * w, canvas.height - h, w - 1, h);
         }
       };
       draw();
     } catch (e: any) {
-      setError('Audio visualizer error');
+      setError("Audio visualizer error");
     }
     return () => {
       if (raf) cancelAnimationFrame(raf);
@@ -69,16 +69,21 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#0E0E0E',
+    borderColor: "#2A2A2A",
+    backgroundColor: "#0E0E0E",
     padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 12,
   },
-  audio: { width: '100%' },
-  canvas: { width: '100%', height: 120, backgroundColor: '#111111', borderRadius: 8 },
-  info: { color: '#9A9A9A' },
-  name: { color: '#F5F5F5', fontSize: 12 },
-  err: { color: '#FF4444', fontSize: 12 },
+  audio: { width: "100%" },
+  canvas: {
+    width: "100%",
+    height: 120,
+    backgroundColor: "#111111",
+    borderRadius: 8,
+  },
+  info: { color: "#9A9A9A" },
+  name: { color: "#F5F5F5", fontSize: 12 },
+  err: { color: "#FF4444", fontSize: 12 },
 });

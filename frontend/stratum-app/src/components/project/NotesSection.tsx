@@ -1,5 +1,13 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Platform, Alert } from 'react-native';
+import React, { useRef, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Platform,
+  Alert,
+} from "react-native";
 
 interface NoteAttachment {
   id?: string;
@@ -42,13 +50,13 @@ export default function NotesSection({
     const rafRef = useRef<number>(0);
 
     useEffect(() => {
-      if (Platform.OS !== 'web') return;
+      if (Platform.OS !== "web") return;
       if (!url || !audioRef.current || !canvasRef.current) return;
       let ctx: AudioContext | null = null;
       let analyser: AnalyserNode | null = null;
       let mounted = true;
       try {
-        audioRef.current.crossOrigin = 'anonymous';
+        audioRef.current.crossOrigin = "anonymous";
         ctx = new AudioContext();
         ctxRef.current = ctx;
         const src = ctx.createMediaElementSource(audioRef.current);
@@ -57,19 +65,20 @@ export default function NotesSection({
         src.connect(analyser);
         analyser.connect(ctx.destination);
         const data = new Uint8Array(analyser.fftSize);
-        const g = canvasRef.current.getContext('2d')!;
+        const g = canvasRef.current.getContext("2d")!;
         const draw = () => {
           if (!mounted) return;
           rafRef.current = requestAnimationFrame(draw);
           analyser!.getByteTimeDomainData(data);
           g.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
-          g.strokeStyle = '#FF2A2A';
+          g.strokeStyle = "#FF2A2A";
           g.lineWidth = 2;
           g.beginPath();
           const slice = canvasRef.current!.width / data.length;
           for (let i = 0; i < data.length; i++) {
             const v = data[i] / 128 - 1;
-            const y = (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+            const y =
+              (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
             if (i === 0) g.moveTo(0, y);
             else g.lineTo(i * slice, y);
           }
@@ -86,8 +95,12 @@ export default function NotesSection({
       };
     }, [url]);
 
-    if (Platform.OS !== 'web') {
-      return <Text style={{ color: '#9A9A9A', fontSize: 12 }}>Audio (open note to play)</Text>;
+    if (Platform.OS !== "web") {
+      return (
+        <Text style={{ color: "#9A9A9A", fontSize: 12 }}>
+          Audio (open note to play)
+        </Text>
+      );
     }
 
     return (
@@ -101,7 +114,7 @@ export default function NotesSection({
           style={styles.audioTag}
           onPlay={() => {
             const c = ctxRef.current;
-            if (c && c.state === 'suspended') c.resume().catch(() => {});
+            if (c && c.state === "suspended") c.resume().catch(() => {});
           }}
         />
         <canvas ref={canvasRef} width={300} height={40} style={styles.audioCanvas} />
@@ -112,11 +125,11 @@ export default function NotesSection({
   const renderNote = ({ item }: { item: Note }) => {
     const attachments = item.attachments || [];
     const hasAudio = attachments.some((a) =>
-      (a.mime_type || a.file_type || '').startsWith('audio/')
+      (a.mime_type || a.file_type || "").startsWith("audio/"),
     );
-    const isVoice = (!item.content || item.content.trim() === '') && hasAudio;
+    const isVoice = (!item.content || item.content.trim() === "") && hasAudio;
     const audioAtt = attachments.find((a) =>
-      (a.mime_type || a.file_type || '').startsWith('audio/')
+      (a.mime_type || a.file_type || "").startsWith("audio/"),
     );
 
     return (
@@ -128,10 +141,12 @@ export default function NotesSection({
           <View style={styles.noteHeader}>
             <Text style={styles.noteTitle} numberOfLines={1}>
               {item.title}
-              {isVoice ? ' 🔊' : ''}
+              {isVoice ? " 🔊" : ""}
             </Text>
             <Text style={styles.noteDate}>
-              {new Date(item.updated_at).toLocaleDateString(undefined, { timeZone: 'UTC' })}
+              {new Date(item.updated_at).toLocaleDateString(undefined, {
+                timeZone: "UTC",
+              })}
             </Text>
           </View>
           {!isVoice && !!item.content && (
@@ -160,7 +175,9 @@ export default function NotesSection({
                       onDeleteNote(item.id);
                     }}
                   >
-                    <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
+                    <Text style={[styles.metaBtnText, styles.deleteBtnText]}>
+                      Delete
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -168,26 +185,28 @@ export default function NotesSection({
               <TouchableOpacity
                 style={[styles.metaBtn, styles.deleteBtn]}
                 onPress={() => {
-                  if (Platform.OS === 'web') {
+                  if (Platform.OS === "web") {
                     // Inline confirmation for web
                     setPendingDeleteId(item.id);
                   } else {
                     Alert.alert(
-                      'Delete voice note?',
-                      'This will permanently delete the note and its audio attachment.',
+                      "Delete voice note?",
+                      "This will permanently delete the note and its audio attachment.",
                       [
-                        { text: 'Cancel', style: 'cancel' },
+                        { text: "Cancel", style: "cancel" },
                         {
-                          text: 'Delete',
-                          style: 'destructive',
+                          text: "Delete",
+                          style: "destructive",
                           onPress: () => onDeleteNote(item.id),
                         },
-                      ]
+                      ],
                     );
                   }
                 }}
               >
-                <Text style={[styles.metaBtnText, styles.deleteBtnText]}>Delete</Text>
+                <Text style={[styles.metaBtnText, styles.deleteBtnText]}>
+                  Delete
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -218,7 +237,9 @@ export default function NotesSection({
           <Text style={styles.emptyStateText}>No notes yet</Text>
           {canEdit ? (
             <>
-              <Text style={styles.emptyStateSubtext}>Create your first note to get started</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Create your first note to get started
+              </Text>
               <TouchableOpacity style={styles.createButton} onPress={onCreateNote}>
                 <Text style={styles.createButtonText}>CREATE FIRST NOTE</Text>
               </TouchableOpacity>
@@ -236,73 +257,89 @@ export default function NotesSection({
 
 const styles = StyleSheet.create({
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#F5F5F5' },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#F5F5F5" },
   addButton: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
   },
-  addButtonText: { color: '#F5F5F5', fontWeight: '600', fontSize: 12 },
+  addButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 12 },
   noteCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   noteHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 4,
   },
-  noteTitle: { color: '#F5F5F5', fontWeight: '700', fontSize: 16, flex: 1, marginRight: 8 },
-  noteDate: { color: '#9A9A9A', fontSize: 12 },
-  notePreview: { color: '#CFCFCF', marginTop: 4 },
-  emptyState: { alignItems: 'center', paddingVertical: 48 },
-  emptyStateText: { fontSize: 18, fontWeight: '600', color: '#F5F5F5', marginBottom: 8 },
-  emptyStateSubtext: { fontSize: 14, color: '#9A9A9A', marginBottom: 24 },
+  noteTitle: {
+    color: "#F5F5F5",
+    fontWeight: "700",
+    fontSize: 16,
+    flex: 1,
+    marginRight: 8,
+  },
+  noteDate: { color: "#9A9A9A", fontSize: 12 },
+  notePreview: { color: "#CFCFCF", marginTop: 4 },
+  emptyState: { alignItems: "center", paddingVertical: 48 },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#F5F5F5",
+    marginBottom: 8,
+  },
+  emptyStateSubtext: { fontSize: 14, color: "#9A9A9A", marginBottom: 24 },
   createButton: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
-  createButtonText: { color: '#F5F5F5', fontWeight: '600' },
+  createButtonText: { color: "#F5F5F5", fontWeight: "600" },
   audioPreviewWrapper: { marginTop: 6, gap: 6 },
-  audioTag: { width: '100%' },
-  audioCanvas: { width: '100%', height: 40, backgroundColor: '#111', borderRadius: 6 },
-  voiceActions: { flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  audioTag: { width: "100%" },
+  audioCanvas: {
+    width: "100%",
+    height: 40,
+    backgroundColor: "#111",
+    borderRadius: 6,
+  },
+  voiceActions: { flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" },
   metaBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
-  metaBtnText: { color: '#CFCFCF', fontSize: 12, fontWeight: '600' },
-  deleteBtn: { borderColor: '#3A0C0C', backgroundColor: '#2A1414' },
-  deleteBtnText: { color: '#FF4444' },
+  metaBtnText: { color: "#CFCFCF", fontSize: 12, fontWeight: "600" },
+  deleteBtn: { borderColor: "#3A0C0C", backgroundColor: "#2A1414" },
+  deleteBtnText: { color: "#FF4444" },
   inlineConfirm: {
     flex: 1,
     padding: 8,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: "#1E1E1E",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
     gap: 8,
   },
-  confirmText: { color: '#F5F5F5', fontSize: 12, fontWeight: '600' },
-  confirmButtons: { flexDirection: 'row', gap: 8 },
-  cancelBtn: { backgroundColor: '#2A2A2A', borderColor: '#444' },
+  confirmText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600" },
+  confirmButtons: { flexDirection: "row", gap: 8 },
+  cancelBtn: { backgroundColor: "#2A2A2A", borderColor: "#444" },
 });

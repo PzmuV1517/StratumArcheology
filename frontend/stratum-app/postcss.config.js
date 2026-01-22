@@ -2,10 +2,10 @@
 module.exports = (() => {
   const plugins = [];
   try {
-    plugins.push(require('@tailwindcss/postcss'));
+    plugins.push(require("@tailwindcss/postcss"));
   } catch {}
   try {
-    plugins.push(require('autoprefixer'));
+    plugins.push(require("autoprefixer"));
   } catch {}
   return { plugins };
 })();

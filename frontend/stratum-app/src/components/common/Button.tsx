@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   TouchableOpacity,
   Text,
@@ -7,13 +7,13 @@ import {
   ViewStyle,
   TextStyle,
   StyleProp,
-} from 'react-native';
+} from "react-native";
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'small' | 'medium' | 'large';
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  size?: "small" | "medium" | "large";
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -22,10 +22,10 @@ interface ButtonProps {
 }
 
 const variantStyles: Record<string, ViewStyle> = {
-  primary: { backgroundColor: '#007AFF' },
-  secondary: { backgroundColor: '#2C2C2E', borderWidth: 1, borderColor: '#3C3C3E' },
-  danger: { backgroundColor: '#FF3B30' },
-  ghost: { backgroundColor: 'transparent' },
+  primary: { backgroundColor: "#007AFF" },
+  secondary: { backgroundColor: "#2C2C2E", borderWidth: 1, borderColor: "#3C3C3E" },
+  danger: { backgroundColor: "#FF3B30" },
+  ghost: { backgroundColor: "transparent" },
 };
 
 const sizeStyles: Record<string, ViewStyle> = {
@@ -35,10 +35,10 @@ const sizeStyles: Record<string, ViewStyle> = {
 };
 
 const textVariantStyles: Record<string, TextStyle> = {
-  primary: { color: '#FFFFFF' },
-  secondary: { color: '#FFFFFF' },
-  danger: { color: '#FFFFFF' },
-  ghost: { color: '#007AFF' },
+  primary: { color: "#FFFFFF" },
+  secondary: { color: "#FFFFFF" },
+  danger: { color: "#FFFFFF" },
+  ghost: { color: "#007AFF" },
 };
 
 const textSizeStyles: Record<string, TextStyle> = {
@@ -50,8 +50,8 @@ const textSizeStyles: Record<string, TextStyle> = {
 export default function Button({
   title,
   onPress,
-  variant = 'primary',
-  size = 'medium',
+  variant = "primary",
+  size = "medium",
   disabled = false,
   loading = false,
   style,
@@ -82,7 +82,10 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={variant === 'ghost' ? '#007AFF' : '#FFFFFF'} />
+        <ActivityIndicator
+          size="small"
+          color={variant === "ghost" ? "#007AFF" : "#FFFFFF"}
+        />
       ) : (
         <>
           {icon}
@@ -95,9 +98,9 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
     gap: 8,
   },
@@ -105,7 +108,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontWeight: '600',
+    fontWeight: "600",
   },
   textDisabled: {
     opacity: 0.7,

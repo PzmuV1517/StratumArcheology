@@ -1,6 +1,11 @@
-import api from './api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, AuthResult, AUTH_TOKEN_KEY, USER_DATA_KEY } from './authService.types';
+import api from "./api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  User,
+  AuthResult,
+  AUTH_TOKEN_KEY,
+  USER_DATA_KEY,
+} from "./authService.types";
 
 /**
  * Auth service - works on both web and native
@@ -12,7 +17,7 @@ export const authService = {
    */
   login: async (email: string, password: string): Promise<AuthResult> => {
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post("/auth/login", {
         email,
         password,
       });
@@ -23,10 +28,10 @@ export const authService = {
 
       return { success: true, token: access_token, user };
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message || 'Login failed',
+        error: error.response?.data?.detail || error.message || "Login failed",
       };
     }
   },
@@ -34,9 +39,13 @@ export const authService = {
   /**
    * Register new user
    */
-  register: async (email: string, password: string, displayName: string): Promise<AuthResult> => {
+  register: async (
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<AuthResult> => {
     try {
-      const response = await api.post('/auth/register', {
+      const response = await api.post("/auth/register", {
         email,
         password,
         display_name: displayName,
@@ -48,10 +57,11 @@ export const authService = {
 
       return { success: true, token: access_token, user };
     } catch (error: any) {
-      console.error('Register error:', error);
+      console.error("Register error:", error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message || 'Registration failed',
+        error:
+          error.response?.data?.detail || error.message || "Registration failed",
       };
     }
   },
@@ -73,22 +83,23 @@ export const authService = {
       if (clearOfflineData) {
         try {
           // Import dynamically to avoid circular dependencies
-          const { recentProjectsCache, offlineFilesStorage } = await import('./offlineService');
+          const { recentProjectsCache, offlineFilesStorage } =
+            await import("./offlineService");
           await recentProjectsCache.clearCache();
           await offlineFilesStorage.clearAllOfflineFiles();
 
           // Also clear any pending offline queue
-          const { offlineQueue, conflicts } = await import('./offlineQueueService');
+          const { offlineQueue, conflicts } = await import("./offlineQueueService");
           await offlineQueue.clearQueue();
           await conflicts.clearResolved();
 
-          console.log('[AuthService] Cleared offline data on logout');
+          console.log("[AuthService] Cleared offline data on logout");
         } catch (offlineError) {
-          console.warn('[AuthService] Failed to clear offline data:', offlineError);
+          console.warn("[AuthService] Failed to clear offline data:", offlineError);
         }
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   },
 
@@ -127,7 +138,7 @@ export const authService = {
   },
 };
 
-export type { User, AuthResult } from './authService.types';
+export type { User, AuthResult } from "./authService.types";
 
 // Standalone exports for convenience
 export const isAuthenticated = authService.isAuthenticated;

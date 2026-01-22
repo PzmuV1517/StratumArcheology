@@ -1,10 +1,10 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { Tabs } from "expo-router";
+import React from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import { BlurView } from "expo-blur";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HapticTab } from "@/components/haptic-tab";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 /**
  * TabLayout - Main navigation tabs
@@ -17,12 +17,12 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#FF2A2A',
-        tabBarInactiveTintColor: '#9A9A9A',
+        tabBarActiveTintColor: "#FF2A2A",
+        tabBarInactiveTintColor: "#9A9A9A",
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
+          Platform.OS === "ios" ? (
             <BlurView
               intensity={50}
               tint="systemChromeMaterialDark"
@@ -30,25 +30,28 @@ export default function TabLayout() {
             />
           ) : (
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(26, 26, 26, 0.95)' }]}
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: "rgba(26, 26, 26, 0.95)" },
+              ]}
             />
           ),
         tabBarStyle: Platform.select({
           ios: {
-            position: 'absolute',
-            backgroundColor: 'transparent',
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            position: "absolute",
+            backgroundColor: "transparent",
+            borderTopColor: "rgba(255, 255, 255, 0.1)",
             borderTopWidth: StyleSheet.hairlineWidth,
           },
           default: {
-            backgroundColor: '#1A1A1A',
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: "#1A1A1A",
+            borderTopColor: "rgba(255, 255, 255, 0.1)",
             borderTopWidth: StyleSheet.hairlineWidth,
           },
         }),
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: "600",
           letterSpacing: 0.3,
           marginTop: 2,
         },
@@ -58,8 +61,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="overview"
         options={{
-          title: 'Overview',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          title: "Overview",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="house.fill" color={color} />
+          ),
         }}
       />
 
@@ -67,8 +72,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Projects',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="folder.fill" color={color} />,
+          title: "Projects",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="folder.fill" color={color} />
+          ),
         }}
       />
 
@@ -76,8 +83,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="person.fill" color={color} />,
+          title: "Profile",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="person.fill" color={color} />
+          ),
         }}
       />
 
@@ -85,8 +94,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
+          title: "Settings",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="gearshape.fill" color={color} />
+          ),
         }}
       />
 

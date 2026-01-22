@@ -5,7 +5,7 @@ export interface ProjectMember {
   user_id: string;
   email: string;
   display_name: string;
-  role: 'leader' | 'researcher' | 'guest' | 'owner' | 'editor' | 'viewer';
+  role: "leader" | "researcher" | "guest" | "owner" | "editor" | "viewer";
   joined_at: string;
 }
 

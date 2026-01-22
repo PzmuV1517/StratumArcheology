@@ -1,6 +1,13 @@
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Pressable,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 interface ProjectActionModalProps {
   visible: boolean;
@@ -16,7 +23,12 @@ export function ProjectActionModal({
   onJoinProject,
 }: ProjectActionModalProps) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.container} onStartShouldSetResponder={() => true}>
           {/* Header */}
@@ -45,7 +57,9 @@ export function ProjectActionModal({
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionTitle}>Create Project</Text>
-                <Text style={styles.optionSubtitle}>Start a new archaeological project</Text>
+                <Text style={styles.optionSubtitle}>
+                  Start a new archaeological project
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
@@ -63,7 +77,9 @@ export function ProjectActionModal({
               </View>
               <View style={styles.optionTextContainer}>
                 <Text style={styles.optionTitle}>Join Project</Text>
-                <Text style={styles.optionSubtitle}>Join with invite link or code</Text>
+                <Text style={styles.optionSubtitle}>
+                  Join with invite link or code
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
@@ -77,31 +93,31 @@ export function ProjectActionModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   container: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 20,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    overflow: 'hidden',
+    borderColor: "#2A2A2A",
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
     letterSpacing: 0.5,
   },
   closeButton: {
@@ -109,28 +125,28 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
   },
   optionsContainer: {
     padding: 12,
     gap: 8,
   },
   optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#222222',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#222222",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#1A1A1A',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#1A1A1A",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
   optionTextContainer: {
@@ -138,14 +154,14 @@ const styles = StyleSheet.create({
   },
   optionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 4,
     letterSpacing: 0.3,
   },
   optionSubtitle: {
     fontSize: 13,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     letterSpacing: 0.2,
   },
 });

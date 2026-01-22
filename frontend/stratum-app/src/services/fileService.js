@@ -1,5 +1,5 @@
-import api from './api';
-import { Platform } from 'react-native';
+import api from "./api";
+import { Platform } from "react-native";
 
 export const fileService = {
   listRoot: async (projectId) => {
@@ -18,7 +18,9 @@ export const fileService = {
     return res.data;
   },
   moveNode: async (nodeId, newParentId = null) => {
-    const res = await api.put(`/files/${nodeId}/move`, { new_parent_id: newParentId });
+    const res = await api.put(`/files/${nodeId}/move`, {
+      new_parent_id: newParentId,
+    });
     return res.data;
   },
   renameNode: async (nodeId, name) => {
@@ -38,13 +40,13 @@ export const fileService = {
   },
   downloadFile: async (nodeId) => {
     const res = await api.get(`/files/${nodeId}/download`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return res;
   },
   downloadFileWithProgress: async (nodeId, onProgress) => {
     const res = await api.get(`/files/${nodeId}/download`, {
-      responseType: 'blob',
+      responseType: "blob",
       onDownloadProgress: (e) => {
         if (onProgress) {
           const loaded = e.loaded;
@@ -57,15 +59,16 @@ export const fileService = {
     return res;
   },
   downloadFileStream: async (nodeId, token, onProgress) => {
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== "web") {
       // Fallback to axios progress for non-web
       return fileService.downloadFileWithProgress(nodeId, onProgress);
     }
     const url = `${api.defaults.baseURL}/files/${nodeId}/download`;
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error('Download failed');
-    const contentLength = parseInt(response.headers.get('Content-Length') || '0', 10) || 0;
+    if (!response.ok) throw new Error("Download failed");
+    const contentLength =
+      parseInt(response.headers.get("Content-Length") || "0", 10) || 0;
     const reader = response.body.getReader();
     let received = 0;
     const chunks = [];
@@ -77,7 +80,7 @@ export const fileService = {
       if (onProgress) onProgress(received, contentLength);
     }
     const blob = new Blob(chunks, {
-      type: response.headers.get('Content-Type') || 'application/octet-stream',
+      type: response.headers.get("Content-Type") || "application/octet-stream",
     });
     return { blob, contentLength };
   },

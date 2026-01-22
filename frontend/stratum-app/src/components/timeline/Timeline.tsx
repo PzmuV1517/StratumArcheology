@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +7,12 @@ import {
   RefreshControl,
   TouchableOpacity,
   Platform,
-} from 'react-native';
-import { useActivity } from '../../hooks';
-import { activityService, ProjectActivity, authService } from '../../services';
-import { Loading, Card } from '../common';
+} from "react-native";
+import { useActivity } from "../../hooks";
+import { activityService, ProjectActivity, authService } from "../../services";
+import { Loading, Card } from "../common";
 
-type TimelineMode = 'project' | 'personal';
+type TimelineMode = "project" | "personal";
 
 interface TimelineProps {
   projectId: string;
@@ -24,12 +24,16 @@ interface TimelineProps {
  * Timeline component for displaying project activity
  * Works on both web and native platforms
  */
-export default function Timeline({ projectId, maxHeight, onActivityPress }: TimelineProps) {
-  const [mode, setMode] = useState<TimelineMode>('project');
+export default function Timeline({
+  projectId,
+  maxHeight,
+  onActivityPress,
+}: TimelineProps) {
+  const [mode, setMode] = useState<TimelineMode>("project");
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const { activities, isLoading, hasMore, loadMore, refresh, error } = useActivity(
     projectId,
-    mode === 'personal'
+    mode === "personal",
   );
 
   // Get current user ID for "You" display
@@ -46,7 +50,13 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
     })();
   }, []);
 
-  const renderActivity = ({ item, index }: { item: ProjectActivity; index: number }) => {
+  const renderActivity = ({
+    item,
+    index,
+  }: {
+    item: ProjectActivity;
+    index: number;
+  }) => {
     const icon = activityService.getActivityIcon(item.activity_type);
     const description = activityService.getActivityDescription(item, currentUserId);
     const timestamp = activityService.formatTimestamp(item.created_at);
@@ -62,10 +72,14 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
       >
         {/* Timeline connector */}
         <View style={styles.timelineConnector}>
-          <View style={[styles.iconContainer, { borderColor: color, borderWidth: 2 }]}>
+          <View
+            style={[styles.iconContainer, { borderColor: color, borderWidth: 2 }]}
+          >
             <Text style={styles.icon}>{icon}</Text>
           </View>
-          {!isLast && <View style={[styles.line, { backgroundColor: color + '40' }]} />}
+          {!isLast && (
+            <View style={[styles.line, { backgroundColor: color + "40" }]} />
+          )}
         </View>
 
         {/* Activity content */}
@@ -119,34 +133,52 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
       {/* Toggle between Project and Personal timeline */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity
-          style={[styles.toggleButton, mode === 'project' && styles.toggleButtonActive]}
-          onPress={() => setMode('project')}
+          style={[
+            styles.toggleButton,
+            mode === "project" && styles.toggleButtonActive,
+          ]}
+          onPress={() => setMode("project")}
         >
-          <Text style={[styles.toggleText, mode === 'project' && styles.toggleTextActive]}>
+          <Text
+            style={[
+              styles.toggleText,
+              mode === "project" && styles.toggleTextActive,
+            ]}
+          >
             All Activity
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.toggleButton, mode === 'personal' && styles.toggleButtonActive]}
-          onPress={() => setMode('personal')}
+          style={[
+            styles.toggleButton,
+            mode === "personal" && styles.toggleButtonActive,
+          ]}
+          onPress={() => setMode("personal")}
         >
-          <Text style={[styles.toggleText, mode === 'personal' && styles.toggleTextActive]}>
+          <Text
+            style={[
+              styles.toggleText,
+              mode === "personal" && styles.toggleTextActive,
+            ]}
+          >
             My Activity
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        showsVerticalScrollIndicator={Platform.OS === 'web'}
+        showsVerticalScrollIndicator={Platform.OS === "web"}
         refreshControl={
           <RefreshControl
             refreshing={isLoading && activities.length > 0}
             onRefresh={refresh}
             tintColor="#007AFF"
-            colors={['#007AFF']}
+            colors={["#007AFF"]}
           />
         }
-        contentContainerStyle={activities.length === 0 ? styles.emptyList : undefined}
+        contentContainerStyle={
+          activities.length === 0 ? styles.emptyList : undefined
+        }
       >
         {isLoading && activities.length === 0 ? (
           <Loading message="Loading activity..." />
@@ -168,7 +200,7 @@ export default function Timeline({ projectId, maxHeight, onActivityPress }: Time
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0C0C0E',
+    backgroundColor: "#0C0C0E",
   },
   toggleContainer: {
     flexDirection: "row",
@@ -203,32 +235,32 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   activityItem: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   timelineConnector: {
     width: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2C2C2E',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#2C2C2E",
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1,
   },
   icon: {
     fontSize: 16,
   },
   line: {
-    position: 'absolute',
+    position: "absolute",
     top: 32,
     bottom: -8,
     width: 2,
-    backgroundColor: '#3C3C3E',
+    backgroundColor: "#3C3C3E",
     left: 19,
   },
   content: {
@@ -238,18 +270,18 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     lineHeight: 20,
   },
   timestamp: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: "#8E8E93",
     marginTop: 4,
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 32,
   },
   emptyIcon: {
@@ -258,36 +290,36 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
     lineHeight: 20,
   },
   loadMoreButton: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: 16,
   },
   loadMoreText: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
+    color: "#007AFF",
+    fontWeight: "500",
   },
   errorCard: {
     margin: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   errorText: {
     fontSize: 14,
-    color: '#FF3B30',
+    color: "#FF3B30",
     marginBottom: 8,
   },
   retryText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: "#007AFF",
   },
 });

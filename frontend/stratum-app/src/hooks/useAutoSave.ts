@@ -10,11 +10,11 @@
  * Cross-platform: Uses AsyncStorage for persistence
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState, useEffect, useCallback, useRef } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Save status types
-export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 // Draft metadata
 interface DraftMetadata {
@@ -64,7 +64,7 @@ interface UseAutoSaveReturn<T> {
   scheduleAutoSave: (data: T) => void;
 }
 
-const DRAFT_KEY_PREFIX = '@stratum_draft_';
+const DRAFT_KEY_PREFIX = "@stratum_draft_";
 const DRAFT_VERSION = 1;
 
 /**
@@ -78,7 +78,7 @@ export function useAutoSave<T>({
   debounceDelay = 1000,
   skipRestore = false,
 }: UseAutoSaveOptions<T>): UseAutoSaveReturn<T> {
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [wasRestored, setWasRestored] = useState(false);
 
@@ -95,7 +95,7 @@ export function useAutoSave<T>({
   const saveDraft = useCallback(
     async (data: T): Promise<void> => {
       try {
-        setSaveStatus('saving');
+        setSaveStatus("saving");
 
         const draftData: DraftData<T> = {
           data,
@@ -110,18 +110,18 @@ export function useAutoSave<T>({
 
         const now = new Date();
         setLastSavedAt(now);
-        setSaveStatus('saved');
+        setSaveStatus("saved");
 
         console.log(`[AutoSave] Draft saved for ${formId}`);
 
         // Reset to idle after showing "saved" briefly
-        setTimeout(() => setSaveStatus('idle'), 2000);
+        setTimeout(() => setSaveStatus("idle"), 2000);
       } catch (error) {
         console.error(`[AutoSave] Failed to save draft for ${formId}:`, error);
-        setSaveStatus('error');
+        setSaveStatus("error");
       }
     },
-    [formId, storageKey]
+    [formId, storageKey],
   );
 
   /**
@@ -131,7 +131,7 @@ export function useAutoSave<T>({
     try {
       await AsyncStorage.removeItem(storageKey);
       setLastSavedAt(null);
-      setSaveStatus('idle');
+      setSaveStatus("idle");
       console.log(`[AutoSave] Draft cleared for ${formId}`);
     } catch (error) {
       console.error(`[AutoSave] Failed to clear draft for ${formId}:`, error);
@@ -212,7 +212,7 @@ export function useAutoSave<T>({
         }
       }, debounceDelay);
     },
-    [saveDraft, debounceDelay]
+    [saveDraft, debounceDelay],
   );
 
   /**
@@ -279,30 +279,30 @@ export function useAutoSave<T>({
 export function getDraftStatusDisplay(
   saveStatus: SaveStatus,
   lastSavedAt: Date | null,
-  wasRestored: boolean
+  wasRestored: boolean,
 ): { text: string; color: string; visible: boolean } {
   switch (saveStatus) {
-    case 'saving':
-      return { text: 'Saving...', color: '#60a5fa', visible: true };
-    case 'saved':
-      return { text: 'Draft saved', color: '#34d399', visible: true };
-    case 'error':
-      return { text: 'Failed to save', color: '#f87171', visible: true };
-    case 'idle':
+    case "saving":
+      return { text: "Saving...", color: "#60a5fa", visible: true };
+    case "saved":
+      return { text: "Draft saved", color: "#34d399", visible: true };
+    case "error":
+      return { text: "Failed to save", color: "#f87171", visible: true };
+    case "idle":
       if (wasRestored) {
-        return { text: 'Draft restored', color: '#fbbf24', visible: true };
+        return { text: "Draft restored", color: "#fbbf24", visible: true };
       }
       if (lastSavedAt) {
         const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
         if (seconds < 60) {
-          return { text: `Saved ${seconds}s ago`, color: '#9ca3af', visible: true };
+          return { text: `Saved ${seconds}s ago`, color: "#9ca3af", visible: true };
         }
         const minutes = Math.floor(seconds / 60);
-        return { text: `Saved ${minutes}m ago`, color: '#9ca3af', visible: true };
+        return { text: `Saved ${minutes}m ago`, color: "#9ca3af", visible: true };
       }
-      return { text: '', color: '', visible: false };
+      return { text: "", color: "", visible: false };
     default:
-      return { text: '', color: '', visible: false };
+      return { text: "", color: "", visible: false };
   }
 }
 

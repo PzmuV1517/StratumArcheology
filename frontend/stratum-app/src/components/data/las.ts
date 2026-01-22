@@ -9,7 +9,7 @@ export type LasParseResult = {
 };
 
 function readString(view: DataView, offset: number, length: number) {
-  let s = '';
+  let s = "";
   for (let i = 0; i < length; i++) {
     const c = view.getUint8(offset + i);
     if (c === 0) break;
@@ -18,22 +18,25 @@ function readString(view: DataView, offset: number, length: number) {
   return s;
 }
 
-export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }): LasParseResult {
+export function parseLAS(
+  buffer: ArrayBuffer,
+  options?: { maxPoints?: number },
+): LasParseResult {
   const view = new DataView(buffer);
   // quick compression/html checks
   const b0 = view.getUint8(0);
   const b1 = view.getUint8(1);
   if (b0 === 0x1f && b1 === 0x8b) {
-    throw new Error('Compressed (gzip/LAZ) content not supported in-browser');
+    throw new Error("Compressed (gzip/LAZ) content not supported in-browser");
   }
   if (b0 === 0x3c /* '<' */) {
-    throw new Error('Received HTML/XML, not a LAS file (check URL/auth)');
+    throw new Error("Received HTML/XML, not a LAS file (check URL/auth)");
   }
 
   // find LAS header signature; tolerate preambles by scanning up to 8MB
   let base = 0;
   let sig = readString(view, 0, 4);
-  if (sig !== 'LASF') {
+  if (sig !== "LASF") {
     const limit = Math.min(buffer.byteLength - 4, 8 * 1024 * 1024);
     for (let i = 1; i < limit; i++) {
       if (
@@ -43,18 +46,18 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
         view.getUint8(i + 3) === 0x46 // 'F'
       ) {
         base = i;
-        sig = 'LASF';
+        sig = "LASF";
         break;
       }
     }
   }
-  if (sig !== 'LASF') {
+  if (sig !== "LASF") {
     // surface first few chars to help diagnose (HTML/JSON/etc.)
     const peek = Array.from(new Uint8Array(buffer.slice(0, 16)))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join(' ');
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(" ");
     throw new Error(
-      `Not a LAS file (signature not found in first ${Math.min(buffer.byteLength, 8 * 1024 * 1024)} bytes). First bytes: ${peek}`
+      `Not a LAS file (signature not found in first ${Math.min(buffer.byteLength, 8 * 1024 * 1024)} bytes). First bytes: ${peek}`,
     );
   }
 
@@ -71,7 +74,7 @@ export function parseLAS(buffer: ArrayBuffer, options?: { maxPoints?: number }):
     // Fallback estimate
     pointCount = Math.max(
       0,
-      Math.floor((buffer.byteLength - offsetToPointData) / pointRecordLength)
+      Math.floor((buffer.byteLength - offsetToPointData) / pointRecordLength),
     );
   }
 

@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Platform, View, Text, TextInput, StyleSheet } from 'react-native';
+import React, { useRef, useState } from "react";
+import { Platform, View, Text, TextInput, StyleSheet } from "react-native";
 
 interface Props {
   table: string[][];
@@ -17,19 +17,23 @@ export default function GridPanel({ table, setTable, editing, onDirty }: Props) 
           <View key={rIdx} style={styles.tableRow}>
             {row.map((cell, cIdx) => {
               const cellWidthOverride =
-                Platform.OS === 'web' ? ({ width: '15ch' } as any) : { width: 120 };
+                Platform.OS === "web" ? ({ width: "15ch" } as any) : { width: 120 };
               const webPreWrap =
-                Platform.OS === 'web' ? ({ whiteSpace: 'pre-wrap' } as any) : undefined;
+                Platform.OS === "web"
+                  ? ({ whiteSpace: "pre-wrap" } as any)
+                  : undefined;
               return (
                 <View key={cIdx} style={[styles.tableCell, cellWidthOverride]}>
                   {editing ? (
                     <TextInput
                       style={[
                         styles.cellInput,
-                        Platform.OS === 'web' ? ({ fontFamily: 'monospace' } as any) : undefined,
+                        Platform.OS === "web"
+                          ? ({ fontFamily: "monospace" } as any)
+                          : undefined,
                       ]}
                       multiline
-                      value={String(cell ?? '')}
+                      value={String(cell ?? "")}
                       onChangeText={(txt) => {
                         setTable((prev) => {
                           const next = prev.map((r) => r.slice());
@@ -40,14 +44,18 @@ export default function GridPanel({ table, setTable, editing, onDirty }: Props) 
                       }}
                     />
                   ) : (
-                    <Text style={[styles.cellText, webPreWrap]}>{String(cell ?? '')}</Text>
+                    <Text style={[styles.cellText, webPreWrap]}>
+                      {String(cell ?? "")}
+                    </Text>
                   )}
                 </View>
               );
             })}
           </View>
         ))}
-        {table.length > 200 && <Text style={styles.moreText}>Showing first 200 rows…</Text>}
+        {table.length > 200 && (
+          <Text style={styles.moreText}>Showing first 200 rows…</Text>
+        )}
       </View>
     </View>
   );
@@ -58,35 +66,35 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#0E0E0E',
+    borderColor: "#2A2A2A",
+    backgroundColor: "#0E0E0E",
   },
-  tableRow: { flexDirection: 'row' },
+  tableRow: { flexDirection: "row" },
   tableCell: {
     paddingVertical: 4,
     paddingHorizontal: 6,
     borderRightWidth: 1,
-    borderRightColor: '#2A2A2A',
+    borderRightColor: "#2A2A2A",
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
     width: 160,
   },
   cellText: {
-    color: '#EAEAEA',
-    fontFamily: Platform.select({ web: 'monospace', default: undefined }),
+    color: "#EAEAEA",
+    fontFamily: Platform.select({ web: "monospace", default: undefined }),
     fontSize: 12,
     lineHeight: 14,
   },
   cellInput: {
-    color: '#EAEAEA',
+    color: "#EAEAEA",
     paddingVertical: 2,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
     borderRadius: 4,
     minHeight: 24,
-    backgroundColor: '#151515',
+    backgroundColor: "#151515",
     fontSize: 12,
   },
-  moreText: { color: '#9A9A9A', padding: 8 },
+  moreText: { color: "#9A9A9A", padding: 8 },
 });

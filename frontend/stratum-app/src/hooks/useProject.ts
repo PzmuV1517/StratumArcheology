@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { projectService, Project } from '../services';
-import { socketService } from '../services/socketService';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { projectService, Project } from "../services";
+import { socketService } from "../services/socketService";
 
 interface ProjectState {
   project: Project | null;
@@ -15,10 +15,12 @@ interface ProjectActions {
   createProject: (name: string, description?: string) => Promise<Project | null>;
   updateProject: (
     projectId: string,
-    data: { name?: string; description?: string }
+    data: { name?: string; description?: string },
   ) => Promise<boolean>;
   deleteProject: (projectId: string) => Promise<boolean>;
-  joinByCode: (code: string) => Promise<{ success: boolean; projectId?: string; error?: string }>;
+  joinByCode: (
+    code: string,
+  ) => Promise<{ success: boolean; projectId?: string; error?: string }>;
   clearError: () => void;
 }
 
@@ -41,7 +43,7 @@ export function useProject(projectId?: string): UseProjectReturn {
       socketService.connect(projectId);
 
       // Subscribe to project updates
-      unsubscribeRef.current = socketService.on('project_updated', (data) => {
+      unsubscribeRef.current = socketService.on("project_updated", (data) => {
         if (data.project) {
           setProject(data.project);
         }
@@ -72,7 +74,7 @@ export function useProject(projectId?: string): UseProjectReturn {
       const data = await projectService.getProjects();
       setProjects(data);
     } catch (e: any) {
-      setError(e.detail || e.message || 'Failed to load projects');
+      setError(e.detail || e.message || "Failed to load projects");
     } finally {
       setIsLoading(false);
     }
@@ -86,7 +88,7 @@ export function useProject(projectId?: string): UseProjectReturn {
       const data = await projectService.getProject(id);
       setProject(data);
     } catch (e: any) {
-      setError(e.detail || e.message || 'Failed to load project');
+      setError(e.detail || e.message || "Failed to load project");
     } finally {
       setIsLoading(false);
     }
@@ -102,17 +104,20 @@ export function useProject(projectId?: string): UseProjectReturn {
         setProjects((prev) => [...prev, newProject]);
         return newProject;
       } catch (e: any) {
-        setError(e.detail || e.message || 'Failed to create project');
+        setError(e.detail || e.message || "Failed to create project");
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   const updateProject = useCallback(
-    async (id: string, data: { name?: string; description?: string }): Promise<boolean> => {
+    async (
+      id: string,
+      data: { name?: string; description?: string },
+    ): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
@@ -122,13 +127,13 @@ export function useProject(projectId?: string): UseProjectReturn {
         setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
         return true;
       } catch (e: any) {
-        setError(e.detail || e.message || 'Failed to update project');
+        setError(e.detail || e.message || "Failed to update project");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   const deleteProject = useCallback(
@@ -144,17 +149,19 @@ export function useProject(projectId?: string): UseProjectReturn {
         }
         return true;
       } catch (e: any) {
-        setError(e.detail || e.message || 'Failed to delete project');
+        setError(e.detail || e.message || "Failed to delete project");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [project]
+    [project],
   );
 
   const joinByCode = useCallback(
-    async (code: string): Promise<{ success: boolean; projectId?: string; error?: string }> => {
+    async (
+      code: string,
+    ): Promise<{ success: boolean; projectId?: string; error?: string }> => {
       setIsLoading(true);
       setError(null);
 
@@ -164,14 +171,14 @@ export function useProject(projectId?: string): UseProjectReturn {
         await loadProjects();
         return { success: true, projectId: result.project_id };
       } catch (e: any) {
-        const errorMsg = e.detail || e.message || 'Failed to join project';
+        const errorMsg = e.detail || e.message || "Failed to join project";
         setError(errorMsg);
         return { success: false, error: errorMsg };
       } finally {
         setIsLoading(false);
       }
     },
-    [loadProjects]
+    [loadProjects],
   );
 
   const clearError = useCallback(() => {

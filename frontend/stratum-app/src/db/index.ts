@@ -4,5 +4,5 @@
  * Exports all database functionality for offline-first architecture.
  */
 
-export * from './schema';
-export * from './database';
+export * from "./schema";
+export * from "./database";

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
 
 export default function PdfPanel({ src }: { src: string | null }) {
   return (
@@ -19,10 +19,10 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#0E0E0E',
-    overflow: 'hidden',
+    borderColor: "#2A2A2A",
+    backgroundColor: "#0E0E0E",
+    overflow: "hidden",
   },
-  iframe: { width: '100%', height: '100%', borderWidth: 0 },
-  info: { color: '#9A9A9A', padding: 12, textAlign: 'center' },
+  iframe: { width: "100%", height: "100%", borderWidth: 0 },
+  info: { color: "#9A9A9A", padding: 12, textAlign: "center" },
 });

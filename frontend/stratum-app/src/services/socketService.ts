@@ -1,5 +1,5 @@
-import { config } from '../config/config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { config } from "../config/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type MessageHandler = (data: any) => void;
 type ConnectionHandler = () => void;
@@ -36,12 +36,12 @@ const getWsUrl = async (): Promise<string> => {
 
   // Check for override
   try {
-    const override = await AsyncStorage.getItem('apiBaseUrlOverride');
+    const override = await AsyncStorage.getItem("apiBaseUrlOverride");
     if (override) baseUrl = override;
   } catch {}
 
   // Convert HTTP to WS
-  return baseUrl.replace(/^http/, 'ws');
+  return baseUrl.replace(/^http/, "ws");
 };
 
 /**
@@ -62,9 +62,9 @@ export const socketService = {
     state.reconnectAttempts = 0;
 
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      const token = await AsyncStorage.getItem("authToken");
       if (!token) {
-        console.warn('No auth token available for WebSocket connection');
+        console.warn("No auth token available for WebSocket connection");
         return;
       }
 
@@ -83,7 +83,7 @@ export const socketService = {
           try {
             handler();
           } catch (e) {
-            console.error('Connect handler error:', e);
+            console.error("Connect handler error:", e);
           }
         });
       };
@@ -91,7 +91,7 @@ export const socketService = {
       state.socket.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          const eventType = data.type || data.event || 'message';
+          const eventType = data.type || data.event || "message";
 
           // Dispatch to handlers for this event type
           const handlers = state.messageHandlers.get(eventType);
@@ -106,23 +106,23 @@ export const socketService = {
           }
 
           // Also dispatch to 'all' handlers
-          const allHandlers = state.messageHandlers.get('*');
+          const allHandlers = state.messageHandlers.get("*");
           if (allHandlers) {
             allHandlers.forEach((handler) => {
               try {
                 handler(data);
               } catch (e) {
-                console.error('Wildcard handler error:', e);
+                console.error("Wildcard handler error:", e);
               }
             });
           }
         } catch (e) {
-          console.error('Failed to parse WebSocket message:', e);
+          console.error("Failed to parse WebSocket message:", e);
         }
       };
 
       state.socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
       };
 
       state.socket.onclose = (event) => {
@@ -135,7 +135,7 @@ export const socketService = {
           try {
             handler();
           } catch (e) {
-            console.error('Disconnect handler error:', e);
+            console.error("Disconnect handler error:", e);
           }
         });
 
@@ -146,8 +146,11 @@ export const socketService = {
           state.reconnectAttempts < state.maxReconnectAttempts
         ) {
           state.reconnectAttempts++;
-          const delay = state.reconnectDelay * Math.pow(2, state.reconnectAttempts - 1);
-          console.log(`Reconnecting in ${delay}ms (attempt ${state.reconnectAttempts})`);
+          const delay =
+            state.reconnectDelay * Math.pow(2, state.reconnectAttempts - 1);
+          console.log(
+            `Reconnecting in ${delay}ms (attempt ${state.reconnectAttempts})`,
+          );
 
           setTimeout(() => {
             if (state.projectId !== null) {
@@ -157,7 +160,7 @@ export const socketService = {
         }
       };
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      console.error("Failed to create WebSocket connection:", error);
     }
   },
 
@@ -166,7 +169,7 @@ export const socketService = {
    */
   disconnect: (): void => {
     if (state.socket) {
-      state.socket.close(1000, 'Client disconnect');
+      state.socket.close(1000, "Client disconnect");
       state.socket = null;
     }
     state.connected = false;
@@ -196,7 +199,7 @@ export const socketService = {
    * Subscribe to all events
    */
   onAny: (handler: MessageHandler): (() => void) => {
-    return socketService.on('*', handler);
+    return socketService.on("*", handler);
   },
 
   /**
@@ -226,7 +229,7 @@ export const socketService = {
     if (state.socket && state.connected) {
       state.socket.send(JSON.stringify(data));
     } else {
-      console.warn('Cannot send: WebSocket not connected');
+      console.warn("Cannot send: WebSocket not connected");
     }
   },
 

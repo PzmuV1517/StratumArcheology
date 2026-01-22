@@ -19,7 +19,7 @@ export interface ContextFeatureRecord {
 export interface StratigraphicUnitRecord {
   unit_id?: string;
   context_id?: string;
-  type?: 'deposit' | 'cut' | 'fill' | 'structure' | 'interface' | string;
+  type?: "deposit" | "cut" | "fill" | "structure" | "interface" | string;
   description?: string;
   relationships?: {
     above?: string[];

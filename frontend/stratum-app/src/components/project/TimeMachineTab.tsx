@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,9 @@ import {
   Alert,
   RefreshControl,
   Platform,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { config } from '../../config/config';
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { config } from "../../config/config";
 
 interface FileVersion {
   id: string;
@@ -48,30 +48,34 @@ interface TimeMachineTabProps {
   projectId: string;
 }
 
-const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string }> = {
-  documents: { icon: '📄', label: 'Documents', color: '#4A90D9' },
-  spreadsheets: { icon: '📊', label: 'Spreadsheets', color: '#34A853' },
-  images: { icon: '🖼️', label: 'Images', color: '#EA4335' },
-  videos: { icon: '🎬', label: 'Videos', color: '#9C27B0' },
-  audio: { icon: '🎵', label: 'Audio', color: '#FF9800' },
-  '3d_models': { icon: '🧊', label: '3D Models', color: '#00BCD4' },
-  archives: { icon: '📦', label: 'Archives', color: '#795548' },
-  code: { icon: '💻', label: 'Code', color: '#607D8B' },
-  other: { icon: '📁', label: 'Other', color: '#9E9E9E' },
-};
+const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string }> =
+  {
+    documents: { icon: "📄", label: "Documents", color: "#4A90D9" },
+    spreadsheets: { icon: "📊", label: "Spreadsheets", color: "#34A853" },
+    images: { icon: "🖼️", label: "Images", color: "#EA4335" },
+    videos: { icon: "🎬", label: "Videos", color: "#9C27B0" },
+    audio: { icon: "🎵", label: "Audio", color: "#FF9800" },
+    "3d_models": { icon: "🧊", label: "3D Models", color: "#00BCD4" },
+    archives: { icon: "📦", label: "Archives", color: "#795548" },
+    code: { icon: "💻", label: "Code", color: "#607D8B" },
+    other: { icon: "📁", label: "Other", color: "#9E9E9E" },
+  };
 
 export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   const [data, setData] = useState<TimeMachineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(),
+  );
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const loadTimeMachineData = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
+      const token = await AsyncStorage.getItem("authToken");
+      const apiBaseUrl =
+        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
 
       const url = selectedCategory
         ? `${apiBaseUrl}/api/files/project/${projectId}/time-machine?category=${selectedCategory}`
@@ -84,14 +88,14 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load version history');
+        throw new Error("Failed to load version history");
       }
 
       const result = await response.json();
       setData(result);
     } catch (error) {
-      console.error('Error loading time machine data:', error);
-      Alert.alert('Error', 'Failed to load version history');
+      console.error("Error loading time machine data:", error);
+      Alert.alert("Error", "Failed to load version history");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -132,23 +136,24 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   };
 
   const formatFileSize = (size: string | null): string => {
-    if (!size) return 'Unknown size';
+    if (!size) return "Unknown size";
     const bytes = parseInt(size, 10);
     if (isNaN(bytes)) return size;
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024 * 1024)
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -160,29 +165,34 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
+    if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return formatDate(dateString);
   };
 
-  const downloadVersion = async (fileId: string, version: number, fileName: string) => {
+  const downloadVersion = async (
+    fileId: string,
+    version: number,
+    fileName: string,
+  ) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
+      const token = await AsyncStorage.getItem("authToken");
+      const apiBaseUrl =
+        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
       const url = `${apiBaseUrl}/api/files/${fileId}/version/${version}/download?token=${token}`;
 
-      if (Platform.OS === 'web') {
-        window.open(url, '_blank');
+      if (Platform.OS === "web") {
+        window.open(url, "_blank");
       } else {
-        Alert.alert('Download Version', `Download ${fileName} version ${version}?`, [
-          { text: 'Cancel', style: 'cancel' },
+        Alert.alert("Download Version", `Download ${fileName} version ${version}?`, [
+          { text: "Cancel", style: "cancel" },
           {
-            text: 'Download',
+            text: "Download",
             onPress: () => {
               // For native, we'd use Linking or file download library
-              import('expo-linking').then((Linking) => {
+              import("expo-linking").then((Linking) => {
                 Linking.openURL(url);
               });
             },
@@ -190,45 +200,53 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
         ]);
       }
     } catch (error) {
-      console.error('Error downloading version:', error);
-      Alert.alert('Error', 'Failed to download version');
+      console.error("Error downloading version:", error);
+      Alert.alert("Error", "Failed to download version");
     }
   };
 
-  const restoreVersion = async (fileId: string, version: number, fileName: string) => {
+  const restoreVersion = async (
+    fileId: string,
+    version: number,
+    fileName: string,
+  ) => {
     Alert.alert(
-      'Restore Version',
+      "Restore Version",
       `Restore ${fileName} to version ${version}? This will create a new version with the old content.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Restore',
-          style: 'destructive',
+          text: "Restore",
+          style: "destructive",
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('authToken');
-              const apiBaseUrl = config.apiBaseUrl.replace('/api', '') || 'http://localhost:8000';
+              const token = await AsyncStorage.getItem("authToken");
+              const apiBaseUrl =
+                config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
 
-              const response = await fetch(`${apiBaseUrl}/api/files/${fileId}/restore/${version}`, {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${token}`,
+              const response = await fetch(
+                `${apiBaseUrl}/api/files/${fileId}/restore/${version}`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
                 },
-              });
+              );
 
               if (!response.ok) {
-                throw new Error('Failed to restore version');
+                throw new Error("Failed to restore version");
               }
 
-              Alert.alert('Success', `Restored ${fileName} to version ${version}`);
+              Alert.alert("Success", `Restored ${fileName} to version ${version}`);
               loadTimeMachineData();
             } catch (error) {
-              console.error('Error restoring version:', error);
-              Alert.alert('Error', 'Failed to restore version');
+              console.error("Error restoring version:", error);
+              Alert.alert("Error", "Failed to restore version");
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -246,7 +264,12 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           style={[styles.filterChip, !selectedCategory && styles.filterChipActive]}
           onPress={() => setSelectedCategory(null)}
         >
-          <Text style={[styles.filterChipText, !selectedCategory && styles.filterChipTextActive]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              !selectedCategory && styles.filterChipTextActive,
+            ]}
+          >
             All
           </Text>
         </TouchableOpacity>
@@ -259,8 +282,13 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           return (
             <TouchableOpacity
               key={cat}
-              style={[styles.filterChip, selectedCategory === cat && styles.filterChipActive]}
-              onPress={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+              style={[
+                styles.filterChip,
+                selectedCategory === cat && styles.filterChipActive,
+              ]}
+              onPress={() =>
+                setSelectedCategory(cat === selectedCategory ? null : cat)
+              }
             >
               <Text style={styles.filterChipIcon}>{info.icon}</Text>
               <Text
@@ -284,7 +312,10 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
     return (
       <View key={file.id} style={styles.fileCard}>
-        <TouchableOpacity style={styles.fileHeader} onPress={() => toggleFile(file.id)}>
+        <TouchableOpacity
+          style={styles.fileHeader}
+          onPress={() => toggleFile(file.id)}
+        >
           <View style={styles.fileInfo}>
             <Text style={styles.fileIcon}>{info.icon}</Text>
             <View style={styles.fileDetails}>
@@ -292,16 +323,18 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                 {file.name}
               </Text>
               <Text style={styles.fileMeta}>
-                v{file.current_version} • {formatFileSize(file.size)} •{' '}
+                v{file.current_version} • {formatFileSize(file.size)} •{" "}
                 {formatTimeAgo(file.updated_at)}
               </Text>
             </View>
           </View>
           <View style={styles.fileActions}>
             <View style={styles.versionBadge}>
-              <Text style={styles.versionBadgeText}>{file.versions.length + 1} versions</Text>
+              <Text style={styles.versionBadgeText}>
+                {file.versions.length + 1} versions
+              </Text>
             </View>
-            <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+            <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
           </View>
         </TouchableOpacity>
 
@@ -329,17 +362,23 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                 <View style={[styles.versionDot, styles.versionDotOld]} />
                 <View style={styles.versionInfo}>
                   <View style={styles.versionHeader}>
-                    <Text style={styles.versionLabel}>Version {version.version}</Text>
+                    <Text style={styles.versionLabel}>
+                      Version {version.version}
+                    </Text>
                     <View style={styles.versionActions}>
                       <TouchableOpacity
                         style={styles.versionActionButton}
-                        onPress={() => downloadVersion(file.id, version.version, file.name)}
+                        onPress={() =>
+                          downloadVersion(file.id, version.version, file.name)
+                        }
                       >
                         <Text style={styles.versionActionText}>⬇️</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.versionActionButton}
-                        onPress={() => restoreVersion(file.id, version.version, file.name)}
+                        onPress={() =>
+                          restoreVersion(file.id, version.version, file.name)
+                        }
                       >
                         <Text style={styles.versionActionText}>↩️</Text>
                       </TouchableOpacity>
@@ -366,7 +405,10 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
     return (
       <View key={category} style={styles.categorySection}>
-        <TouchableOpacity style={styles.categoryHeader} onPress={() => toggleCategory(category)}>
+        <TouchableOpacity
+          style={styles.categoryHeader}
+          onPress={() => toggleCategory(category)}
+        >
           <View style={styles.categoryInfo}>
             <Text style={styles.categoryIcon}>{info.icon}</Text>
             <View>
@@ -376,10 +418,12 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
               </Text>
             </View>
           </View>
-          <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+          <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
         </TouchableOpacity>
 
-        {isExpanded && <View style={styles.categoryFiles}>{files.map(renderFileVersions)}</View>}
+        {isExpanded && (
+          <View style={styles.categoryFiles}>{files.map(renderFileVersions)}</View>
+        )}
       </View>
     );
   };
@@ -435,7 +479,11 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF2A2A" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF2A2A"
+          />
         }
       >
         {categories.length === 0 ? (
@@ -455,24 +503,24 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: "#0A0A0A",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0A0A0A',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
     padding: 20,
   },
   loadingText: {
     marginTop: 16,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyIcon: {
@@ -481,66 +529,66 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#9A9A9A',
-    textAlign: 'center',
+    color: "#9A9A9A",
+    textAlign: "center",
   },
   statsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#FF2A2A',
+    fontWeight: "700",
+    color: "#FF2A2A",
   },
   statLabel: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginTop: 4,
   },
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
   },
   filterContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   filterContent: {
     padding: 12,
     gap: 8,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2A2A2A',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#3A3A3A',
+    borderColor: "#3A3A3A",
   },
   filterChipActive: {
-    backgroundColor: '#FF2A2A',
-    borderColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
+    borderColor: "#FF2A2A",
   },
   filterChipIcon: {
     fontSize: 14,
@@ -548,11 +596,11 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 13,
-    color: '#9A9A9A',
-    fontWeight: '500',
+    color: "#9A9A9A",
+    fontWeight: "500",
   },
   filterChipTextActive: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
   },
   scrollView: {
     flex: 1,
@@ -563,21 +611,21 @@ const styles = StyleSheet.create({
   },
   categorySection: {
     marginBottom: 16,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
   },
   categoryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   categoryIcon: {
     fontSize: 24,
@@ -585,36 +633,36 @@ const styles = StyleSheet.create({
   },
   categoryLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
   },
   categoryMeta: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   expandIcon: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   categoryFiles: {
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
+    borderTopColor: "#2A2A2A",
   },
   fileCard: {
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   fileHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
     paddingLeft: 16,
   },
   fileInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   fileIcon: {
@@ -626,20 +674,20 @@ const styles = StyleSheet.create({
   },
   fileName: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#F5F5F5',
+    fontWeight: "500",
+    color: "#F5F5F5",
   },
   fileMeta: {
     fontSize: 11,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   fileActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   versionBadge: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
@@ -647,54 +695,54 @@ const styles = StyleSheet.create({
   },
   versionBadgeText: {
     fontSize: 10,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
   },
   versionsContainer: {
-    backgroundColor: '#0E0E0E',
+    backgroundColor: "#0E0E0E",
     paddingVertical: 8,
     paddingLeft: 32,
     paddingRight: 12,
   },
   versionItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     paddingVertical: 8,
   },
   versionDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     marginTop: 6,
     marginRight: 12,
   },
   versionDotOld: {
-    backgroundColor: '#666',
+    backgroundColor: "#666",
   },
   versionInfo: {
     flex: 1,
   },
   versionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   versionLabel: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#F5F5F5',
+    fontWeight: "500",
+    color: "#F5F5F5",
   },
   currentVersionBadge: {
-    color: '#FF2A2A',
-    fontWeight: '600',
+    color: "#FF2A2A",
+    fontWeight: "600",
   },
   versionMeta: {
     fontSize: 11,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   versionActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   versionActionButton: {
     padding: 4,

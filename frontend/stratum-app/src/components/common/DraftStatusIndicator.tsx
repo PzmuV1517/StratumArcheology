@@ -10,9 +10,9 @@
  * Cross-platform: Works on both web and native
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
-import { SaveStatus, getDraftStatusDisplay } from '../../hooks/useAutoSave';
+import React from "react";
+import { View, Text, StyleSheet, ActivityIndicator, Animated } from "react-native";
+import { SaveStatus, getDraftStatusDisplay } from "../../hooks/useAutoSave";
 
 interface DraftStatusIndicatorProps {
   /** Current save status */
@@ -31,13 +31,17 @@ export function DraftStatusIndicator({
   wasRestored,
   style,
 }: DraftStatusIndicatorProps) {
-  const { text, color, visible } = getDraftStatusDisplay(saveStatus, lastSavedAt, wasRestored);
+  const { text, color, visible } = getDraftStatusDisplay(
+    saveStatus,
+    lastSavedAt,
+    wasRestored,
+  );
 
   if (!visible) return null;
 
   return (
     <View style={[styles.container, style]}>
-      {saveStatus === 'saving' && (
+      {saveStatus === "saving" && (
         <ActivityIndicator size="small" color={color} style={styles.spinner} />
       )}
       <Text style={[styles.text, { color }]}>{text}</Text>
@@ -48,29 +52,35 @@ export function DraftStatusIndicator({
 /**
  * Compact draft indicator (just a dot)
  */
-export function DraftDot({ saveStatus, style }: { saveStatus: SaveStatus; style?: any }) {
+export function DraftDot({
+  saveStatus,
+  style,
+}: {
+  saveStatus: SaveStatus;
+  style?: any;
+}) {
   const getColor = () => {
     switch (saveStatus) {
-      case 'saving':
-        return '#60a5fa';
-      case 'saved':
-        return '#34d399';
-      case 'error':
-        return '#f87171';
+      case "saving":
+        return "#60a5fa";
+      case "saved":
+        return "#34d399";
+      case "error":
+        return "#f87171";
       default:
-        return 'transparent';
+        return "transparent";
     }
   };
 
-  if (saveStatus === 'idle') return null;
+  if (saveStatus === "idle") return null;
 
   return <View style={[styles.dot, { backgroundColor: getColor() }, style]} />;
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
@@ -79,7 +89,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   dot: {
     width: 8,

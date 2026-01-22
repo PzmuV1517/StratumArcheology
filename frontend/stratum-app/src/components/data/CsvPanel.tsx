@@ -1,5 +1,5 @@
-import React from 'react';
-import GridPanel from './GridPanel';
+import React from "react";
+import GridPanel from "./GridPanel";
 
 interface Props {
   table: string[][];

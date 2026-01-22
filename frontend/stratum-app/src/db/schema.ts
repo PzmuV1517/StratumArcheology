@@ -10,7 +10,7 @@
  * - Conflict tracking for sync resolution
  */
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 // Types for database records
 export interface LocalProject {
@@ -44,19 +44,19 @@ export interface LocalNote {
 
 export interface QueuedRequest {
   id: string;
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
   data: string | null; // JSON stringified
   headers: string; // JSON stringified
   created_at: string;
   retry_count: number;
   last_error: string | null;
-  status: 'pending' | 'processing' | 'failed';
+  status: "pending" | "processing" | "failed";
 }
 
 export interface SyncConflict {
   id: string;
-  entity_type: 'project' | 'note' | 'file';
+  entity_type: "project" | "note" | "file";
   entity_id: string;
   local_data: string; // JSON stringified
   server_data: string; // JSON stringified
@@ -64,7 +64,7 @@ export interface SyncConflict {
   server_updated_at: string;
   created_at: string;
   resolved: boolean;
-  resolution: 'local' | 'server' | 'merged' | null;
+  resolution: "local" | "server" | "merged" | null;
 }
 
 // Offline file metadata for "Save for Offline" feature
@@ -95,7 +95,7 @@ export interface RecentProject {
 
 // Database schema version for migrations
 export const DB_VERSION = 1;
-export const DB_NAME = 'stratum_offline.db';
+export const DB_NAME = "stratum_offline.db";
 
 // Table creation SQL statements
 export const CREATE_TABLES_SQL = `

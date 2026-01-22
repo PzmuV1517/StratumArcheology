@@ -1,18 +1,18 @@
-import { Platform, View } from 'react-native';
-import './StarBorder.css';
+import { Platform, View } from "react-native";
+import "./StarBorder.css";
 
 const StarBorder = ({
-  as: Component = Platform.OS === 'web' ? 'button' : View,
-  className = '',
-  color = 'white',
-  speed = '6s',
+  as: Component = Platform.OS === "web" ? "button" : View,
+  className = "",
+  color = "white",
+  speed = "6s",
   thickness = 1,
   children,
   ...rest
 }) => {
   // Only apply className and HTML styles on web
   const webProps =
-    Platform.OS === 'web'
+    Platform.OS === "web"
       ? {
           className: `star-border-container ${className}`,
           style: {
@@ -24,7 +24,7 @@ const StarBorder = ({
 
   return (
     <Component {...webProps} {...rest}>
-      {Platform.OS === 'web' ? (
+      {Platform.OS === "web" ? (
         <>
           <div
             className="border-gradient-bottom"

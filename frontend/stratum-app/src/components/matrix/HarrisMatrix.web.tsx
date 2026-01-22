@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { FaWrench, FaArrowLeft } from 'react-icons/fa';
-import { MdOutlineViewInAr } from 'react-icons/md';
-import { FaArrowRotateRight } from 'react-icons/fa6';
-import { HiDotsHorizontal } from 'react-icons/hi';
-import './HarrisMatrix.css';
-import { formsService } from '../../services/formsService';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { FaWrench, FaArrowLeft } from "react-icons/fa";
+import { MdOutlineViewInAr } from "react-icons/md";
+import { FaArrowRotateRight } from "react-icons/fa6";
+import { HiDotsHorizontal } from "react-icons/hi";
+import "./HarrisMatrix.css";
+import { formsService } from "../../services/formsService";
 import {
   ContextFeatureRecord,
   StratigraphicUnitRecord,
@@ -13,21 +13,22 @@ import {
   createEmptyRegistries,
   normalizeLoadedData,
   ArtefactRecord,
-} from './registryModels';
+} from "./registryModels";
 
-const DEFAULT_GROUP_COLOR = '#ff9800';
-const DEFAULT_SUBGROUP_COLOR = '#9c27b0';
+const DEFAULT_GROUP_COLOR = "#ff9800";
+const DEFAULT_SUBGROUP_COLOR = "#9c27b0";
 
 function hslToHex(h: number, s: number, l: number): string {
   s /= 100;
   l /= 100;
   const k = (n: number) => (n + h / 30) % 12;
   const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const f = (n: number) =>
+    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
   const toHex = (x: number) =>
     Math.round(x * 255)
       .toString(16)
-      .padStart(2, '0');
+      .padStart(2, "0");
   return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase();
 }
 
@@ -39,14 +40,14 @@ function generateGroupColor(): string {
 }
 
 function hexToRgba(hex: string, alpha: number): string {
-  const normalized = hex.replace('#', '');
+  const normalized = hex.replace("#", "");
   if (![3, 6].includes(normalized.length)) return hex;
   const fullHex =
     normalized.length === 3
       ? normalized
-          .split('')
+          .split("")
           .map((c) => c + c)
-          .join('')
+          .join("")
       : normalized;
   const bigint = parseInt(fullHex, 16);
   const r = (bigint >> 16) & 255;
@@ -57,11 +58,11 @@ function hexToRgba(hex: string, alpha: number): string {
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 interface GroupOverlayContext {
@@ -73,7 +74,7 @@ interface GroupOverlayContext {
 
 interface GroupOverlayData {
   id: string;
-  type: 'group' | 'subgroup';
+  type: "group" | "subgroup";
   name: string;
   description?: string;
   color: string;
@@ -85,7 +86,10 @@ interface HarrisMatrixProps {
   canEdit?: boolean;
 }
 
-export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit = true }) => {
+export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
+  projectId,
+  canEdit = true,
+}) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -93,25 +97,33 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
   // Keep canEditRef in sync with prop
   canEditRef.current = canEdit;
   const [activeTab, setActiveTab] = useState<
-    | 'hierarchy'
-    | 'conflicts'
-    | 'relationships'
-    | 'records'
-    | 'featureForm'
-    | 'suForm'
-    | 'artefacts'
-    | 'export'
-  >('hierarchy');
+    | "hierarchy"
+    | "conflicts"
+    | "relationships"
+    | "records"
+    | "featureForm"
+    | "suForm"
+    | "artefacts"
+    | "export"
+  >("hierarchy");
   const [sidebarView, setSidebarView] = useState<
-    'default' | 'featureForm' | 'suForm' | 'artefacts'
-  >('default');
+    "default" | "featureForm" | "suForm" | "artefacts"
+  >("default");
   const [toolMenuOpen, setToolMenuOpen] = useState(false);
   const [overlayData, setOverlayData] = useState<GroupOverlayData | null>(null);
   const toolMenuRef = useRef<HTMLDivElement | null>(null);
   const openGroupModalRef = useRef<
-    ((entity: 'group' | 'subgroup' | 'phase', mode: 'create' | 'edit', id?: string) => void) | null
+    | ((
+        entity: "group" | "subgroup" | "phase",
+        mode: "create" | "edit",
+        id?: string,
+      ) => void)
+    | null
   >(null);
-  const dotsIconMarkup = useMemo(() => renderToStaticMarkup(<HiDotsHorizontal />), []);
+  const dotsIconMarkup = useMemo(
+    () => renderToStaticMarkup(<HiDotsHorizontal />),
+    [],
+  );
 
   // Expose imperative handlers to JSX via ref
   const apiRef = useRef<any>({});
@@ -119,7 +131,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
   useEffect(() => {
     let cleanup: (() => void) | undefined;
     (async () => {
-      const d3: any = await import('d3');
+      const d3: any = await import("d3");
       if (!svgRef.current) return;
 
       // Data Model (base Harris Matrix + digitized supplementary forms)
@@ -169,7 +181,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           if (!raw) return;
           const data = JSON.parse(raw);
           contexts = new Map(
-            (data.contexts || []).map(([id, obj]: [string, any]) => [id, { ...obj }])
+            (data.contexts || []).map(([id, obj]: [string, any]) => [
+              id,
+              { ...obj },
+            ]),
           );
           relationships = data.relationships || [];
           groups = new Map(
@@ -180,13 +195,13 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 contexts: new Set(obj.contexts || []),
                 subGroups: new Set(obj.subGroups || []),
               },
-            ])
+            ]),
           );
           subGroups = new Map(
             (data.subGroups || []).map(([id, obj]: [string, any]) => [
               id,
               { ...obj, contexts: new Set(obj.contexts || []) },
-            ])
+            ]),
           );
           phases = new Map(data.phases || []);
           const extended = normalizeLoadedData(data);
@@ -196,30 +211,44 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         } catch {}
       }
 
-      type GroupModalEntity = 'group' | 'subgroup' | 'phase';
+      type GroupModalEntity = "group" | "subgroup" | "phase";
       interface GroupModalOptions {
-        mode: 'create' | 'edit';
+        mode: "create" | "edit";
         entity: GroupModalEntity;
         id?: string;
       }
 
       function openGroupModal(options: GroupModalOptions) {
         if (!canEditRef.current) return; // Guests cannot create/edit groups
-        const modal = document.getElementById('groupModal') as HTMLElement | null;
+        const modal = document.getElementById("groupModal") as HTMLElement | null;
         if (!modal) return;
-        const titleEl = document.getElementById('groupModalTitle') as HTMLElement | null;
-        const nameInput = document.getElementById('groupName') as HTMLInputElement | null;
+        const titleEl = document.getElementById(
+          "groupModalTitle",
+        ) as HTMLElement | null;
+        const nameInput = document.getElementById(
+          "groupName",
+        ) as HTMLInputElement | null;
         const descriptionInput = document.getElementById(
-          'groupDescription'
+          "groupDescription",
         ) as HTMLTextAreaElement | null;
-        const typeWrapper = document.getElementById('groupTypeWrapper') as HTMLElement | null;
-        const typeSelect = document.getElementById('groupType') as HTMLSelectElement | null;
-        const colorRow = document.getElementById('groupColorRow') as HTMLElement | null;
-        const colorInput = document.getElementById('groupColor') as HTMLInputElement | null;
+        const typeWrapper = document.getElementById(
+          "groupTypeWrapper",
+        ) as HTMLElement | null;
+        const typeSelect = document.getElementById(
+          "groupType",
+        ) as HTMLSelectElement | null;
+        const colorRow = document.getElementById(
+          "groupColorRow",
+        ) as HTMLElement | null;
+        const colorInput = document.getElementById(
+          "groupColor",
+        ) as HTMLInputElement | null;
         const randomizeButton = document.getElementById(
-          'groupRandomizeColor'
+          "groupRandomizeColor",
         ) as HTMLButtonElement | null;
-        const confirmBtn = document.getElementById('confirmGroupBtn') as HTMLButtonElement | null;
+        const confirmBtn = document.getElementById(
+          "confirmGroupBtn",
+        ) as HTMLButtonElement | null;
         if (
           !titleEl ||
           !nameInput ||
@@ -230,29 +259,29 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         )
           return;
 
-        const isGroup = options.entity === 'group';
-        const isSubGroup = options.entity === 'subgroup';
+        const isGroup = options.entity === "group";
+        const isSubGroup = options.entity === "subgroup";
         const showColorControls = isGroup || isSubGroup;
         const modalTitle =
-          options.mode === 'edit'
+          options.mode === "edit"
             ? isGroup
-              ? 'Edit Group'
+              ? "Edit Group"
               : isSubGroup
-                ? 'Edit Sub-Group'
-                : 'Edit Phase'
+                ? "Edit Sub-Group"
+                : "Edit Phase"
             : isGroup
-              ? 'Create Group'
+              ? "Create Group"
               : isSubGroup
-                ? 'Create Sub-Group'
-                : 'Create Phase';
+                ? "Create Sub-Group"
+                : "Create Phase";
         titleEl.innerText = modalTitle;
 
-        typeWrapper.style.display = isGroup ? 'block' : 'none';
+        typeWrapper.style.display = isGroup ? "block" : "none";
         if (isGroup && !options.id) {
-          typeSelect.value = 'functional';
+          typeSelect.value = "functional";
         }
 
-        if (colorRow) colorRow.style.display = showColorControls ? 'block' : 'none';
+        if (colorRow) colorRow.style.display = showColorControls ? "block" : "none";
         const ensureColorValue = () => {
           if (!showColorControls || !colorInput) return undefined;
           const sourceColor = colorInput.value || generateGroupColor();
@@ -260,30 +289,32 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           return sourceColor;
         };
 
-        if (options.mode === 'edit' && options.id) {
+        if (options.mode === "edit" && options.id) {
           if (isGroup) {
             const group = groups.get(options.id);
             if (!group) return;
-            nameInput.value = group.name || '';
-            descriptionInput.value = group.description || '';
-            typeSelect.value = group.type || 'functional';
+            nameInput.value = group.name || "";
+            descriptionInput.value = group.description || "";
+            typeSelect.value = group.type || "functional";
             if (colorInput) colorInput.value = group.color || DEFAULT_GROUP_COLOR;
           } else if (isSubGroup) {
             const subgroup = subGroups.get(options.id);
             if (!subgroup) return;
-            nameInput.value = subgroup.name || '';
-            descriptionInput.value = subgroup.description || '';
-            if (colorInput) colorInput.value = subgroup.color || DEFAULT_SUBGROUP_COLOR;
+            nameInput.value = subgroup.name || "";
+            descriptionInput.value = subgroup.description || "";
+            if (colorInput)
+              colorInput.value = subgroup.color || DEFAULT_SUBGROUP_COLOR;
           } else {
             const phase = phases.get(options.id);
             if (!phase) return;
-            nameInput.value = phase.name || '';
-            descriptionInput.value = phase.description || '';
+            nameInput.value = phase.name || "";
+            descriptionInput.value = phase.description || "";
           }
         } else {
-          nameInput.value = '';
-          descriptionInput.value = '';
-          if (showColorControls && colorInput) colorInput.value = generateGroupColor();
+          nameInput.value = "";
+          descriptionInput.value = "";
+          if (showColorControls && colorInput)
+            colorInput.value = generateGroupColor();
         }
 
         if (randomizeButton) {
@@ -292,11 +323,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           };
         }
 
-        confirmBtn.innerText = options.mode === 'edit' ? 'Save Changes' : 'Create';
+        confirmBtn.innerText = options.mode === "edit" ? "Save Changes" : "Create";
         confirmBtn.onclick = () => {
           const name = nameInput.value.trim();
           if (!name) {
-            alert('Name is required.');
+            alert("Name is required.");
             return;
           }
           const description = descriptionInput.value.trim();
@@ -304,7 +335,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             ? colorInput?.value || generateGroupColor()
             : undefined;
 
-          if (options.mode === 'create') {
+          if (options.mode === "create") {
             if (isGroup) {
               const id = `group_${Date.now()}`;
               const group = {
@@ -322,7 +353,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               const subgroup = {
                 id,
                 name,
-                type: 'subgroup',
+                type: "subgroup",
                 description,
                 color: selectedColor || generateGroupColor(),
                 contexts: new Set<string>(),
@@ -330,7 +361,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               subGroups.set(id, subgroup);
             } else {
               const id = `phase_${Date.now()}`;
-              const phase = { id, name, type: 'phase', description };
+              const phase = { id, name, type: "phase", description };
               phases.set(id, phase);
             }
           } else if (options.id) {
@@ -342,20 +373,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               group.type = typeSelect.value;
               group.color = selectedColor || group.color || DEFAULT_GROUP_COLOR;
               setOverlayData((prev) =>
-                prev && prev.id === group.id && prev.type === 'group'
+                prev && prev.id === group.id && prev.type === "group"
                   ? { ...prev, name, description, color: group.color }
-                  : prev
+                  : prev,
               );
             } else if (isSubGroup) {
               const subgroup = subGroups.get(options.id);
               if (!subgroup) return;
               subgroup.name = name;
               subgroup.description = description;
-              subgroup.color = selectedColor || subgroup.color || DEFAULT_SUBGROUP_COLOR;
+              subgroup.color =
+                selectedColor || subgroup.color || DEFAULT_SUBGROUP_COLOR;
               setOverlayData((prev) =>
-                prev && prev.id === subgroup.id && prev.type === 'subgroup'
+                prev && prev.id === subgroup.id && prev.type === "subgroup"
                   ? { ...prev, name, description, color: subgroup.color }
-                  : prev
+                  : prev,
               );
             } else {
               const phase = phases.get(options.id);
@@ -369,54 +401,55 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           updateUI();
         };
 
-        modal.style.display = 'flex';
+        modal.style.display = "flex";
         ensureColorValue();
       }
 
-      openGroupModalRef.current = (entity, mode, id) => openGroupModal({ entity, mode, id });
+      openGroupModalRef.current = (entity, mode, id) =>
+        openGroupModal({ entity, mode, id });
       loadFromStorage();
 
       // D3 Setup
       const svg = d3.select(svgRef.current);
-      let g = svg.select('g.main-group');
-      if (g.empty()) g = svg.append('g').attr('class', 'main-group');
+      let g = svg.select("g.main-group");
+      if (g.empty()) g = svg.append("g").attr("class", "main-group");
       const GRID_CELL_SIZE = 60;
       // Darken grid lines to better fit the dark theme
-      const GRID_COLOR = '#2f3336';
+      const GRID_COLOR = "#2f3336";
       const zoom = d3
         .zoom()
         .scaleExtent([0.1, 5])
-        .on('zoom', (event: any) => g.attr('transform', event.transform));
+        .on("zoom", (event: any) => g.attr("transform", event.transform));
       svg.call(zoom as any);
 
       function drawGrid() {
-        g.select('.grid-group').remove();
+        g.select(".grid-group").remove();
         const gridSize = 4000;
-        const gridGroup = g.insert('g', ':first-child').attr('class', 'grid-group');
+        const gridGroup = g.insert("g", ":first-child").attr("class", "grid-group");
         gridGroup
-          .selectAll('line.vertical')
+          .selectAll("line.vertical")
           .data(d3.range(-gridSize, gridSize, GRID_CELL_SIZE))
           .enter()
-          .append('line')
-          .attr('class', 'vertical')
-          .attr('x1', (d: number) => d)
-          .attr('y1', -gridSize)
-          .attr('x2', (d: number) => d)
-          .attr('y2', gridSize)
-          .style('stroke', GRID_COLOR)
-          .style('stroke-width', 1);
+          .append("line")
+          .attr("class", "vertical")
+          .attr("x1", (d: number) => d)
+          .attr("y1", -gridSize)
+          .attr("x2", (d: number) => d)
+          .attr("y2", gridSize)
+          .style("stroke", GRID_COLOR)
+          .style("stroke-width", 1);
         gridGroup
-          .selectAll('line.horizontal')
+          .selectAll("line.horizontal")
           .data(d3.range(-gridSize, gridSize, GRID_CELL_SIZE))
           .enter()
-          .append('line')
-          .attr('class', 'horizontal')
-          .attr('x1', -gridSize)
-          .attr('y1', (d: number) => d)
-          .attr('x2', gridSize)
-          .attr('y2', (d: number) => d)
-          .style('stroke', GRID_COLOR)
-          .style('stroke-width', 1);
+          .append("line")
+          .attr("class", "horizontal")
+          .attr("x1", -gridSize)
+          .attr("y1", (d: number) => d)
+          .attr("x2", gridSize)
+          .attr("y2", (d: number) => d)
+          .style("stroke", GRID_COLOR)
+          .style("stroke-width", 1);
       }
       drawGrid();
 
@@ -426,20 +459,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         const edges = (relationships || [])
           .filter((rel: any) =>
             [
-              'above',
-              'seals',
-              'cuts',
-              'fill_of',
-              'below',
-              'sealed_by',
-              'cut_by',
-              'filled_by',
-            ].includes(rel.type)
+              "above",
+              "seals",
+              "cuts",
+              "fill_of",
+              "below",
+              "sealed_by",
+              "cut_by",
+              "filled_by",
+            ].includes(rel.type),
           )
           .map((rel: any, idx: number) => {
             let from = rel.from,
               to = rel.to;
-            if (['above', 'seals', 'cuts', 'fill_of'].includes(rel.type)) {
+            if (["above", "seals", "cuts", "fill_of"].includes(rel.type)) {
               from = rel.to;
               to = rel.from;
             }
@@ -467,7 +500,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           return false;
         };
         edges.forEach((edge) => {
-          if (hasPath(edge.from, edge.to, edge)) redundantIndices.add(edge.originalIndex);
+          if (hasPath(edge.from, edge.to, edge))
+            redundantIndices.add(edge.originalIndex);
         });
         return redundantIndices;
       }
@@ -477,9 +511,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           contextIds: string[],
           className: string,
           color?: string,
-          fallbackColor?: string
+          fallbackColor?: string,
         ) => {
-          const validPositions = contextIds.map((id) => positions[id]).filter(Boolean);
+          const validPositions = contextIds
+            .map((id) => positions[id])
+            .filter(Boolean);
           if (validPositions.length < 1) return;
           const padX = 60;
           const padY = 40;
@@ -488,105 +524,107 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           const minY = d3.min(validPositions, (p: any) => p.y) - padY;
           const maxY = d3.max(validPositions, (p: any) => p.y) + padY;
           const rect = g
-            .insert('rect', ':first-child')
-            .attr('class', className)
-            .attr('x', minX)
-            .attr('y', minY)
-            .attr('width', maxX - minX)
-            .attr('height', maxY - minY)
-            .attr('rx', 15);
+            .insert("rect", ":first-child")
+            .attr("class", className)
+            .attr("x", minX)
+            .attr("y", minY)
+            .attr("width", maxX - minX)
+            .attr("height", maxY - minY)
+            .attr("rx", 15);
           const resolvedColor = color || fallbackColor;
           if (resolvedColor) {
-            const fillAlpha = className === 'group-boundary' ? 0.16 : 0.12;
-            rect.style('stroke', resolvedColor).style('fill', hexToRgba(resolvedColor, fillAlpha));
+            const fillAlpha = className === "group-boundary" ? 0.16 : 0.12;
+            rect
+              .style("stroke", resolvedColor)
+              .style("fill", hexToRgba(resolvedColor, fillAlpha));
           }
         };
         phases.forEach((phase: any) => {
           const ids = Array.from(contexts.values())
             .filter((c: any) => c.phaseId === phase.id)
             .map((c: any) => c.id);
-          drawRectBoundary(ids, 'phase-boundary');
+          drawRectBoundary(ids, "phase-boundary");
         });
         groups.forEach((group: any) =>
           drawRectBoundary(
             Array.from(group.contexts || []),
-            'group-boundary',
+            "group-boundary",
             group.color,
-            DEFAULT_GROUP_COLOR
-          )
+            DEFAULT_GROUP_COLOR,
+          ),
         );
         subGroups.forEach((sg: any) =>
           drawRectBoundary(
             Array.from(sg.contexts || []),
-            'subgroup-boundary',
+            "subgroup-boundary",
             sg.color,
-            DEFAULT_SUBGROUP_COLOR
-          )
+            DEFAULT_SUBGROUP_COLOR,
+          ),
         );
       }
 
       function drawMatrix(
         positions: Record<string, any>,
         allEdges: any[],
-        contemporaryLinks: any[]
+        contemporaryLinks: any[],
       ) {
         g.selectAll(
-          '.context-node-group, .relationship-path, .group-boundary, .subgroup-boundary, .phase-boundary, defs'
+          ".context-node-group, .relationship-path, .group-boundary, .subgroup-boundary, .phase-boundary, defs",
         ).remove();
-        const defs = g.append('defs');
+        const defs = g.append("defs");
         defs
-          .append('marker')
-          .attr('id', 'arrowhead')
-          .attr('viewBox', '-2 -5 10 10')
-          .attr('refX', 5)
-          .attr('refY', 0)
-          .attr('markerWidth', 5)
-          .attr('markerHeight', 5)
-          .attr('orient', 'auto')
-          .append('path')
-          .attr('d', 'M0,-5L10,0L0,5')
-          .style('fill', '#495057');
+          .append("marker")
+          .attr("id", "arrowhead")
+          .attr("viewBox", "-2 -5 10 10")
+          .attr("refX", 5)
+          .attr("refY", 0)
+          .attr("markerWidth", 5)
+          .attr("markerHeight", 5)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M0,-5L10,0L0,5")
+          .style("fill", "#495057");
         defs
-          .append('marker')
-          .attr('id', 'arrowhead-cuts')
-          .attr('viewBox', '-2 -5 10 10')
-          .attr('refX', 5)
-          .attr('refY', 0)
-          .attr('markerWidth', 5)
-          .attr('markerHeight', 5)
-          .attr('orient', 'auto')
-          .append('path')
-          .attr('d', 'M0,-5L10,0L0,5')
-          .style('fill', 'var(--danger-accent)');
+          .append("marker")
+          .attr("id", "arrowhead-cuts")
+          .attr("viewBox", "-2 -5 10 10")
+          .attr("refX", 5)
+          .attr("refY", 0)
+          .attr("markerWidth", 5)
+          .attr("markerHeight", 5)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M0,-5L10,0L0,5")
+          .style("fill", "var(--danger-accent)");
         defs
-          .append('marker')
-          .attr('id', 'arrowhead-redundant')
-          .attr('viewBox', '-2 -5 10 10')
-          .attr('refX', 5)
-          .attr('refY', 0)
-          .attr('markerWidth', 4)
-          .attr('markerHeight', 4)
-          .attr('orient', 'auto')
-          .append('path')
-          .attr('d', 'M0,-5L10,0L0,5')
-          .style('fill', '#adb5bd');
+          .append("marker")
+          .attr("id", "arrowhead-redundant")
+          .attr("viewBox", "-2 -5 10 10")
+          .attr("refX", 5)
+          .attr("refY", 0)
+          .attr("markerWidth", 4)
+          .attr("markerHeight", 4)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M0,-5L10,0L0,5")
+          .style("fill", "#adb5bd");
 
         drawGroupBoundaries(positions);
         const redundantRelationIndices = findRedundantRelationships();
 
         const getEdgeClasses = (edge: any) => {
           const isRedundant = redundantRelationIndices.has(edge.originalIndex);
-          if (isRedundant) return 'relationship-path redundant';
+          if (isRedundant) return "relationship-path redundant";
           const originalRel = relationships[edge.originalIndex];
-          if (!originalRel) return 'relationship-path stratigraphic';
+          if (!originalRel) return "relationship-path stratigraphic";
           const hasConflict = temporalConflicts.some(
             (c: any) =>
               (c.context1 === originalRel.from && c.context2 === originalRel.to) ||
-              (c.context1 === originalRel.to && c.context2 === originalRel.from)
+              (c.context1 === originalRel.to && c.context2 === originalRel.from),
           );
-          if (hasConflict) return 'relationship-path temporal-conflict';
-          const isCut = ['cuts', 'cut_by'].includes(originalRel.type);
-          return `relationship-path ${isCut ? 'cuts' : 'stratigraphic'}`;
+          if (hasConflict) return "relationship-path temporal-conflict";
+          const isCut = ["cuts", "cut_by"].includes(originalRel.type);
+          return `relationship-path ${isCut ? "cuts" : "stratigraphic"}`;
         };
 
         const BOX_HALF_HEIGHT = 22.5,
@@ -600,7 +638,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           const endY = p2.y - (contexts.has(edge.to) ? BOX_HALF_HEIGHT : 0);
           const midY = startY + (endY - startY) / 2;
           const pathData = `M ${p1.x},${startY} V ${midY} H ${p2.x} V ${endY}`;
-          g.append('path').attr('class', getEdgeClasses(edge)).attr('d', pathData);
+          g.append("path").attr("class", getEdgeClasses(edge)).attr("d", pathData);
         });
 
         // Contemporary links (double bars)
@@ -611,52 +649,63 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           const yOffset = 2.5;
           const x1 = p1.x < p2.x ? p1.x + BOX_HALF_WIDTH : p1.x - BOX_HALF_WIDTH;
           const x2 = p1.x < p2.x ? p2.x - BOX_HALF_WIDTH : p2.x + BOX_HALF_WIDTH;
-          g.append('line')
-            .attr('class', 'relationship-path contemporary')
-            .attr('x1', x1)
-            .attr('y1', p1.y - yOffset)
-            .attr('x2', x2)
-            .attr('y2', p2.y - yOffset);
-          g.append('line')
-            .attr('class', 'relationship-path contemporary')
-            .attr('x1', x1)
-            .attr('y1', p1.y + yOffset)
-            .attr('x2', x2)
-            .attr('y2', p2.y + yOffset);
+          g.append("line")
+            .attr("class", "relationship-path contemporary")
+            .attr("x1", x1)
+            .attr("y1", p1.y - yOffset)
+            .attr("x2", x2)
+            .attr("y2", p2.y - yOffset);
+          g.append("line")
+            .attr("class", "relationship-path contemporary")
+            .attr("x1", x1)
+            .attr("y1", p1.y + yOffset)
+            .attr("x2", x2)
+            .attr("y2", p2.y + yOffset);
         });
 
         // Nodes
         const nodeData = Array.from(contexts.keys()).filter((id) => positions[id]);
         const nodeGroups = g
-          .selectAll('.context-node-group')
+          .selectAll(".context-node-group")
           .data(nodeData, (d: any) => d)
-          .join('g')
-          .attr('class', 'context-node-group')
-          .attr('transform', (d: any) => `translate(${positions[d].x}, ${positions[d].y})`)
-          .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
-        nodeGroups
-          .append('rect')
+          .join("g")
+          .attr("class", "context-node-group")
           .attr(
-            'class',
-            (d: any) =>
-              'context-node ' +
-              (temporalConflicts.some((c: any) => c.context1 === d || c.context2 === d)
-                ? 'temporal-conflict'
-                : contexts.get(d)?.phaseId
-                  ? 'phased'
-                  : contexts.get(d)?.groupId
-                    ? 'grouped'
-                    : '')
+            "transform",
+            (d: any) => `translate(${positions[d].x}, ${positions[d].y})`,
           )
-          .attr('x', -BOX_HALF_WIDTH)
-          .attr('y', -BOX_HALF_HEIGHT)
-          .attr('width', BOX_HALF_WIDTH * 2)
-          .attr('height', BOX_HALF_HEIGHT * 2)
-          .attr('rx', 8);
+          .call(
+            d3
+              .drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended),
+          );
         nodeGroups
-          .append('text')
-          .attr('class', 'context-label')
-          .attr('dy', '0.35em')
+          .append("rect")
+          .attr(
+            "class",
+            (d: any) =>
+              "context-node " +
+              (temporalConflicts.some(
+                (c: any) => c.context1 === d || c.context2 === d,
+              )
+                ? "temporal-conflict"
+                : contexts.get(d)?.phaseId
+                  ? "phased"
+                  : contexts.get(d)?.groupId
+                    ? "grouped"
+                    : ""),
+          )
+          .attr("x", -BOX_HALF_WIDTH)
+          .attr("y", -BOX_HALF_HEIGHT)
+          .attr("width", BOX_HALF_WIDTH * 2)
+          .attr("height", BOX_HALF_HEIGHT * 2)
+          .attr("rx", 8);
+        nodeGroups
+          .append("text")
+          .attr("class", "context-label")
+          .attr("dy", "0.35em")
           .text((d: any) => d);
       }
 
@@ -664,12 +713,14 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       // Only create equivalence mappings for groups with >1 member (to mirror original behavior)
       function findEquivalenceGroups() {
         const adj: Map<string, string[]> = new Map(
-          Array.from(contexts.keys()).map((id) => [id, []])
+          Array.from(contexts.keys()).map((id) => [id, []]),
         );
         (relationships || []).forEach((rel: any) => {
-          if (['contemporary_with', 'equivalent', 'same_as'].includes(rel.type)) {
-            if (!adj.get(rel.from)!.includes(rel.to)) adj.get(rel.from)!.push(rel.to);
-            if (!adj.get(rel.to)!.includes(rel.from)) adj.get(rel.to)!.push(rel.from);
+          if (["contemporary_with", "equivalent", "same_as"].includes(rel.type)) {
+            if (!adj.get(rel.from)!.includes(rel.to))
+              adj.get(rel.from)!.push(rel.to);
+            if (!adj.get(rel.to)!.includes(rel.from))
+              adj.get(rel.to)!.push(rel.from);
           }
         });
         const visited = new Set<string>();
@@ -693,7 +744,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             if (groupMembers.size > 1) {
               const representative = contextId; // choose first encountered as rep
               groupRepToMembers.set(representative, groupMembers);
-              groupMembers.forEach((memberId) => contextToGroupRep.set(memberId, representative));
+              groupMembers.forEach((memberId) =>
+                contextToGroupRep.set(memberId, representative),
+              );
             }
           }
         }
@@ -710,22 +763,30 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             hasCycle: false,
           } as any;
         const { contextToGroupRep } = findEquivalenceGroups();
-        const logicalNodes = new Set(contextIds.map((id) => contextToGroupRep.get(id) || id));
-        const adj: Map<string, string[]> = new Map(Array.from(logicalNodes).map((id) => [id, []]));
+        const logicalNodes = new Set(
+          contextIds.map((id) => contextToGroupRep.get(id) || id),
+        );
+        const adj: Map<string, string[]> = new Map(
+          Array.from(logicalNodes).map((id) => [id, []]),
+        );
         const inDegree: Map<string, number> = new Map(
-          Array.from(logicalNodes).map((id) => [id, 0])
+          Array.from(logicalNodes).map((id) => [id, 0]),
         );
         const stratigraphicEdges: any[] = [];
         const contemporaryLinks: any[] = [];
         (relationships || []).forEach((rel: any, index: number) => {
           let from: string | undefined, to: string | undefined;
-          if (['above', 'seals', 'cuts', 'fill_of'].includes(rel.type)) {
+          if (["above", "seals", "cuts", "fill_of"].includes(rel.type)) {
             from = rel.to;
             to = rel.from;
-          } else if (['below', 'sealed_by', 'cut_by', 'filled_by'].includes(rel.type)) {
+          } else if (
+            ["below", "sealed_by", "cut_by", "filled_by"].includes(rel.type)
+          ) {
             from = rel.from;
             to = rel.to;
-          } else if (['contemporary_with', 'equivalent', 'same_as'].includes(rel.type)) {
+          } else if (
+            ["contemporary_with", "equivalent", "same_as"].includes(rel.type)
+          ) {
             contemporaryLinks.push({ from: rel.from, to: rel.to });
           }
           if (from && to && contexts.has(from) && contexts.has(to)) {
@@ -739,20 +800,25 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             stratigraphicEdges.push({
               from,
               to,
-              isCut: ['cuts', 'cut_by'].includes(rel.type),
+              isCut: ["cuts", "cut_by"].includes(rel.type),
               originalIndex: index,
             });
           }
         });
         const levels: Map<string, number> = new Map();
-        const queue = Array.from(logicalNodes).filter((id) => (inDegree.get(id) || 0) === 0);
+        const queue = Array.from(logicalNodes).filter(
+          (id) => (inDegree.get(id) || 0) === 0,
+        );
         const processed: string[] = [];
         for (let i = 0; i < queue.length; i++) {
           const u_rep = queue[i];
           processed.push(u_rep);
           levels.set(u_rep, levels.get(u_rep) || 0);
           (adj.get(u_rep) || []).forEach((v_rep) => {
-            levels.set(v_rep, Math.max(levels.get(v_rep) || 0, (levels.get(u_rep) || 0) + 1));
+            levels.set(
+              v_rep,
+              Math.max(levels.get(v_rep) || 0, (levels.get(u_rep) || 0) + 1),
+            );
             inDegree.set(v_rep, (inDegree.get(v_rep) || 0) - 1);
             if ((inDegree.get(v_rep) || 0) === 0) queue.push(v_rep);
           });
@@ -765,7 +831,12 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             finalLevels.set(id, levels.get(rep) || 0);
           });
         }
-        return { levels: finalLevels, stratigraphicEdges, contemporaryLinks, hasCycle };
+        return {
+          levels: finalLevels,
+          stratigraphicEdges,
+          contemporaryLinks,
+          hasCycle,
+        };
       }
 
       function createDummyNodesAndEdges(edges: any[], levels: Map<string, number>) {
@@ -808,21 +879,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       function reduceCrossings(
         levels: Map<string, number>,
         allNodes: Map<string, any>,
-        allEdges: any[]
+        allEdges: any[],
       ) {
         const layerMap: Map<number, string[]> = d3.group(
           Array.from(allNodes.keys()),
-          (id: string) => levels.get(id) as number
+          (id: string) => levels.get(id) as number,
         ) as any;
         const sortedLayers = Array.from(layerMap.keys()).sort((a, b) => a - b);
         let orderedLevels: Map<number, string[]> = new Map(
-          sortedLayers.map((l) => [l, layerMap.get(l)!])
+          sortedLayers.map((l) => [l, layerMap.get(l)!]),
         );
         const adj: Map<string, string[]> = new Map(
-          Array.from(allNodes.keys()).map((id) => [id, []])
+          Array.from(allNodes.keys()).map((id) => [id, []]),
         );
         const revAdj: Map<string, string[]> = new Map(
-          Array.from(allNodes.keys()).map((id) => [id, []])
+          Array.from(allNodes.keys()).map((id) => [id, []]),
         );
         allEdges.forEach((e) => {
           adj.get(e.from)!.push(e.to);
@@ -833,22 +904,28 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           for (let i = 1; i < sortedLayers.length; i++) {
             const layer = orderedLevels.get(sortedLayers[i])!;
             const prevLayer = orderedLevels.get(sortedLayers[i - 1])!;
-            const posInPrev = new Map(prevLayer.map((id, idx) => [id, idx] as [string, number]));
+            const posInPrev = new Map(
+              prevLayer.map((id, idx) => [id, idx] as [string, number]),
+            );
             layer.sort(
               (a, b) =>
-                (d3.mean(revAdj.get(a) || [], (n: string) => posInPrev.get(n)) ?? -1) -
-                (d3.mean(revAdj.get(b) || [], (n: string) => posInPrev.get(n)) ?? -1)
+                (d3.mean(revAdj.get(a) || [], (n: string) => posInPrev.get(n)) ??
+                  -1) -
+                (d3.mean(revAdj.get(b) || [], (n: string) => posInPrev.get(n)) ??
+                  -1),
             );
           }
           // Upward pass (use successors for ordering)
           for (let i = sortedLayers.length - 2; i >= 0; i--) {
             const layer = orderedLevels.get(sortedLayers[i])!;
             const nextLayer = orderedLevels.get(sortedLayers[i + 1])!;
-            const posInNext = new Map(nextLayer.map((id, idx) => [id, idx] as [string, number]));
+            const posInNext = new Map(
+              nextLayer.map((id, idx) => [id, idx] as [string, number]),
+            );
             layer.sort(
               (a, b) =>
                 (d3.mean(adj.get(a) || [], (n: string) => posInNext.get(n)) ?? -1) -
-                (d3.mean(adj.get(b) || [], (n: string) => posInNext.get(n)) ?? -1)
+                (d3.mean(adj.get(b) || [], (n: string) => posInNext.get(n)) ?? -1),
             );
           }
         }
@@ -858,7 +935,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       function assignCoordinates(
         orderedLevels: Map<number, string[]>,
         levels: Map<string, number>,
-        dummyNodes: Map<string, any>
+        dummyNodes: Map<string, any>,
       ) {
         const positions: Record<string, { x: number; y: number }> = {};
         const ySpacing = 120,
@@ -916,7 +993,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       function applyLayoutAndDraw() {
         if (contexts.size === 0) {
           g.selectAll(
-            '.context-node-group, .relationship-path, .group-boundary, .subgroup-boundary, .phase-boundary'
+            ".context-node-group, .relationship-path, .group-boundary, .subgroup-boundary, .phase-boundary",
           ).remove();
           return;
         }
@@ -927,13 +1004,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         const { levels, stratigraphicEdges, contemporaryLinks, hasCycle } =
           calculateInitialLevels();
         if (hasCycle) {
-          const cyclicNodeIds = Array.from(contexts.keys()).filter((id) => !levels.has(id));
+          const cyclicNodeIds = Array.from(contexts.keys()).filter(
+            (id) => !levels.has(id),
+          );
           alert(
-            `ERROR: A cycle was detected in the stratigraphic relationships.\n\nPlease review: ${cyclicNodeIds.join(', ')}`
+            `ERROR: A cycle was detected in the stratigraphic relationships.\n\nPlease review: ${cyclicNodeIds.join(", ")}`,
           );
           return;
         }
-        const { dummyNodes, allEdges } = createDummyNodesAndEdges(stratigraphicEdges, levels);
+        const { dummyNodes, allEdges } = createDummyNodesAndEdges(
+          stratigraphicEdges,
+          levels,
+        );
         const allNodes = new Map<string, any>([...contexts, ...dummyNodes]);
         const orderedLevels = reduceCrossings(levels, allNodes, allEdges);
         nodePositions = assignCoordinates(orderedLevels, levels, dummyNodes);
@@ -945,9 +1027,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       // UI helpers
       function updateHierarchyDisplay() {
-        const listDiv = document.getElementById('hierarchyList');
+        const listDiv = document.getElementById("hierarchyList");
         if (!listDiv) return;
-        let html = '';
+        let html = "";
         if (phases.size > 0) {
           html += '<div style="font-weight: bold; margin: 10px 0;">Phases</div>';
           phases.forEach((phase: any) => {
@@ -955,15 +1037,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               .filter((c: any) => c.phaseId === phase.id)
               .map((c: any) => c.id);
             const hasConflicts = false;
-            html += `<div class="hierarchy-item phase ${hasConflicts ? 'temporal-conflict' : ''}" onclick="window.__hm_highlightPhase && window.__hm_highlightPhase('${phase.id}')"><div class="item-header">Phase: ${phase.name}${hasConflicts ? '<span class="conflict-indicator"></span>' : '<span class="valid-indicator"></span>'}</div><div class="item-details">${phase.description || ''}</div><div class="item-contexts">${phaseContextIds.length} contexts</div></div>`;
+            html += `<div class="hierarchy-item phase ${hasConflicts ? "temporal-conflict" : ""}" onclick="window.__hm_highlightPhase && window.__hm_highlightPhase('${phase.id}')"><div class="item-header">Phase: ${phase.name}${hasConflicts ? '<span class="conflict-indicator"></span>' : '<span class="valid-indicator"></span>'}</div><div class="item-details">${phase.description || ""}</div><div class="item-contexts">${phaseContextIds.length} contexts</div></div>`;
           });
         }
         if (groups.size > 0) {
           html += '<div style="font-weight: bold; margin: 10px 0;">Groups</div>';
           groups.forEach((group: any) => {
             const color = group.color || DEFAULT_GROUP_COLOR;
-            const description = group.description ? escapeHtml(group.description) : '';
-            const title = escapeHtml(group.name || 'Untitled Group');
+            const description = group.description
+              ? escapeHtml(group.description)
+              : "";
+            const title = escapeHtml(group.name || "Untitled Group");
             const contextsCount = (group.contexts && group.contexts.size) || 0;
             html += `
               <div class="hierarchy-item group" data-entity="group" data-id="${group.id}" onclick="window.__hm_showGroupOverlay && window.__hm_showGroupOverlay('group','${group.id}')">
@@ -981,8 +1065,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           html += '<div style="font-weight: bold; margin: 10px 0;">Sub-Groups</div>';
           subGroups.forEach((sg: any) => {
             const color = sg.color || DEFAULT_SUBGROUP_COLOR;
-            const description = sg.description ? escapeHtml(sg.description) : '';
-            const title = escapeHtml(sg.name || 'Untitled Sub-Group');
+            const description = sg.description ? escapeHtml(sg.description) : "";
+            const title = escapeHtml(sg.name || "Untitled Sub-Group");
             const contextsCount = (sg.contexts && sg.contexts.size) || 0;
             html += `
               <div class="hierarchy-item subgroup" data-entity="subgroup" data-id="${sg.id}" onclick="window.__hm_showGroupOverlay && window.__hm_showGroupOverlay('subgroup','${sg.id}')">
@@ -997,30 +1081,34 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           });
         }
         const unassigned = Array.from(contexts.values()).filter(
-          (c: any) => !c.groupId && !c.phaseId
+          (c: any) => !c.groupId && !c.phaseId,
         );
         if (unassigned.length > 0) {
-          html += '<div style="font-weight: bold; margin: 10px 0;">Unassigned Contexts</div>';
+          html +=
+            '<div style="font-weight: bold; margin: 10px 0;">Unassigned Contexts</div>';
           unassigned.forEach((context: any) => {
             const hasConflicts = temporalConflicts.some(
-              (c: any) => c.context1 === context.id || c.context2 === context.id
+              (c: any) => c.context1 === context.id || c.context2 === context.id,
             );
-            const contextTitle = `${escapeHtml(context.id)} (${escapeHtml(context.type || 'layer')})`;
-            const contextDescription = context.description ? escapeHtml(context.description) : '';
-            html += `<div class="hierarchy-item ${hasConflicts ? 'temporal-conflict' : ''}" onclick="window.__hm_highlightContext && window.__hm_highlightContext('${context.id}')"><div class="item-header"><span class="item-title">${contextTitle}</span>${hasConflicts ? '<span class="conflict-indicator"></span>' : ''}</div><div class="item-details">${contextDescription}</div></div>`;
+            const contextTitle = `${escapeHtml(context.id)} (${escapeHtml(context.type || "layer")})`;
+            const contextDescription = context.description
+              ? escapeHtml(context.description)
+              : "";
+            html += `<div class="hierarchy-item ${hasConflicts ? "temporal-conflict" : ""}" onclick="window.__hm_highlightContext && window.__hm_highlightContext('${context.id}')"><div class="item-header"><span class="item-title">${contextTitle}</span>${hasConflicts ? '<span class="conflict-indicator"></span>' : ""}</div><div class="item-details">${contextDescription}</div></div>`;
           });
         }
-        listDiv.innerHTML = html || '<em>No data yet. Click in the canvas to add contexts.</em>';
+        listDiv.innerHTML =
+          html || "<em>No data yet. Click in the canvas to add contexts.</em>";
       }
 
       function updateConflictsDisplay() {
-        const listDiv = document.getElementById('conflictsList');
+        const listDiv = document.getElementById("conflictsList");
         if (!listDiv) return;
         if (temporalConflicts.length === 0) {
-          listDiv.innerHTML = '<em>No conflicts detected.</em>';
+          listDiv.innerHTML = "<em>No conflicts detected.</em>";
           return;
         }
-        let html = '';
+        let html = "";
         temporalConflicts.forEach((conflict: any, index: number) => {
           const ctx1 = contexts.get(conflict.context1);
           const ctx2 = contexts.get(conflict.context2);
@@ -1030,10 +1118,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
 
       function updateRelationshipsDisplay() {
-        const listDiv = document.getElementById('relationshipsList');
+        const listDiv = document.getElementById("relationshipsList");
         if (!listDiv) return;
         if ((relationships || []).length === 0) {
-          listDiv.innerHTML = '<em>No relationships defined.</em>';
+          listDiv.innerHTML = "<em>No relationships defined.</em>";
           return;
         }
         const redundantIndices = findRedundantRelationships();
@@ -1042,33 +1130,41 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           const conflict = temporalConflicts.find(
             (c: any) =>
               (c.context1 === rel.from && c.context2 === rel.to) ||
-              (c.context1 === rel.to && c.context2 === rel.from)
+              (c.context1 === rel.to && c.context2 === rel.from),
           );
           const isRedundant = redundantIndices.has(index);
-          const status = conflict ? '⚠️ Conflict' : isRedundant ? 'ℹ️ Redundant' : '✅ Valid';
-          const style = conflict
-            ? 'background: #ffebee;'
+          const status = conflict
+            ? "⚠️ Conflict"
             : isRedundant
-              ? 'background: #f8f9fa; color: #6c757d;'
-              : '';
-          tableHTML += `<tr style="${style}"><td style="border: 1px solid #ddd; padding: 4px;">${rel.from}</td><td style="border: 1px solid #ddd; padding: 4px;">${rel.type.replace(/_/g, ' ')}</td><td style="border: 1px solid #ddd; padding: 4px;">${rel.to}</td><td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${status}</td><td style=\"border: 1px solid #ddd; padding: 4px; text-align: center;\"><button onclick=\"window.__hm_removeRelationship && window.__hm_removeRelationship(${index})\" style=\"background: var(--danger-accent); color: white; border: none; border-radius: 3px; cursor: pointer; padding: 2px 5px; font-size: 10px;\">X</button></td></tr>`;
+              ? "ℹ️ Redundant"
+              : "✅ Valid";
+          const style = conflict
+            ? "background: #ffebee;"
+            : isRedundant
+              ? "background: #f8f9fa; color: #6c757d;"
+              : "";
+          tableHTML += `<tr style="${style}"><td style="border: 1px solid #ddd; padding: 4px;">${rel.from}</td><td style="border: 1px solid #ddd; padding: 4px;">${rel.type.replace(/_/g, " ")}</td><td style="border: 1px solid #ddd; padding: 4px;">${rel.to}</td><td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${status}</td><td style=\"border: 1px solid #ddd; padding: 4px; text-align: center;\"><button onclick=\"window.__hm_removeRelationship && window.__hm_removeRelationship(${index})\" style=\"background: var(--danger-accent); color: white; border: none; border-radius: 3px; cursor: pointer; padding: 2px 5px; font-size: 10px;\">X</button></td></tr>`;
         });
         tableHTML += `</tbody></table>`;
         listDiv.innerHTML = tableHTML;
       }
 
       function updateDropdownOptions() {
-        const selectIds = ['editGroupAssignment', 'editSubGroupAssignment', 'editPhaseAssignment'];
+        const selectIds = [
+          "editGroupAssignment",
+          "editSubGroupAssignment",
+          "editPhaseAssignment",
+        ];
         selectIds.forEach((id) => {
           const select = document.getElementById(id) as HTMLSelectElement | null;
           if (!select) return;
           const currentVal = select.value;
-          if (id === 'editGroupAssignment') {
+          if (id === "editGroupAssignment") {
             select.innerHTML = '<option value="">— None —</option>';
             groups.forEach((group: any) => {
               select.innerHTML += `<option value="${group.id}">${group.name}</option>`;
             });
-          } else if (id === 'editSubGroupAssignment') {
+          } else if (id === "editSubGroupAssignment") {
             select.innerHTML = '<option value="">— None —</option>';
             subGroups.forEach((sg: any) => {
               select.innerHTML += `<option value="${sg.id}">${sg.name}</option>`;
@@ -1084,43 +1180,43 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
 
       function updateRecordsDisplay() {
-        const div = document.getElementById('recordsSummary');
+        const div = document.getElementById("recordsSummary");
         if (!div) return;
         try {
           const totalArtefacts = Object.values(artefactRegistries).reduce(
             (sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0),
-            0
+            0,
           );
           const cfRows = Array.from(contextForms.values())
-            .sort((a: any, b: any) => (a.id || '').localeCompare(b.id || ''))
+            .sort((a: any, b: any) => (a.id || "").localeCompare(b.id || ""))
             .map(
               (rec: any) => `
               <tr>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ''}</td>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.featureNumber || ''}</td>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.featureNumber || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
-                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openCFRecord && window.__hm_openCFRecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Open</button>
-                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteCFRecord && window.__hm_deleteCFRecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Delete</button>
+                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openCFRecord && window.__hm_openCFRecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Open</button>
+                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteCFRecord && window.__hm_deleteCFRecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Delete</button>
                 </td>
-              </tr>`
+              </tr>`,
             )
-            .join('');
+            .join("");
           const suRows = Array.from(stratigraphicUnits.values())
-            .sort((a: any, b: any) => (a.id || '').localeCompare(b.id || ''))
+            .sort((a: any, b: any) => (a.id || "").localeCompare(b.id || ""))
             .map(
               (rec: any) => `
               <tr>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ''}</td>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.unitType || ''}</td>
-                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ''}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.unitType || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
-                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openSURecord && window.__hm_openSURecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Open</button>
-                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteSURecord && window.__hm_deleteSURecord('${(rec.id || '').replace(/\"/g, '&quot;')}')\">Delete</button>
+                  <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openSURecord && window.__hm_openSURecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Open</button>
+                  <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteSURecord && window.__hm_deleteSURecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Delete</button>
                 </td>
-              </tr>`
+              </tr>`,
             )
-            .join('');
+            .join("");
 
           // Artefact entries across all categories
           const artefactFlat: {
@@ -1132,40 +1228,43 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             feature?: string;
             qty?: number;
           }[] = [];
-          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
-            (arr || []).forEach((r: any) =>
-              artefactFlat.push({
-                id: r.id,
-                category: cat,
-                number: r.number,
-                type: r.type,
-                su: r.stratigraphicUnit,
-                feature: r.complexFeature,
-                qty: r.quantity,
-              })
-            );
-          });
+          (Object.entries(artefactRegistries) as any).forEach(
+            ([cat, arr]: [string, any[]]) => {
+              (arr || []).forEach((r: any) =>
+                artefactFlat.push({
+                  id: r.id,
+                  category: cat,
+                  number: r.number,
+                  type: r.type,
+                  su: r.stratigraphicUnit,
+                  feature: r.complexFeature,
+                  qty: r.quantity,
+                }),
+              );
+            },
+          );
           artefactFlat.sort(
             (a, b) =>
-              a.category.localeCompare(b.category) || (a.number || '').localeCompare(b.number || '')
+              a.category.localeCompare(b.category) ||
+              (a.number || "").localeCompare(b.number || ""),
           );
           const afRows = artefactFlat
             .map(
               (r) => `
             <tr>
-              <td style=\"border:1px solid #333;padding:4px;\">${(r.category || '').replace(/_/g, ' ')}</td>
-              <td style=\"border:1px solid #333;padding:4px;\">${r.number || ''}</td>
-              <td style=\"border:1px solid #333;padding:4px;\">${r.type || ''}</td>
-              <td style=\"border:1px solid #333;padding:4px;\">${r.su || ''}</td>
-              <td style=\"border:1px solid #333;padding:4px;\">${r.feature || ''}</td>
-              <td style=\"border:1px solid #333;padding:4px; text-align:right;\">${r.qty != null ? r.qty : ''}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${(r.category || "").replace(/_/g, " ")}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.number || ""}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.type || ""}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.su || ""}</td>
+              <td style=\"border:1px solid #333;padding:4px;\">${r.feature || ""}</td>
+              <td style=\"border:1px solid #333;padding:4px; text-align:right;\">${r.qty != null ? r.qty : ""}</td>
               <td style=\"border:1px solid #333;padding:4px; text-align:center;\">\
                 <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openArtefact && window.__hm_openArtefact('${r.id}')\">Open</button>\
                 <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteArtefact && window.__hm_deleteArtefact('${r.id}')\">Delete</button>\
               </td>
-            </tr>`
+            </tr>`,
             )
-            .join('');
+            .join("");
 
           div.innerHTML = `
             <ul>
@@ -1214,24 +1313,24 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           const rec = contextForms.get(id);
           if (!rec) return;
           populateContextFeatureFormFromRecord(rec);
-          setSidebarView('featureForm');
+          setSidebarView("featureForm");
         };
         (window as any).__hm_openSURecord = (id: string) => {
           const rec = stratigraphicUnits.get(id);
           if (!rec) return;
           populateSUFormFromRecord(rec);
-          setSidebarView('suForm');
+          setSidebarView("suForm");
         };
         (window as any).__hm_deleteCFRecord = (id: string) => {
           if (!contextForms.has(id)) return;
-          if (!confirm('Delete context feature form?')) return;
+          if (!confirm("Delete context feature form?")) return;
           contextForms.delete(id);
           saveToStorage();
           updateRecordsDisplay();
         };
         (window as any).__hm_deleteSURecord = (id: string) => {
           if (!stratigraphicUnits.has(id)) return;
-          if (!confirm('Delete stratigraphic unit form?')) return;
+          if (!confirm("Delete stratigraphic unit form?")) return;
           stratigraphicUnits.delete(id);
           saveToStorage();
           updateRecordsDisplay();
@@ -1239,48 +1338,58 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         (window as any).__hm_openArtefact = (id: string) => {
           let found: any = null;
           let category: string | null = null;
-          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
-            if (found) return;
-            const x = (arr || []).find((r: any) => r.id === id);
-            if (x) {
-              found = x;
-              category = cat;
-            }
-          });
-          setSidebarView('artefacts');
+          (Object.entries(artefactRegistries) as any).forEach(
+            ([cat, arr]: [string, any[]]) => {
+              if (found) return;
+              const x = (arr || []).find((r: any) => r.id === id);
+              if (x) {
+                found = x;
+                category = cat;
+              }
+            },
+          );
+          setSidebarView("artefacts");
           if (found) {
             setInputValue(
-              'af_filterText',
-              found.number || found.type || found.stratigraphicUnit || ''
+              "af_filterText",
+              found.number || found.type || found.stratigraphicUnit || "",
             );
-            if (category) setInputValue('af_filterCategory', category);
+            if (category) setInputValue("af_filterCategory", category);
           }
-          if (apiRef.current?.refreshArtefactTable) apiRef.current.refreshArtefactTable();
+          if (apiRef.current?.refreshArtefactTable)
+            apiRef.current.refreshArtefactTable();
         };
         (window as any).__hm_deleteArtefact = (id: string) => {
           let removed = false;
-          (Object.entries(artefactRegistries) as any).forEach(([cat, arr]: [string, any[]]) => {
-            if (removed) return;
-            const idx = (arr || []).findIndex((r: any) => r.id === id);
-            if (idx >= 0) {
-              arr.splice(idx, 1);
-              removed = true;
-            }
-          });
+          (Object.entries(artefactRegistries) as any).forEach(
+            ([cat, arr]: [string, any[]]) => {
+              if (removed) return;
+              const idx = (arr || []).findIndex((r: any) => r.id === id);
+              if (idx >= 0) {
+                arr.splice(idx, 1);
+                removed = true;
+              }
+            },
+          );
           if (removed) {
             saveToStorage();
             updateRecordsDisplay();
-            if (apiRef.current?.refreshArtefactTable) apiRef.current.refreshArtefactTable();
+            if (apiRef.current?.refreshArtefactTable)
+              apiRef.current.refreshArtefactTable();
           }
         };
         setOverlayData((current) => {
           if (!current) return current;
           const source =
-            current.type === 'group' ? groups.get(current.id) : subGroups.get(current.id);
+            current.type === "group"
+              ? groups.get(current.id)
+              : subGroups.get(current.id);
           if (!source) return null;
           const color =
             source.color ||
-            (current.type === 'group' ? DEFAULT_GROUP_COLOR : DEFAULT_SUBGROUP_COLOR);
+            (current.type === "group"
+              ? DEFAULT_GROUP_COLOR
+              : DEFAULT_SUBGROUP_COLOR);
           const contextIds = Array.from(source.contexts || []) as string[];
           const contextsPayload: GroupOverlayContext[] = contextIds
             .map((ctxId) => contexts.get(ctxId))
@@ -1306,7 +1415,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       let wasDragged = false;
       function handleCanvasClick(event: any) {
         if (!canEditRef.current) return; // Guests cannot add nodes
-        if ((event?.target as Element)?.closest('.context-node-group')) return;
+        if ((event?.target as Element)?.closest(".context-node-group")) return;
         const [x, y] = d3.pointer(event, g.node());
         const snappedX = Math.round(x / GRID_CELL_SIZE) * GRID_CELL_SIZE;
         const snappedY = Math.round(y / GRID_CELL_SIZE) * GRID_CELL_SIZE;
@@ -1315,17 +1424,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       function dragstarted(this: any, event: any) {
         if (!canEditRef.current) return; // Guests cannot drag
         event.sourceEvent.stopPropagation();
-        d3.select(this).raise().classed('dragging', true);
+        d3.select(this).raise().classed("dragging", true);
         wasDragged = false;
       }
       function dragged(this: any, event: any) {
         if (!canEditRef.current) return; // Guests cannot drag
         wasDragged = true;
-        d3.select(this).attr('transform', `translate(${event.x}, ${event.y})`);
+        d3.select(this).attr("transform", `translate(${event.x}, ${event.y})`);
       }
       function dragended(this: any, event: any, d: any) {
         if (!canEditRef.current) return; // Guests cannot drag
-        d3.select(this).classed('dragging', false);
+        d3.select(this).classed("dragging", false);
         if (wasDragged) {
           const sourceId = d;
           let targetId: string | null = null;
@@ -1353,7 +1462,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             }
             // Only save and redraw with existing edges without restructuring
             saveToStorage();
-            drawMatrix(nodePositions, lastComputedEdges, lastComputedContemporaryLinks);
+            drawMatrix(
+              nodePositions,
+              lastComputedEdges,
+              lastComputedContemporaryLinks,
+            );
           }
         } else {
           showEditNodeModal(d);
@@ -1362,16 +1475,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function hideModals() {
         document
-          .querySelectorAll('.modal-backdrop')
-          .forEach((m) => ((m as HTMLElement).style.display = 'none'));
+          .querySelectorAll(".modal-backdrop")
+          .forEach((m) => ((m as HTMLElement).style.display = "none"));
       }
 
       // Feature form helpers
       function readInputValue(id: string): string {
-        return (document.getElementById(id) as HTMLInputElement | null)?.value || '';
+        return (document.getElementById(id) as HTMLInputElement | null)?.value || "";
       }
       function readCheckbox(id: string): boolean {
-        return (document.getElementById(id) as HTMLInputElement | null)?.checked || false;
+        return (
+          (document.getElementById(id) as HTMLInputElement | null)?.checked || false
+        );
       }
 
       function setInputValue(id: string, value: string) {
@@ -1380,7 +1495,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           | HTMLTextAreaElement
           | HTMLSelectElement
           | null;
-        if (el) (el as any).value = value ?? '';
+        if (el) (el as any).value = value ?? "";
       }
       function setCheckbox(id: string, checked: boolean) {
         const el = document.getElementById(id) as HTMLInputElement | null;
@@ -1388,208 +1503,226 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
 
       function populateContextFeatureFormFromRecord(rec: ContextFeatureRecord) {
-        setInputValue('cf_id', rec.id || '');
-        setInputValue('cf_featureNumber', rec.featureNumber || '');
-        setInputValue('cf_sector', rec.sector || '');
-        setInputValue('cf_earlierThan', (rec.earlierThan || []).join(','));
-        setInputValue('cf_laterThan', (rec.laterThan || []).join(','));
+        setInputValue("cf_id", rec.id || "");
+        setInputValue("cf_featureNumber", rec.featureNumber || "");
+        setInputValue("cf_sector", rec.sector || "");
+        setInputValue("cf_earlierThan", (rec.earlierThan || []).join(","));
+        setInputValue("cf_laterThan", (rec.laterThan || []).join(","));
         const dims = rec.dimensions || ({} as any);
-        setInputValue('cf_length', dims.length != null ? String(dims.length) : '');
-        setInputValue('cf_width', dims.width != null ? String(dims.width) : '');
-        setInputValue('cf_depth', dims.depth != null ? String(dims.depth) : '');
+        setInputValue("cf_length", dims.length != null ? String(dims.length) : "");
+        setInputValue("cf_width", dims.width != null ? String(dims.width) : "");
+        setInputValue("cf_depth", dims.depth != null ? String(dims.depth) : "");
         const coords = rec.coordinates || ({} as any);
-        setInputValue('cf_x', coords.x != null ? String(coords.x) : '');
-        setInputValue('cf_y', coords.y != null ? String(coords.y) : '');
-        setInputValue('cf_z', coords.zMasl != null ? String(coords.zMasl) : '');
-        setInputValue('cf_featureType', (rec.featureType as any) || '');
-        setInputValue('cf_location', rec.location || '');
-        setInputValue('cf_shape', (rec.shape as any) || '');
-        setInputValue('cf_orientation', rec.orientation || '');
-        setInputValue('cf_description', rec.description || '');
+        setInputValue("cf_x", coords.x != null ? String(coords.x) : "");
+        setInputValue("cf_y", coords.y != null ? String(coords.y) : "");
+        setInputValue("cf_z", coords.zMasl != null ? String(coords.zMasl) : "");
+        setInputValue("cf_featureType", (rec.featureType as any) || "");
+        setInputValue("cf_location", rec.location || "");
+        setInputValue("cf_shape", (rec.shape as any) || "");
+        setInputValue("cf_orientation", rec.orientation || "");
+        setInputValue("cf_description", rec.description || "");
         const finds = (rec.findsPresent || {}) as any;
         [
-          'pottery',
-          'metal',
-          'flint',
-          'stone',
-          'wood',
-          'charcoal',
-          'shell',
-          'snail',
-          'ash',
-          'adobe',
-          'beads',
-          'pendant',
-          'ring',
-          'seed',
-          'animalBones',
-          'humanBones',
-          'other',
+          "pottery",
+          "metal",
+          "flint",
+          "stone",
+          "wood",
+          "charcoal",
+          "shell",
+          "snail",
+          "ash",
+          "adobe",
+          "beads",
+          "pendant",
+          "ring",
+          "seed",
+          "animalBones",
+          "humanBones",
+          "other",
         ].forEach((k) => setCheckbox(`cf_find_${k}`, !!finds[k]));
         const docs = (rec.documentation || {}) as any;
-        ['drawing', 'plan', 'photogrammetry', 'photos', 'video'].forEach((k) =>
-          setCheckbox(`cf_doc_${k}`, !!docs[k])
+        ["drawing", "plan", "photogrammetry", "photos", "video"].forEach((k) =>
+          setCheckbox(`cf_doc_${k}`, !!docs[k]),
         );
-        setInputValue('cf_planNumber', docs.planNumber || '');
+        setInputValue("cf_planNumber", docs.planNumber || "");
         const samp = (rec.samples || {}) as any;
-        ['environmental', 'aDNA', 'c14', 'isotopic', 'other'].forEach((k) =>
-          setCheckbox(`cf_samp_${k}`, !!samp[k])
+        ["environmental", "aDNA", "c14", "isotopic", "other"].forEach((k) =>
+          setCheckbox(`cf_samp_${k}`, !!samp[k]),
         );
-        setInputValue('cf_sampleBag', (samp.bagNo as any) || '');
-        setInputValue('cf_sampleQty', samp.quantity != null ? String(samp.quantity) : '');
-        setInputValue('cf_sampleOtherType', (samp.otherType as any) || '');
-        setInputValue('cf_author', rec.author || '');
-        setInputValue('cf_dateCreated', rec.dateCreated || '');
-        setInputValue('cf_checkedBy', rec.checkedBy || '');
-        setInputValue('cf_dateChecked', rec.dateChecked || '');
+        setInputValue("cf_sampleBag", (samp.bagNo as any) || "");
+        setInputValue(
+          "cf_sampleQty",
+          samp.quantity != null ? String(samp.quantity) : "",
+        );
+        setInputValue("cf_sampleOtherType", (samp.otherType as any) || "");
+        setInputValue("cf_author", rec.author || "");
+        setInputValue("cf_dateCreated", rec.dateCreated || "");
+        setInputValue("cf_checkedBy", rec.checkedBy || "");
+        setInputValue("cf_dateChecked", rec.dateChecked || "");
       }
 
       function populateSUFormFromRecord(rec: StratigraphicUnitRecord) {
-        setInputValue('su_id', rec.id || '');
-        setInputValue('su_sector', rec.sector || '');
-        setInputValue('su_complexFeatureNo', rec.complexFeatureNo || '');
-        setInputValue('su_unitType', (rec.unitType as any) || '');
-        setInputValue('su_earlierThan', (rec.earlierThan || []).join(','));
-        setInputValue('su_laterThan', (rec.laterThan || []).join(','));
-        setInputValue('su_location', rec.location || '');
+        setInputValue("su_id", rec.id || "");
+        setInputValue("su_sector", rec.sector || "");
+        setInputValue("su_complexFeatureNo", rec.complexFeatureNo || "");
+        setInputValue("su_unitType", (rec.unitType as any) || "");
+        setInputValue("su_earlierThan", (rec.earlierThan || []).join(","));
+        setInputValue("su_laterThan", (rec.laterThan || []).join(","));
+        setInputValue("su_location", rec.location || "");
         const dims = rec.dimensions || ({} as any);
-        setInputValue('su_length', dims.length != null ? String(dims.length) : '');
-        setInputValue('su_thickness', dims.thickness != null ? String(dims.thickness) : '');
-        setInputValue('su_depth', dims.depth != null ? String(dims.depth) : '');
-        setInputValue('su_areaSurface', dims.areaSurface != null ? String(dims.areaSurface) : '');
-        setInputValue('su_orientation', rec.orientation || '');
+        setInputValue("su_length", dims.length != null ? String(dims.length) : "");
+        setInputValue(
+          "su_thickness",
+          dims.thickness != null ? String(dims.thickness) : "",
+        );
+        setInputValue("su_depth", dims.depth != null ? String(dims.depth) : "");
+        setInputValue(
+          "su_areaSurface",
+          dims.areaSurface != null ? String(dims.areaSurface) : "",
+        );
+        setInputValue("su_orientation", rec.orientation || "");
         const structure = (rec.structure || {}) as any;
-        setInputValue('su_colour', (structure.colour as any) || '');
-        setInputValue('su_munsell', (structure.munsellCode as any) || '');
-        setInputValue('su_compaction', (structure.compaction as any) || '');
-        setCheckbox('su_homogeneous', !!structure.homogeneous);
-        setCheckbox('su_heterogeneous', !!structure.heterogeneous);
+        setInputValue("su_colour", (structure.colour as any) || "");
+        setInputValue("su_munsell", (structure.munsellCode as any) || "");
+        setInputValue("su_compaction", (structure.compaction as any) || "");
+        setCheckbox("su_homogeneous", !!structure.homogeneous);
+        setCheckbox("su_heterogeneous", !!structure.heterogeneous);
         const comp = (rec.composition || {}) as any;
         [
-          'pottery',
-          'flint',
-          'stone',
-          'wood',
-          'charcoal',
-          'shell',
-          'snail',
-          'ash',
-          'adobe',
-          'metal',
-          'organic',
-          'mineral',
-          'gravels',
-          'silt',
-          'sand',
-          'argil',
-          'loess',
-          'mud',
-          'other',
+          "pottery",
+          "flint",
+          "stone",
+          "wood",
+          "charcoal",
+          "shell",
+          "snail",
+          "ash",
+          "adobe",
+          "metal",
+          "organic",
+          "mineral",
+          "gravels",
+          "silt",
+          "sand",
+          "argil",
+          "loess",
+          "mud",
+          "other",
         ].forEach((k) => setCheckbox(`su_comp_${k}`, !!comp[k]));
-        setInputValue('su_granulation', (rec.granulation as any) || '');
-        setInputValue('su_contamination', (rec.contaminationRisk as any) || '');
-        setCheckbox('su_bones', !!rec.bones);
-        setCheckbox('su_seed', !!rec.seed);
+        setInputValue("su_granulation", (rec.granulation as any) || "");
+        setInputValue("su_contamination", (rec.contaminationRisk as any) || "");
+        setCheckbox("su_bones", !!rec.bones);
+        setCheckbox("su_seed", !!rec.seed);
         const docs = (rec.documentation || {}) as any;
-        ['drawing', 'plan', 'photogrammetry', 'samples', 'photos', 'video'].forEach((k) =>
-          setCheckbox(`su_doc_${k}`, !!docs[k])
+        ["drawing", "plan", "photogrammetry", "samples", "photos", "video"].forEach(
+          (k) => setCheckbox(`su_doc_${k}`, !!docs[k]),
         );
-        setInputValue('su_planNumber', (docs.planNumber as any) || '');
-        setInputValue('su_description', rec.description || '');
-        setInputValue('su_author', rec.author || '');
-        setInputValue('su_dateCreated', rec.dateCreated || '');
-        setInputValue('su_checkedBy', rec.checkedBy || '');
-        setInputValue('su_dateChecked', rec.dateChecked || '');
+        setInputValue("su_planNumber", (docs.planNumber as any) || "");
+        setInputValue("su_description", rec.description || "");
+        setInputValue("su_author", rec.author || "");
+        setInputValue("su_dateCreated", rec.dateCreated || "");
+        setInputValue("su_checkedBy", rec.checkedBy || "");
+        setInputValue("su_dateChecked", rec.dateChecked || "");
       }
       function attachFeatureFormHandlers() {
-        const saveBtn = document.getElementById('cf_saveBtn') as HTMLButtonElement | null;
-        const clearBtn = document.getElementById('cf_clearBtn') as HTMLButtonElement | null;
+        const saveBtn = document.getElementById(
+          "cf_saveBtn",
+        ) as HTMLButtonElement | null;
+        const clearBtn = document.getElementById(
+          "cf_clearBtn",
+        ) as HTMLButtonElement | null;
         if (saveBtn)
           saveBtn.onclick = async () => {
             if (!canEditRef.current) {
-              alert('You do not have permission to save records.');
+              alert("You do not have permission to save records.");
               return;
             }
-            const id = readInputValue('cf_id').trim().toUpperCase();
+            const id = readInputValue("cf_id").trim().toUpperCase();
             if (!id) {
-              alert('Context ID is required for saving the feature record.');
+              alert("Context ID is required for saving the feature record.");
               return;
             }
             // Gather record
-            const earlierThan = readInputValue('cf_earlierThan')
-              .split(',')
+            const earlierThan = readInputValue("cf_earlierThan")
+              .split(",")
               .map((s) => s.trim().toUpperCase())
               .filter(Boolean);
-            const laterThan = readInputValue('cf_laterThan')
-              .split(',')
+            const laterThan = readInputValue("cf_laterThan")
+              .split(",")
               .map((s) => s.trim().toUpperCase())
               .filter(Boolean);
             const rec: ContextFeatureRecord = {
               id,
-              featureNumber: readInputValue('cf_featureNumber'),
-              sector: readInputValue('cf_sector'),
+              featureNumber: readInputValue("cf_featureNumber"),
+              sector: readInputValue("cf_sector"),
               earlierThan,
               laterThan,
-              featureType: (document.getElementById('cf_featureType') as HTMLSelectElement | null)
-                ?.value as any,
-              location: readInputValue('cf_location'),
+              featureType: (
+                document.getElementById("cf_featureType") as HTMLSelectElement | null
+              )?.value as any,
+              location: readInputValue("cf_location"),
               dimensions: {
-                length: parseFloat(readInputValue('cf_length')) || undefined,
-                width: parseFloat(readInputValue('cf_width')) || undefined,
-                depth: parseFloat(readInputValue('cf_depth')) || undefined,
+                length: parseFloat(readInputValue("cf_length")) || undefined,
+                width: parseFloat(readInputValue("cf_width")) || undefined,
+                depth: parseFloat(readInputValue("cf_depth")) || undefined,
               },
               coordinates: {
-                x: parseFloat(readInputValue('cf_x')) || undefined,
-                y: parseFloat(readInputValue('cf_y')) || undefined,
-                zMasl: parseFloat(readInputValue('cf_z')) || undefined,
+                x: parseFloat(readInputValue("cf_x")) || undefined,
+                y: parseFloat(readInputValue("cf_y")) || undefined,
+                zMasl: parseFloat(readInputValue("cf_z")) || undefined,
               },
-              shape: (document.getElementById('cf_shape') as HTMLSelectElement | null)
-                ?.value as any,
-              orientation: readInputValue('cf_orientation'),
+              shape: (
+                document.getElementById("cf_shape") as HTMLSelectElement | null
+              )?.value as any,
+              orientation: readInputValue("cf_orientation"),
               findsPresent: {
-                pottery: readCheckbox('cf_find_pottery'),
-                metal: readCheckbox('cf_find_metal'),
-                flint: readCheckbox('cf_find_flint'),
-                stone: readCheckbox('cf_find_stone'),
-                wood: readCheckbox('cf_find_wood'),
-                charcoal: readCheckbox('cf_find_charcoal'),
-                shell: readCheckbox('cf_find_shell'),
-                snail: readCheckbox('cf_find_snail'),
-                ash: readCheckbox('cf_find_ash'),
-                adobe: readCheckbox('cf_find_adobe'),
-                beads: readCheckbox('cf_find_beads'),
-                pendant: readCheckbox('cf_find_pendant'),
-                ring: readCheckbox('cf_find_ring'),
-                seed: readCheckbox('cf_find_seed'),
-                animalBones: readCheckbox('cf_find_animalBones'),
-                humanBones: readCheckbox('cf_find_humanBones'),
-                other: readCheckbox('cf_find_other'),
+                pottery: readCheckbox("cf_find_pottery"),
+                metal: readCheckbox("cf_find_metal"),
+                flint: readCheckbox("cf_find_flint"),
+                stone: readCheckbox("cf_find_stone"),
+                wood: readCheckbox("cf_find_wood"),
+                charcoal: readCheckbox("cf_find_charcoal"),
+                shell: readCheckbox("cf_find_shell"),
+                snail: readCheckbox("cf_find_snail"),
+                ash: readCheckbox("cf_find_ash"),
+                adobe: readCheckbox("cf_find_adobe"),
+                beads: readCheckbox("cf_find_beads"),
+                pendant: readCheckbox("cf_find_pendant"),
+                ring: readCheckbox("cf_find_ring"),
+                seed: readCheckbox("cf_find_seed"),
+                animalBones: readCheckbox("cf_find_animalBones"),
+                humanBones: readCheckbox("cf_find_humanBones"),
+                other: readCheckbox("cf_find_other"),
               },
               description:
-                (document.getElementById('cf_description') as HTMLTextAreaElement | null)?.value ||
-                '',
+                (
+                  document.getElementById(
+                    "cf_description",
+                  ) as HTMLTextAreaElement | null
+                )?.value || "",
               documentation: {
-                drawing: readCheckbox('cf_doc_drawing'),
-                plan: readCheckbox('cf_doc_plan'),
-                photogrammetry: readCheckbox('cf_doc_photogrammetry'),
-                photos: readCheckbox('cf_doc_photos'),
-                video: readCheckbox('cf_doc_video'),
-                planNumber: readInputValue('cf_planNumber'),
+                drawing: readCheckbox("cf_doc_drawing"),
+                plan: readCheckbox("cf_doc_plan"),
+                photogrammetry: readCheckbox("cf_doc_photogrammetry"),
+                photos: readCheckbox("cf_doc_photos"),
+                video: readCheckbox("cf_doc_video"),
+                planNumber: readInputValue("cf_planNumber"),
               },
               samples: {
-                environmental: readCheckbox('cf_samp_environmental'),
-                aDNA: readCheckbox('cf_samp_aDNA'),
-                c14: readCheckbox('cf_samp_c14'),
-                isotopic: readCheckbox('cf_samp_isotopic'),
-                other: readCheckbox('cf_samp_other'),
-                otherType: readInputValue('cf_sampleOtherType'),
-                bagNo: readInputValue('cf_sampleBag'),
-                quantity: parseInt(readInputValue('cf_sampleQty')) || undefined,
+                environmental: readCheckbox("cf_samp_environmental"),
+                aDNA: readCheckbox("cf_samp_aDNA"),
+                c14: readCheckbox("cf_samp_c14"),
+                isotopic: readCheckbox("cf_samp_isotopic"),
+                other: readCheckbox("cf_samp_other"),
+                otherType: readInputValue("cf_sampleOtherType"),
+                bagNo: readInputValue("cf_sampleBag"),
+                quantity: parseInt(readInputValue("cf_sampleQty")) || undefined,
               },
-              author: readInputValue('cf_author'),
-              dateCreated: readInputValue('cf_dateCreated'),
-              checkedBy: readInputValue('cf_checkedBy'),
-              dateChecked: readInputValue('cf_dateChecked'),
+              author: readInputValue("cf_author"),
+              dateCreated: readInputValue("cf_dateCreated"),
+              checkedBy: readInputValue("cf_checkedBy"),
+              dateChecked: readInputValue("cf_dateChecked"),
             };
             contextForms.set(id, rec);
             saveToStorage();
@@ -1600,181 +1733,214 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             } catch (e) {
               /* network errors ignored for now */
             }
-            alert('Context feature record saved.');
+            alert("Context feature record saved.");
           };
         if (clearBtn)
           clearBtn.onclick = () => {
             [
-              'cf_featureNumber',
-              'cf_sector',
-              'cf_earlierThan',
-              'cf_laterThan',
-              'cf_location',
-              'cf_length',
-              'cf_width',
-              'cf_depth',
-              'cf_x',
-              'cf_y',
-              'cf_z',
-              'cf_orientation',
-              'cf_description',
-              'cf_planNumber',
-              'cf_sampleOtherType',
-              'cf_sampleBag',
-              'cf_sampleQty',
-              'cf_author',
-              'cf_dateCreated',
-              'cf_checkedBy',
-              'cf_dateChecked',
+              "cf_featureNumber",
+              "cf_sector",
+              "cf_earlierThan",
+              "cf_laterThan",
+              "cf_location",
+              "cf_length",
+              "cf_width",
+              "cf_depth",
+              "cf_x",
+              "cf_y",
+              "cf_z",
+              "cf_orientation",
+              "cf_description",
+              "cf_planNumber",
+              "cf_sampleOtherType",
+              "cf_sampleBag",
+              "cf_sampleQty",
+              "cf_author",
+              "cf_dateCreated",
+              "cf_checkedBy",
+              "cf_dateChecked",
             ].forEach((id) => {
               const el = document.getElementById(id) as
                 | HTMLInputElement
                 | HTMLTextAreaElement
                 | null;
-              if (el) (el as any).value = '';
+              if (el) (el as any).value = "";
             });
-            ['drawing', 'plan', 'photogrammetry', 'photos', 'video'].forEach((k) => {
-              const el = document.getElementById(`cf_doc_${k}`) as HTMLInputElement | null;
+            ["drawing", "plan", "photogrammetry", "photos", "video"].forEach((k) => {
+              const el = document.getElementById(
+                `cf_doc_${k}`,
+              ) as HTMLInputElement | null;
               if (el) el.checked = false;
             });
-            ['environmental', 'aDNA', 'c14', 'isotopic', 'other'].forEach((k) => {
-              const el = document.getElementById(`cf_samp_${k}`) as HTMLInputElement | null;
+            ["environmental", "aDNA", "c14", "isotopic", "other"].forEach((k) => {
+              const el = document.getElementById(
+                `cf_samp_${k}`,
+              ) as HTMLInputElement | null;
               if (el) el.checked = false;
             });
             [
-              'pottery',
-              'metal',
-              'flint',
-              'stone',
-              'wood',
-              'charcoal',
-              'shell',
-              'snail',
-              'ash',
-              'adobe',
-              'beads',
-              'pendant',
-              'ring',
-              'seed',
-              'animalBones',
-              'humanBones',
-              'other',
+              "pottery",
+              "metal",
+              "flint",
+              "stone",
+              "wood",
+              "charcoal",
+              "shell",
+              "snail",
+              "ash",
+              "adobe",
+              "beads",
+              "pendant",
+              "ring",
+              "seed",
+              "animalBones",
+              "humanBones",
+              "other",
             ].forEach((k) => {
-              const el = document.getElementById(`cf_find_${k}`) as HTMLInputElement | null;
+              const el = document.getElementById(
+                `cf_find_${k}`,
+              ) as HTMLInputElement | null;
               if (el) el.checked = false;
             });
-            (document.getElementById('cf_featureType') as HTMLSelectElement | null)
+            (document.getElementById("cf_featureType") as HTMLSelectElement | null)
               ?.selectedIndex &&
-              ((document.getElementById('cf_featureType') as HTMLSelectElement).selectedIndex = 0);
-            (document.getElementById('cf_shape') as HTMLSelectElement | null)?.selectedIndex &&
-              ((document.getElementById('cf_shape') as HTMLSelectElement).selectedIndex = 0);
+              ((
+                document.getElementById("cf_featureType") as HTMLSelectElement
+              ).selectedIndex = 0);
+            (document.getElementById("cf_shape") as HTMLSelectElement | null)
+              ?.selectedIndex &&
+              ((
+                document.getElementById("cf_shape") as HTMLSelectElement
+              ).selectedIndex = 0);
           };
       }
 
       // SU form handlers
       function attachSUFormHandlers() {
-        const saveBtn = document.getElementById('su_saveBtn') as HTMLButtonElement | null;
-        const clearBtn = document.getElementById('su_clearBtn') as HTMLButtonElement | null;
+        const saveBtn = document.getElementById(
+          "su_saveBtn",
+        ) as HTMLButtonElement | null;
+        const clearBtn = document.getElementById(
+          "su_clearBtn",
+        ) as HTMLButtonElement | null;
         if (saveBtn)
           saveBtn.onclick = async () => {
             if (!canEditRef.current) {
-              alert('You do not have permission to save records.');
+              alert("You do not have permission to save records.");
               return;
             }
-            const id = readInputValue('su_id').trim();
+            const id = readInputValue("su_id").trim();
             if (!id) {
-              alert('SU ID is required.');
+              alert("SU ID is required.");
               return;
             }
-            const earlierThan = readInputValue('su_earlierThan')
-              .split(',')
+            const earlierThan = readInputValue("su_earlierThan")
+              .split(",")
               .map((s) => s.trim())
               .filter(Boolean);
-            const laterThan = readInputValue('su_laterThan')
-              .split(',')
+            const laterThan = readInputValue("su_laterThan")
+              .split(",")
               .map((s) => s.trim())
               .filter(Boolean);
             const rec: StratigraphicUnitRecord = {
               id,
-              sector: readInputValue('su_sector'),
-              complexFeatureNo: readInputValue('su_complexFeatureNo'),
+              sector: readInputValue("su_sector"),
+              complexFeatureNo: readInputValue("su_complexFeatureNo"),
               earlierThan,
               laterThan,
-              unitType: (document.getElementById('su_unitType') as HTMLSelectElement | null)
-                ?.value as any,
-              location: readInputValue('su_location'),
+              unitType: (
+                document.getElementById("su_unitType") as HTMLSelectElement | null
+              )?.value as any,
+              location: readInputValue("su_location"),
               dimensions: {
-                length: parseFloat(readInputValue('su_length')) || undefined,
-                thickness: parseFloat(readInputValue('su_thickness')) || undefined,
-                depth: parseFloat(readInputValue('su_depth')) || undefined,
-                areaSurface: parseFloat(readInputValue('su_areaSurface')) || undefined,
+                length: parseFloat(readInputValue("su_length")) || undefined,
+                thickness: parseFloat(readInputValue("su_thickness")) || undefined,
+                depth: parseFloat(readInputValue("su_depth")) || undefined,
+                areaSurface:
+                  parseFloat(readInputValue("su_areaSurface")) || undefined,
               },
-              orientation: readInputValue('su_orientation'),
+              orientation: readInputValue("su_orientation"),
               structure: {
-                compaction: (document.getElementById('su_compaction') as HTMLSelectElement | null)
-                  ?.value as any,
-                colour: readInputValue('su_colour'),
-                munsellCode: readInputValue('su_munsell'),
-                homogeneous: readCheckbox('su_homogeneous'),
-                heterogeneous: readCheckbox('su_heterogeneous'),
+                compaction: (
+                  document.getElementById(
+                    "su_compaction",
+                  ) as HTMLSelectElement | null
+                )?.value as any,
+                colour: readInputValue("su_colour"),
+                munsellCode: readInputValue("su_munsell"),
+                homogeneous: readCheckbox("su_homogeneous"),
+                heterogeneous: readCheckbox("su_heterogeneous"),
               },
               composition: (() => {
                 const obj: any = {};
                 [
-                  'pottery',
-                  'flint',
-                  'stone',
-                  'wood',
-                  'charcoal',
-                  'shell',
-                  'snail',
-                  'ash',
-                  'adobe',
-                  'metal',
-                  'organic',
-                  'mineral',
-                  'gravels',
-                  'silt',
-                  'sand',
-                  'argil',
-                  'loess',
-                  'mud',
-                  'other',
+                  "pottery",
+                  "flint",
+                  "stone",
+                  "wood",
+                  "charcoal",
+                  "shell",
+                  "snail",
+                  "ash",
+                  "adobe",
+                  "metal",
+                  "organic",
+                  "mineral",
+                  "gravels",
+                  "silt",
+                  "sand",
+                  "argil",
+                  "loess",
+                  "mud",
+                  "other",
                 ].forEach((k) => {
                   obj[k] = readCheckbox(`su_comp_${k}`);
                 });
                 return obj;
               })(),
-              granulation: (document.getElementById('su_granulation') as HTMLSelectElement | null)
-                ?.value as any,
-              contaminationRisk: (
-                document.getElementById('su_contamination') as HTMLSelectElement | null
+              granulation: (
+                document.getElementById("su_granulation") as HTMLSelectElement | null
               )?.value as any,
-              bones: readCheckbox('su_bones'),
-              seed: readCheckbox('su_seed'),
+              contaminationRisk: (
+                document.getElementById(
+                  "su_contamination",
+                ) as HTMLSelectElement | null
+              )?.value as any,
+              bones: readCheckbox("su_bones"),
+              seed: readCheckbox("su_seed"),
               perturbation: (() => {
                 const obj: any = {};
-                ['natural', 'anthropic', 'burrow', 'roots', 'other'].forEach((k) => {
+                ["natural", "anthropic", "burrow", "roots", "other"].forEach((k) => {
                   obj[k] = readCheckbox(`su_pert_${k}`);
                 });
-                obj.otherType = readInputValue('su_pert_otherType');
+                obj.otherType = readInputValue("su_pert_otherType");
                 return obj;
               })(),
               description:
-                (document.getElementById('su_description') as HTMLTextAreaElement | null)?.value ||
-                '',
+                (
+                  document.getElementById(
+                    "su_description",
+                  ) as HTMLTextAreaElement | null
+                )?.value || "",
               documentation: (() => {
                 const obj: any = {};
-                ['drawing', 'plan', 'photogrammetry', 'samples', 'photos', 'video'].forEach((k) => {
+                [
+                  "drawing",
+                  "plan",
+                  "photogrammetry",
+                  "samples",
+                  "photos",
+                  "video",
+                ].forEach((k) => {
                   obj[k] = readCheckbox(`su_doc_${k}`);
                 });
-                obj.planNumber = readInputValue('su_planNumber');
+                obj.planNumber = readInputValue("su_planNumber");
                 return obj;
               })(),
-              author: readInputValue('su_author'),
-              dateCreated: readInputValue('su_dateCreated'),
-              checkedBy: readInputValue('su_checkedBy'),
-              dateChecked: readInputValue('su_dateChecked'),
+              author: readInputValue("su_author"),
+              dateCreated: readInputValue("su_dateCreated"),
+              checkedBy: readInputValue("su_checkedBy"),
+              dateChecked: readInputValue("su_dateChecked"),
             };
             stratigraphicUnits.set(id, rec);
             saveToStorage();
@@ -1784,73 +1950,93 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             } catch (e) {
               /* ignore */
             }
-            alert('SU record saved.');
+            alert("SU record saved.");
           };
         if (clearBtn)
           clearBtn.onclick = () => {
             [
-              'su_id',
-              'su_sector',
-              'su_complexFeatureNo',
-              'su_earlierThan',
-              'su_laterThan',
-              'su_location',
-              'su_length',
-              'su_thickness',
-              'su_depth',
-              'su_areaSurface',
-              'su_orientation',
-              'su_colour',
-              'su_munsell',
-              'su_description',
-              'su_planNumber',
-              'su_author',
-              'su_dateCreated',
-              'su_checkedBy',
-              'su_dateChecked',
-              'su_pert_otherType',
+              "su_id",
+              "su_sector",
+              "su_complexFeatureNo",
+              "su_earlierThan",
+              "su_laterThan",
+              "su_location",
+              "su_length",
+              "su_thickness",
+              "su_depth",
+              "su_areaSurface",
+              "su_orientation",
+              "su_colour",
+              "su_munsell",
+              "su_description",
+              "su_planNumber",
+              "su_author",
+              "su_dateCreated",
+              "su_checkedBy",
+              "su_dateChecked",
+              "su_pert_otherType",
             ].forEach((id) => {
               const el = document.getElementById(id) as any;
-              if (el) el.value = '';
+              if (el) el.value = "";
             });
-            ['su_unitType', 'su_compaction', 'su_granulation', 'su_contamination'].forEach((id) => {
+            [
+              "su_unitType",
+              "su_compaction",
+              "su_granulation",
+              "su_contamination",
+            ].forEach((id) => {
               const el = document.getElementById(id) as HTMLSelectElement | null;
               if (el) el.selectedIndex = 0;
             });
-            ['su_homogeneous', 'su_heterogeneous', 'su_bones', 'su_seed'].forEach((id) => {
-              const el = document.getElementById(id) as HTMLInputElement | null;
+            ["su_homogeneous", "su_heterogeneous", "su_bones", "su_seed"].forEach(
+              (id) => {
+                const el = document.getElementById(id) as HTMLInputElement | null;
+                if (el) el.checked = false;
+              },
+            );
+            [
+              "pottery",
+              "flint",
+              "stone",
+              "wood",
+              "charcoal",
+              "shell",
+              "snail",
+              "ash",
+              "adobe",
+              "metal",
+              "organic",
+              "mineral",
+              "gravels",
+              "silt",
+              "sand",
+              "argil",
+              "loess",
+              "mud",
+              "other",
+            ].forEach((k) => {
+              const el = document.getElementById(
+                `su_comp_${k}`,
+              ) as HTMLInputElement | null;
+              if (el) el.checked = false;
+            });
+            ["natural", "anthropic", "burrow", "roots", "other"].forEach((k) => {
+              const el = document.getElementById(
+                `su_pert_${k}`,
+              ) as HTMLInputElement | null;
               if (el) el.checked = false;
             });
             [
-              'pottery',
-              'flint',
-              'stone',
-              'wood',
-              'charcoal',
-              'shell',
-              'snail',
-              'ash',
-              'adobe',
-              'metal',
-              'organic',
-              'mineral',
-              'gravels',
-              'silt',
-              'sand',
-              'argil',
-              'loess',
-              'mud',
-              'other',
+              "drawing",
+              "plan",
+              "photogrammetry",
+              "samples",
+              "photos",
+              "video",
             ].forEach((k) => {
-              const el = document.getElementById(`su_comp_${k}`) as HTMLInputElement | null;
-              if (el) el.checked = false;
-            });
-            ['natural', 'anthropic', 'burrow', 'roots', 'other'].forEach((k) => {
-              const el = document.getElementById(`su_pert_${k}`) as HTMLInputElement | null;
-              if (el) el.checked = false;
-            });
-            ['drawing', 'plan', 'photogrammetry', 'samples', 'photos', 'video'].forEach((k) => {
-              const el = document.getElementById(`su_doc_${k}`) as HTMLInputElement | null;
+              const el = document.getElementById(
+                `su_doc_${k}`,
+              ) as HTMLInputElement | null;
               if (el) el.checked = false;
             });
           };
@@ -1858,45 +2044,51 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       // Artefact registry handlers
       function attachArtefactHandlers() {
-        const addBtn = document.getElementById('af_addBtn') as HTMLButtonElement | null;
+        const addBtn = document.getElementById(
+          "af_addBtn",
+        ) as HTMLButtonElement | null;
         if (addBtn)
           addBtn.onclick = async () => {
-            const category = (document.getElementById('af_category') as HTMLSelectElement | null)
-              ?.value as keyof ArtefactRegistries;
-            const record: Omit<ArtefactRecord, 'id' | 'category'> = {
-              number: readInputValue('af_number'),
-              type: readInputValue('af_type'),
-              complexFeature: readInputValue('af_feature'),
-              areaSurface: readInputValue('af_area'),
-              gridSquare: readInputValue('af_grid'),
-              depth: readInputValue('af_depth'),
-              stratigraphicUnit: readInputValue('af_su'),
-              quantity: parseInt(readInputValue('af_qty')) || undefined,
-              otherObservations: readInputValue('af_obs'),
+            const category = (
+              document.getElementById("af_category") as HTMLSelectElement | null
+            )?.value as keyof ArtefactRegistries;
+            const record: Omit<ArtefactRecord, "id" | "category"> = {
+              number: readInputValue("af_number"),
+              type: readInputValue("af_type"),
+              complexFeature: readInputValue("af_feature"),
+              areaSurface: readInputValue("af_area"),
+              gridSquare: readInputValue("af_grid"),
+              depth: readInputValue("af_depth"),
+              stratigraphicUnit: readInputValue("af_su"),
+              quantity: parseInt(readInputValue("af_qty")) || undefined,
+              otherObservations: readInputValue("af_obs"),
             };
             if (!category) {
-              alert('Select a category.');
+              alert("Select a category.");
               return;
             }
             // Basic validation for required fields
             let invalid = false;
-            (['af_number', 'af_type'] as const).forEach((id) => {
+            (["af_number", "af_type"] as const).forEach((id) => {
               const el = document.getElementById(id) as HTMLInputElement | null;
               if (el && !el.value.trim()) {
-                el.style.borderColor = 'red';
+                el.style.borderColor = "red";
                 invalid = true;
               } else if (el) {
-                el.style.borderColor = '';
+                el.style.borderColor = "";
               }
             });
             if (invalid) {
-              alert('Please fill required fields: Number and Type.');
+              alert("Please fill required fields: Number and Type.");
               return;
             }
             addArtefact(category, record);
             renderArtefactTable();
             try {
-              await formsService.saveArtefact(projectId, { category, ...record } as any);
+              await formsService.saveArtefact(projectId, {
+                category,
+                ...record,
+              } as any);
             } catch (e) {
               /* ignore */
             }
@@ -1904,14 +2096,15 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         renderArtefactTable();
       }
       function renderArtefactTable() {
-        const container = document.getElementById('af_table');
+        const container = document.getElementById("af_table");
         if (!container) return;
         const filterText =
           (
-            document.getElementById('af_filterText') as HTMLInputElement | null
-          )?.value.toLowerCase() || '';
+            document.getElementById("af_filterText") as HTMLInputElement | null
+          )?.value.toLowerCase() || "";
         const filterCategory =
-          (document.getElementById('af_filterCategory') as HTMLSelectElement | null)?.value || '';
+          (document.getElementById("af_filterCategory") as HTMLSelectElement | null)
+            ?.value || "";
         const rows: string[] = [];
         Object.entries(artefactRegistries).forEach(([cat, arr]) => {
           if (arr.length === 0) return;
@@ -1924,23 +2117,23 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           });
           if (filtered.length === 0) return;
           rows.push(
-            `<tr><th colspan="10" style="text-align:left; background:#1f1f1f">${cat.replace(/_/g, ' ').toUpperCase()} (${arr.length})</th></tr>`
+            `<tr><th colspan="10" style="text-align:left; background:#1f1f1f">${cat.replace(/_/g, " ").toUpperCase()} (${arr.length})</th></tr>`,
           );
           filtered.forEach((r: any) => {
             rows.push(
-              `<tr><td>${r.number || ''}</td><td>${r.type || ''}</td><td>${r.complexFeature || ''}</td><td>${r.areaSurface || ''}</td><td>${r.gridSquare || ''}</td><td>${r.depth || ''}</td><td>${r.stratigraphicUnit || ''}</td><td>${r.quantity || ''}</td><td>${(r.otherObservations || '').slice(0, 40)}</td><td><button data-del="${r.id}" class="af-del-btn" style="background:#922; color:#fff; border:none; padding:2px 6px; cursor:pointer; font-size:11px;">✕</button></td></tr>`
+              `<tr><td>${r.number || ""}</td><td>${r.type || ""}</td><td>${r.complexFeature || ""}</td><td>${r.areaSurface || ""}</td><td>${r.gridSquare || ""}</td><td>${r.depth || ""}</td><td>${r.stratigraphicUnit || ""}</td><td>${r.quantity || ""}</td><td>${(r.otherObservations || "").slice(0, 40)}</td><td><button data-del="${r.id}" class="af-del-btn" style="background:#922; color:#fff; border:none; padding:2px 6px; cursor:pointer; font-size:11px;">✕</button></td></tr>`,
             );
           });
         });
         container.innerHTML = rows.length
-          ? `<table class="registry-table"><thead><tr><th>No.</th><th>Type</th><th>Feature</th><th>Area</th><th>Grid</th><th>Depth</th><th>SU</th><th>Qty</th><th>Observations</th><th>Del</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
-          : '<em>No artefacts recorded yet.</em>';
+          ? `<table class="registry-table"><thead><tr><th>No.</th><th>Type</th><th>Feature</th><th>Area</th><th>Grid</th><th>Depth</th><th>SU</th><th>Qty</th><th>Observations</th><th>Del</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
+          : "<em>No artefacts recorded yet.</em>";
         // Bind delete buttons
-        container.querySelectorAll('button.af-del-btn').forEach((btn) => {
-          btn.addEventListener('click', (e: any) => {
-            const id = e.currentTarget.getAttribute('data-del');
+        container.querySelectorAll("button.af-del-btn").forEach((btn) => {
+          btn.addEventListener("click", (e: any) => {
+            const id = e.currentTarget.getAttribute("data-del");
             if (!id) return;
-            if (!confirm('Delete artefact entry?')) return;
+            if (!confirm("Delete artefact entry?")) return;
             deleteArtefact(id);
             renderArtefactTable();
           });
@@ -1948,9 +2141,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
 
       function suggestNextContextId() {
-        if (contexts.size === 0) return '1001';
+        if (contexts.size === 0) return "1001";
         const numbers = Array.from(contexts.keys())
-          .map((id) => parseInt(id.match(/\d+$/)?.[0] || ''))
+          .map((id) => parseInt(id.match(/\d+$/)?.[0] || ""))
           .filter((n) => !isNaN(n));
         return numbers.length > 0
           ? String(Math.max(...numbers) + 1)
@@ -1959,147 +2152,179 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function parseDateFromInputs(year: number, era: string) {
         if (isNaN(year) || year <= 0) return null;
-        return era === 'BCE' ? -year : year;
+        return era === "BCE" ? -year : year;
       }
       function formatDateForDisplay(internalYear: number | null) {
-        if (internalYear === null || internalYear === 0) return { year: '', era: 'CE' };
+        if (internalYear === null || internalYear === 0)
+          return { year: "", era: "CE" };
         return internalYear < 0
-          ? { year: Math.abs(internalYear), era: 'BCE' }
-          : { year: internalYear, era: 'CE' };
+          ? { year: Math.abs(internalYear), era: "BCE" }
+          : { year: internalYear, era: "CE" };
       }
 
       function showContextModal(x: number, y: number) {
         if (!canEditRef.current) return; // Guests cannot create contexts
-        const modal = document.getElementById('contextModal') as HTMLElement | null;
+        const modal = document.getElementById("contextModal") as HTMLElement | null;
         if (!modal) return;
-        modal.style.display = 'flex';
-        const input = document.getElementById('newContextId') as HTMLInputElement;
-        const earliestYear = document.getElementById('earliestDateYear') as HTMLInputElement;
-        const latestYear = document.getElementById('latestDateYear') as HTMLInputElement;
-        const desc = document.getElementById('contextDescription') as HTMLTextAreaElement;
-        const dateType = document.getElementById('dateType') as HTMLSelectElement;
+        modal.style.display = "flex";
+        const input = document.getElementById("newContextId") as HTMLInputElement;
+        const earliestYear = document.getElementById(
+          "earliestDateYear",
+        ) as HTMLInputElement;
+        const latestYear = document.getElementById(
+          "latestDateYear",
+        ) as HTMLInputElement;
+        const desc = document.getElementById(
+          "contextDescription",
+        ) as HTMLTextAreaElement;
+        const dateType = document.getElementById("dateType") as HTMLSelectElement;
         input.value = suggestNextContextId();
-        earliestYear.value = '';
-        latestYear.value = '';
-        desc.value = '';
-        dateType.value = '';
+        earliestYear.value = "";
+        latestYear.value = "";
+        desc.value = "";
+        dateType.value = "";
         input.focus();
-        (document.getElementById('confirmContextBtn') as HTMLButtonElement).onclick = () => {
-          const id = (document.getElementById('newContextId') as HTMLInputElement).value
-            .trim()
-            .toUpperCase();
-          if (!id || contexts.has(id)) {
-            alert(`Context "${id}" is invalid or already exists.`);
-            return;
-          }
-          const context: any = {
-            id,
-            x,
-            y,
-            fixed: true,
-            type: (document.getElementById('contextType') as HTMLSelectElement).value,
-            description: desc.value.trim(),
+        (document.getElementById("confirmContextBtn") as HTMLButtonElement).onclick =
+          () => {
+            const id = (
+              document.getElementById("newContextId") as HTMLInputElement
+            ).value
+              .trim()
+              .toUpperCase();
+            if (!id || contexts.has(id)) {
+              alert(`Context "${id}" is invalid or already exists.`);
+              return;
+            }
+            const context: any = {
+              id,
+              x,
+              y,
+              fixed: true,
+              type: (document.getElementById("contextType") as HTMLSelectElement)
+                .value,
+              description: desc.value.trim(),
+            };
+            const eYear = parseInt(
+              (document.getElementById("earliestDateYear") as HTMLInputElement)
+                .value,
+            );
+            const eEra = (
+              document.getElementById("earliestDateEra") as HTMLSelectElement
+            ).value;
+            const lYear = parseInt(
+              (document.getElementById("latestDateYear") as HTMLInputElement).value,
+            );
+            const lEra = (
+              document.getElementById("latestDateEra") as HTMLSelectElement
+            ).value;
+            context.earliestDate = parseDateFromInputs(eYear, eEra);
+            context.latestDate = parseDateFromInputs(lYear, lEra);
+            context.dateType = dateType.value;
+            contexts.set(id, context);
+            // Initialize digitized feature record skeleton for extended dataset
+            contextForms.set(id, { id, description: context.description });
+            // New context triggers full rearrangement
+            forceAutoLayoutNext = true;
+            hideModals();
+            updateUI();
           };
-          const eYear = parseInt(
-            (document.getElementById('earliestDateYear') as HTMLInputElement).value
-          );
-          const eEra = (document.getElementById('earliestDateEra') as HTMLSelectElement).value;
-          const lYear = parseInt(
-            (document.getElementById('latestDateYear') as HTMLInputElement).value
-          );
-          const lEra = (document.getElementById('latestDateEra') as HTMLSelectElement).value;
-          context.earliestDate = parseDateFromInputs(eYear, eEra);
-          context.latestDate = parseDateFromInputs(lYear, lEra);
-          context.dateType = dateType.value;
-          contexts.set(id, context);
-          // Initialize digitized feature record skeleton for extended dataset
-          contextForms.set(id, { id, description: context.description });
-          // New context triggers full rearrangement
-          forceAutoLayoutNext = true;
-          hideModals();
-          updateUI();
-        };
       }
 
       function showEditNodeModal(contextId: string) {
         if (!canEditRef.current) return; // Guests cannot edit contexts
-        const modal = document.getElementById('editNodeModal') as HTMLElement | null;
+        const modal = document.getElementById("editNodeModal") as HTMLElement | null;
         if (!modal) return;
-        modal.style.display = 'flex';
+        modal.style.display = "flex";
         const context = contexts.get(contextId);
-        (document.getElementById('editNodeModalTitle') as HTMLElement).innerText =
+        (document.getElementById("editNodeModalTitle") as HTMLElement).innerText =
           `Edit Context: ${contextId}`;
-        (document.getElementById('editNodeIdInput') as HTMLInputElement).value = contextId;
-        (document.getElementById('editContextType') as HTMLSelectElement).value =
-          context.type || 'layer';
-        (document.getElementById('editContextDescription') as HTMLTextAreaElement).value =
-          context.description || '';
+        (document.getElementById("editNodeIdInput") as HTMLInputElement).value =
+          contextId;
+        (document.getElementById("editContextType") as HTMLSelectElement).value =
+          context.type || "layer";
+        (
+          document.getElementById("editContextDescription") as HTMLTextAreaElement
+        ).value = context.description || "";
         const earliestDisplay = formatDateForDisplay(context.earliestDate);
-        (document.getElementById('editEarliestDateYear') as HTMLInputElement).value = String(
-          earliestDisplay.year
-        );
-        (document.getElementById('editEarliestDateEra') as HTMLSelectElement).value =
+        (document.getElementById("editEarliestDateYear") as HTMLInputElement).value =
+          String(earliestDisplay.year);
+        (document.getElementById("editEarliestDateEra") as HTMLSelectElement).value =
           earliestDisplay.era;
         const latestDisplay = formatDateForDisplay(context.latestDate);
-        (document.getElementById('editLatestDateYear') as HTMLInputElement).value = String(
-          latestDisplay.year
-        );
-        (document.getElementById('editLatestDateEra') as HTMLSelectElement).value =
+        (document.getElementById("editLatestDateYear") as HTMLInputElement).value =
+          String(latestDisplay.year);
+        (document.getElementById("editLatestDateEra") as HTMLSelectElement).value =
           latestDisplay.era;
-        (document.getElementById('editDateType') as HTMLSelectElement).value =
-          context.dateType || '';
-        (document.getElementById('editGroupAssignment') as HTMLSelectElement).value =
-          context.groupId || '';
-        (document.getElementById('editSubGroupAssignment') as HTMLSelectElement).value =
-          context.subGroupId || '';
-        (document.getElementById('editPhaseAssignment') as HTMLSelectElement).value =
-          context.phaseId || '';
-        (document.getElementById('saveNodeBtn') as HTMLButtonElement).onclick = () =>
+        (document.getElementById("editDateType") as HTMLSelectElement).value =
+          context.dateType || "";
+        (document.getElementById("editGroupAssignment") as HTMLSelectElement).value =
+          context.groupId || "";
+        (
+          document.getElementById("editSubGroupAssignment") as HTMLSelectElement
+        ).value = context.subGroupId || "";
+        (document.getElementById("editPhaseAssignment") as HTMLSelectElement).value =
+          context.phaseId || "";
+        (document.getElementById("saveNodeBtn") as HTMLButtonElement).onclick = () =>
           saveNodeChanges(contextId);
-        (document.getElementById('deleteNodeBtn') as HTMLButtonElement).onclick = () =>
-          deleteContext(contextId);
+        (document.getElementById("deleteNodeBtn") as HTMLButtonElement).onclick =
+          () => deleteContext(contextId);
         // Pre-fill feature form tab with this context id and coordinates
-        const cfId = document.getElementById('cf_id') as HTMLInputElement | null;
+        const cfId = document.getElementById("cf_id") as HTMLInputElement | null;
         if (cfId) cfId.value = contextId;
-        const cfX = document.getElementById('cf_x') as HTMLInputElement | null;
-        if (cfX && typeof context.x === 'number') cfX.value = String(context.x);
-        const cfY = document.getElementById('cf_y') as HTMLInputElement | null;
-        if (cfY && typeof context.y === 'number') cfY.value = String(context.y);
+        const cfX = document.getElementById("cf_x") as HTMLInputElement | null;
+        if (cfX && typeof context.x === "number") cfX.value = String(context.x);
+        const cfY = document.getElementById("cf_y") as HTMLInputElement | null;
+        if (cfY && typeof context.y === "number") cfY.value = String(context.y);
       }
 
       function saveNodeChanges(oldId: string) {
         if (!canEditRef.current) return; // Guests cannot save changes
-        const newId = (document.getElementById('editNodeIdInput') as HTMLInputElement).value
+        const newId = (
+          document.getElementById("editNodeIdInput") as HTMLInputElement
+        ).value
           .trim()
           .toUpperCase();
         if (!newId || (newId !== oldId && contexts.has(newId))) {
-          alert('Context ID is invalid or already exists.');
+          alert("Context ID is invalid or already exists.");
           return;
         }
         const context = contexts.get(oldId);
         if (context.groupId) groups.get(context.groupId)?.contexts.delete(oldId);
-        if (context.subGroupId) subGroups.get(context.subGroupId)?.contexts.delete(oldId);
-        context.type = (document.getElementById('editContextType') as HTMLSelectElement).value;
+        if (context.subGroupId)
+          subGroups.get(context.subGroupId)?.contexts.delete(oldId);
+        context.type = (
+          document.getElementById("editContextType") as HTMLSelectElement
+        ).value;
         context.description = (
-          document.getElementById('editContextDescription') as HTMLTextAreaElement
+          document.getElementById("editContextDescription") as HTMLTextAreaElement
         ).value.trim();
         const eYear = parseInt(
-          (document.getElementById('editEarliestDateYear') as HTMLInputElement).value
+          (document.getElementById("editEarliestDateYear") as HTMLInputElement)
+            .value,
         );
-        const eEra = (document.getElementById('editEarliestDateEra') as HTMLSelectElement).value;
+        const eEra = (
+          document.getElementById("editEarliestDateEra") as HTMLSelectElement
+        ).value;
         const lYear = parseInt(
-          (document.getElementById('editLatestDateYear') as HTMLInputElement).value
+          (document.getElementById("editLatestDateYear") as HTMLInputElement).value,
         );
-        const lEra = (document.getElementById('editLatestDateEra') as HTMLSelectElement).value;
+        const lEra = (
+          document.getElementById("editLatestDateEra") as HTMLSelectElement
+        ).value;
         context.earliestDate = parseDateFromInputs(eYear, eEra);
         context.latestDate = parseDateFromInputs(lYear, lEra);
-        context.dateType = (document.getElementById('editDateType') as HTMLSelectElement).value;
+        context.dateType = (
+          document.getElementById("editDateType") as HTMLSelectElement
+        ).value;
         const newGroupId =
-          (document.getElementById('editGroupAssignment') as HTMLSelectElement).value || null;
+          (document.getElementById("editGroupAssignment") as HTMLSelectElement)
+            .value || null;
         const newSubGroupId =
-          (document.getElementById('editSubGroupAssignment') as HTMLSelectElement).value || null;
+          (document.getElementById("editSubGroupAssignment") as HTMLSelectElement)
+            .value || null;
         const newPhaseId =
-          (document.getElementById('editPhaseAssignment') as HTMLSelectElement).value || null;
+          (document.getElementById("editPhaseAssignment") as HTMLSelectElement)
+            .value || null;
         context.groupId = newGroupId;
         context.subGroupId = newSubGroupId;
         context.phaseId = newPhaseId;
@@ -2135,12 +2360,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function showRelationshipModal(sourceId: string, targetId: string) {
         if (!canEditRef.current) return; // Guests cannot create relationships
-        const modal = document.getElementById('relationshipModal') as HTMLElement | null;
+        const modal = document.getElementById(
+          "relationshipModal",
+        ) as HTMLElement | null;
         if (!modal) return;
-        modal.style.display = 'flex';
-        (document.getElementById('relationshipModalTitle') as HTMLElement).innerText =
-          `Define Relationship: ${sourceId} → ${targetId}`;
-        const select = document.getElementById('relationshipType') as HTMLSelectElement;
+        modal.style.display = "flex";
+        (
+          document.getElementById("relationshipModalTitle") as HTMLElement
+        ).innerText = `Define Relationship: ${sourceId} → ${targetId}`;
+        const select = document.getElementById(
+          "relationshipType",
+        ) as HTMLSelectElement;
         select.innerHTML = `<optgroup label="Direct Pairing">
           <option value="fill_of">${sourceId} is FILL OF ${targetId}</option>
           <option value="filled_by">${sourceId} is FILLED BY ${targetId}</option>
@@ -2160,7 +2390,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           <option value="equivalent">Equivalent To</option>
           <option value="same_as">Same As</option>
         </optgroup>`;
-        (document.getElementById('confirmRelationshipBtn') as HTMLButtonElement).onclick = () => {
+        (
+          document.getElementById("confirmRelationshipBtn") as HTMLButtonElement
+        ).onclick = () => {
           relationships.push({ from: sourceId, to: targetId, type: select.value });
           // Relationship addition impacts stratigraphy ordering
           forceAutoLayoutNext = true;
@@ -2171,16 +2403,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function deleteContext(contextId: string) {
         if (!canEditRef.current) return; // Guests cannot delete contexts
-        if (!window.confirm(`Delete context "${contextId}" and all its relationships?`)) return;
+        if (
+          !window.confirm(`Delete context "${contextId}" and all its relationships?`)
+        )
+          return;
         const context = contexts.get(contextId);
-        if (context?.groupId) groups.get(context.groupId)?.contexts.delete(contextId);
-        if (context?.subGroupId) subGroups.get(context.subGroupId)?.contexts.delete(contextId);
+        if (context?.groupId)
+          groups.get(context.groupId)?.contexts.delete(contextId);
+        if (context?.subGroupId)
+          subGroups.get(context.subGroupId)?.contexts.delete(contextId);
         contexts.delete(contextId);
         relationships = relationships.filter(
-          (rel) => rel.from !== contextId && rel.to !== contextId
+          (rel) => rel.from !== contextId && rel.to !== contextId,
         );
         temporalConflicts = temporalConflicts.filter(
-          (c: any) => c.context1 !== contextId && c.context2 !== contextId
+          (c: any) => c.context1 !== contextId && c.context2 !== contextId,
         );
         // Deletion changes graph topology
         forceAutoLayoutNext = true;
@@ -2197,21 +2434,25 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       // Placeholder API for artefact addition (will be surfaced via UI later)
       function addArtefact(
         category: keyof ArtefactRegistries,
-        partial: Omit<ArtefactRecord, 'id' | 'category'>
+        partial: Omit<ArtefactRecord, "id" | "category">,
       ) {
         if (!canEditRef.current) {
-          alert('You do not have permission to add artefacts.');
+          alert("You do not have permission to add artefacts.");
           return;
         }
         const id = `art_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const record: ArtefactRecord = { id, category, ...partial } as ArtefactRecord;
+        const record: ArtefactRecord = {
+          id,
+          category,
+          ...partial,
+        } as ArtefactRecord;
         artefactRegistries[category].push(record);
         saveToStorage();
       }
 
       function deleteArtefact(id: string) {
         if (!canEditRef.current) {
-          alert('You do not have permission to delete artefacts.');
+          alert("You do not have permission to delete artefacts.");
           return;
         }
         const cats = Object.keys(artefactRegistries) as (keyof ArtefactRegistries)[];
@@ -2226,7 +2467,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
 
       function resetZoom() {
-        (svg as any).transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+        (svg as any)
+          .transition()
+          .duration(750)
+          .call(zoom.transform, d3.zoomIdentity);
       }
 
       function analyzeTemporalConflicts() {
@@ -2234,18 +2478,31 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         (relationships || []).forEach((rel: any) => {
           const ctx1 = contexts.get(rel.from);
           const ctx2 = contexts.get(rel.to);
-          if (!ctx1?.earliestDate || !ctx1?.latestDate || !ctx2?.earliestDate || !ctx2?.latestDate)
+          if (
+            !ctx1?.earliestDate ||
+            !ctx1?.latestDate ||
+            !ctx2?.earliestDate ||
+            !ctx2?.latestDate
+          )
             return;
           let earlierCtx: any, laterCtx: any;
-          if (['above', 'seals', 'cuts', 'filled_by'].includes(rel.type)) {
+          if (["above", "seals", "cuts", "filled_by"].includes(rel.type)) {
             earlierCtx = ctx2;
             laterCtx = ctx1;
-          } else if (['below', 'sealed_by', 'cut_by', 'fill_of'].includes(rel.type)) {
+          } else if (
+            ["below", "sealed_by", "cut_by", "fill_of"].includes(rel.type)
+          ) {
             earlierCtx = ctx1;
             laterCtx = ctx2;
           } else return;
-          const earlier = { earliest: earlierCtx.earliestDate, latest: earlierCtx.latestDate };
-          const later = { earliest: laterCtx.earliestDate, latest: laterCtx.latestDate };
+          const earlier = {
+            earliest: earlierCtx.earliestDate,
+            latest: earlierCtx.latestDate,
+          };
+          const later = {
+            earliest: laterCtx.earliestDate,
+            latest: laterCtx.latestDate,
+          };
           if (earlier.earliest > later.latest) {
             temporalConflicts.push({
               context1: earlierCtx.id,
@@ -2255,11 +2512,13 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           }
         });
         updateUI();
-        alert(`Analysis complete. Found ${temporalConflicts.length} temporal conflicts.`);
+        alert(
+          `Analysis complete. Found ${temporalConflicts.length} temporal conflicts.`,
+        );
       }
 
       function confirmClear() {
-        if (!window.confirm('Delete all data? This cannot be undone.')) return;
+        if (!window.confirm("Delete all data? This cannot be undone.")) return;
         contexts = new Map();
         relationships = [];
         groups = new Map();
@@ -2285,23 +2544,30 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             const rows = csvContent
               .split(/\r?\n/)
               .filter(Boolean)
-              .map((r) => r.split(','));
+              .map((r) => r.split(","));
             const headers = rows.shift() || [];
             showImportModal(rows, headers);
           } catch (err) {
-            alert('Failed to parse CSV');
+            alert("Failed to parse CSV");
           }
         };
         reader.readAsText(file);
-        event.target.value = '';
+        event.target.value = "";
       }
 
       function showImportModal(parsedData: string[][], headers: string[]) {
-        const modal = document.getElementById('importModal') as HTMLElement | null;
+        const modal = document.getElementById("importModal") as HTMLElement | null;
         if (!modal) return;
-        const selectIds = ['mapContextId', 'mapDescription', 'mapRelType', 'mapRelTo'];
+        const selectIds = [
+          "mapContextId",
+          "mapDescription",
+          "mapRelType",
+          "mapRelTo",
+        ];
         const noMap = `<option value="">--- Do Not Map ---</option>`;
-        const headerOptions = headers.map((h) => `<option value="${h}">${h}</option>`).join('');
+        const headerOptions = headers
+          .map((h) => `<option value="${h}">${h}</option>`)
+          .join("");
         selectIds.forEach((id) => {
           const sel = document.getElementById(id) as HTMLSelectElement;
           if (sel) sel.innerHTML = noMap + headerOptions;
@@ -2309,32 +2575,44 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         // keep for confirmImport
         (window as any).__hm_lastHeaders = headers;
         const smartMap: any = {
-          mapContextId: ['id', 'context', 'context_id', 'unit'],
-          mapDescription: ['desc', 'description', 'notes'],
-          mapRelType: ['rel_type', 'relationship', 'rel type', 'type'],
-          mapRelTo: ['rel_to', 'related_to', 'related context', 'is_below', 'is_above'],
+          mapContextId: ["id", "context", "context_id", "unit"],
+          mapDescription: ["desc", "description", "notes"],
+          mapRelType: ["rel_type", "relationship", "rel type", "type"],
+          mapRelTo: [
+            "rel_to",
+            "related_to",
+            "related context",
+            "is_below",
+            "is_above",
+          ],
         };
         for (const [selectId, possibles] of Object.entries(smartMap)) {
           const found = headers.find((h) =>
-            (possibles as string[]).includes(h.toLowerCase().replace(/ /g, '_'))
+            (possibles as string[]).includes(h.toLowerCase().replace(/ /g, "_")),
           );
-          if (found) (document.getElementById(selectId) as HTMLSelectElement).value = found;
+          if (found)
+            (document.getElementById(selectId) as HTMLSelectElement).value = found;
         }
-        (document.getElementById('confirmImportBtn') as HTMLButtonElement).onclick = () =>
-          confirmImport(parsedData);
-        modal.style.display = 'flex';
+        (document.getElementById("confirmImportBtn") as HTMLButtonElement).onclick =
+          () => confirmImport(parsedData);
+        modal.style.display = "flex";
       }
 
       function confirmImport(parsedData: string[][]) {
         const mapping = {
-          contextId: (document.getElementById('mapContextId') as HTMLSelectElement).value,
-          description: (document.getElementById('mapDescription') as HTMLSelectElement).value,
-          relType: (document.getElementById('mapRelType') as HTMLSelectElement).value,
-          relTo: (document.getElementById('mapRelTo') as HTMLSelectElement).value,
-          clear: (document.getElementById('importClearData') as HTMLInputElement).checked,
+          contextId: (document.getElementById("mapContextId") as HTMLSelectElement)
+            .value,
+          description: (
+            document.getElementById("mapDescription") as HTMLSelectElement
+          ).value,
+          relType: (document.getElementById("mapRelType") as HTMLSelectElement)
+            .value,
+          relTo: (document.getElementById("mapRelTo") as HTMLSelectElement).value,
+          clear: (document.getElementById("importClearData") as HTMLInputElement)
+            .checked,
         };
         if (!mapping.contextId) {
-          alert('Context ID must be mapped.');
+          alert("Context ID must be mapped.");
           return;
         }
         if (mapping.clear) {
@@ -2349,24 +2627,28 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         // Import by headers names
         // Build index map
         const headersSel = {
-          id: (document.getElementById('mapContextId') as HTMLSelectElement).value,
-          desc: (document.getElementById('mapDescription') as HTMLSelectElement).value,
-          relType: (document.getElementById('mapRelType') as HTMLSelectElement).value,
-          relTo: (document.getElementById('mapRelTo') as HTMLSelectElement).value,
+          id: (document.getElementById("mapContextId") as HTMLSelectElement).value,
+          desc: (document.getElementById("mapDescription") as HTMLSelectElement)
+            .value,
+          relType: (document.getElementById("mapRelType") as HTMLSelectElement)
+            .value,
+          relTo: (document.getElementById("mapRelTo") as HTMLSelectElement).value,
         } as any;
         const hdrs = (window as any).__hm_lastHeaders as string[] | undefined;
         const headerIndex: any = {};
         (hdrs || []).forEach((h: string, i: number) => (headerIndex[h] = i));
         parsedData.forEach((row) => {
-          const idVal = headersSel.id ? row[headerIndex[headersSel.id]] : '';
+          const idVal = headersSel.id ? row[headerIndex[headersSel.id]] : "";
           if (idVal && !contexts.has(idVal)) {
             contexts.set(idVal, {
               id: idVal,
               x: 0,
               y: 0,
               fixed: false,
-              type: 'layer',
-              description: headersSel.desc ? row[headerIndex[headersSel.desc]] || '' : '',
+              type: "layer",
+              description: headersSel.desc
+                ? row[headerIndex[headersSel.desc]] || ""
+                : "",
             });
             importedContexts++;
           }
@@ -2377,7 +2659,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               relationships.push({
                 from: idVal,
                 to: rTo,
-                type: String(rType).toLowerCase().replace(/\s+/g, '_'),
+                type: String(rType).toLowerCase().replace(/\s+/g, "_"),
               });
               importedRels++;
             }
@@ -2386,33 +2668,33 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         hideModals();
         updateUI();
         alert(
-          `Import complete. Added ${importedContexts} contexts and ${importedRels} relationships.`
+          `Import complete. Added ${importedContexts} contexts and ${importedRels} relationships.`,
         );
       }
 
       function exportViewAsSVG() {
         // Compute bbox-like export (simplified)
-        const gridGroup = g.select('.grid-group');
-        gridGroup.style('display', 'none');
+        const gridGroup = g.select(".grid-group");
+        gridGroup.style("display", "none");
         const svgContent = (g.node() as any).innerHTML;
-        gridGroup.style('display', null);
-        let cssStyles = '';
+        gridGroup.style("display", null);
+        let cssStyles = "";
         try {
           for (const sheet of Array.from(document.styleSheets)) {
             try {
               const rules = (sheet as CSSStyleSheet).cssRules || [];
               for (const r of Array.from(rules)) {
-                cssStyles += (r as CSSStyleRule).cssText || '';
+                cssStyles += (r as CSSStyleRule).cssText || "";
               }
             } catch {}
           }
         } catch {}
         const standalone = `<svg xmlns="http://www.w3.org/2000/svg"><style>${cssStyles}</style>${svgContent}</svg>`;
-        const blob = new Blob([standalone], { type: 'image/svg+xml' });
+        const blob = new Blob([standalone], { type: "image/svg+xml" });
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
-        link.download = 'harris_matrix.svg';
+        link.download = "harris_matrix.svg";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2425,63 +2707,66 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           // Artefact add/delete
           const before = Object.values(artefactRegistries).reduce(
             (a: number, b: any) => a + b.length,
-            0
+            0,
           );
-          addArtefact('pottery', {
-            number: 'TST-1',
-            type: 'test',
-            complexFeature: 'CFX',
-            areaSurface: '',
-            gridSquare: '',
-            depth: '',
-            stratigraphicUnit: 'SU-X',
+          addArtefact("pottery", {
+            number: "TST-1",
+            type: "test",
+            complexFeature: "CFX",
+            areaSurface: "",
+            gridSquare: "",
+            depth: "",
+            stratigraphicUnit: "SU-X",
             quantity: 1,
-            otherObservations: 'tmp',
+            otherObservations: "tmp",
           });
           const afterAdd = Object.values(artefactRegistries).reduce(
             (a: number, b: any) => a + b.length,
-            0
+            0,
           );
           const lastId =
-            artefactRegistries['pottery'][artefactRegistries['pottery'].length - 1]?.id;
+            artefactRegistries["pottery"][artefactRegistries["pottery"].length - 1]
+              ?.id;
           if (afterAdd === before + 1 && lastId) {
-            results.push('Artefact add: PASS');
+            results.push("Artefact add: PASS");
           } else {
-            results.push('Artefact add: FAIL');
+            results.push("Artefact add: FAIL");
           }
           if (lastId) deleteArtefact(lastId);
           const afterDel = Object.values(artefactRegistries).reduce(
             (a: number, b: any) => a + b.length,
-            0
+            0,
           );
-          results.push(afterDel === before ? 'Artefact delete: PASS' : 'Artefact delete: FAIL');
+          results.push(
+            afterDel === before ? "Artefact delete: PASS" : "Artefact delete: FAIL",
+          );
 
           // SU save
           const suId = `SU_TEST_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
           stratigraphicUnits.set(suId, {
             id: suId,
-            sector: 'T',
-            complexFeatureNo: '',
+            sector: "T",
+            complexFeatureNo: "",
             earlierThan: [],
             laterThan: [],
-            unitType: 'layer' as any,
-            location: '',
+            unitType: "layer" as any,
+            location: "",
             dimensions: {},
-            orientation: '',
+            orientation: "",
             structure: {
-              compaction: '' as any,
-              colour: '',
-              munsellCode: '',
+              compaction: "" as any,
+              colour: "",
+              munsellCode: "",
               homogeneous: false,
               heterogeneous: false,
             },
             composition: {},
-            granulation: '' as any,
-            contaminationRisk: '' as any,
+            granulation: "" as any,
+            contaminationRisk: "" as any,
             bones: false,
             seed: false,
             perturbation: {},
-            description: '',
+            description: "",
             documentation: {
               drawing: false,
               plan: false,
@@ -2489,63 +2774,63 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
               samples: false,
               photos: false,
               video: false,
-              planNumber: '',
+              planNumber: "",
             },
-            author: '',
-            dateCreated: '',
-            checkedBy: '',
-            dateChecked: '',
+            author: "",
+            dateCreated: "",
+            checkedBy: "",
+            dateChecked: "",
           });
           const suExists = stratigraphicUnits.has(suId);
           stratigraphicUnits.delete(suId);
-          results.push(suExists ? 'SU save: PASS' : 'SU save: FAIL');
+          results.push(suExists ? "SU save: PASS" : "SU save: FAIL");
 
-          alert(results.join('\n'));
+          alert(results.join("\n"));
         } catch (e) {
-          alert('Self-test failed to run');
+          alert("Self-test failed to run");
         }
       }
 
       function exportCSV() {
         if (contexts.size === 0) {
-          alert('No data to export.');
+          alert("No data to export.");
           return;
         }
         const headers = [
-          'Context_ID',
-          'Context_Type',
-          'Description',
-          'Earliest_Date_Year',
-          'Earliest_Date_Era',
-          'Latest_Date_Year',
-          'Latest_Date_Era',
-          'Date_Type',
-          'Phase_ID',
-          'Group_ID',
-          'SubGroup_ID',
+          "Context_ID",
+          "Context_Type",
+          "Description",
+          "Earliest_Date_Year",
+          "Earliest_Date_Era",
+          "Latest_Date_Year",
+          "Latest_Date_Era",
+          "Date_Type",
+          "Phase_ID",
+          "Group_ID",
+          "SubGroup_ID",
         ];
-        let csv = headers.join(',') + '\r\n';
+        let csv = headers.join(",") + "\r\n";
         contexts.forEach((c: any) => {
           const ed = formatDateForDisplay(c.earliestDate);
           const ld = formatDateForDisplay(c.latestDate);
           csv +=
             [
               c.id,
-              c.type || '',
-              (c.description || '').replace(/,/g, ' '),
+              c.type || "",
+              (c.description || "").replace(/,/g, " "),
               ed.year,
               ed.era,
               ld.year,
               ld.era,
-              c.dateType || '',
-              c.phaseId || '',
-              c.groupId || '',
-              c.subGroupId || '',
-            ].join(',') + '\r\n';
+              c.dateType || "",
+              c.phaseId || "",
+              c.groupId || "",
+              c.subGroupId || "",
+            ].join(",") + "\r\n";
         });
-        const link = document.createElement('a');
-        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-        link.download = 'harris_matrix.csv';
+        const link = document.createElement("a");
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = "harris_matrix.csv";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2553,74 +2838,74 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function exportSUCSV() {
         if (stratigraphicUnits.size === 0) {
-          alert('No SU records.');
+          alert("No SU records.");
           return;
         }
         const headers = [
-          'SU_ID',
-          'Sector',
-          'Complex_Feature_No',
-          'Earlier_Than',
-          'Later_Than',
-          'Unit_Type',
-          'Location',
-          'Length',
-          'Thickness',
-          'Depth',
-          'Area_Surface',
-          'Orientation',
-          'Compaction',
-          'Colour',
-          'Munsell',
-          'Homogeneous',
-          'Heterogeneous',
-          'Granulation',
-          'Contamination_Risk',
-          'Bones',
-          'Seed',
-          'Description',
-          'Plan_Number',
-          'Author',
-          'Date_Created',
-          'Checked_By',
-          'Date_Checked',
+          "SU_ID",
+          "Sector",
+          "Complex_Feature_No",
+          "Earlier_Than",
+          "Later_Than",
+          "Unit_Type",
+          "Location",
+          "Length",
+          "Thickness",
+          "Depth",
+          "Area_Surface",
+          "Orientation",
+          "Compaction",
+          "Colour",
+          "Munsell",
+          "Homogeneous",
+          "Heterogeneous",
+          "Granulation",
+          "Contamination_Risk",
+          "Bones",
+          "Seed",
+          "Description",
+          "Plan_Number",
+          "Author",
+          "Date_Created",
+          "Checked_By",
+          "Date_Checked",
         ];
-        let csv = headers.join(',') + '\r\n';
+        let csv = headers.join(",") + "\r\n";
         stratigraphicUnits.forEach((su: any) => {
           csv +=
             [
               su.id,
-              su.sector || '',
-              su.complexFeatureNo || '',
-              (su.earlierThan || []).join('|'),
-              (su.laterThan || []).join('|'),
-              su.unitType || '',
-              su.location || '',
-              su.dimensions?.length || '',
-              su.dimensions?.thickness || '',
-              su.dimensions?.depth || '',
-              su.dimensions?.areaSurface || '',
-              su.orientation || '',
-              su.structure?.compaction || '',
-              su.structure?.colour || '',
-              su.structure?.munsellCode || '',
-              su.structure?.homogeneous || '',
-              su.structure?.heterogeneous || '',
-              su.granulation || '',
-              su.contaminationRisk || '',
-              su.bones || '',
-              su.seed || '',
-              (su.description || '').replace(/,/g, ' '),
-              su.documentation?.planNumber || '',
-              su.author || '',
-              su.dateCreated || '',
-              su.checkedBy || '',
-              su.dateChecked || '',
-            ].join(',') + '\r\n';
+              su.sector || "",
+              su.complexFeatureNo || "",
+              (su.earlierThan || []).join("|"),
+              (su.laterThan || []).join("|"),
+              su.unitType || "",
+              su.location || "",
+              su.dimensions?.length || "",
+              su.dimensions?.thickness || "",
+              su.dimensions?.depth || "",
+              su.dimensions?.areaSurface || "",
+              su.orientation || "",
+              su.structure?.compaction || "",
+              su.structure?.colour || "",
+              su.structure?.munsellCode || "",
+              su.structure?.homogeneous || "",
+              su.structure?.heterogeneous || "",
+              su.granulation || "",
+              su.contaminationRisk || "",
+              su.bones || "",
+              su.seed || "",
+              (su.description || "").replace(/,/g, " "),
+              su.documentation?.planNumber || "",
+              su.author || "",
+              su.dateCreated || "",
+              su.checkedBy || "",
+              su.dateChecked || "",
+            ].join(",") + "\r\n";
         });
-        const link = document.createElement('a');
-        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-        link.download = 'su_records.csv';
+        const link = document.createElement("a");
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = "su_records.csv";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2628,46 +2913,48 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
       function exportArtefactsCSV() {
         let total = 0;
-        Object.values(artefactRegistries).forEach((arr: any) => (total += (arr as any[]).length));
+        Object.values(artefactRegistries).forEach(
+          (arr: any) => (total += (arr as any[]).length),
+        );
         if (!total) {
-          alert('No artefacts recorded.');
+          alert("No artefacts recorded.");
           return;
         }
         const headers = [
-          'ID',
-          'Category',
-          'Number',
-          'Type',
-          'Feature',
-          'Area_Surface',
-          'Grid_Square',
-          'Depth',
-          'Stratigraphic_Unit',
-          'Quantity',
-          'Observations',
+          "ID",
+          "Category",
+          "Number",
+          "Type",
+          "Feature",
+          "Area_Surface",
+          "Grid_Square",
+          "Depth",
+          "Stratigraphic_Unit",
+          "Quantity",
+          "Observations",
         ];
-        let csv = headers.join(',') + '\r\n';
+        let csv = headers.join(",") + "\r\n";
         Object.entries(artefactRegistries).forEach(([cat, arr]) => {
           (arr as any[]).forEach((r: any) => {
             csv +=
               [
                 r.id,
                 cat,
-                r.number || '',
-                (r.type || '').replace(/,/g, ' '),
-                r.complexFeature || '',
-                r.areaSurface || '',
-                r.gridSquare || '',
-                r.depth || '',
-                r.stratigraphicUnit || '',
-                r.quantity || '',
-                (r.otherObservations || '').replace(/,/g, ' '),
-              ].join(',') + '\r\n';
+                r.number || "",
+                (r.type || "").replace(/,/g, " "),
+                r.complexFeature || "",
+                r.areaSurface || "",
+                r.gridSquare || "",
+                r.depth || "",
+                r.stratigraphicUnit || "",
+                r.quantity || "",
+                (r.otherObservations || "").replace(/,/g, " "),
+              ].join(",") + "\r\n";
           });
         });
-        const link = document.createElement('a');
-        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
-        link.download = 'artefacts.csv';
+        const link = document.createElement("a");
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = "artefacts.csv";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2677,45 +2964,49 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         const reader = new FileReader();
         reader.onload = (e: any) => {
           try {
-            const lines = String(e.target?.result || '')
+            const lines = String(e.target?.result || "")
               .split(/\r?\n/)
               .filter(Boolean);
             if (lines.length < 2) return;
-            const headers = lines.shift()!.split(',');
+            const headers = lines.shift()!.split(",");
             const idx = (h: string) => headers.indexOf(h);
             lines.forEach((line) => {
-              const cells = line.split(',');
-              const id = cells[idx('SU_ID')]?.trim();
+              const cells = line.split(",");
+              const id = cells[idx("SU_ID")]?.trim();
               if (!id) return;
               const rec: StratigraphicUnitRecord = {
                 id,
-                sector: cells[idx('Sector')] || '',
-                complexFeatureNo: cells[idx('Complex_Feature_No')] || '',
-                earlierThan: (cells[idx('Earlier_Than')] || '').split('|').filter(Boolean),
-                laterThan: (cells[idx('Later_Than')] || '').split('|').filter(Boolean),
-                unitType: (cells[idx('Unit_Type')] || '') as any,
-                location: cells[idx('Location')] || '',
+                sector: cells[idx("Sector")] || "",
+                complexFeatureNo: cells[idx("Complex_Feature_No")] || "",
+                earlierThan: (cells[idx("Earlier_Than")] || "")
+                  .split("|")
+                  .filter(Boolean),
+                laterThan: (cells[idx("Later_Than")] || "")
+                  .split("|")
+                  .filter(Boolean),
+                unitType: (cells[idx("Unit_Type")] || "") as any,
+                location: cells[idx("Location")] || "",
                 dimensions: {
-                  length: parseFloat(cells[idx('Length')]) || undefined,
-                  thickness: parseFloat(cells[idx('Thickness')]) || undefined,
-                  depth: parseFloat(cells[idx('Depth')]) || undefined,
-                  areaSurface: parseFloat(cells[idx('Area_Surface')]) || undefined,
+                  length: parseFloat(cells[idx("Length")]) || undefined,
+                  thickness: parseFloat(cells[idx("Thickness")]) || undefined,
+                  depth: parseFloat(cells[idx("Depth")]) || undefined,
+                  areaSurface: parseFloat(cells[idx("Area_Surface")]) || undefined,
                 },
-                orientation: cells[idx('Orientation')] || '',
+                orientation: cells[idx("Orientation")] || "",
                 structure: {
-                  compaction: (cells[idx('Compaction')] || '') as any,
-                  colour: cells[idx('Colour')] || '',
-                  munsellCode: cells[idx('Munsell')] || '',
-                  homogeneous: cells[idx('Homogeneous')] === 'true',
-                  heterogeneous: cells[idx('Heterogeneous')] === 'true',
+                  compaction: (cells[idx("Compaction")] || "") as any,
+                  colour: cells[idx("Colour")] || "",
+                  munsellCode: cells[idx("Munsell")] || "",
+                  homogeneous: cells[idx("Homogeneous")] === "true",
+                  heterogeneous: cells[idx("Heterogeneous")] === "true",
                 },
                 composition: {},
-                granulation: (cells[idx('Granulation')] || '') as any,
-                contaminationRisk: (cells[idx('Contamination_Risk')] || '') as any,
-                bones: cells[idx('Bones')] === 'true',
-                seed: cells[idx('Seed')] === 'true',
+                granulation: (cells[idx("Granulation")] || "") as any,
+                contaminationRisk: (cells[idx("Contamination_Risk")] || "") as any,
+                bones: cells[idx("Bones")] === "true",
+                seed: cells[idx("Seed")] === "true",
                 perturbation: {},
-                description: cells[idx('Description')] || '',
+                description: cells[idx("Description")] || "",
                 documentation: {
                   drawing: false,
                   plan: false,
@@ -2723,20 +3014,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   samples: false,
                   photos: false,
                   video: false,
-                  planNumber: cells[idx('Plan_Number')] || '',
+                  planNumber: cells[idx("Plan_Number")] || "",
                 },
-                author: cells[idx('Author')] || '',
-                dateCreated: cells[idx('Date_Created')] || '',
-                checkedBy: cells[idx('Checked_By')] || '',
-                dateChecked: cells[idx('Date_Checked')] || '',
+                author: cells[idx("Author")] || "",
+                dateCreated: cells[idx("Date_Created")] || "",
+                checkedBy: cells[idx("Checked_By")] || "",
+                dateChecked: cells[idx("Date_Checked")] || "",
               };
               stratigraphicUnits.set(id, rec);
             });
             saveToStorage();
             updateRecordsDisplay();
-            alert('SU CSV import complete.');
+            alert("SU CSV import complete.");
           } catch {
-            alert('Failed to import SU CSV');
+            alert("Failed to import SU CSV");
           }
         };
         reader.readAsText(file);
@@ -2746,45 +3037,45 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         const reader = new FileReader();
         reader.onload = (e: any) => {
           try {
-            const lines = String(e.target?.result || '')
+            const lines = String(e.target?.result || "")
               .split(/\r?\n/)
               .filter(Boolean);
             if (lines.length < 2) return;
-            const headers = lines.shift()!.split(',');
+            const headers = lines.shift()!.split(",");
             const idx = (h: string) => headers.indexOf(h);
             lines.forEach((line) => {
-              const cells = line.split(',');
-              const category = cells[idx('Category')] as keyof ArtefactRegistries;
+              const cells = line.split(",");
+              const category = cells[idx("Category")] as keyof ArtefactRegistries;
               if (!category || !artefactRegistries[category]) return;
-              const partial: Omit<ArtefactRecord, 'id' | 'category'> = {
-                number: cells[idx('Number')] || '',
-                type: cells[idx('Type')] || '',
-                complexFeature: cells[idx('Feature')] || '',
-                areaSurface: cells[idx('Area_Surface')] || '',
-                gridSquare: cells[idx('Grid_Square')] || '',
-                depth: cells[idx('Depth')] || '',
-                stratigraphicUnit: cells[idx('Stratigraphic_Unit')] || '',
-                quantity: parseInt(cells[idx('Quantity')]) || undefined,
-                otherObservations: cells[idx('Observations')] || '',
+              const partial: Omit<ArtefactRecord, "id" | "category"> = {
+                number: cells[idx("Number")] || "",
+                type: cells[idx("Type")] || "",
+                complexFeature: cells[idx("Feature")] || "",
+                areaSurface: cells[idx("Area_Surface")] || "",
+                gridSquare: cells[idx("Grid_Square")] || "",
+                depth: cells[idx("Depth")] || "",
+                stratigraphicUnit: cells[idx("Stratigraphic_Unit")] || "",
+                quantity: parseInt(cells[idx("Quantity")]) || undefined,
+                otherObservations: cells[idx("Observations")] || "",
               };
               addArtefact(category, partial);
             });
-            alert('Artefacts CSV import complete.');
+            alert("Artefacts CSV import complete.");
             renderArtefactTable();
           } catch {
-            alert('Failed to import artefacts CSV');
+            alert("Failed to import artefacts CSV");
           }
         };
         reader.readAsText(file);
       }
 
       // Hook up SVG interactions
-      svg.on('click', handleCanvasClick);
+      svg.on("click", handleCanvasClick);
 
       // Expose helpers for buttons/tables
       (window as any).__hm_removeRelationship = removeRelationship;
       (window as any).__hm_highlightPhase = (id: string) =>
-        highlightBy((c: any) => c.phaseId === id, '#4caf50');
+        highlightBy((c: any) => c.phaseId === id, "#4caf50");
       (window as any).__hm_highlightGroup = (id: string) => {
         const group = groups.get(id);
         const color = group?.color || DEFAULT_GROUP_COLOR;
@@ -2796,17 +3087,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
         highlightBy((c: any) => c.subGroupId === id, color);
       };
       (window as any).__hm_highlightContext = (id: string) =>
-        highlightBy((c: any) => c.id === id, 'gold');
-      (window as any).__hm_clearHighlights = () => highlightBy(() => false, '#0056b3');
+        highlightBy((c: any) => c.id === id, "gold");
+      (window as any).__hm_clearHighlights = () =>
+        highlightBy(() => false, "#0056b3");
 
       (window as any).__hm_showGroupOverlay = (
-        entityType: 'group' | 'subgroup',
-        entityId: string
+        entityType: "group" | "subgroup",
+        entityId: string,
       ) => {
-        const source = entityType === 'group' ? groups.get(entityId) : subGroups.get(entityId);
+        const source =
+          entityType === "group" ? groups.get(entityId) : subGroups.get(entityId);
         if (!source) return;
         const color =
-          source.color || (entityType === 'group' ? DEFAULT_GROUP_COLOR : DEFAULT_SUBGROUP_COLOR);
+          source.color ||
+          (entityType === "group" ? DEFAULT_GROUP_COLOR : DEFAULT_SUBGROUP_COLOR);
         const contextIds = Array.from(source.contexts || []) as string[];
         const contextsPayload: GroupOverlayContext[] = contextIds
           .map((ctxId) => contexts.get(ctxId))
@@ -2826,37 +3120,42 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           contexts: contextsPayload,
         });
         highlightBy(
-          (c: any) => (entityType === 'group' ? c.groupId === entityId : c.subGroupId === entityId),
-          color
+          (c: any) =>
+            entityType === "group"
+              ? c.groupId === entityId
+              : c.subGroupId === entityId,
+          color,
         );
       };
 
       (window as any).__hm_editGroupEntity = (
         event: MouseEvent,
-        entityType: 'group' | 'subgroup',
-        entityId: string
+        entityType: "group" | "subgroup",
+        entityId: string,
       ) => {
         event?.stopPropagation();
-        openGroupModal({ mode: 'edit', entity: entityType, id: entityId });
+        openGroupModal({ mode: "edit", entity: entityType, id: entityId });
       };
 
       function highlightBy(filterFn: (c: any) => boolean, color: string) {
-        g.selectAll('.context-node-group').each(function (this: any) {
+        g.selectAll(".context-node-group").each(function (this: any) {
           const node = d3.select(this);
-          const rect = node.select('rect');
-          const c = contexts.get((node.datum && node.datum()) || nodeDataFromTransform(this));
+          const rect = node.select("rect");
+          const c = contexts.get(
+            (node.datum && node.datum()) || nodeDataFromTransform(this),
+          );
           const isSelected = c && filterFn(c);
           rect
             .transition()
             .duration(300)
-            .attr('stroke-width', isSelected ? '4px' : '2px')
-            .attr('stroke', isSelected ? color : '#0056b3');
+            .attr("stroke-width", isSelected ? "4px" : "2px")
+            .attr("stroke", isSelected ? color : "#0056b3");
         });
       }
       function nodeDataFromTransform(el: any) {
         // Attempt to read label text as id
         try {
-          return d3.select(el).select('text').text() || null;
+          return d3.select(el).select("text").text() || null;
         } catch {
           return null;
         }
@@ -2866,21 +3165,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       updateUI();
 
       cleanup = () => {
-        svg.on('.zoom', null);
-        svg.on('click', null);
+        svg.on(".zoom", null);
+        svg.on("click", null);
       };
 
       // Wire API ref for React buttons
       apiRef.current = {
-        createGroup: () => openGroupModal({ mode: 'create', entity: 'group' }),
+        createGroup: () => openGroupModal({ mode: "create", entity: "group" }),
         createSubGroup: () => {
           if (groups.size === 0) {
-            alert('Please create a parent group first.');
+            alert("Please create a parent group first.");
             return;
           }
-          openGroupModal({ mode: 'create', entity: 'subgroup' });
+          openGroupModal({ mode: "create", entity: "subgroup" });
         },
-        createPhase: () => openGroupModal({ mode: 'create', entity: 'phase' }),
+        createPhase: () => openGroupModal({ mode: "create", entity: "phase" }),
         analyzeTemporalConflicts,
         resetZoom,
         restructure: () => {
@@ -2928,27 +3227,34 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       }
     }
     if (toolMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [toolMenuOpen]);
 
   const handleOverlayClose = () => {
     const clearHighlights = (window as any)?.__hm_clearHighlights;
-    if (typeof clearHighlights === 'function') {
+    if (typeof clearHighlights === "function") {
       clearHighlights();
     }
     setOverlayData(null);
   };
 
   return (
-    <div ref={rootRef} className="harris-matrix" style={{ width: '100%', height: '100%' }}>
+    <div
+      ref={rootRef}
+      className="harris-matrix"
+      style={{ width: "100%", height: "100%" }}
+    >
       <div className="container">
-        <div className="workspace" style={{ width: '100%' }}>
+        <div className="workspace" style={{ width: "100%" }}>
           <div className="visualization-panel">
-            <div ref={toolMenuRef} className={`tool-menu ${toolMenuOpen ? 'open' : ''}`}>
+            <div
+              ref={toolMenuRef}
+              className={`tool-menu ${toolMenuOpen ? "open" : ""}`}
+            >
               {canEdit && (
                 <button
                   type="button"
@@ -3045,74 +3351,77 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <svg id="matrixSvg" ref={svgRef} />
           </div>
           <div className="data-panel">
-            {sidebarView === 'default' ? (
+            {sidebarView === "default" ? (
               <div className="tabs">
                 <div
-                  className={`tab ${activeTab === 'hierarchy' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('hierarchy')}
+                  className={`tab ${activeTab === "hierarchy" ? "active" : ""}`}
+                  onClick={() => setActiveTab("hierarchy")}
                 >
                   Hierarchy
                 </div>
                 <div
-                  className={`tab ${activeTab === 'relationships' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('relationships')}
+                  className={`tab ${activeTab === "relationships" ? "active" : ""}`}
+                  onClick={() => setActiveTab("relationships")}
                 >
                   Relationships
                 </div>
                 <div
-                  className={`tab ${activeTab === 'records' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('records')}
+                  className={`tab ${activeTab === "records" ? "active" : ""}`}
+                  onClick={() => setActiveTab("records")}
                 >
                   Records
                 </div>
                 <div
-                  className={`tab ${activeTab === 'export' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('export')}
+                  className={`tab ${activeTab === "export" ? "active" : ""}`}
+                  onClick={() => setActiveTab("export")}
                 >
                   Export
                 </div>
               </div>
             ) : (
-              <div className="tabs" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                className="tabs"
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
                 <button
                   type="button"
                   className="tool-menu-toggle"
                   aria-label="Back"
                   title="Back"
                   onClick={() => {
-                    setSidebarView('default');
-                    setActiveTab('records');
+                    setSidebarView("default");
+                    setActiveTab("records");
                   }}
                   style={{ marginRight: 6 }}
                 >
                   <FaArrowLeft size={14} />
                 </button>
-                <div style={{ fontSize: 12, color: 'var(--muted,#adb5bd)' }}>
-                  {sidebarView === 'featureForm'
-                    ? 'Context Feature Form'
-                    : sidebarView === 'suForm'
-                      ? 'SU Form'
-                      : 'Artefact Registry'}
+                <div style={{ fontSize: 12, color: "var(--muted,#adb5bd)" }}>
+                  {sidebarView === "featureForm"
+                    ? "Context Feature Form"
+                    : sidebarView === "suForm"
+                      ? "SU Form"
+                      : "Artefact Registry"}
                 </div>
               </div>
             )}
             <div
               id="hierarchy-tab"
-              className={`tab-content ${activeTab === 'hierarchy' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "hierarchy" ? "active" : ""}`}
             >
               <h3>Stratigraphic Hierarchy</h3>
               <div id="hierarchyList" className="hierarchy-list"></div>
             </div>
             <div
               id="conflicts-tab"
-              className={`tab-content ${activeTab === 'conflicts' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "conflicts" ? "active" : ""}`}
             >
               <h3>Temporal Conflicts</h3>
               <div id="conflictsList" className="hierarchy-list"></div>
             </div>
             <div
               id="relationships-tab"
-              className={`tab-content ${activeTab === 'relationships' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "relationships" ? "active" : ""}`}
             >
               <h3>Relationships</h3>
               <div id="relationshipsList" className="hierarchy-list"></div>
@@ -3120,18 +3429,31 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
             <div
               id="records-tab"
-              className={`tab-content ${activeTab === 'records' && sidebarView === 'default' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "records" && sidebarView === "default" ? "active" : ""}`}
             >
               <h3>Digitized Records</h3>
-              <div id="recordsSummary" className="hierarchy-list" style={{ marginBottom: 8 }}></div>
+              <div
+                id="recordsSummary"
+                className="hierarchy-list"
+                style={{ marginBottom: 8 }}
+              ></div>
               <div className="button-grid">
-                <button className="btn-primary" onClick={() => setSidebarView('featureForm')}>
+                <button
+                  className="btn-primary"
+                  onClick={() => setSidebarView("featureForm")}
+                >
                   Open Context Feature Form
                 </button>
-                <button className="btn-primary" onClick={() => setSidebarView('suForm')}>
+                <button
+                  className="btn-primary"
+                  onClick={() => setSidebarView("suForm")}
+                >
                   Open SU Form
                 </button>
-                <button className="btn-primary" onClick={() => setSidebarView('artefacts')}>
+                <button
+                  className="btn-primary"
+                  onClick={() => setSidebarView("artefacts")}
+                >
                   Open Artefact Registry
                 </button>
               </div>
@@ -3139,11 +3461,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
             <div
               id="featureForm-tab"
-              className={`tab-content ${activeTab === 'featureForm' || sidebarView === 'featureForm' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "featureForm" || sidebarView === "featureForm" ? "active" : ""}`}
             >
               <h3>Full Context Feature Record</h3>
-              <p style={{ fontSize: '12px', color: 'var(--muted,#adb5bd)', marginBottom: '8px' }}>
-                Select a context node to preload some fields, then fill the detailed record.
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "var(--muted,#adb5bd)",
+                  marginBottom: "8px",
+                }}
+              >
+                Select a context node to preload some fields, then fill the detailed
+                record.
               </p>
               <form
                 id="contextFeatureForm"
@@ -3155,7 +3484,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <label>Context ID</label>
                   <input type="text" id="cf_id" placeholder="e.g. 1001" />
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Feature / Complex No.</label>
                     <input type="text" id="cf_featureNumber" />
@@ -3165,7 +3494,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <input type="text" id="cf_sector" />
                   </div>
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Earlier Than (IDs comma sep)</label>
                     <input type="text" id="cf_earlierThan" placeholder="1001,1002" />
@@ -3189,11 +3518,15 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </div>
                 <div className="form-group">
                   <label>Location / Notes</label>
-                  <input type="text" id="cf_location" placeholder="Grid ref / description" />
+                  <input
+                    type="text"
+                    id="cf_location"
+                    placeholder="Grid ref / description"
+                  />
                 </div>
                 <fieldset className="fieldset-group">
                   <legend>Dimensions</legend>
-                  <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                  <div className="form-row" style={{ display: "flex", gap: 8 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label>Length (m)</label>
                       <input type="number" step="0.01" id="cf_length" />
@@ -3210,7 +3543,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </fieldset>
                 <fieldset className="fieldset-group">
                   <legend>Coordinates</legend>
-                  <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                  <div className="form-row" style={{ display: "flex", gap: 8 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label>X</label>
                       <input type="number" id="cf_x" />
@@ -3244,31 +3577,31 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div
                     className="checkbox-grid"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill,minmax(110px,1fr))",
                       gap: 4,
                     }}
                   >
                     {[
-                      'pottery',
-                      'metal',
-                      'flint',
-                      'stone',
-                      'wood',
-                      'charcoal',
-                      'shell',
-                      'snail',
-                      'ash',
-                      'adobe',
-                      'beads',
-                      'pendant',
-                      'ring',
-                      'seed',
-                      'animalBones',
-                      'humanBones',
-                      'other',
+                      "pottery",
+                      "metal",
+                      "flint",
+                      "stone",
+                      "wood",
+                      "charcoal",
+                      "shell",
+                      "snail",
+                      "ash",
+                      "adobe",
+                      "beads",
+                      "pendant",
+                      "ring",
+                      "seed",
+                      "animalBones",
+                      "humanBones",
+                      "other",
                     ].map((k) => (
-                      <label key={k} style={{ fontSize: '11px' }}>
+                      <label key={k} style={{ fontSize: "11px" }}>
                         <input type="checkbox" id={`cf_find_${k}`} /> {k}
                       </label>
                     ))}
@@ -3283,16 +3616,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div
                     className="checkbox-grid"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))",
                       gap: 4,
                     }}
                   >
-                    {['drawing', 'plan', 'photogrammetry', 'photos', 'video'].map((k) => (
-                      <label key={k} style={{ fontSize: '11px' }}>
-                        <input type="checkbox" id={`cf_doc_${k}`} /> {k}
-                      </label>
-                    ))}
+                    {["drawing", "plan", "photogrammetry", "photos", "video"].map(
+                      (k) => (
+                        <label key={k} style={{ fontSize: "11px" }}>
+                          <input type="checkbox" id={`cf_doc_${k}`} /> {k}
+                        </label>
+                      ),
+                    )}
                   </div>
                   <div className="form-group">
                     <label>Plan Number</label>
@@ -3304,18 +3639,20 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div
                     className="checkbox-grid"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))",
                       gap: 4,
                     }}
                   >
-                    {['environmental', 'aDNA', 'c14', 'isotopic', 'other'].map((k) => (
-                      <label key={k} style={{ fontSize: '11px' }}>
-                        <input type="checkbox" id={`cf_samp_${k}`} /> {k}
-                      </label>
-                    ))}
+                    {["environmental", "aDNA", "c14", "isotopic", "other"].map(
+                      (k) => (
+                        <label key={k} style={{ fontSize: "11px" }}>
+                          <input type="checkbox" id={`cf_samp_${k}`} /> {k}
+                        </label>
+                      ),
+                    )}
                   </div>
-                  <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                  <div className="form-row" style={{ display: "flex", gap: 8 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label>Bag No.</label>
                       <input type="text" id="cf_sampleBag" />
@@ -3330,7 +3667,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <input type="text" id="cf_sampleOtherType" />
                   </div>
                 </fieldset>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Author</label>
                     <input type="text" id="cf_author" />
@@ -3340,7 +3677,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <input type="date" id="cf_dateCreated" />
                   </div>
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Checked By</label>
                     <input type="text" id="cf_checkedBy" />
@@ -3363,11 +3700,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
             <div
               id="suForm-tab"
-              className={`tab-content ${activeTab === 'suForm' || sidebarView === 'suForm' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "suForm" || sidebarView === "suForm" ? "active" : ""}`}
             >
               <h3>Stratigraphic Unit (SU) Record</h3>
               <form id="suForm" onSubmit={(e) => e.preventDefault()}>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>SU ID</label>
                     <input type="text" id="su_id" placeholder="e.g. SU1" />
@@ -3377,7 +3714,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <input type="text" id="su_sector" />
                   </div>
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Complex / Feature No.</label>
                     <input type="text" id="su_complexFeatureNo" />
@@ -3387,31 +3724,39 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <select id="su_unitType">
                       <option value="">— Select —</option>
                       {[
-                        'cut',
-                        'deposit_fill',
-                        'anthropic',
-                        'natural',
-                        'demolition',
-                        'negative',
-                        'construction',
-                        'abandonment',
-                        'other',
+                        "cut",
+                        "deposit_fill",
+                        "anthropic",
+                        "natural",
+                        "demolition",
+                        "negative",
+                        "construction",
+                        "abandonment",
+                        "other",
                       ].map((t) => (
                         <option key={t} value={t}>
-                          {t.replace('_', ' ')}
+                          {t.replace("_", " ")}
                         </option>
                       ))}
                     </select>
                   </div>
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Earlier Than (IDs)</label>
-                    <input type="text" id="su_earlierThan" placeholder="comma separated" />
+                    <input
+                      type="text"
+                      id="su_earlierThan"
+                      placeholder="comma separated"
+                    />
                   </div>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Later Than (IDs)</label>
-                    <input type="text" id="su_laterThan" placeholder="comma separated" />
+                    <input
+                      type="text"
+                      id="su_laterThan"
+                      placeholder="comma separated"
+                    />
                   </div>
                 </div>
                 <div className="form-group">
@@ -3420,7 +3765,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </div>
                 <fieldset className="fieldset-group">
                   <legend>Dimensions</legend>
-                  <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                  <div className="form-row" style={{ display: "flex", gap: 8 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label>Length</label>
                       <input type="number" id="su_length" />
@@ -3439,7 +3784,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     </div>
                   </div>
                 </fieldset>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Orientation</label>
                     <input type="text" id="su_orientation" />
@@ -3455,13 +3800,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </div>
                 <fieldset className="fieldset-group">
                   <legend>Structure</legend>
-                  <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                  <div className="form-row" style={{ display: "flex", gap: 8 }}>
                     <div className="form-group" style={{ flex: 1 }}>
                       <label>Compaction</label>
                       <select id="su_compaction">
-                        {['', 'dry', 'wet', 'soft', 'very_soft', 'compact', 'medium'].map((t) => (
+                        {[
+                          "",
+                          "dry",
+                          "wet",
+                          "soft",
+                          "very_soft",
+                          "compact",
+                          "medium",
+                        ].map((t) => (
                           <option key={t} value={t}>
-                            {t || '— Select —'}
+                            {t || "— Select —"}
                           </option>
                         ))}
                       </select>
@@ -3483,45 +3836,45 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div
                     className="checkbox-grid"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))",
                       gap: 4,
                     }}
                   >
                     {[
-                      'pottery',
-                      'flint',
-                      'stone',
-                      'wood',
-                      'charcoal',
-                      'shell',
-                      'snail',
-                      'ash',
-                      'adobe',
-                      'metal',
-                      'organic',
-                      'mineral',
-                      'gravels',
-                      'silt',
-                      'sand',
-                      'argil',
-                      'loess',
-                      'mud',
-                      'other',
+                      "pottery",
+                      "flint",
+                      "stone",
+                      "wood",
+                      "charcoal",
+                      "shell",
+                      "snail",
+                      "ash",
+                      "adobe",
+                      "metal",
+                      "organic",
+                      "mineral",
+                      "gravels",
+                      "silt",
+                      "sand",
+                      "argil",
+                      "loess",
+                      "mud",
+                      "other",
                     ].map((k) => (
-                      <label key={k} style={{ fontSize: '11px' }}>
+                      <label key={k} style={{ fontSize: "11px" }}>
                         <input type="checkbox" id={`su_comp_${k}`} /> {k}
                       </label>
                     ))}
                   </div>
                 </fieldset>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Granulation</label>
                     <select id="su_granulation">
-                      {['', 'high', 'medium', 'low'].map((t) => (
+                      {["", "high", "medium", "low"].map((t) => (
                         <option key={t} value={t}>
-                          {t || '— Select —'}
+                          {t || "— Select —"}
                         </option>
                       ))}
                     </select>
@@ -3529,9 +3882,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Contamination Risk</label>
                     <select id="su_contamination">
-                      {['', 'high', 'medium', 'low'].map((t) => (
+                      {["", "high", "medium", "low"].map((t) => (
                         <option key={t} value={t}>
-                          {t || '— Select —'}
+                          {t || "— Select —"}
                         </option>
                       ))}
                     </select>
@@ -3549,12 +3902,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </div>
                 <fieldset className="fieldset-group">
                   <legend>Perturbation</legend>
-                  <div className="form-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['natural', 'anthropic', 'burrow', 'roots', 'other'].map((k) => (
-                      <label key={k} style={{ fontSize: '11px' }}>
-                        <input type="checkbox" id={`su_pert_${k}`} /> {k}
-                      </label>
-                    ))}
+                  <div
+                    className="form-row"
+                    style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+                  >
+                    {["natural", "anthropic", "burrow", "roots", "other"].map(
+                      (k) => (
+                        <label key={k} style={{ fontSize: "11px" }}>
+                          <input type="checkbox" id={`su_pert_${k}`} /> {k}
+                        </label>
+                      ),
+                    )}
                     <div className="form-group" style={{ flex: 1, minWidth: 200 }}>
                       <label>Other Type</label>
                       <input type="text" id="su_pert_otherType" />
@@ -3570,25 +3928,30 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   <div
                     className="checkbox-grid"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))',
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))",
                       gap: 4,
                     }}
                   >
-                    {['drawing', 'plan', 'photogrammetry', 'samples', 'photos', 'video'].map(
-                      (k) => (
-                        <label key={k} style={{ fontSize: '11px' }}>
-                          <input type="checkbox" id={`su_doc_${k}`} /> {k}
-                        </label>
-                      )
-                    )}
+                    {[
+                      "drawing",
+                      "plan",
+                      "photogrammetry",
+                      "samples",
+                      "photos",
+                      "video",
+                    ].map((k) => (
+                      <label key={k} style={{ fontSize: "11px" }}>
+                        <input type="checkbox" id={`su_doc_${k}`} /> {k}
+                      </label>
+                    ))}
                   </div>
                   <div className="form-group">
                     <label>Plan Number</label>
                     <input type="text" id="su_planNumber" />
                   </div>
                 </fieldset>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Author</label>
                     <input type="text" id="su_author" />
@@ -3598,7 +3961,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     <input type="date" id="su_dateCreated" />
                   </div>
                 </div>
-                <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+                <div className="form-row" style={{ display: "flex", gap: 8 }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Checked By</label>
                     <input type="text" id="su_checkedBy" />
@@ -3626,7 +3989,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     type="button"
                     className="btn-primary"
                     onClick={() =>
-                      (document.getElementById('su_importInput') as HTMLInputElement)?.click()
+                      (
+                        document.getElementById("su_importInput") as HTMLInputElement
+                      )?.click()
                     }
                   >
                     Import SU CSV
@@ -3636,11 +4001,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   type="file"
                   id="su_importInput"
                   accept=".csv"
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                   onChange={(e) => {
                     const f = (e.target as HTMLInputElement).files?.[0];
                     if (f) apiRef.current.__importSUCSV(f);
-                    (e.target as HTMLInputElement).value = '';
+                    (e.target as HTMLInputElement).value = "";
                   }}
                 />
               </form>
@@ -3648,10 +4013,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
 
             <div
               id="artefacts-tab"
-              className={`tab-content ${activeTab === 'artefacts' || sidebarView === 'artefacts' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "artefacts" || sidebarView === "artefacts" ? "active" : ""}`}
             >
               <h3>Artefact Registry</h3>
-              <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+              <div className="form-row" style={{ display: "flex", gap: 8 }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Filter Text</label>
                   <input
@@ -3669,44 +4034,47 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   >
                     <option value="">All</option>
                     {[
-                      'pottery',
-                      'lithic',
-                      'hard_animal_material',
-                      'clay_artefact',
-                      'metal_artefact',
-                      'pot',
-                      'figurine',
-                      'sample',
-                      'animal_bone',
-                      'ceramic_fragment',
-                      'small_find',
+                      "pottery",
+                      "lithic",
+                      "hard_animal_material",
+                      "clay_artefact",
+                      "metal_artefact",
+                      "pot",
+                      "figurine",
+                      "sample",
+                      "animal_bone",
+                      "ceramic_fragment",
+                      "small_find",
                     ].map((c) => (
                       <option key={c} value={c}>
-                        {c.replace(/_/g, ' ')}
+                        {c.replace(/_/g, " ")}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
-              <div className="form-row" style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div
+                className="form-row"
+                style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
+              >
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Category</label>
                   <select id="af_category">
                     {[
-                      'pottery',
-                      'lithic',
-                      'hard_animal_material',
-                      'clay_artefact',
-                      'metal_artefact',
-                      'pot',
-                      'figurine',
-                      'sample',
-                      'animal_bone',
-                      'ceramic_fragment',
-                      'small_find',
+                      "pottery",
+                      "lithic",
+                      "hard_animal_material",
+                      "clay_artefact",
+                      "metal_artefact",
+                      "pot",
+                      "figurine",
+                      "sample",
+                      "animal_bone",
+                      "ceramic_fragment",
+                      "small_find",
                     ].map((c) => (
                       <option key={c} value={c}>
-                        {c.replace(/_/g, ' ')}
+                        {c.replace(/_/g, " ")}
                       </option>
                     ))}
                   </select>
@@ -3721,10 +4089,14 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 </div>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Context/Feature</label>
-                  <input type="text" id="af_feature" placeholder="Context or Feature ID" />
+                  <input
+                    type="text"
+                    id="af_feature"
+                    placeholder="Context or Feature ID"
+                  />
                 </div>
               </div>
-              <div className="form-row" style={{ display: 'flex', gap: 8 }}>
+              <div className="form-row" style={{ display: "flex", gap: 8 }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Area/Surface</label>
                   <input type="text" id="af_area" />
@@ -3765,45 +4137,63 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                   type="button"
                   className="btn-primary"
                   onClick={() =>
-                    (document.getElementById('af_importInput') as HTMLInputElement)?.click()
+                    (
+                      document.getElementById("af_importInput") as HTMLInputElement
+                    )?.click()
                   }
                 >
                   Import Artefacts CSV
                 </button>
               </div>
-              <div id="af_table" className="hierarchy-list" style={{ marginTop: 12 }}></div>
+              <div
+                id="af_table"
+                className="hierarchy-list"
+                style={{ marginTop: 12 }}
+              ></div>
               <input
                 type="file"
                 id="af_importInput"
                 accept=".csv"
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
                 onChange={(e) => {
                   const f = (e.target as HTMLInputElement).files?.[0];
                   if (f) apiRef.current.__importArtefactsCSV(f);
-                  (e.target as HTMLInputElement).value = '';
+                  (e.target as HTMLInputElement).value = "";
                 }}
               />
             </div>
 
             <div
               id="export-tab"
-              className={`tab-content ${activeTab === 'export' ? 'active' : ''}`}
+              className={`tab-content ${activeTab === "export" ? "active" : ""}`}
             >
               <h3>Export & Import</h3>
               <div className="button-grid">
-                <button className="btn-primary" onClick={() => apiRef.current.exportCSV()}>
+                <button
+                  className="btn-primary"
+                  onClick={() => apiRef.current.exportCSV()}
+                >
                   Export CSV
                 </button>
-                <button className="btn-primary" onClick={() => apiRef.current.exportSVG()}>
+                <button
+                  className="btn-primary"
+                  onClick={() => apiRef.current.exportSVG()}
+                >
                   Export SVG
                 </button>
-                <button className="btn-primary" onClick={() => apiRef.current.importCSV()}>
+                <button
+                  className="btn-primary"
+                  onClick={() => apiRef.current.importCSV()}
+                >
                   Import CSV
                 </button>
               </div>
               <h3 style={{ marginTop: 12 }}>Start Over</h3>
               <div className="button-grid">
-                <button className="btn-danger" onClick={() => apiRef.current.clearAll()}>
+                <button
+                  className="btn-danger"
+                  onClick={() => apiRef.current.clearAll()}
+                >
                   Clear All
                 </button>
               </div>
@@ -3812,7 +4202,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 type="file"
                 id="csvFileInput"
                 accept=".csv"
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
                 onChange={(e) =>
                   apiRef.current && apiRef.current.__handleFileSelect
                     ? apiRef.current.__handleFileSelect(e)
@@ -3833,16 +4223,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           >
             <div className="group-overlay-header">
               <div className="group-overlay-heading">
-                <span className="group-color-chip" style={{ background: overlayData.color }}></span>
+                <span
+                  className="group-color-chip"
+                  style={{ background: overlayData.color }}
+                ></span>
                 <div>
                   <div className="group-overlay-title">
                     {overlayData.name ||
-                      (overlayData.type === 'group' ? 'Untitled Group' : 'Untitled Sub-Group')}
+                      (overlayData.type === "group"
+                        ? "Untitled Group"
+                        : "Untitled Sub-Group")}
                   </div>
                   <div className="group-overlay-meta">
-                    {overlayData.type === 'group' ? 'Group' : 'Sub-Group'} •{' '}
+                    {overlayData.type === "group" ? "Group" : "Sub-Group"} •{" "}
                     {overlayData.contexts.length} context
-                    {overlayData.contexts.length === 1 ? '' : 's'}
+                    {overlayData.contexts.length === 1 ? "" : "s"}
                   </div>
                 </div>
               </div>
@@ -3853,7 +4248,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                     className="group-edit-button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      openGroupModalRef.current?.(overlayData.type, 'edit', overlayData.id);
+                      openGroupModalRef.current?.(
+                        overlayData.type,
+                        "edit",
+                        overlayData.id,
+                      );
                     }}
                     aria-label="Edit group"
                   >
@@ -3880,9 +4279,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 overlayData.contexts.map((ctx) => (
                   <div key={ctx.id} className="context-card">
                     <div className="context-card-title">{ctx.label}</div>
-                    <div className="context-card-meta">{ctx.type || 'layer'}</div>
+                    <div className="context-card-meta">{ctx.type || "layer"}</div>
                     {ctx.description && (
-                      <div className="context-card-description">{ctx.description}</div>
+                      <div className="context-card-description">
+                        {ctx.description}
+                      </div>
                     )}
                   </div>
                 ))
@@ -3897,9 +4298,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
       <div id="importModal" className="modal-backdrop">
         <div className="modal-content">
           <h4>Map CSV Columns to Import</h4>
-          <p style={{ fontSize: '0.9em', marginBottom: 15 }}>
-            Select which column from your CSV file corresponds to each data field. Context ID is
-            required.
+          <p style={{ fontSize: "0.9em", marginBottom: 15 }}>
+            Select which column from your CSV file corresponds to each data field.
+            Context ID is required.
           </p>
           <div className="form-group">
             <label>Context ID (Required)</label>
@@ -3909,7 +4310,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <label>Description</label>
             <select id="mapDescription"></select>
           </div>
-          <hr style={{ margin: '16px 0' }} />
+          <hr style={{ margin: "16px 0" }} />
           <h5 style={{ marginBottom: 10 }}>For Relationships</h5>
           <div className="form-group">
             <label>Relationship Type</label>
@@ -3919,11 +4320,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <label>Related Context ID</label>
             <select id="mapRelTo"></select>
           </div>
-          <hr style={{ margin: '16px 0' }} />
+          <hr style={{ margin: "16px 0" }} />
           <div className="form-group">
             <label>
-              <input type="checkbox" id="importClearData" defaultChecked /> Clear all existing data
-              before import
+              <input type="checkbox" id="importClearData" defaultChecked /> Clear all
+              existing data before import
             </label>
           </div>
           <div className="modal-buttons">
@@ -3933,7 +4334,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <button
               className="cancel"
               onClick={() =>
-                ((document.getElementById('importModal') as any).style.display = 'none')
+                ((document.getElementById("importModal") as any).style.display =
+                  "none")
               }
             >
               Cancel
@@ -3962,11 +4364,15 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           </div>
           <div className="form-group">
             <label>Description</label>
-            <textarea id="contextDescription" rows={2} placeholder="Brief description" />
+            <textarea
+              id="contextDescription"
+              rows={2}
+              placeholder="Brief description"
+            />
           </div>
           <div className="form-group">
             <label>Dating Evidence (optional)</label>
-            <label style={{ fontSize: '0.9em', fontWeight: 'normal', marginTop: 5 }}>
+            <label style={{ fontSize: "0.9em", fontWeight: "normal", marginTop: 5 }}>
               Earliest Date
             </label>
             <div className="date-inputs">
@@ -3976,7 +4382,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 <option selected>CE</option>
               </select>
             </div>
-            <label style={{ fontSize: '0.9em', fontWeight: 'normal', marginTop: 5 }}>
+            <label style={{ fontSize: "0.9em", fontWeight: "normal", marginTop: 5 }}>
               Latest Date
             </label>
             <div className="date-inputs">
@@ -4001,7 +4407,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <button
               className="cancel"
               onClick={() =>
-                ((document.getElementById('contextModal') as any).style.display = 'none')
+                ((document.getElementById("contextModal") as any).style.display =
+                  "none")
               }
             >
               Cancel
@@ -4022,7 +4429,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <button
               className="cancel"
               onClick={() =>
-                ((document.getElementById('relationshipModal') as any).style.display = 'none')
+                ((
+                  document.getElementById("relationshipModal") as any
+                ).style.display = "none")
               }
             >
               Cancel
@@ -4055,7 +4464,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
           </div>
           <div className="form-group">
             <label>Dating Evidence</label>
-            <label style={{ fontSize: '0.9em', fontWeight: 'normal', marginTop: 5 }}>
+            <label style={{ fontSize: "0.9em", fontWeight: "normal", marginTop: 5 }}>
               Earliest Date
             </label>
             <div className="date-inputs">
@@ -4065,7 +4474,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
                 <option selected>CE</option>
               </select>
             </div>
-            <label style={{ fontSize: '0.9em', fontWeight: 'normal', marginTop: 5 }}>
+            <label style={{ fontSize: "0.9em", fontWeight: "normal", marginTop: 5 }}>
               Latest Date
             </label>
             <div className="date-inputs">
@@ -4108,13 +4517,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <button
               className="cancel"
               onClick={() =>
-                ((document.getElementById('editNodeModal') as any).style.display = 'none')
+                ((document.getElementById("editNodeModal") as any).style.display =
+                  "none")
               }
             >
               Cancel
             </button>
           </div>
-          <button id="deleteNodeBtn" className="danger" style={{ width: '100%', marginTop: 10 }}>
+          <button
+            id="deleteNodeBtn"
+            className="danger"
+            style={{ width: "100%", marginTop: 10 }}
+          >
             Delete Context
           </button>
         </div>
@@ -4144,7 +4558,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <label>Colour</label>
             <div className="color-input-row">
               <input type="color" id="groupColor" />
-              <button type="button" id="groupRandomizeColor" className="color-randomize">
+              <button
+                type="button"
+                id="groupRandomizeColor"
+                className="color-randomize"
+              >
                 Randomize
               </button>
             </div>
@@ -4156,7 +4574,8 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({ projectId, canEdit =
             <button
               className="cancel"
               onClick={() =>
-                ((document.getElementById('groupModal') as any).style.display = 'none')
+                ((document.getElementById("groupModal") as any).style.display =
+                  "none")
               }
             >
               Cancel

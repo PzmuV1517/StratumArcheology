@@ -2,22 +2,33 @@
 // These interfaces capture the structure of archaeological recording sheets.
 
 // Basic enumerations
-export type Era = 'BCE' | 'CE';
-export type DateType = '' | 'Absolute' | 'Relative' | 'Terminus Ante Quem' | 'Terminus Post Quem';
+export type Era = "BCE" | "CE";
+export type DateType =
+  | ""
+  | "Absolute"
+  | "Relative"
+  | "Terminus Ante Quem"
+  | "Terminus Post Quem";
 
-export type FeatureType = 'pit' | 'trench' | 'house' | 'grave' | 'oven_hearth' | 'other';
-export type ContextShape = 'circular' | 'oval' | 'rectangular' | 'other';
+export type FeatureType =
+  | "pit"
+  | "trench"
+  | "house"
+  | "grave"
+  | "oven_hearth"
+  | "other";
+export type ContextShape = "circular" | "oval" | "rectangular" | "other";
 
 export type StratigraphicUnitType =
-  | 'cut'
-  | 'deposit_fill'
-  | 'anthropic'
-  | 'natural'
-  | 'demolition'
-  | 'negative'
-  | 'construction'
-  | 'abandonment'
-  | 'other';
+  | "cut"
+  | "deposit_fill"
+  | "anthropic"
+  | "natural"
+  | "demolition"
+  | "negative"
+  | "construction"
+  | "abandonment"
+  | "other";
 
 export interface ContextFeatureRecord {
   id: string; // Context identifier (e.g., 1001)
@@ -91,10 +102,15 @@ export interface StratigraphicUnitRecord {
   laterThan?: string[];
   unitType?: StratigraphicUnitType;
   location?: string;
-  dimensions?: { length?: number; thickness?: number; depth?: number; areaSurface?: number };
+  dimensions?: {
+    length?: number;
+    thickness?: number;
+    depth?: number;
+    areaSurface?: number;
+  };
   orientation?: string;
   structure?: {
-    compaction?: 'dry' | 'wet' | 'soft' | 'very_soft' | 'compact' | 'medium';
+    compaction?: "dry" | "wet" | "soft" | "very_soft" | "compact" | "medium";
     colour?: string;
     munsellCode?: string;
     homogeneous?: boolean;
@@ -122,8 +138,8 @@ export interface StratigraphicUnitRecord {
     other?: boolean;
     otherDescription?: string;
   };
-  granulation?: 'high' | 'medium' | 'low';
-  contaminationRisk?: 'high' | 'medium' | 'low';
+  granulation?: "high" | "medium" | "low";
+  contaminationRisk?: "high" | "medium" | "low";
   bones?: boolean;
   seed?: boolean;
   perturbation?: {
@@ -175,17 +191,17 @@ export interface ArtefactRecord {
 }
 
 export type ArtefactCategory =
-  | 'pottery'
-  | 'hard_animal_material'
-  | 'clay_artefact'
-  | 'metal_artefact'
-  | 'pot'
-  | 'figurine'
-  | 'sample'
-  | 'animal_bone'
-  | 'ceramic_fragment'
-  | 'lithic'
-  | 'small_find';
+  | "pottery"
+  | "hard_animal_material"
+  | "clay_artefact"
+  | "metal_artefact"
+  | "pot"
+  | "figurine"
+  | "sample"
+  | "animal_bone"
+  | "ceramic_fragment"
+  | "lithic"
+  | "small_find";
 
 export interface ArtefactRegistries {
   pottery: ArtefactRecord[];
@@ -235,10 +251,14 @@ export function normalizeLoadedData(raw: any): {
   artefacts: ArtefactRegistries;
 } {
   const contextForms = new Map<string, ContextFeatureRecord>(
-    (raw.contextForms || []).map((pair: any) => pair as [string, ContextFeatureRecord])
+    (raw.contextForms || []).map(
+      (pair: any) => pair as [string, ContextFeatureRecord],
+    ),
   );
   const stratigraphicUnits = new Map<string, StratigraphicUnitRecord>(
-    (raw.stratigraphicUnits || []).map((pair: any) => pair as [string, StratigraphicUnitRecord])
+    (raw.stratigraphicUnits || []).map(
+      (pair: any) => pair as [string, StratigraphicUnitRecord],
+    ),
   );
   const artefacts: ArtefactRegistries = raw.artefacts || createEmptyRegistries();
   // Ensure all categories exist

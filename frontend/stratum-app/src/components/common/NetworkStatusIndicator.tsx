@@ -9,10 +9,25 @@
  * Cross-platform: Works on both web and native
  */
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
-import { subscribeNetworkStatus, NetworkState, isOnline } from '../../services/networkService';
-import { subscribeSyncStatus, SyncStatus, forceSync } from '../../services/syncService';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Platform,
+} from "react-native";
+import {
+  subscribeNetworkStatus,
+  NetworkState,
+  isOnline,
+} from "../../services/networkService";
+import {
+  subscribeSyncStatus,
+  SyncStatus,
+  forceSync,
+} from "../../services/syncService";
 
 interface NetworkStatusIndicatorProps {
   /** Show full status bar or just the dot */
@@ -21,7 +36,10 @@ interface NetworkStatusIndicatorProps {
   style?: any;
 }
 
-export function NetworkStatusIndicator({ compact = false, style }: NetworkStatusIndicatorProps) {
+export function NetworkStatusIndicator({
+  compact = false,
+  style,
+}: NetworkStatusIndicatorProps) {
   const [networkState, setNetworkState] = useState<NetworkState | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -52,7 +70,7 @@ export function NetworkStatusIndicator({ compact = false, style }: NetworkStatus
             duration: 500,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
       return () => pulse.stop();
@@ -71,20 +89,20 @@ export function NetworkStatusIndicator({ compact = false, style }: NetworkStatus
 
   // Determine status color
   const getStatusColor = () => {
-    if (!isConnected) return '#ef4444'; // Red - offline
-    if (hasErrors) return '#f59e0b'; // Amber - errors
-    if (isSyncing) return '#3b82f6'; // Blue - syncing
-    if (pendingCount > 0) return '#f59e0b'; // Amber - pending
-    return '#22c55e'; // Green - all good
+    if (!isConnected) return "#ef4444"; // Red - offline
+    if (hasErrors) return "#f59e0b"; // Amber - errors
+    if (isSyncing) return "#3b82f6"; // Blue - syncing
+    if (pendingCount > 0) return "#f59e0b"; // Amber - pending
+    return "#22c55e"; // Green - all good
   };
 
   // Determine status text
   const getStatusText = () => {
-    if (!isConnected) return 'Offline';
-    if (isSyncing) return 'Syncing...';
+    if (!isConnected) return "Offline";
+    if (isSyncing) return "Syncing...";
     if (hasErrors) return `${syncStatus?.failedCount} failed`;
     if (pendingCount > 0) return `${pendingCount} pending`;
-    return 'Online';
+    return "Online";
   };
 
   // Handle manual sync trigger
@@ -104,11 +122,16 @@ export function NetworkStatusIndicator({ compact = false, style }: NetworkStatus
         accessibilityRole="button"
       >
         <Animated.View
-          style={[styles.dot, { backgroundColor: getStatusColor(), opacity: pulseAnim }]}
+          style={[
+            styles.dot,
+            { backgroundColor: getStatusColor(), opacity: pulseAnim },
+          ]}
         />
         {pendingCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{pendingCount > 99 ? '99+' : pendingCount}</Text>
+            <Text style={styles.badgeText}>
+              {pendingCount > 99 ? "99+" : pendingCount}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -126,7 +149,9 @@ export function NetworkStatusIndicator({ compact = false, style }: NetworkStatus
       >
         <Animated.View style={[styles.dotSmall, { opacity: pulseAnim }]} />
         <Text style={styles.statusText}>{getStatusText()}</Text>
-        {isConnected && !isSyncing && <Text style={styles.tapText}>Tap to sync</Text>}
+        {isConnected && !isSyncing && (
+          <Text style={styles.tapText}>Tap to sync</Text>
+        )}
       </TouchableOpacity>
     );
   }
@@ -179,23 +204,25 @@ export function SyncBadge({ style }: { style?: any }) {
 
   return (
     <View style={[styles.syncBadge, style]}>
-      <Text style={styles.syncBadgeText}>{pendingCount > 99 ? '99+' : pendingCount}</Text>
+      <Text style={styles.syncBadgeText}>
+        {pendingCount > 99 ? "99+" : pendingCount}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   compactContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 8,
-    position: 'relative',
+    position: "relative",
   },
   dot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1,
@@ -205,79 +232,79 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     marginRight: 8,
   },
   badge: {
-    position: 'absolute',
+    position: "absolute",
     top: 2,
     right: 2,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     borderRadius: 8,
     minWidth: 16,
     height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 4,
   },
   badgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   fullContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 4,
     margin: 8,
   },
   statusText: {
-    color: 'white',
-    fontWeight: '600',
+    color: "white",
+    fontWeight: "600",
     fontSize: 14,
   },
   tapText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 12,
     marginLeft: 8,
   },
   offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1f2937',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1f2937",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#374151',
+    borderBottomColor: "#374151",
   },
   offlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ef4444',
+    backgroundColor: "#ef4444",
     marginRight: 10,
   },
   offlineText: {
-    color: '#9ca3af',
+    color: "#9ca3af",
     fontSize: 13,
     flex: 1,
   },
   syncBadge: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: "#f59e0b",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
   },
   syncBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 

@@ -1,10 +1,10 @@
 // Shared file service types and API calls
-import api from './api';
+import api from "./api";
 
 export interface FileNode {
   id: string;
   name: string;
-  type: 'folder' | 'file';
+  type: "folder" | "file";
   parent_id: string | null;
   project_id: string;
   size?: string;
@@ -37,7 +37,7 @@ export const fileServiceCore = {
   createFolder: async (
     projectId: string,
     name: string,
-    parentId: string | null = null
+    parentId: string | null = null,
   ): Promise<FileNode> => {
     try {
       const res = await api.post(`/files/project/${projectId}/folders`, {
@@ -47,26 +47,30 @@ export const fileServiceCore = {
       return res.data;
     } catch (error: any) {
       // If offline or network error, queue the action
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network') || !error.response) {
-        const { offlineQueue } = await import('./offlineQueueService');
-        const { authService } = await import('./authService');
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network") ||
+        !error.response
+      ) {
+        const { offlineQueue } = await import("./offlineQueueService");
+        const { authService } = await import("./authService");
         const user = await authService.getCurrentUser();
         const tempId = `temp_folder_${Date.now()}`;
 
         if (user) {
           await offlineQueue.enqueue(
-            'CREATE_FOLDER',
+            "CREATE_FOLDER",
             projectId,
             { name, parent_id: parentId },
             user.id,
-            { priority: 1 }
+            { priority: 1 },
           );
 
           // Return temporary folder object
           return {
             id: tempId,
             name,
-            type: 'folder',
+            type: "folder",
             parent_id: parentId,
             project_id: projectId,
             created_at: new Date().toISOString(),
@@ -78,8 +82,13 @@ export const fileServiceCore = {
     }
   },
 
-  moveNode: async (nodeId: string, newParentId: string | null = null): Promise<FileNode> => {
-    const res = await api.put(`/files/${nodeId}/move`, { new_parent_id: newParentId });
+  moveNode: async (
+    nodeId: string,
+    newParentId: string | null = null,
+  ): Promise<FileNode> => {
+    const res = await api.put(`/files/${nodeId}/move`, {
+      new_parent_id: newParentId,
+    });
     return res.data;
   },
 
@@ -117,7 +126,7 @@ export const fileServiceCore = {
   },
 
   getMyFolderPermissions: async (
-    projectId: string
+    projectId: string,
   ): Promise<{
     folder_id: string | null;
     default_can_view: boolean;
@@ -133,10 +142,17 @@ export const fileServiceCore = {
     settings: {
       default_can_view: boolean;
       default_can_edit: boolean;
-      member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
-    }
+      member_permissions: {
+        user_id: string;
+        can_view: boolean;
+        can_edit: boolean;
+      }[];
+    },
   ): Promise<{ message: string; folder_id: string }> => {
-    const res = await api.put(`/files/project/${projectId}/my-folder/permissions`, settings);
+    const res = await api.put(
+      `/files/project/${projectId}/my-folder/permissions`,
+      settings,
+    );
     return res.data;
   },
 

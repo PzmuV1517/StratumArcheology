@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, ActivityIndicator, Text, StyleSheet, ViewStyle } from 'react-native';
+import React from "react";
+import { View, ActivityIndicator, Text, StyleSheet, ViewStyle } from "react-native";
 
 interface LoadingProps {
   message?: string;
-  size?: 'small' | 'large';
+  size?: "small" | "large";
   color?: string;
   style?: ViewStyle;
   fullScreen?: boolean;
@@ -11,8 +11,8 @@ interface LoadingProps {
 
 export default function Loading({
   message,
-  size = 'large',
-  color = '#007AFF',
+  size = "large",
+  color = "#007AFF",
   style,
   fullScreen = false,
 }: LoadingProps) {
@@ -32,8 +32,8 @@ export default function Loading({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
   },
   fullScreen: {
@@ -41,15 +41,15 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 1000,
   },
   message: {
     marginTop: 12,
     fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
+    color: "#8E8E93",
+    textAlign: "center",
   },
 });

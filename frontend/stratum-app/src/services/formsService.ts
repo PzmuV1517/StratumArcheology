@@ -1,10 +1,10 @@
-import api from './api';
+import api from "./api";
 import {
   ContextFeatureRecord,
   StratigraphicUnitRecord,
   ArtefactRecord,
   FormSaveResponse,
-} from './formsService.types';
+} from "./formsService.types";
 
 /**
  * Forms service for archaeological data entry
@@ -16,9 +16,12 @@ export const formsService = {
    */
   saveContextFeature: async (
     projectId: string,
-    record: ContextFeatureRecord
+    record: ContextFeatureRecord,
   ): Promise<FormSaveResponse> => {
-    const res = await api.post(`/forms/project/${projectId}/context-feature`, record);
+    const res = await api.post(
+      `/forms/project/${projectId}/context-feature`,
+      record,
+    );
     return res.data;
   },
 
@@ -27,16 +30,22 @@ export const formsService = {
    */
   saveStratigraphicUnit: async (
     projectId: string,
-    record: StratigraphicUnitRecord
+    record: StratigraphicUnitRecord,
   ): Promise<FormSaveResponse> => {
-    const res = await api.post(`/forms/project/${projectId}/stratigraphic-unit`, record);
+    const res = await api.post(
+      `/forms/project/${projectId}/stratigraphic-unit`,
+      record,
+    );
     return res.data;
   },
 
   /**
    * Save an artefact record
    */
-  saveArtefact: async (projectId: string, record: ArtefactRecord): Promise<FormSaveResponse> => {
+  saveArtefact: async (
+    projectId: string,
+    record: ArtefactRecord,
+  ): Promise<FormSaveResponse> => {
     const res = await api.post(`/forms/project/${projectId}/artefact`, record);
     return res.data;
   },
@@ -52,7 +61,9 @@ export const formsService = {
   /**
    * Get all stratigraphic units for a project
    */
-  getStratigraphicUnits: async (projectId: string): Promise<StratigraphicUnitRecord[]> => {
+  getStratigraphicUnits: async (
+    projectId: string,
+  ): Promise<StratigraphicUnitRecord[]> => {
     const res = await api.get(`/forms/project/${projectId}/stratigraphic-units`);
     return res.data;
   },
@@ -71,4 +82,4 @@ export type {
   StratigraphicUnitRecord,
   ArtefactRecord,
   FormSaveResponse,
-} from './formsService.types';
+} from "./formsService.types";

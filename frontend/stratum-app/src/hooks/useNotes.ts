@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { noteService, Note, socketService } from '../services';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { noteService, Note, socketService } from "../services";
 
 interface NotesState {
   notes: Note[];
@@ -31,8 +31,8 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
   useEffect(() => {
     if (!projectId) return;
 
-    unsubscribeRef.current = socketService.on('content_updated', (data) => {
-      if (data.content_type === 'notes') {
+    unsubscribeRef.current = socketService.on("content_updated", (data) => {
+      if (data.content_type === "notes") {
         // Refresh notes list on any note change
         loadNotes();
       }
@@ -63,7 +63,7 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
       const data = await noteService.getNotes(projectId);
       setNotes(data);
     } catch (e: any) {
-      setError(e.message || 'Failed to load notes');
+      setError(e.message || "Failed to load notes");
     } finally {
       setIsLoading(false);
     }
@@ -81,13 +81,13 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
         setNotes((prev) => [newNote, ...prev]);
         return newNote;
       } catch (e: any) {
-        setError(e.message || 'Failed to create note');
+        setError(e.message || "Failed to create note");
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   const updateNote = useCallback(
@@ -98,17 +98,20 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
       setError(null);
 
       try {
-        const updated = await noteService.updateNote(projectId, noteId, { title, content });
+        const updated = await noteService.updateNote(projectId, noteId, {
+          title,
+          content,
+        });
         setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
         return true;
       } catch (e: any) {
-        setError(e.message || 'Failed to update note');
+        setError(e.message || "Failed to update note");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   const deleteNote = useCallback(
@@ -123,13 +126,13 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
         setNotes((prev) => prev.filter((n) => n.id !== noteId));
         return true;
       } catch (e: any) {
-        setError(e.message || 'Failed to delete note');
+        setError(e.message || "Failed to delete note");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId]
+    [projectId],
   );
 
   const refresh = useCallback(async (): Promise<void> => {

@@ -1,5 +1,5 @@
 // Cross-platform storage abstraction
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // This works on both web and native thanks to @react-native-async-storage/async-storage
 // which uses localStorage on web and native storage on mobile
@@ -9,7 +9,7 @@ export const storage = {
     try {
       return await AsyncStorage.getItem(key);
     } catch (error) {
-      console.error('Storage getItem error:', error);
+      console.error("Storage getItem error:", error);
       return null;
     }
   },
@@ -18,7 +18,7 @@ export const storage = {
     try {
       await AsyncStorage.setItem(key, value);
     } catch (error) {
-      console.error('Storage setItem error:', error);
+      console.error("Storage setItem error:", error);
     }
   },
 
@@ -26,7 +26,7 @@ export const storage = {
     try {
       await AsyncStorage.removeItem(key);
     } catch (error) {
-      console.error('Storage removeItem error:', error);
+      console.error("Storage removeItem error:", error);
     }
   },
 
@@ -35,7 +35,7 @@ export const storage = {
       const result = await AsyncStorage.multiGet(keys);
       return result as [string, string | null][];
     } catch (error) {
-      console.error('Storage multiGet error:', error);
+      console.error("Storage multiGet error:", error);
       return keys.map((key) => [key, null]);
     }
   },
@@ -44,7 +44,7 @@ export const storage = {
     try {
       await AsyncStorage.multiSet(keyValuePairs);
     } catch (error) {
-      console.error('Storage multiSet error:', error);
+      console.error("Storage multiSet error:", error);
     }
   },
 
@@ -52,7 +52,7 @@ export const storage = {
     try {
       await AsyncStorage.multiRemove(keys);
     } catch (error) {
-      console.error('Storage multiRemove error:', error);
+      console.error("Storage multiRemove error:", error);
     }
   },
 
@@ -60,7 +60,7 @@ export const storage = {
     try {
       await AsyncStorage.clear();
     } catch (error) {
-      console.error('Storage clear error:', error);
+      console.error("Storage clear error:", error);
     }
   },
 
@@ -69,7 +69,7 @@ export const storage = {
       const keys = await AsyncStorage.getAllKeys();
       return keys as string[];
     } catch (error) {
-      console.error('Storage getAllKeys error:', error);
+      console.error("Storage getAllKeys error:", error);
       return [];
     }
   },

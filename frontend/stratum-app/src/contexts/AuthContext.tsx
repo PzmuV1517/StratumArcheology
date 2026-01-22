@@ -5,10 +5,10 @@ import React, {
   useContext,
   ReactNode,
   useCallback,
-} from 'react';
-import { Alert } from 'react-native';
-import { authService } from '../services/authService';
-import api, { authEvents, AUTH_SESSION_EXPIRED } from '../services/api';
+} from "react";
+import { Alert } from "react-native";
+import { authService } from "../services/authService";
+import api, { authEvents, AUTH_SESSION_EXPIRED } from "../services/api";
 
 interface User {
   id: string;
@@ -21,11 +21,14 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   sessionExpired: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   register: (
     email: string,
     password: string,
-    displayName: string
+    displayName: string,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -50,12 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Handle session expiry event from API interceptor
   const handleSessionExpired = useCallback(() => {
-    console.log('[AuthContext] Session expired event received');
+    console.log("[AuthContext] Session expired event received");
     setUser(null);
     setSessionExpired(true);
-    Alert.alert('Session Expired', 'Your session has expired. Please log in again.', [
-      { text: 'OK' },
-    ]);
+    Alert.alert(
+      "Session Expired",
+      "Your session has expired. Please log in again.",
+      [{ text: "OK" }],
+    );
   }, []);
 
   // Clear session expired flag (after user acknowledges or logs in)
@@ -91,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Validate token with backend - this ensures the token hasn't expired
       try {
-        const response = await api.get('/auth/me');
+        const response = await api.get("/auth/me");
         if (response.data) {
           // Token is valid, update stored user data with fresh data from server
           const freshUser = {
@@ -105,11 +110,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (apiError: any) {
         // Token is invalid or expired (401), already cleared by api interceptor
-        console.log('[AuthContext] Token validation failed, clearing session');
+        console.log("[AuthContext] Token validation failed, clearing session");
         setUser(null);
       }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error("Auth check error:", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -118,20 +123,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('[AuthContext] login called with email:', email);
+      console.log("[AuthContext] login called with email:", email);
       const result = await authService.login(email, password);
-      console.log('[AuthContext] authService.login result:', result);
+      console.log("[AuthContext] authService.login result:", result);
       if (result.success) {
-        console.log('[AuthContext] Setting user:', result.user);
+        console.log("[AuthContext] Setting user:", result.user);
         setUser(result.user || null);
         return { success: true };
       } else {
-        console.log('[AuthContext] Login failed:', result.error);
+        console.log("[AuthContext] Login failed:", result.error);
         return { success: false, error: result.error };
       }
     } catch (error: any) {
-      console.error('[AuthContext] Login exception:', error);
-      return { success: false, error: error.message || 'Login failed' };
+      console.error("[AuthContext] Login exception:", error);
+      return { success: false, error: error.message || "Login failed" };
     }
   };
 
@@ -145,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: result.error };
       }
     } catch (error: any) {
-      return { success: false, error: error.message || 'Registration failed' };
+      return { success: false, error: error.message || "Registration failed" };
     }
   };
 
@@ -154,13 +159,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await authService.logout();
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
   const refreshUser = async () => {
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get("/auth/me");
       if (response.data) {
         const freshUser = {
           id: response.data.id,
@@ -172,7 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(freshUser);
       }
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      console.error("Failed to refresh user:", error);
     }
   };
 

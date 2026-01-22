@@ -1,5 +1,12 @@
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import React from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Pressable,
+} from "react-native";
 
 interface Props {
   visible: boolean;
@@ -19,7 +26,12 @@ export default function ProjectMenuModal({
   canChangeSettings = true,
 }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.menuBackdrop}>
         {/* Click outside to close */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -45,15 +57,19 @@ export default function ProjectMenuModal({
             </TouchableOpacity>
           ) : (
             <View style={[styles.menuItem, styles.disabledMenuItem]}>
-              <Text style={[styles.menuItemText, styles.disabledText]}>Settings</Text>
-              <Text style={styles.permissionHint}>Only the leader can change settings</Text>
+              <Text style={[styles.menuItemText, styles.disabledText]}>
+                Settings
+              </Text>
+              <Text style={styles.permissionHint}>
+                Only the leader can change settings
+              </Text>
             </View>
           )}
           <TouchableOpacity
-            style={[styles.menuItem, { justifyContent: 'center' }]}
+            style={[styles.menuItem, { justifyContent: "center" }]}
             onPress={onClose}
           >
-            <Text style={[styles.menuItemText, { color: '#9A9A9A' }]}>Close</Text>
+            <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -64,22 +80,27 @@ export default function ProjectMenuModal({
 const styles = StyleSheet.create({
   menuBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   menuCard: {
-    backgroundColor: '#1E1E1A',
+    backgroundColor: "#1E1E1A",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#333',
-    width: '100%',
+    borderColor: "#333",
+    width: "100%",
   },
   menuItem: { paddingVertical: 12 },
-  menuItemText: { color: '#F5F5F5', fontSize: 16, fontWeight: '600' },
+  menuItemText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
   disabledMenuItem: { opacity: 0.6 },
-  disabledText: { color: '#666' },
-  permissionHint: { color: '#FF6B6B', fontSize: 12, marginTop: 4, fontStyle: 'italic' },
+  disabledText: { color: "#666" },
+  permissionHint: {
+    color: "#FF6B6B",
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
 });

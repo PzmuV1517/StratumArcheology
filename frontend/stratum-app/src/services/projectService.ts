@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 import {
   Project,
   ProjectMember,
@@ -7,7 +7,7 @@ import {
   InviteResponse,
   JoinResponse,
   GpsState,
-} from './projectService.types';
+} from "./projectService.types";
 
 /**
  * Project service - works on both web and native
@@ -19,7 +19,7 @@ export const projectService = {
    */
   getProjects: async (): Promise<Project[]> => {
     try {
-      const response = await api.get('/projects');
+      const response = await api.get("/projects");
       return response.data;
     } catch (error: any) {
       throw error.response?.data || error;
@@ -47,7 +47,7 @@ export const projectService = {
    */
   createProject: async (projectData: CreateProjectData): Promise<Project> => {
     try {
-      const response = await api.post('/projects', projectData);
+      const response = await api.post("/projects", projectData);
       return response.data;
     } catch (error: any) {
       throw error.response?.data || error;
@@ -57,7 +57,10 @@ export const projectService = {
   /**
    * Update a project
    */
-  updateProject: async (projectId: string, projectData: UpdateProjectData): Promise<Project> => {
+  updateProject: async (
+    projectId: string,
+    projectData: UpdateProjectData,
+  ): Promise<Project> => {
     try {
       const response = await api.put(`/projects/${projectId}`, projectData);
       return response.data;
@@ -83,7 +86,7 @@ export const projectService = {
   createInvite: async (
     projectId: string,
     role: string,
-    ttlHours: number = 168
+    ttlHours: number = 168,
   ): Promise<InviteResponse> => {
     try {
       const response = await api.post(`/projects/${projectId}/invites`, {
@@ -153,10 +156,13 @@ export const projectService = {
   updateMemberRole: async (
     projectId: string,
     userId: string,
-    role: string
+    role: string,
   ): Promise<ProjectMember> => {
     try {
-      const response = await api.put(`/projects/${projectId}/members/${userId}/role`, { role });
+      const response = await api.put(
+        `/projects/${projectId}/members/${userId}/role`,
+        { role },
+      );
       return response.data;
     } catch (error: any) {
       throw error.response?.data || error;
@@ -166,10 +172,13 @@ export const projectService = {
   /**
    * Transfer project ownership to another member
    */
-  transferOwnership: async (projectId: string, newOwnerId: string): Promise<Project> => {
+  transferOwnership: async (
+    projectId: string,
+    newOwnerId: string,
+  ): Promise<Project> => {
     try {
       const response = await api.post(
-        `/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`
+        `/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`,
       );
       return response.data;
     } catch (error: any) {
@@ -202,4 +211,4 @@ export type {
   InviteResponse,
   JoinResponse,
   GpsState,
-} from './projectService.types';
+} from "./projectService.types";

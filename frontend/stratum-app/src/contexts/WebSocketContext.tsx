@@ -4,10 +4,17 @@
  *
  * Uses a singleton socket that persists across route changes
  */
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { config } from '../config/config';
-import { useAuth } from './AuthContext';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import { io, Socket } from "socket.io-client";
+import { config } from "../config/config";
+import { useAuth } from "./AuthContext";
 
 interface WebSocketContextType {
   socket: Socket | null;
@@ -45,7 +52,7 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     if (!user) {
       // Disconnect if user logs out
       if (globalSocket) {
-        if (__DEV__) console.log('[WebSocket] User logged out, disconnecting');
+        if (__DEV__) console.log("[WebSocket] User logged out, disconnecting");
         globalSocket.close();
         globalSocket = null;
         socketRef.current = null;
@@ -58,7 +65,7 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
     // Reuse existing connection
     if (globalSocket && globalSocket.connected) {
       // Only log in development
-      if (__DEV__) console.log('[WebSocket] Reusing existing connection');
+      if (__DEV__) console.log("[WebSocket] Reusing existing connection");
       socketRef.current = globalSocket;
       setSocket(globalSocket);
       setIsConnected(true);
@@ -76,15 +83,20 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
 
     // Extract base URL and construct WebSocket URL
     // The backend mounts Socket.IO at /ws with its own /socket.io path
-    const baseUrl = config.apiBaseUrl.replace('/api', '');
+    const baseUrl = config.apiBaseUrl.replace("/api", "");
 
-    if (__DEV__) console.log('[WebSocket] Connecting to:', baseUrl, `(attempt ${currentCount})`);
+    if (__DEV__)
+      console.log(
+        "[WebSocket] Connecting to:",
+        baseUrl,
+        `(attempt ${currentCount})`,
+      );
 
     // Create Socket.IO connection
     // Backend mounts Socket.IO at /ws with empty socketio_path
     const newSocket = io(baseUrl, {
-      path: '/ws',
-      transports: ['polling', 'websocket'],
+      path: "/ws",
+      transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionDelay: 2000,
       reconnectionAttempts: 3,
@@ -92,20 +104,20 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
       timeout: 10000,
     });
 
-    newSocket.on('connect', () => {
-      if (__DEV__) console.log('[WebSocket] Connected:', newSocket.id);
+    newSocket.on("connect", () => {
+      if (__DEV__) console.log("[WebSocket] Connected:", newSocket.id);
       setIsConnected(true);
       isConnectingRef.current = false;
     });
 
-    newSocket.on('disconnect', (reason) => {
-      if (__DEV__) console.log('[WebSocket] Disconnected:', reason);
+    newSocket.on("disconnect", (reason) => {
+      if (__DEV__) console.log("[WebSocket] Disconnected:", reason);
       setIsConnected(false);
     });
 
-    newSocket.on('connect_error', (error) => {
+    newSocket.on("connect_error", (error) => {
       // Only log in development to reduce console noise
-      if (__DEV__) console.warn('[WebSocket] Connection error:', error.message);
+      if (__DEV__) console.warn("[WebSocket] Connection error:", error.message);
       setIsConnected(false);
       isConnectingRef.current = false;
     });
@@ -123,20 +135,28 @@ export const WebSocketProvider: React.FC<Props> = ({ children }) => {
 
   const joinProject = useCallback((projectId: string, userId: string) => {
     if (socketRef.current?.connected) {
-      if (__DEV__) console.log('[WebSocket] Joining project:', projectId);
-      socketRef.current.emit('join_project', { project_id: projectId, user_id: userId });
+      if (__DEV__) console.log("[WebSocket] Joining project:", projectId);
+      socketRef.current.emit("join_project", {
+        project_id: projectId,
+        user_id: userId,
+      });
     }
   }, []);
 
   const leaveProject = useCallback((projectId: string, userId: string) => {
     if (socketRef.current?.connected) {
-      if (__DEV__) console.log('[WebSocket] Leaving project:', projectId);
-      socketRef.current.emit('leave_project', { project_id: projectId, user_id: userId });
+      if (__DEV__) console.log("[WebSocket] Leaving project:", projectId);
+      socketRef.current.emit("leave_project", {
+        project_id: projectId,
+        user_id: userId,
+      });
     }
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ socket, isConnected, joinProject, leaveProject }}>
+    <WebSocketContext.Provider
+      value={{ socket, isConnected, joinProject, leaveProject }}
+    >
       {children}
     </WebSocketContext.Provider>
   );

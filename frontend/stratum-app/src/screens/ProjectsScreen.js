@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { projectService } from '../services/projectService';
-import { useAuth } from '../contexts/AuthContext';
+} from "react-native";
+import { projectService } from "../services/projectService";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ProjectsScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
@@ -26,7 +26,7 @@ export default function ProjectsScreen({ navigation }) {
       const data = await projectService.getProjects();
       setProjects(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load projects');
+      Alert.alert("Error", "Failed to load projects");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -39,19 +39,21 @@ export default function ProjectsScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', onPress: logout },
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", onPress: logout },
     ]);
   };
 
   const renderProject = ({ item }) => (
     <TouchableOpacity
       style={styles.projectCard}
-      onPress={() => navigation.navigate('ProjectDetail', { projectId: item.id })}
+      onPress={() => navigation.navigate("ProjectDetail", { projectId: item.id })}
     >
       <Text style={styles.projectName}>{item.name}</Text>
-      <Text style={styles.projectDescription}>{item.description || 'No description'}</Text>
+      <Text style={styles.projectDescription}>
+        {item.description || "No description"}
+      </Text>
       <View style={styles.projectMeta}>
         <Text style={styles.dateText}>
           Created: {new Date(item.created_at).toLocaleDateString()}
@@ -80,7 +82,9 @@ export default function ProjectsScreen({ navigation }) {
       {projects.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No projects yet</Text>
-          <Text style={styles.emptySubtext}>Create your first project to get started</Text>
+          <Text style={styles.emptySubtext}>
+            Create your first project to get started
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -93,7 +97,10 @@ export default function ProjectsScreen({ navigation }) {
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateProject')}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate("CreateProject")}
+      >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
     </View>
@@ -103,40 +110,40 @@ export default function ProjectsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: "bold",
+    color: "#2c3e50",
   },
   logoutText: {
-    color: '#e74c3c',
+    color: "#e74c3c",
     fontSize: 16,
   },
   listContainer: {
     padding: 15,
   },
   projectCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 12,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -144,55 +151,55 @@ const styles = StyleSheet.create({
   },
   projectName: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: "bold",
+    color: "#2c3e50",
     marginBottom: 8,
   },
   projectDescription: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: "#7f8c8d",
     marginBottom: 12,
   },
   projectMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   roleText: {
     fontSize: 12,
-    color: '#3498db',
-    fontWeight: '600',
+    color: "#3498db",
+    fontWeight: "600",
   },
   dateText: {
     fontSize: 12,
-    color: '#95a5a6',
+    color: "#95a5a6",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 40,
   },
   emptyText: {
     fontSize: 20,
-    color: '#7f8c8d',
+    color: "#7f8c8d",
     marginBottom: 10,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#95a5a6',
-    textAlign: 'center',
+    color: "#95a5a6",
+    textAlign: "center",
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     bottom: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#3498db',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#3498db",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -200,7 +207,7 @@ const styles = StyleSheet.create({
   },
   fabText: {
     fontSize: 32,
-    color: '#fff',
+    color: "#fff",
     lineHeight: 36,
   },
 });

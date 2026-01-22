@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
-import { projectService } from '../../services/projectService';
+import { projectService } from "../../services/projectService";
 
 // Avoid importing 'leaflet' at module scope to prevent SSR "window is not defined".
 // We'll dynamic-import it on the client inside useEffect.
 type LatLngLiteral = { lat: number; lng: number };
 
-type Mode = 'work' | 'site';
+type Mode = "work" | "site";
 
 type Shape = {
   id: string;
@@ -20,13 +20,13 @@ type Shape = {
 
 function useInjectLeafletCss() {
   useEffect(() => {
-    const id = 'leaflet-css';
+    const id = "leaflet-css";
     if (document.getElementById(id)) return;
-    const link = document.createElement('link');
+    const link = document.createElement("link");
     link.id = id;
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    link.crossOrigin = '';
+    link.rel = "stylesheet";
+    link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    link.crossOrigin = "";
     document.head.appendChild(link);
   }, []);
 }
@@ -50,7 +50,7 @@ export default function MapEditor({
   const mapRef = useRef<any>(null);
   const LRef = useRef<any>(null);
 
-  const [mode, setMode] = useState<Mode>('work');
+  const [mode, setMode] = useState<Mode>("work");
   const [work, _setWork] = useState<Shape | null>(null);
   const [sites, _setSites] = useState<Shape[]>([]);
   const [activeSite, _setActiveSite] = useState<number | null>(null);
@@ -74,8 +74,8 @@ export default function MapEditor({
     _setActiveSite(val);
   };
 
-  const workColor = '#FF2A2A';
-  const siteColor = '#00d4b3';
+  const workColor = "#FF2A2A";
+  const siteColor = "#00d4b3";
 
   // Debounced save handling
   const saveTimer = useRef<any>(null);
@@ -107,13 +107,13 @@ export default function MapEditor({
       }
     };
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') onPageHide();
+      if (document.visibilityState === "hidden") onPageHide();
     };
-    window.addEventListener('pagehide', onPageHide);
-    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
-      window.removeEventListener('pagehide', onPageHide);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         saveNow();
@@ -128,7 +128,7 @@ export default function MapEditor({
       if (!containerRef.current) return;
       if (!LRef.current) {
         try {
-          const mod: any = await import('leaflet');
+          const mod: any = await import("leaflet");
           if (cancelled) return;
           LRef.current = mod.default ?? mod;
           setLeafletReady(true);
@@ -153,8 +153,8 @@ export default function MapEditor({
         zoom: 6,
         preferCanvas: true,
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM & CARTO',
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: "&copy; OSM & CARTO",
       }).addTo(map);
       mapRef.current = map;
     }
@@ -163,7 +163,7 @@ export default function MapEditor({
 
     const getIcon = (color: string) =>
       (L as any).divIcon({
-        className: '',
+        className: "",
         html: `<div style="width:12px;height:12px;border:2px solid ${color};background:#111111;border-radius:50%;box-shadow:0 0 0 1px #0A0A0A"></div>`,
         iconSize: [12, 12],
         iconAnchor: [6, 6],
@@ -178,10 +178,10 @@ export default function MapEditor({
       const curSites = sitesRef.current;
       const curActiveSite = activeSiteRef.current;
 
-      if (mode === 'work') {
+      if (mode === "work") {
         if (!curWork) {
           const shape: Shape = {
-            id: 'work',
+            id: "work",
             points: [ll],
             closed: false,
             markers: [],
@@ -191,8 +191,8 @@ export default function MapEditor({
           const mk = (L as any)
             .marker(ll, { draggable: true, icon: getIcon(workColor) })
             .addTo(map);
-          mk.on('drag', (ev: any) => onMarkerDragWorkByMarker(ev));
-          mk.on('dragend', async (ev: any) => {
+          mk.on("drag", (ev: any) => onMarkerDragWorkByMarker(ev));
+          mk.on("dragend", async (ev: any) => {
             onMarkerDragWorkByMarker(ev);
             await saveNow();
           });
@@ -212,7 +212,12 @@ export default function MapEditor({
             const poly = curWork.layer as any;
             if (poly) map.removeLayer(poly);
             const polygon = (L as any)
-              .polygon(newPts, { color: workColor, weight: 2, opacity: 0.9, fillOpacity: 0.1 })
+              .polygon(newPts, {
+                color: workColor,
+                weight: 2,
+                opacity: 0.9,
+                fillOpacity: 0.1,
+              })
               .addTo(map);
             const updated: Shape = { ...curWork, closed: true, layer: polygon };
             setWorkSync(updated);
@@ -225,8 +230,8 @@ export default function MapEditor({
             const mk = (L as any)
               .marker(ll, { draggable: true, icon: getIcon(workColor) })
               .addTo(map);
-            mk.on('drag', (ev: any) => onMarkerDragWorkByMarker(ev));
-            mk.on('dragend', async (ev: any) => {
+            mk.on("drag", (ev: any) => onMarkerDragWorkByMarker(ev));
+            mk.on("dragend", async (ev: any) => {
               onMarkerDragWorkByMarker(ev);
               await saveNow();
             });
@@ -248,8 +253,8 @@ export default function MapEditor({
           const mk = (L as any)
             .marker(ll, { draggable: true, icon: getIcon(siteColor) })
             .addTo(map);
-          mk.on('drag', (ev: any) => onMarkerDragSiteByMarker(ev));
-          mk.on('dragend', async (ev: any) => {
+          mk.on("drag", (ev: any) => onMarkerDragSiteByMarker(ev));
+          mk.on("dragend", async (ev: any) => {
             onMarkerDragSiteByMarker(ev);
             await saveNow();
           });
@@ -269,7 +274,12 @@ export default function MapEditor({
             const newPts = cur.points.slice();
             if (cur.layer) map.removeLayer(cur.layer);
             const polygon = (L as any)
-              .polygon(newPts, { color: siteColor, weight: 2, opacity: 0.9, fillOpacity: 0.08 })
+              .polygon(newPts, {
+                color: siteColor,
+                weight: 2,
+                opacity: 0.9,
+                fillOpacity: 0.08,
+              })
               .addTo(map);
             const updated = curSites.slice();
             updated[curActiveSite] = { ...cur, closed: true, layer: polygon };
@@ -282,8 +292,8 @@ export default function MapEditor({
             const mk = (L as any)
               .marker(ll, { draggable: true, icon: getIcon(siteColor) })
               .addTo(map);
-            mk.on('drag', (ev: any) => onMarkerDragSiteByMarker(ev));
-            mk.on('dragend', async (ev: any) => {
+            mk.on("drag", (ev: any) => onMarkerDragSiteByMarker(ev));
+            mk.on("dragend", async (ev: any) => {
               onMarkerDragSiteByMarker(ev);
               await saveNow();
             });
@@ -297,9 +307,9 @@ export default function MapEditor({
       }
     };
 
-    map.on('click', onClick);
+    map.on("click", onClick);
     return () => {
-      map.off('click', onClick);
+      map.off("click", onClick);
     };
   }, [leafletReady, mode, work, sites, activeSite]);
 
@@ -396,9 +406,12 @@ export default function MapEditor({
         }
         // Rehydrate work
         if (state?.work?.points?.length) {
-          const pts = state.work.points.map((p: any) => ({ lat: p.lat, lng: p.lng }));
+          const pts = state.work.points.map((p: any) => ({
+            lat: p.lat,
+            lng: p.lng,
+          }));
           const shape: Shape = {
-            id: 'work',
+            id: "work",
             points: [],
             closed: !!state.work.closed,
             markers: [],
@@ -411,15 +424,15 @@ export default function MapEditor({
               .marker(ll, {
                 draggable: true,
                 icon: (L as any).divIcon({
-                  className: '',
+                  className: "",
                   html: `<div style=\"width:12px;height:12px;border:2px solid ${workColor};background:#111111;border-radius:50%\"></div>`,
                   iconSize: [12, 12],
                   iconAnchor: [6, 6],
                 }),
               })
               .addTo(map);
-            mk.on('drag', (ev: any) => onMarkerDragWorkByMarker(ev));
-            mk.on('dragend', async (ev: any) => {
+            mk.on("drag", (ev: any) => onMarkerDragWorkByMarker(ev));
+            mk.on("dragend", async (ev: any) => {
               onMarkerDragWorkByMarker(ev);
               await saveNow();
             });
@@ -450,7 +463,10 @@ export default function MapEditor({
           (state.sites || [])
             .filter((s: any) => !!s.closed)
             .forEach((s: any) => {
-              const pts = (s.points || []).map((p: any) => ({ lat: p.lat, lng: p.lng }));
+              const pts = (s.points || []).map((p: any) => ({
+                lat: p.lat,
+                lng: p.lng,
+              }));
               const shape: Shape = {
                 id: `site-${Date.now()}-${Math.random()}`,
                 points: [],
@@ -464,15 +480,15 @@ export default function MapEditor({
                   .marker(ll, {
                     draggable: true,
                     icon: (L as any).divIcon({
-                      className: '',
+                      className: "",
                       html: `<div style=\"width:12px;height:12px;border:2px solid ${siteColor};background:#111111;border-radius:50%\"></div>`,
                       iconSize: [12, 12],
                       iconAnchor: [6, 6],
                     }),
                   })
                   .addTo(map);
-                mk.on('drag', (ev: any) => onMarkerDragSiteByMarker(ev));
-                mk.on('dragend', async (ev: any) => {
+                mk.on("drag", (ev: any) => onMarkerDragSiteByMarker(ev));
+                mk.on("dragend", async (ev: any) => {
                   onMarkerDragSiteByMarker(ev);
                   await saveNow();
                 });
@@ -490,7 +506,11 @@ export default function MapEditor({
                   .addTo(map);
               } else {
                 shape.layer = (L as any)
-                  .polyline(shape.points, { color: siteColor, weight: 2, opacity: 0.9 })
+                  .polyline(shape.points, {
+                    color: siteColor,
+                    weight: 2,
+                    opacity: 0.9,
+                  })
                   .addTo(map);
               }
               reSites.push(shape);
@@ -508,41 +528,50 @@ export default function MapEditor({
       {canEdit && (
         <View style={styles.toolbox}>
           <TouchableOpacity
-            style={[styles.btn, mode === 'work' && styles.btnActive]}
-            onPress={() => setMode('work')}
+            style={[styles.btn, mode === "work" && styles.btnActive]}
+            onPress={() => setMode("work")}
           >
-            <Text style={[styles.btnText, mode === 'work' && styles.btnTextActive]}>
+            <Text style={[styles.btnText, mode === "work" && styles.btnTextActive]}>
               Zonă lucru
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.btn, mode === 'site' && styles.btnActive]}
-            onPress={() => setMode('site')}
+            style={[styles.btn, mode === "site" && styles.btnActive]}
+            onPress={() => setMode("site")}
           >
-            <Text style={[styles.btnText, mode === 'site' && styles.btnTextActive]}>Sit</Text>
+            <Text style={[styles.btnText, mode === "site" && styles.btnTextActive]}>
+              Sit
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btn} onPress={resetAll}>
             <Text style={styles.btnText}>Reset</Text>
           </TouchableOpacity>
         </View>
       )}
-      <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+      <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, backgroundColor: '#111111' },
-  toolbox: { position: 'absolute', top: 12, right: 12, zIndex: 1000, flexDirection: 'row', gap: 8 },
+  wrapper: { flex: 1, backgroundColor: "#111111" },
+  toolbox: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 1000,
+    flexDirection: "row",
+    gap: 8,
+  },
   btn: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  btnActive: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
-  btnText: { color: '#F5F5F5', fontWeight: '700', letterSpacing: 0.5 },
-  btnTextActive: { color: '#111111' },
+  btnActive: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+  btnText: { color: "#F5F5F5", fontWeight: "700", letterSpacing: 0.5 },
+  btnTextActive: { color: "#111111" },
 });

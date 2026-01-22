@@ -4,19 +4,19 @@
 // - fileService.web.ts on web
 // - fileService.native.ts on iOS/Android
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 // Re-export types from core
-export * from './fileService.core';
+export * from "./fileService.core";
 
 // Platform-specific imports
 // Metro bundler will resolve these based on platform
 let fileService: any;
 
-if (Platform.OS === 'web') {
-  fileService = require('./fileService.web').fileService;
+if (Platform.OS === "web") {
+  fileService = require("./fileService.web").fileService;
 } else {
-  fileService = require('./fileService.native').fileService;
+  fileService = require("./fileService.native").fileService;
 }
 
 export { fileService };

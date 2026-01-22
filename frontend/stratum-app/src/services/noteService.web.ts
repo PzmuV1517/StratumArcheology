@@ -1,9 +1,14 @@
 // Web-specific note operations
-import api from './api';
-import { noteServiceCore, Note, Attachment, CreateNoteData } from './noteService.core';
+import api from "./api";
+import {
+  noteServiceCore,
+  Note,
+  Attachment,
+  CreateNoteData,
+} from "./noteService.core";
 
 // Re-export types
-export * from './noteService.core';
+export * from "./noteService.core";
 
 export const noteService = {
   ...noteServiceCore,
@@ -11,7 +16,7 @@ export const noteService = {
   // Web-specific: upload photo using File object
   uploadPhoto: async (noteId: string, file: File): Promise<Attachment> => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     const response = await api.post(`/notes/${noteId}/attachments`, formData);
     return response.data;
   },
@@ -20,11 +25,11 @@ export const noteService = {
   uploadAudio: async (
     noteId: string,
     blob: Blob,
-    filename: string = 'voice-note.webm'
+    filename: string = "voice-note.webm",
   ): Promise<Attachment> => {
     const formData = new FormData();
-    const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
-    formData.append('file', file, filename);
+    const file = new File([blob], filename, { type: blob.type || "audio/webm" });
+    formData.append("file", file, filename);
     const response = await api.post(`/notes/${noteId}/attachments`, formData);
     return response.data;
   },
@@ -32,7 +37,7 @@ export const noteService = {
   // Web-specific: upload any file as attachment
   uploadAttachment: async (noteId: string, file: File): Promise<Attachment> => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     const response = await api.post(`/notes/${noteId}/attachments`, formData);
     return response.data;
   },
@@ -64,12 +69,12 @@ export const noteService = {
       stop: () => {
         return new Promise<Blob>((resolve, reject) => {
           if (!mediaRecorder) {
-            reject(new Error('No recording in progress'));
+            reject(new Error("No recording in progress"));
             return;
           }
 
           mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const blob = new Blob(audioChunks, { type: "audio/webm" });
             // Stop all tracks
             mediaRecorder?.stream.getTracks().forEach((track) => track.stop());
             resolve(blob);

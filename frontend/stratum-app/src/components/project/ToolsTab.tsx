@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Alert,
   Animated,
   Easing,
-} from 'react-native';
+} from "react-native";
 
 // Types for expo-location (dynamically imported)
 type LocationSubscription = { remove: () => void };
@@ -48,7 +48,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const [acquiringGPS, setAcquiringGPS] = useState(false); // True when getting fresh GPS fix
   const [watchingLocation, setWatchingLocation] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-   
+
   const [LocationModule, setLocationModule] = useState<any>(null);
 
   const compassRotation = useRef(new Animated.Value(0)).current;
@@ -57,13 +57,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   // Load expo-location dynamically on native only
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      import('expo-location')
+    if (Platform.OS !== "web") {
+      import("expo-location")
         .then((module) => {
           setLocationModule(module);
         })
         .catch((err) => {
-          console.warn('expo-location not available:', err);
+          console.warn("expo-location not available:", err);
           setLoading(false);
         });
     } else {
@@ -72,7 +72,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   }, []);
 
   useEffect(() => {
-    if (LocationModule && Platform.OS !== 'web') {
+    if (LocationModule && Platform.OS !== "web") {
       requestPermissions();
     }
 
@@ -102,9 +102,10 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
     if (!LocationModule) return;
 
     try {
-      const { status: foregroundStatus } = await LocationModule.requestForegroundPermissionsAsync();
+      const { status: foregroundStatus } =
+        await LocationModule.requestForegroundPermissionsAsync();
 
-      if (foregroundStatus !== 'granted') {
+      if (foregroundStatus !== "granted") {
         setLocationPermission(false);
         setLoading(false);
         return;
@@ -115,11 +116,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
       // Get fresh location with high accuracy (not cached)
       // Using maximumAge: 0 forces a fresh GPS fix instead of cached data
-      const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
-        accuracy: LocationModule.Accuracy.BestForNavigation,
-        maximumAge: 0, // Don't use cached location
-        timeout: 15000, // 15 second timeout
-      });
+      const currentLocation: LocationObject =
+        await LocationModule.getCurrentPositionAsync({
+          accuracy: LocationModule.Accuracy.BestForNavigation,
+          maximumAge: 0, // Don't use cached location
+          timeout: 15000, // 15 second timeout
+        });
 
       setLocation({
         latitude: currentLocation.coords.latitude,
@@ -134,16 +136,18 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       setAcquiringGPS(false);
 
       // Start heading updates for compass (mobile only)
-      if (Platform.OS !== 'web') {
-        const headingSub = await LocationModule.watchHeadingAsync((headingData: HeadingObject) => {
-          setHeading(headingData.trueHeading || headingData.magHeading || 0);
-        });
+      if (Platform.OS !== "web") {
+        const headingSub = await LocationModule.watchHeadingAsync(
+          (headingData: HeadingObject) => {
+            setHeading(headingData.trueHeading || headingData.magHeading || 0);
+          },
+        );
         headingSubscription.current = headingSub;
       }
 
       setLoading(false);
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error("Error getting location:", error);
       setAcquiringGPS(false);
       setLocationPermission(false);
       setLoading(false);
@@ -172,10 +176,10 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             speed: newLocation.coords.speed,
             timestamp: newLocation.timestamp,
           });
-        }
+        },
       );
     } catch (error) {
-      console.error('Error watching location:', error);
+      console.error("Error watching location:", error);
       setWatchingLocation(false);
     }
   };
@@ -193,11 +197,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
     try {
       setAcquiringGPS(true);
-      const currentLocation: LocationObject = await LocationModule.getCurrentPositionAsync({
-        accuracy: LocationModule.Accuracy.BestForNavigation,
-        maximumAge: 0, // Force fresh GPS fix
-        timeout: 15000,
-      });
+      const currentLocation: LocationObject =
+        await LocationModule.getCurrentPositionAsync({
+          accuracy: LocationModule.Accuracy.BestForNavigation,
+          maximumAge: 0, // Force fresh GPS fix
+          timeout: 15000,
+        });
 
       setLocation({
         latitude: currentLocation.coords.latitude,
@@ -209,8 +214,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         timestamp: currentLocation.timestamp,
       });
     } catch (error) {
-      console.error('Error refreshing location:', error);
-      Alert.alert('Error', 'Failed to refresh location. Make sure GPS is enabled.');
+      console.error("Error refreshing location:", error);
+      Alert.alert("Error", "Failed to refresh location. Make sure GPS is enabled.");
     } finally {
       setAcquiringGPS(false);
     }
@@ -219,19 +224,19 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       // Use dynamic import for expo-clipboard
-      const Clipboard = await import('expo-clipboard').catch(() => null);
+      const Clipboard = await import("expo-clipboard").catch(() => null);
       if (Clipboard) {
         await Clipboard.setStringAsync(text);
         setCopyFeedback(label);
         setTimeout(() => setCopyFeedback(null), 2000);
       }
     } catch (error) {
-      console.error('Error copying to clipboard:', error);
+      console.error("Error copying to clipboard:", error);
     }
   };
 
   const formatCoordinate = (value: number, isLatitude: boolean): string => {
-    const direction = isLatitude ? (value >= 0 ? 'N' : 'S') : value >= 0 ? 'E' : 'W';
+    const direction = isLatitude ? (value >= 0 ? "N" : "S") : value >= 0 ? "E" : "W";
     const absValue = Math.abs(value);
     const degrees = Math.floor(absValue);
     const minutes = Math.floor((absValue - degrees) * 60);
@@ -242,29 +247,29 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const getCardinalDirection = (degrees: number): string => {
     const directions = [
-      'N',
-      'NNE',
-      'NE',
-      'ENE',
-      'E',
-      'ESE',
-      'SE',
-      'SSE',
-      'S',
-      'SSW',
-      'SW',
-      'WSW',
-      'W',
-      'WNW',
-      'NW',
-      'NNW',
+      "N",
+      "NNE",
+      "NE",
+      "ENE",
+      "E",
+      "ESE",
+      "SE",
+      "SSE",
+      "S",
+      "SSW",
+      "SW",
+      "WSW",
+      "W",
+      "WNW",
+      "NW",
+      "NNW",
     ];
     const index = Math.round(degrees / 22.5) % 16;
     return directions[index];
   };
 
   // Web-only message
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return (
       <View style={styles.webContainer}>
         <Text style={styles.webIcon}>📱</Text>
@@ -296,7 +301,10 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         <Text style={styles.permissionText}>
           Enable location services to use the compass and GPS coordinate locator.
         </Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermissions}>
+        <TouchableOpacity
+          style={styles.permissionButton}
+          onPress={requestPermissions}
+        >
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </TouchableOpacity>
       </View>
@@ -308,7 +316,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       {
         rotate: compassRotation.interpolate({
           inputRange: [-360, 360],
-          outputRange: ['-360deg', '360deg'],
+          outputRange: ["-360deg", "360deg"],
         }),
       },
     ],
@@ -337,7 +345,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         </View>
         <View style={styles.headingInfo}>
           <Text style={styles.headingValue}>{Math.round(heading)}°</Text>
-          <Text style={styles.headingDirection}>{getCardinalDirection(heading)}</Text>
+          <Text style={styles.headingDirection}>
+            {getCardinalDirection(heading)}
+          </Text>
         </View>
       </View>
 
@@ -346,13 +356,19 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>GPS Coordinates</Text>
           <TouchableOpacity
-            style={[styles.watchButton, watchingLocation && styles.watchButtonActive]}
+            style={[
+              styles.watchButton,
+              watchingLocation && styles.watchButtonActive,
+            ]}
             onPress={watchingLocation ? stopWatching : startWatching}
           >
             <Text
-              style={[styles.watchButtonText, watchingLocation && styles.watchButtonTextActive]}
+              style={[
+                styles.watchButtonText,
+                watchingLocation && styles.watchButtonTextActive,
+              ]}
             >
-              {watchingLocation ? '⏸ Pause' : '▶ Live'}
+              {watchingLocation ? "⏸ Pause" : "▶ Live"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -362,44 +378,62 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             {/* Latitude */}
             <TouchableOpacity
               style={styles.coordinateRow}
-              onPress={() => copyToClipboard(location.latitude.toFixed(8), 'Latitude')}
+              onPress={() =>
+                copyToClipboard(location.latitude.toFixed(8), "Latitude")
+              }
             >
               <View style={styles.coordinateLabel}>
                 <Text style={styles.coordinateLabelText}>Latitude</Text>
-                {copyFeedback === 'Latitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
+                {copyFeedback === "Latitude" && (
+                  <Text style={styles.copyFeedback}>Copied!</Text>
+                )}
               </View>
               <Text style={styles.coordinateValue}>
                 {formatCoordinate(location.latitude, true)}
               </Text>
-              <Text style={styles.coordinateDecimal}>{location.latitude.toFixed(8)}</Text>
+              <Text style={styles.coordinateDecimal}>
+                {location.latitude.toFixed(8)}
+              </Text>
             </TouchableOpacity>
 
             {/* Longitude */}
             <TouchableOpacity
               style={styles.coordinateRow}
-              onPress={() => copyToClipboard(location.longitude.toFixed(8), 'Longitude')}
+              onPress={() =>
+                copyToClipboard(location.longitude.toFixed(8), "Longitude")
+              }
             >
               <View style={styles.coordinateLabel}>
                 <Text style={styles.coordinateLabelText}>Longitude</Text>
-                {copyFeedback === 'Longitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
+                {copyFeedback === "Longitude" && (
+                  <Text style={styles.copyFeedback}>Copied!</Text>
+                )}
               </View>
               <Text style={styles.coordinateValue}>
                 {formatCoordinate(location.longitude, false)}
               </Text>
-              <Text style={styles.coordinateDecimal}>{location.longitude.toFixed(8)}</Text>
+              <Text style={styles.coordinateDecimal}>
+                {location.longitude.toFixed(8)}
+              </Text>
             </TouchableOpacity>
 
             {/* Altitude */}
             {location.altitude !== null && (
               <TouchableOpacity
                 style={styles.coordinateRow}
-                onPress={() => copyToClipboard(location.altitude!.toFixed(2), 'Altitude')}
+                onPress={() =>
+                  copyToClipboard(location.altitude!.toFixed(2), "Altitude")
+                }
               >
                 <View style={styles.coordinateLabel}>
                   <Text style={styles.coordinateLabelText}>Altitude</Text>
-                  {copyFeedback === 'Altitude' && <Text style={styles.copyFeedback}>Copied!</Text>}
+                  {copyFeedback === "Altitude" && (
+                    <Text style={styles.copyFeedback}>Copied!</Text>
+                  )}
                 </View>
-                <Text style={styles.coordinateValue}>{location.altitude.toFixed(2)} m</Text>
+                <Text style={styles.coordinateValue}>
+                  {location.altitude.toFixed(2)} m
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -427,11 +461,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               style={styles.copyAllButton}
               onPress={() => {
                 const coords = `${location.latitude.toFixed(8)}, ${location.longitude.toFixed(8)}`;
-                copyToClipboard(coords, 'Coordinates');
+                copyToClipboard(coords, "Coordinates");
               }}
             >
               <Text style={styles.copyAllButtonText}>
-                {copyFeedback === 'Coordinates' ? '✓ Copied!' : '📋 Copy Coordinates'}
+                {copyFeedback === "Coordinates"
+                  ? "✓ Copied!"
+                  : "📋 Copy Coordinates"}
               </Text>
             </TouchableOpacity>
 
@@ -453,12 +489,15 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         {/* Refresh Button */}
         {!watchingLocation && (
           <TouchableOpacity
-            style={[styles.refreshButton, acquiringGPS && styles.refreshButtonDisabled]}
+            style={[
+              styles.refreshButton,
+              acquiringGPS && styles.refreshButtonDisabled,
+            ]}
             onPress={refreshLocation}
             disabled={acquiringGPS}
           >
             <Text style={styles.refreshButtonText}>
-              {acquiringGPS ? '📡 Acquiring...' : '🔄 Refresh Location'}
+              {acquiringGPS ? "📡 Acquiring..." : "🔄 Refresh Location"}
             </Text>
           </TouchableOpacity>
         )}
@@ -470,25 +509,25 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: "#0A0A0A",
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0A0A0A',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
   },
   loadingText: {
     marginTop: 16,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 14,
   },
   permissionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0A0A0A',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
     padding: 32,
   },
   permissionIcon: {
@@ -497,34 +536,34 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   permissionText: {
     fontSize: 14,
-    color: '#9A9A9A',
-    textAlign: 'center',
+    color: "#9A9A9A",
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
   },
   permissionButton: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
   },
   permissionButtonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   webContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0A0A0A',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
     padding: 32,
   },
   webIcon: {
@@ -533,152 +572,152 @@ const styles = StyleSheet.create({
   },
   webTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 12,
   },
   webSubtitle: {
     fontSize: 14,
-    color: '#9A9A9A',
-    textAlign: 'center',
+    color: "#9A9A9A",
+    textAlign: "center",
     marginBottom: 8,
   },
   webHint: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
   section: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 16,
   },
   compassContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     height: 200,
-    position: 'relative',
+    position: "relative",
   },
   compass: {
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: '#0E0E0E',
+    backgroundColor: "#0E0E0E",
     borderWidth: 3,
-    borderColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+    borderColor: "#2A2A2A",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
   },
   compassRose: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
+    position: "absolute",
+    width: "100%",
+    height: "100%",
   },
   compassDirection: {
-    position: 'absolute',
+    position: "absolute",
     fontSize: 16,
-    fontWeight: '700',
-    color: '#9A9A9A',
+    fontWeight: "700",
+    color: "#9A9A9A",
   },
   compassN: {
     top: 12,
-    alignSelf: 'center',
-    left: '50%',
+    alignSelf: "center",
+    left: "50%",
     marginLeft: -6,
-    color: '#FF2A2A',
+    color: "#FF2A2A",
   },
   compassE: {
     right: 12,
-    top: '50%',
+    top: "50%",
     marginTop: -10,
   },
   compassS: {
     bottom: 12,
-    alignSelf: 'center',
-    left: '50%',
+    alignSelf: "center",
+    left: "50%",
     marginLeft: -5,
   },
   compassW: {
     left: 12,
-    top: '50%',
+    top: "50%",
     marginTop: -10,
   },
   compassNeedle: {
     width: 6,
     height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   needleRed: {
     width: 6,
     height: 60,
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
   },
   needleWhite: {
     width: 6,
     height: 60,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
   compassCenter: {
-    position: 'absolute',
+    position: "absolute",
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     borderWidth: 2,
-    borderColor: '#FF2A2A',
+    borderColor: "#FF2A2A",
   },
   headingInfo: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   headingValue: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
   },
   headingDirection: {
     fontSize: 18,
-    color: '#FF2A2A',
-    fontWeight: '600',
+    color: "#FF2A2A",
+    fontWeight: "600",
     marginTop: 4,
   },
   watchButton: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   watchButtonActive: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
   },
   watchButtonText: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   watchButtonTextActive: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
   },
   coordinatesContainer: {
     marginTop: 8,
@@ -686,89 +725,89 @@ const styles = StyleSheet.create({
   coordinateRow: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   coordinateLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   coordinateLabelText: {
     fontSize: 12,
-    color: '#666',
-    textTransform: 'uppercase',
+    color: "#666",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   copyFeedback: {
     fontSize: 12,
-    color: '#4CAF50',
+    color: "#4CAF50",
     marginLeft: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   coordinateValue: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginTop: 4,
   },
   coordinateDecimal: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginTop: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   accuracyGood: {
-    color: '#4CAF50',
+    color: "#4CAF50",
   },
   accuracyModerate: {
-    color: '#FFC107',
+    color: "#FFC107",
   },
   accuracyPoor: {
-    color: '#FF9800',
+    color: "#FF9800",
   },
   copyAllButton: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   copyAllButtonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   refreshButton: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   refreshButtonDisabled: {
-    backgroundColor: '#4A2020',
+    backgroundColor: "#4A2020",
     opacity: 0.7,
   },
   refreshButtonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   timestampText: {
     fontSize: 11,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginTop: 12,
   },
   acquiringContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 12,
     gap: 8,
   },
   acquiringText: {
     fontSize: 13,
-    color: '#FF2A2A',
-    fontWeight: '500',
+    color: "#FF2A2A",
+    fontWeight: "500",
   },
 });

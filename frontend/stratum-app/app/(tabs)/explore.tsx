@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-} from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { projectService } from '../../src/services/projectService';
-import type { Project } from '../../src/services/projectService.types';
+} from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
+import { projectService } from "../../src/services/projectService";
+import type { Project } from "../../src/services/projectService.types";
 
 export default function ExploreScreen() {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
@@ -24,7 +24,7 @@ export default function ExploreScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadRecentActivity();
-    }, [])
+    }, []),
   );
 
   const loadRecentActivity = async () => {
@@ -33,12 +33,13 @@ export default function ExploreScreen() {
       // Get the 3 most recent projects
       const sortedProjects = projects
         .sort(
-          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          (a: any, b: any) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         .slice(0, 3);
       setRecentProjects(sortedProjects);
     } catch (error) {
-      console.error('Failed to load recent activity:', error);
+      console.error("Failed to load recent activity:", error);
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,9 @@ export default function ExploreScreen() {
         {recentProjects.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>No projects yet</Text>
-            <Text style={styles.emptySubtext}>Create your first project to get started</Text>
+            <Text style={styles.emptySubtext}>
+              Create your first project to get started
+            </Text>
           </View>
         ) : (
           recentProjects.map((project: any) => (
@@ -73,7 +76,9 @@ export default function ExploreScreen() {
               onPress={() => router.push(`/project/${project.id}`)}
             >
               <Text style={styles.cardTitle}>{project.name}</Text>
-              <Text style={styles.cardDescription}>{project.description || 'No description'}</Text>
+              <Text style={styles.cardDescription}>
+                {project.description || "No description"}
+              </Text>
               <Text style={styles.cardDate}>
                 Created {new Date(project.created_at).toLocaleDateString()}
               </Text>
@@ -84,9 +89,14 @@ export default function ExploreScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/modal')}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push("/modal")}
+        >
           <Text style={styles.actionTitle}>Create New Project</Text>
-          <Text style={styles.actionDescription}>Start documenting a new archaeological site</Text>
+          <Text style={styles.actionDescription}>
+            Start documenting a new archaeological site
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -95,8 +105,8 @@ export default function ExploreScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Archaeological Documentation</Text>
           <Text style={styles.infoDescription}>
-            STRATUM helps archaeologists document excavation sites, organize field notes, and
-            collaborate with team members in real-time.
+            STRATUM helps archaeologists document excavation sites, organize field
+            notes, and collaborate with team members in real-time.
           </Text>
         </View>
       </View>
@@ -107,23 +117,23 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: "#111111",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#111111',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#111111",
   },
   header: {
     padding: 24,
     paddingTop: 60,
-    backgroundColor: '#111111',
+    backgroundColor: "#111111",
   },
   headerTitle: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   section: {
     paddingHorizontal: 24,
@@ -131,86 +141,86 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 16,
   },
   card: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: "#CCCCCC",
     marginBottom: 8,
     lineHeight: 20,
   },
   cardDate: {
     fontSize: 12,
-    color: '#999999',
+    color: "#999999",
   },
   emptyCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999999',
-    textAlign: 'center',
+    color: "#999999",
+    textAlign: "center",
   },
   actionCard: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
   actionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   actionDescription: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     opacity: 0.9,
   },
   infoCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   infoTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
   infoDescription: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: "#CCCCCC",
     lineHeight: 20,
   },
 });

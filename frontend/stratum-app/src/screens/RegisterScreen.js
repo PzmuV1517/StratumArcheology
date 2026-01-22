@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,30 +7,30 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
+} from "react-native";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
 
   const handleRegister = async () => {
     if (!email || !password || !displayName) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert("Error", "Password must be at least 6 characters");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function RegisterScreen({ navigation }) {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert('Registration Failed', result.error);
+      Alert.alert("Registration Failed", result.error);
     }
   };
 
@@ -77,7 +77,11 @@ export default function RegisterScreen({ navigation }) {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleRegister}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -85,7 +89,10 @@ export default function RegisterScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
+        <TouchableOpacity
+          style={styles.linkButton}
+          onPress={() => navigation.navigate("Login")}
+        >
           <Text style={styles.linkText}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>
@@ -96,47 +103,47 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
     padding: 20,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: "bold",
+    color: "#2c3e50",
     marginBottom: 40,
   },
   form: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   button: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: "#2ecc71",
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   linkButton: {
     marginTop: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   linkText: {
-    color: '#3498db',
+    color: "#3498db",
     fontSize: 14,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,21 +11,24 @@ import {
   Modal,
   TextInput,
   Image,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../src/contexts/AuthContext';
-import api from '../src/services/api';
-import * as FileSystem from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
-import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { offlineFilesStorage, recentProjectsCache } from '../src/services/offlineService';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../src/contexts/AuthContext";
+import api from "../src/services/api";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
+import {
+  offlineFilesStorage,
+  recentProjectsCache,
+} from "../src/services/offlineService";
 import {
   offlineQueue,
   getOfflineStorageStats,
   OfflineStorageStats,
-} from '../src/services/offlineQueueService';
-import { OfflineFile } from '../src/db/schema';
+} from "../src/services/offlineQueueService";
+import { OfflineFile } from "../src/db/schema";
 
 // Storage bar component
 function StorageBar({
@@ -55,30 +58,40 @@ function StorageBar({
         <View
           style={[
             storageStyles.segment,
-            { width: `${stratumPercent}%`, backgroundColor: '#FF2A2A' },
+            { width: `${stratumPercent}%`, backgroundColor: "#FF2A2A" },
           ]}
         />
         <View
-          style={[storageStyles.segment, { width: `${otherPercent}%`, backgroundColor: '#666' }]}
+          style={[
+            storageStyles.segment,
+            { width: `${otherPercent}%`, backgroundColor: "#666" },
+          ]}
         />
         <View
-          style={[storageStyles.segment, { width: `${freePercent}%`, backgroundColor: '#2A2A2A' }]}
+          style={[
+            storageStyles.segment,
+            { width: `${freePercent}%`, backgroundColor: "#2A2A2A" },
+          ]}
         />
       </View>
       <View style={storageStyles.legend}>
         <View style={storageStyles.legendItem}>
-          <View style={[storageStyles.legendDot, { backgroundColor: '#FF2A2A' }]} />
-          <Text style={storageStyles.legendText}>STRATUM ({formatSize(stratumUsed)})</Text>
+          <View style={[storageStyles.legendDot, { backgroundColor: "#FF2A2A" }]} />
+          <Text style={storageStyles.legendText}>
+            STRATUM ({formatSize(stratumUsed)})
+          </Text>
         </View>
         <View style={storageStyles.legendItem}>
-          <View style={[storageStyles.legendDot, { backgroundColor: '#666' }]} />
-          <Text style={storageStyles.legendText}>Other ({formatSize(otherUsed)})</Text>
+          <View style={[storageStyles.legendDot, { backgroundColor: "#666" }]} />
+          <Text style={storageStyles.legendText}>
+            Other ({formatSize(otherUsed)})
+          </Text>
         </View>
         <View style={storageStyles.legendItem}>
           <View
             style={[
               storageStyles.legendDot,
-              { backgroundColor: '#2A2A2A', borderWidth: 1, borderColor: '#444' },
+              { backgroundColor: "#2A2A2A", borderWidth: 1, borderColor: "#444" },
             ]}
           />
           <Text style={storageStyles.legendText}>Free ({formatSize(free)})</Text>
@@ -93,15 +106,15 @@ const storageStyles = StyleSheet.create({
   bar: {
     height: 12,
     borderRadius: 6,
-    flexDirection: 'row',
-    overflow: 'hidden',
-    backgroundColor: '#2A2A2A',
+    flexDirection: "row",
+    overflow: "hidden",
+    backgroundColor: "#2A2A2A",
   },
-  segment: { height: '100%' },
+  segment: { height: "100%" },
   legend: { marginTop: 12, gap: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
   legendDot: { width: 12, height: 12, borderRadius: 3 },
-  legendText: { color: '#9A9A9A', fontSize: 12 },
+  legendText: { color: "#9A9A9A", fontSize: 12 },
 });
 
 export default function SettingsScreen() {
@@ -114,7 +127,8 @@ export default function SettingsScreen() {
   const [otherUsed, setOtherUsed] = useState(0);
   const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
   const [loadingStorage, setLoadingStorage] = useState(true);
-  const [offlineStorageStats, setOfflineStorageStats] = useState<OfflineStorageStats | null>(null);
+  const [offlineStorageStats, setOfflineStorageStats] =
+    useState<OfflineStorageStats | null>(null);
 
   // Offline files
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
@@ -122,8 +136,8 @@ export default function SettingsScreen() {
   const [checkingConnection, setCheckingConnection] = useState(false);
   // Connection status - use a ref to track actual status
   const [connectionStatus, setConnectionStatus] = useState<
-    'unknown' | 'connected' | 'disconnected'
-  >('unknown');
+    "unknown" | "connected" | "disconnected"
+  >("unknown");
   const connectionCheckedRef = React.useRef(false);
 
   // Network state (real-time from NetInfo)
@@ -135,8 +149,8 @@ export default function SettingsScreen() {
 
   // Profile settings
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [newDisplayName, setNewDisplayName] = useState(user?.display_name || '');
-  const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || '');
+  const [newDisplayName, setNewDisplayName] = useState(user?.display_name || "");
+  const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -149,7 +163,7 @@ export default function SettingsScreen() {
       if (!connectionCheckedRef.current) {
         // Set to unknown until user manually checks - network available != backend connected
         if (state.isConnected === false) {
-          setConnectionStatus('disconnected');
+          setConnectionStatus("disconnected");
         }
         // Don't auto-set to connected - let user verify with the check button
       }
@@ -159,7 +173,7 @@ export default function SettingsScreen() {
     NetInfo.fetch().then((state) => {
       setNetworkState(state);
       if (state.isConnected === false) {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
       }
       // Don't auto-set to connected - keep unknown until manual check
     });
@@ -170,10 +184,10 @@ export default function SettingsScreen() {
   const loadPendingQueue = useCallback(async () => {
     try {
       const queue = await offlineQueue.getQueue();
-      const pendingCount = queue.filter((a) => a.status === 'pending').length;
+      const pendingCount = queue.filter((a) => a.status === "pending").length;
       setPendingQueueCount(pendingCount);
     } catch (err) {
-      console.error('Failed to load pending queue:', err);
+      console.error("Failed to load pending queue:", err);
     }
   }, []);
 
@@ -186,7 +200,7 @@ export default function SettingsScreen() {
   }, [loadPendingQueue]);
 
   const loadStorageInfo = async () => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === "web") {
       setLoadingStorage(false);
       return;
     }
@@ -205,17 +219,17 @@ export default function SettingsScreen() {
           setStratumUsed((prev) => prev + queueStats.totalSize * 1024); // Convert KB to bytes
         }
       } catch (queueErr) {
-        console.warn('Failed to get queue storage stats:', queueErr);
+        console.warn("Failed to get queue storage stats:", queueErr);
       }
 
       // Get device storage info - wrap in try-catch for Expo Go compatibility
       try {
-        if (typeof FileSystem.getFreeDiskStorageAsync === 'function') {
+        if (typeof FileSystem.getFreeDiskStorageAsync === "function") {
           const freeSpace = await FileSystem.getFreeDiskStorageAsync();
 
           // Also try to get total disk storage for more accurate calculation
           let totalDiskSpace = freeSpace;
-          if (typeof FileSystem.getTotalDiskCapacityAsync === 'function') {
+          if (typeof FileSystem.getTotalDiskCapacityAsync === "function") {
             try {
               totalDiskSpace = await FileSystem.getTotalDiskCapacityAsync();
               setTotalStorage(totalDiskSpace);
@@ -234,18 +248,18 @@ export default function SettingsScreen() {
           }
         } else {
           // Fallback for Expo Go where this API may not be available
-          console.warn('Storage APIs not available, using fallback values');
+          console.warn("Storage APIs not available, using fallback values");
           setTotalStorage(64 * 1e9); // Default 64GB
           setOtherUsed(32 * 1e9); // Estimate 32GB used by other
         }
       } catch (storageErr) {
-        console.warn('Storage API error:', storageErr);
+        console.warn("Storage API error:", storageErr);
         // Fallback values
         setTotalStorage(64 * 1e9);
         setOtherUsed(32 * 1e9);
       }
     } catch (err) {
-      console.error('Failed to load storage info:', err);
+      console.error("Failed to load storage info:", err);
     } finally {
       setLoadingStorage(false);
     }
@@ -269,43 +283,46 @@ export default function SettingsScreen() {
       const netState = await NetInfo.fetch();
 
       if (!netState.isConnected) {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
         Alert.alert(
-          'No Network',
-          'Your device is not connected to a network. Check your Wi-Fi or cellular data.'
+          "No Network",
+          "Your device is not connected to a network. Check your Wi-Fi or cellular data.",
         );
         setCheckingConnection(false);
         return;
       }
 
       if (!netState.isInternetReachable) {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
         Alert.alert(
-          'No Internet',
-          'Network connected but internet is not reachable. Try again later.'
+          "No Internet",
+          "Network connected but internet is not reachable. Try again later.",
         );
         setCheckingConnection(false);
         return;
       }
 
       // Now try to reach the STRATUM backend using the health endpoint
-      const response = await api.get('/health');
+      const response = await api.get("/health");
       if (response.status === 200) {
-        setConnectionStatus('connected');
+        setConnectionStatus("connected");
         const pendingMessage =
           pendingQueueCount > 0
             ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
-            : '';
-        Alert.alert('Connected ✓', `Successfully connected to STRATUM backend.${pendingMessage}`);
+            : "";
+        Alert.alert(
+          "Connected ✓",
+          `Successfully connected to STRATUM backend.${pendingMessage}`,
+        );
       } else {
-        setConnectionStatus('disconnected');
-        Alert.alert('Connection Failed', 'Could not reach STRATUM backend.');
+        setConnectionStatus("disconnected");
+        Alert.alert("Connection Failed", "Could not reach STRATUM backend.");
       }
     } catch {
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
       Alert.alert(
-        'Connection Failed',
-        'Could not reach STRATUM backend. The server may be temporarily unavailable.'
+        "Connection Failed",
+        "Could not reach STRATUM backend. The server may be temporarily unavailable.",
       );
     } finally {
       setCheckingConnection(false);
@@ -320,61 +337,62 @@ export default function SettingsScreen() {
 
   const clearAllOfflineFiles = async () => {
     Alert.alert(
-      'Clear All Offline Files',
-      'This will remove all files saved for offline access. You will need an internet connection to view them again.',
+      "Clear All Offline Files",
+      "This will remove all files saved for offline access. You will need an internet connection to view them again.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Clear All',
-          style: 'destructive',
+          text: "Clear All",
+          style: "destructive",
           onPress: async () => {
             await offlineFilesStorage.clearAllOfflineFiles();
             await loadOfflineFiles();
             await loadStorageInfo();
           },
         },
-      ]
+      ],
     );
   };
 
   const removeDownloadedProject = async (projectId: string) => {
     Alert.alert(
-      'Remove Downloaded Project',
-      'This will remove the cached project data. You will need internet to view it again.',
+      "Remove Downloaded Project",
+      "This will remove the cached project data. You will need internet to view it again.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Remove',
-          style: 'destructive',
+          text: "Remove",
+          style: "destructive",
           onPress: async () => {
             try {
               await recentProjectsCache.removeProject(projectId);
               await loadDownloadedProjects();
               await loadStorageInfo();
             } catch (error) {
-              console.error('Failed to remove downloaded project:', error);
-              Alert.alert('Error', 'Failed to remove downloaded project');
+              console.error("Failed to remove downloaded project:", error);
+              Alert.alert("Error", "Failed to remove downloaded project");
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const pickImage = async () => {
     try {
       // Request permissions first on iOS
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
         Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library to upload a profile picture.'
+          "Permission Required",
+          "Please allow access to your photo library to upload a profile picture.",
         );
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -384,14 +402,14 @@ export default function SettingsScreen() {
         const asset = result.assets[0];
         // Check file size (50MB max) - fileSize may not always be available
         if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
-          Alert.alert('Image Too Large', 'Please select an image under 50MB.');
+          Alert.alert("Image Too Large", "Please select an image under 50MB.");
           return;
         }
         setSelectedImage(asset.uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image.');
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image.");
     }
   };
 
@@ -403,30 +421,30 @@ export default function SettingsScreen() {
       const formData = new FormData();
       const filename = `profile_${user?.id}_${Date.now()}.jpg`;
 
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         // Web: fetch blob from URI
         const response = await fetch(selectedImage);
         const blob = await response.blob();
-        formData.append('file', blob, filename);
+        formData.append("file", blob, filename);
       } else {
         // Native: use file URI directly
-        formData.append('file', {
+        formData.append("file", {
           uri: selectedImage,
-          type: 'image/jpeg',
+          type: "image/jpeg",
           name: filename,
         } as any);
       }
 
       // Upload to profile pictures endpoint
-      const response = await api.post('/files/profile-picture', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await api.post("/files/profile-picture", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       return response.data.url;
     } catch (error: any) {
-      console.error('Failed to upload profile image:', error);
+      console.error("Failed to upload profile image:", error);
       // If upload fails, try using base64 data URL as fallback
-      if (selectedImage.startsWith('data:') || Platform.OS === 'web') {
+      if (selectedImage.startsWith("data:") || Platform.OS === "web") {
         return selectedImage; // Use data URL directly
       }
       throw error;
@@ -447,7 +465,7 @@ export default function SettingsScreen() {
           }
         } catch {
           // Continue with existing photo URL if upload fails
-          console.warn('Profile image upload failed, keeping existing photo');
+          console.warn("Profile image upload failed, keeping existing photo");
         }
       }
 
@@ -460,17 +478,17 @@ export default function SettingsScreen() {
       }
 
       if (Object.keys(updates).length > 0) {
-        await api.patch('/auth/me', updates);
+        await api.patch("/auth/me", updates);
         if (refreshUser) {
           await refreshUser();
         }
-        Alert.alert('Success', 'Profile updated successfully.');
+        Alert.alert("Success", "Profile updated successfully.");
       }
 
       setShowProfileModal(false);
       setSelectedImage(null);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update profile.');
+      Alert.alert("Error", error.message || "Failed to update profile.");
     } finally {
       setSavingProfile(false);
     }
@@ -485,7 +503,7 @@ export default function SettingsScreen() {
       acc[file.project_id].push(file);
       return acc;
     },
-    {} as Record<string, OfflineFile[]>
+    {} as Record<string, OfflineFile[]>,
   );
 
   const formatSize = (bytes: number) => {
@@ -505,7 +523,10 @@ export default function SettingsScreen() {
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Profile Settings Section - Moved above Storage */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
@@ -513,25 +534,30 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              setNewDisplayName(user?.display_name || '');
-              setNewPhotoUrl(user?.photo_url || '');
+              setNewDisplayName(user?.display_name || "");
+              setNewPhotoUrl(user?.photo_url || "");
               setSelectedImage(null);
               setShowProfileModal(true);
             }}
           >
             <View style={styles.profilePreview}>
               {user?.photo_url ? (
-                <Image source={{ uri: user.photo_url }} style={styles.profileImage} />
+                <Image
+                  source={{ uri: user.photo_url }}
+                  style={styles.profileImage}
+                />
               ) : (
                 <View style={styles.profilePlaceholder}>
                   <Text style={styles.profilePlaceholderText}>
-                    {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+                    {user?.display_name?.charAt(0).toUpperCase() || "U"}
                   </Text>
                 </View>
               )}
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.menuItemText}>Edit Profile</Text>
-                <Text style={styles.menuItemSubtext}>Change photo and display name</Text>
+                <Text style={styles.menuItemSubtext}>
+                  Change photo and display name
+                </Text>
               </View>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
@@ -539,7 +565,7 @@ export default function SettingsScreen() {
         </View>
 
         {/* Storage Section - Mobile Only */}
-        {Platform.OS !== 'web' && (
+        {Platform.OS !== "web" && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Storage</Text>
 
@@ -556,7 +582,10 @@ export default function SettingsScreen() {
               )}
             </View>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowOfflineModal(true)}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => setShowOfflineModal(true)}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuItemText}>Offline Usage</Text>
                 <Text style={styles.menuItemSubtext}>
@@ -579,30 +608,30 @@ export default function SettingsScreen() {
                   styles.connectionIndicator,
                   {
                     backgroundColor:
-                      connectionStatus === 'connected'
-                        ? '#4CAF50'
-                        : connectionStatus === 'disconnected'
-                          ? '#FF4444'
-                          : '#666',
+                      connectionStatus === "connected"
+                        ? "#4CAF50"
+                        : connectionStatus === "disconnected"
+                          ? "#FF4444"
+                          : "#666",
                   },
                 ]}
               />
               <View style={{ flex: 1 }}>
                 <Text style={styles.connectionTitle}>
-                  {connectionStatus === 'connected'
-                    ? 'Online'
-                    : connectionStatus === 'disconnected'
-                      ? 'Offline'
-                      : 'Not checked'}
+                  {connectionStatus === "connected"
+                    ? "Online"
+                    : connectionStatus === "disconnected"
+                      ? "Offline"
+                      : "Not checked"}
                 </Text>
                 <Text style={styles.connectionSubtitle}>
-                  {networkState?.type === 'wifi'
-                    ? 'Wi-Fi'
-                    : networkState?.type === 'cellular'
-                      ? 'Cellular'
-                      : networkState?.type === 'none'
-                        ? 'No Network'
-                        : 'Tap Refresh to check'}
+                  {networkState?.type === "wifi"
+                    ? "Wi-Fi"
+                    : networkState?.type === "cellular"
+                      ? "Cellular"
+                      : networkState?.type === "none"
+                        ? "No Network"
+                        : "Tap Refresh to check"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -623,7 +652,7 @@ export default function SettingsScreen() {
                 <Text style={styles.syncQueueText}>
                   {pendingQueueCount} pending action(s) waiting to sync
                 </Text>
-                {connectionStatus === 'connected' && (
+                {connectionStatus === "connected" && (
                   <Text style={styles.syncQueueHint}>
                     Will sync automatically in the background
                   </Text>
@@ -661,12 +690,13 @@ export default function SettingsScreen() {
               ) : (
                 <>
                   <Text style={styles.actionButtonText}>Check Connection</Text>
-                  {connectionStatus !== 'unknown' && (
+                  {connectionStatus !== "unknown" && (
                     <View
                       style={[
                         styles.statusDot,
                         {
-                          backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : '#FF4444',
+                          backgroundColor:
+                            connectionStatus === "connected" ? "#4CAF50" : "#FF4444",
                         },
                       ]}
                     />
@@ -681,11 +711,15 @@ export default function SettingsScreen() {
                 <Text style={styles.cardTitle}>Offline Storage Details</Text>
                 <View style={styles.storageStatRow}>
                   <Text style={styles.storageStatLabel}>Sync Queue</Text>
-                  <Text style={styles.storageStatValue}>{offlineStorageStats.queueSize} KB</Text>
+                  <Text style={styles.storageStatValue}>
+                    {offlineStorageStats.queueSize} KB
+                  </Text>
                 </View>
                 <View style={styles.storageStatRow}>
                   <Text style={styles.storageStatLabel}>File Versions</Text>
-                  <Text style={styles.storageStatValue}>{offlineStorageStats.versionsSize} KB</Text>
+                  <Text style={styles.storageStatValue}>
+                    {offlineStorageStats.versionsSize} KB
+                  </Text>
                 </View>
                 <View style={styles.storageStatRow}>
                   <Text style={styles.storageStatLabel}>Pending Edits</Text>
@@ -702,13 +736,18 @@ export default function SettingsScreen() {
                 <View
                   style={[
                     styles.storageStatRow,
-                    { borderTopWidth: 1, borderTopColor: '#333', paddingTop: 8, marginTop: 8 },
+                    {
+                      borderTopWidth: 1,
+                      borderTopColor: "#333",
+                      paddingTop: 8,
+                      marginTop: 8,
+                    },
                   ]}
                 >
-                  <Text style={[styles.storageStatLabel, { fontWeight: '600' }]}>
+                  <Text style={[styles.storageStatLabel, { fontWeight: "600" }]}>
                     Total Queue Storage
                   </Text>
-                  <Text style={[styles.storageStatValue, { color: '#FF2A2A' }]}>
+                  <Text style={[styles.storageStatValue, { color: "#FF2A2A" }]}>
                     {offlineStorageStats.totalSize} KB
                   </Text>
                 </View>
@@ -721,9 +760,9 @@ export default function SettingsScreen() {
                 <Text style={styles.cardTitle}>Pending Sync Actions</Text>
                 <Text style={styles.pendingQueueCount}>{pendingQueueCount}</Text>
                 <Text style={styles.pendingQueueDescription}>
-                  {connectionStatus === 'connected'
-                    ? 'Actions will sync automatically in the background'
-                    : 'Will sync when connection is restored'}
+                  {connectionStatus === "connected"
+                    ? "Actions will sync automatically in the background"
+                    : "Will sync when connection is restored"}
                 </Text>
               </View>
             )}
@@ -732,7 +771,9 @@ export default function SettingsScreen() {
             <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Saved Files</Text>
 
             {offlineFiles.length === 0 ? (
-              <Text style={styles.emptyText}>No files saved for offline access.</Text>
+              <Text style={styles.emptyText}>
+                No files saved for offline access.
+              </Text>
             ) : (
               <>
                 {Object.entries(groupedOfflineFiles).map(([projectId, files]) => (
@@ -746,7 +787,9 @@ export default function SettingsScreen() {
                           <Text style={styles.fileName} numberOfLines={1}>
                             {file.name}
                           </Text>
-                          <Text style={styles.fileSize}>{formatSize(file.size)}</Text>
+                          <Text style={styles.fileSize}>
+                            {formatSize(file.size)}
+                          </Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => removeOfflineFile(file.node_id)}
@@ -763,15 +806,15 @@ export default function SettingsScreen() {
                   style={[
                     styles.actionButton,
                     {
-                      backgroundColor: '#3A0C0C',
-                      borderColor: '#FF4444',
+                      backgroundColor: "#3A0C0C",
+                      borderColor: "#FF4444",
                       borderWidth: 1,
                       marginTop: 16,
                     },
                   ]}
                   onPress={clearAllOfflineFiles}
                 >
-                  <Text style={[styles.actionButtonText, { color: '#FF4444' }]}>
+                  <Text style={[styles.actionButtonText, { color: "#FF4444" }]}>
                     Clear All Offline Files
                   </Text>
                 </TouchableOpacity>
@@ -779,14 +822,18 @@ export default function SettingsScreen() {
             )}
 
             {/* Downloaded Projects */}
-            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>Downloaded Projects</Text>
+            <Text style={[styles.sectionTitle, { marginTop: 32 }]}>
+              Downloaded Projects
+            </Text>
             <Text style={styles.descriptionText}>
-              Projects downloaded for offline viewing. You can see their files but can only open
-              files that are also saved offline.
+              Projects downloaded for offline viewing. You can see their files but
+              can only open files that are also saved offline.
             </Text>
 
             {downloadedProjects.length === 0 ? (
-              <Text style={styles.emptyText}>No projects downloaded for offline access.</Text>
+              <Text style={styles.emptyText}>
+                No projects downloaded for offline access.
+              </Text>
             ) : (
               downloadedProjects.map((project) => {
                 const projectData = JSON.parse(project.project_data);
@@ -795,7 +842,8 @@ export default function SettingsScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.projectName}>{projectData.name}</Text>
                       <Text style={styles.projectDate}>
-                        Downloaded: {new Date(project.accessed_at).toLocaleDateString()}
+                        Downloaded:{" "}
+                        {new Date(project.accessed_at).toLocaleDateString()}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -833,7 +881,7 @@ export default function SettingsScreen() {
               {savingProfile ? (
                 <ActivityIndicator color="#FF2A2A" size="small" />
               ) : (
-                <Text style={[styles.backText, { color: '#FF2A2A' }]}>Save</Text>
+                <Text style={[styles.backText, { color: "#FF2A2A" }]}>Save</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -850,7 +898,7 @@ export default function SettingsScreen() {
                 ) : (
                   <View style={styles.profilePlaceholderLarge}>
                     <Text style={styles.profilePlaceholderTextLarge}>
-                      {user?.display_name?.charAt(0).toUpperCase() || 'U'}
+                      {user?.display_name?.charAt(0).toUpperCase() || "U"}
                     </Text>
                   </View>
                 )}
@@ -883,28 +931,28 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: "#111111",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   backButton: {
     padding: 8,
     marginRight: 8,
   },
   backText: {
-    color: '#FF2A2A',
+    color: "#FF2A2A",
     fontSize: 18,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
   },
   content: {
     flex: 1,
@@ -915,53 +963,53 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#9A9A9A',
+    fontWeight: "600",
+    color: "#9A9A9A",
     marginBottom: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     marginBottom: 12,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 8,
   },
   menuItem: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     padding: 16,
     borderRadius: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderColor: "#2A2A2A",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   menuItemText: {
     fontSize: 16,
-    color: '#F5F5F5',
+    color: "#F5F5F5",
   },
   menuItemSubtext: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginTop: 4,
   },
   menuItemArrow: {
     fontSize: 18,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
   },
   profilePreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   profileImage: {
@@ -973,51 +1021,51 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FF2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FF2A2A",
+    justifyContent: "center",
+    alignItems: "center",
   },
   profilePlaceholderText: {
     fontSize: 18,
-    color: '#F5F5F5',
-    fontWeight: '700',
+    color: "#F5F5F5",
+    fontWeight: "700",
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: "#111111",
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: "#2A2A2A",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
   },
   modalContent: {
     flex: 1,
     padding: 16,
   },
   actionButton: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 8,
   },
   actionButtonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   statusDot: {
     width: 10,
@@ -1025,85 +1073,85 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   emptyText: {
-    color: '#666',
+    color: "#666",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginVertical: 16,
   },
   descriptionText: {
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     fontSize: 13,
     marginBottom: 16,
     lineHeight: 18,
   },
   projectGroup: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   projectGroupTitle: {
     fontSize: 12,
-    color: '#FF2A2A',
-    fontWeight: '600',
+    color: "#FF2A2A",
+    fontWeight: "600",
     marginBottom: 8,
   },
   fileItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
+    borderTopColor: "#2A2A2A",
   },
   fileName: {
     fontSize: 14,
-    color: '#F5F5F5',
+    color: "#F5F5F5",
   },
   fileSize: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   removeButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#3A0C0C',
+    backgroundColor: "#3A0C0C",
     borderRadius: 8,
   },
   removeButtonText: {
-    color: '#FF4444',
+    color: "#FF4444",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   projectItem: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderColor: "#2A2A2A",
+    flexDirection: "row",
+    alignItems: "center",
   },
   projectName: {
     fontSize: 16,
-    color: '#F5F5F5',
-    fontWeight: '600',
+    color: "#F5F5F5",
+    fontWeight: "600",
   },
   projectDate: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   // Profile edit modal
   profileEditSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 24,
   },
   profileImageEdit: {
-    position: 'relative',
+    position: "relative",
   },
   profileImageLarge: {
     width: 120,
@@ -1114,33 +1162,33 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FF2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FF2A2A",
+    justifyContent: "center",
+    alignItems: "center",
   },
   profilePlaceholderTextLarge: {
     fontSize: 48,
-    color: '#F5F5F5',
-    fontWeight: '700',
+    color: "#F5F5F5",
+    fontWeight: "700",
   },
   editBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: '#333',
+    backgroundColor: "#333",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#111111',
+    borderColor: "#111111",
   },
   editBadgeText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   profileEditHint: {
-    color: '#666',
+    color: "#666",
     fontSize: 13,
     marginTop: 12,
   },
@@ -1149,22 +1197,22 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 16,
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   // Connection & Sync styles
   connectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   connectionIndicator: {
@@ -1174,68 +1222,68 @@ const styles = StyleSheet.create({
   },
   connectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
   },
   connectionSubtitle: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginTop: 2,
   },
   refreshButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF2A2A',
+    borderColor: "#FF2A2A",
   },
   refreshButtonText: {
-    color: '#FF2A2A',
+    color: "#FF2A2A",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   syncQueueInfo: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
+    borderTopColor: "#2A2A2A",
   },
   syncQueueText: {
     fontSize: 14,
-    color: '#FF9500',
-    fontWeight: '500',
+    color: "#FF9500",
+    fontWeight: "500",
   },
   syncQueueHint: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   // Storage stats in modal
   storageStatRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingVertical: 6,
   },
   storageStatLabel: {
     fontSize: 14,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
   },
   storageStatValue: {
     fontSize: 14,
-    color: '#F5F5F5',
-    fontWeight: '500',
+    color: "#F5F5F5",
+    fontWeight: "500",
   },
   pendingQueueCount: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#FF9500',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#FF9500",
+    textAlign: "center",
     marginVertical: 8,
   },
   pendingQueueDescription: {
     fontSize: 13,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
 });

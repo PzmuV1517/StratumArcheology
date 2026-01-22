@@ -1,17 +1,22 @@
 // Native-specific note operations using Expo APIs
-import api from './api';
-import { noteServiceCore, Note, Attachment, CreateNoteData } from './noteService.core';
-import { Audio } from 'expo-av';
+import api from "./api";
+import {
+  noteServiceCore,
+  Note,
+  Attachment,
+  CreateNoteData,
+} from "./noteService.core";
+import { Audio } from "expo-av";
 // Note: expo-image-picker must be installed separately: npx expo install expo-image-picker
 let ImagePicker: any;
 try {
-  ImagePicker = require('expo-image-picker');
+  ImagePicker = require("expo-image-picker");
 } catch {
   ImagePicker = null;
 }
 
 // Re-export types
-export * from './noteService.core';
+export * from "./noteService.core";
 
 export const noteService = {
   ...noteServiceCore,
@@ -19,13 +24,13 @@ export const noteService = {
   // Native-specific: upload photo from URI
   uploadPhoto: async (noteId: string, photoUri: string): Promise<Attachment> => {
     const formData = new FormData();
-    formData.append('file', {
+    formData.append("file", {
       uri: photoUri,
-      type: 'image/jpeg',
-      name: 'photo.jpg',
+      type: "image/jpeg",
+      name: "photo.jpg",
     } as any);
     const response = await api.post(`/notes/${noteId}/attachments`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   },
@@ -34,16 +39,16 @@ export const noteService = {
   uploadAudio: async (
     noteId: string,
     audioUri: string,
-    filename: string = 'voice-note.mp3'
+    filename: string = "voice-note.mp3",
   ): Promise<Attachment> => {
     const formData = new FormData();
-    formData.append('file', {
+    formData.append("file", {
       uri: audioUri,
-      type: 'audio/mpeg',
+      type: "audio/mpeg",
       name: filename,
     } as any);
     const response = await api.post(`/notes/${noteId}/attachments`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   },
@@ -53,25 +58,29 @@ export const noteService = {
     noteId: string,
     fileUri: string,
     fileName: string,
-    mimeType: string
+    mimeType: string,
   ): Promise<Attachment> => {
     const formData = new FormData();
-    formData.append('file', {
+    formData.append("file", {
       uri: fileUri,
       type: mimeType,
       name: fileName,
     } as any);
     const response = await api.post(`/notes/${noteId}/attachments`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   },
 
   // Native-specific: pick image using ImagePicker
-  pickImage: async (): Promise<{ uri: string; width: number; height: number } | null> => {
+  pickImage: async (): Promise<{
+    uri: string;
+    width: number;
+    height: number;
+  } | null> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Permission to access media library was denied');
+    if (status !== "granted") {
+      throw new Error("Permission to access media library was denied");
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -93,10 +102,14 @@ export const noteService = {
   },
 
   // Native-specific: take photo using camera
-  takePhoto: async (): Promise<{ uri: string; width: number; height: number } | null> => {
+  takePhoto: async (): Promise<{
+    uri: string;
+    width: number;
+    height: number;
+  } | null> => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      throw new Error('Permission to access camera was denied');
+    if (status !== "granted") {
+      throw new Error("Permission to access camera was denied");
     }
 
     const result = await ImagePicker.launchCameraAsync({
@@ -123,8 +136,8 @@ export const noteService = {
     return {
       start: async () => {
         const { status } = await Audio.requestPermissionsAsync();
-        if (status !== 'granted') {
-          throw new Error('Permission to access microphone was denied');
+        if (status !== "granted") {
+          throw new Error("Permission to access microphone was denied");
         }
 
         await Audio.setAudioModeAsync({
@@ -133,13 +146,15 @@ export const noteService = {
         });
 
         recording = new Audio.Recording();
-        await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        await recording.prepareToRecordAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        );
         await recording.startAsync();
       },
 
       stop: async (): Promise<string> => {
         if (!recording) {
-          throw new Error('No recording in progress');
+          throw new Error("No recording in progress");
         }
 
         await recording.stopAndUnloadAsync();
@@ -151,7 +166,7 @@ export const noteService = {
         recording = null;
 
         if (!uri) {
-          throw new Error('Failed to get recording URI');
+          throw new Error("Failed to get recording URI");
         }
 
         return uri;

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React from "react";
+import { View, StyleSheet } from "react-native";
 
 export default function VideoPanel({ src }: { src: string | null }) {
   return (
@@ -14,9 +14,9 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-    backgroundColor: '#0E0E0E',
-    overflow: 'hidden',
+    borderColor: "#2A2A2A",
+    backgroundColor: "#0E0E0E",
+    overflow: "hidden",
   },
-  video: { width: '100%', height: '100%' },
+  video: { width: "100%", height: "100%" },
 });

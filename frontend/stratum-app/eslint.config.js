@@ -1,28 +1,29 @@
 // eslint.config.js
-const { defineConfig } = require('eslint/config');
-const expoConfig = require('eslint-config-expo/flat');
+const expoConfig = require("eslint-config-expo/flat");
+const prettierPlugin = require("eslint-plugin-prettier");
 
-module.exports = defineConfig([
-  expoConfig,
+module.exports = [
+  ...expoConfig,
 
   {
     ignores: [
-      'dist/*',
-      'node_modules/*',
-      '.expo/*',
-      'android/*',
-      'ios/*',
-      '*.lock',
-      'babel.config.js',
-      'metro.config.js',
+      "dist/*",
+      "node_modules/*",
+      ".expo/*",
+      "android/*",
+      "ios/*",
+      "*.lock",
+      "babel.config.js",
+      "metro.config.js",
     ],
   },
 
   {
-    plugins: ['prettier', 'simple-import-sort', 'import'],
+    plugins: {
+      prettier: prettierPlugin,
+    },
 
     rules: {
-      // ---------------- Prettier ----------------
       "prettier/prettier": [
         "error",
         {
@@ -36,29 +37,7 @@ module.exports = defineConfig([
           arrowParens: "always",
         },
       ],
-
-      // ---------------- React / JSX ----------------
-      'react/no-unescaped-entities': 'off',
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-
-      // ---------------- TypeScript ----------------
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-        },
-      ],
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
-
-      // ---------------- Imports ----------------
-      'import/no-unresolved': 'off',
-      'import/no-named-as-default': 'warn',
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
+      "react/no-unescaped-entities": "off",
     },
   },
-]);
+];

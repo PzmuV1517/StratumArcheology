@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,25 +8,25 @@ import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { projectService } from '../src/services/projectService';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { projectService } from "../src/services/projectService";
 
 export default function CreateProjectModal() {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [ranLmiId, setRanLmiId] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [ranLmiId, setRanLmiId] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a project name');
+      Alert.alert("Error", "Please enter a project name");
       return;
     }
 
     if (!ranLmiId.trim()) {
-      Alert.alert('Error', 'Please enter a RAN/LMI ID');
+      Alert.alert("Error", "Please enter a RAN/LMI ID");
       return;
     }
 
@@ -43,14 +43,16 @@ export default function CreateProjectModal() {
         router.replace(`/project/${newProject.id}`);
       } else {
         // Fallback if no project ID returned
-        Alert.alert('Success', 'Project created successfully!', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert("Success", "Project created successfully!", [
+          { text: "OK", onPress: () => router.back() },
         ]);
       }
     } catch (error: any) {
       const message =
-        error?.detail || error?.message || 'Failed to create project. Please try again.';
-      Alert.alert('Error', message);
+        error?.detail ||
+        error?.message ||
+        "Failed to create project. Please try again.";
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }
@@ -90,7 +92,11 @@ export default function CreateProjectModal() {
           numberOfLines={4}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={loading}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleCreate}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -109,7 +115,7 @@ export default function CreateProjectModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: "#111111",
   },
   form: {
     padding: 24,
@@ -117,53 +123,53 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
     marginBottom: 32,
-    textAlign: 'center',
+    textAlign: "center",
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#FFFFFF",
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#444444',
+    borderColor: "#444444",
   },
   textArea: {
     height: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   button: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     borderRadius: 8,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 32,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cancelButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderRadius: 8,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 12,
   },
   cancelButtonText: {
-    color: '#999999',
+    color: "#999999",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

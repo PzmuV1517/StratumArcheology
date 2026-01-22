@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MIN_CHECK_INTERVAL = 60000; // 60 seconds minimum between manual checks
 
@@ -54,7 +54,7 @@ function ConnectionStatusIndicatorInner() {
     try {
       // First check device network connectivity
       try {
-        const NetInfo = await import('@react-native-community/netinfo');
+        const NetInfo = await import("@react-native-community/netinfo");
         const state = await NetInfo.default.fetch();
         if (!state.isConnected) {
           setIsConnected(false);
@@ -63,12 +63,12 @@ function ConnectionStatusIndicatorInner() {
           return;
         }
       } catch (e) {
-        console.warn('[ConnectionStatus] NetInfo not available:', e);
+        console.warn("[ConnectionStatus] NetInfo not available:", e);
       }
 
       // Try to reach the backend
-      const { default: api } = await import('../../services/api');
-      const response = await api.get('/health');
+      const { default: api } = await import("../../services/api");
+      const response = await api.get("/health");
       setIsConnected(response.status === 200);
     } catch {
       setIsConnected(false);
@@ -106,13 +106,13 @@ function ConnectionStatusIndicatorInner() {
 
     const setupNetworkListener = async () => {
       try {
-        const NetInfo = await import('@react-native-community/netinfo');
+        const NetInfo = await import("@react-native-community/netinfo");
         const unsubscribe = NetInfo.default.addEventListener(() => {
           checkConnection(false);
         });
         cleanup = unsubscribe;
       } catch (e) {
-        console.warn('[ConnectionStatus] Could not set up network listener:', e);
+        console.warn("[ConnectionStatus] Could not set up network listener:", e);
       }
     };
 
@@ -125,26 +125,26 @@ function ConnectionStatusIndicatorInner() {
   }, [checkConnection]);
 
   const getStatusColor = () => {
-    if (isChecking || isConnected === null) return '#666666'; // Gray while checking
-    return isConnected ? '#22c55e' : '#ef4444'; // Green or Red
+    if (isChecking || isConnected === null) return "#666666"; // Gray while checking
+    return isConnected ? "#22c55e" : "#ef4444"; // Green or Red
   };
 
   const getStatusIcon = () => {
-    if (isChecking || isConnected === null) return '•';
-    return isConnected ? '✓' : '✕';
+    if (isChecking || isConnected === null) return "•";
+    return isConnected ? "✓" : "✕";
   };
 
   const getStatusText = () => {
-    if (isChecking) return 'Checking...';
-    return isConnected ? 'Connected' : 'Offline';
+    if (isChecking) return "Checking...";
+    return isConnected ? "Connected" : "Offline";
   };
 
   const getDetailText = () => {
-    if (isChecking) return 'Verifying backend connection...';
+    if (isChecking) return "Verifying backend connection...";
     if (isConnected) {
-      return 'Your device is connected to STRATUM. All features are available.';
+      return "Your device is connected to STRATUM. All features are available.";
     }
-    return 'Cannot reach the backend. You can still work offline — changes will sync when connection is restored.';
+    return "Cannot reach the backend. You can still work offline — changes will sync when connection is restored.";
   };
 
   const handleRefresh = () => {
@@ -171,7 +171,11 @@ function ConnectionStatusIndicatorInner() {
           accessibilityRole="button"
         >
           {isChecking ? (
-            <ActivityIndicator size="small" color="#FFFFFF" style={{ transform: [{ scale: 0.6 }] }} />
+            <ActivityIndicator
+              size="small"
+              color="#FFFFFF"
+              style={{ transform: [{ scale: 0.6 }] }}
+            />
           ) : (
             <Text style={styles.statusIcon}>{getStatusIcon()}</Text>
           )}
@@ -192,7 +196,12 @@ function ConnectionStatusIndicatorInner() {
             onTouchEnd={(e) => e.stopPropagation()}
           >
             <View style={styles.modalHeader}>
-              <View style={[styles.modalStatusDot, { backgroundColor: getStatusColor() }]}>
+              <View
+                style={[
+                  styles.modalStatusDot,
+                  { backgroundColor: getStatusColor() },
+                ]}
+              >
                 {isChecking ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
@@ -209,15 +218,26 @@ function ConnectionStatusIndicatorInner() {
             )}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.refreshButton, !canRefresh && styles.refreshButtonDisabled]}
+                style={[
+                  styles.refreshButton,
+                  !canRefresh && styles.refreshButtonDisabled,
+                ]}
                 onPress={handleRefresh}
                 disabled={!canRefresh}
               >
-                <Text style={[styles.refreshText, !canRefresh && styles.refreshTextDisabled]}>
-                  {canRefresh ? 'Refresh' : `Wait ${cooldownRemaining}s`}
+                <Text
+                  style={[
+                    styles.refreshText,
+                    !canRefresh && styles.refreshTextDisabled,
+                  ]}
+                >
+                  {canRefresh ? "Refresh" : `Wait ${cooldownRemaining}s`}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.dismissButton} onPress={() => setShowModal(false)}>
+              <TouchableOpacity
+                style={styles.dismissButton}
+                onPress={() => setShowModal(false)}
+              >
                 <Text style={styles.dismissText}>Close</Text>
               </TouchableOpacity>
             </View>
@@ -230,7 +250,7 @@ function ConnectionStatusIndicatorInner() {
 
 const styles = StyleSheet.create({
   indicator: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     zIndex: 9999,
     elevation: 10,
@@ -239,9 +259,9 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -250,96 +270,96 @@ const styles = StyleSheet.create({
   },
   statusIcon: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalContent: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderRadius: 16,
     padding: 20,
     marginHorizontal: 20,
     maxWidth: 340,
-    width: '90%',
+    width: "90%",
     borderWidth: 1,
-    borderColor: '#333',
-    shadowColor: '#000',
+    borderColor: "#333",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 10,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   modalStatusDot: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   modalStatusIcon: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
   modalTitle: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     flex: 1,
   },
   modalText: {
-    color: '#AAAAAA',
+    color: "#AAAAAA",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
   },
   lastCheckedText: {
-    color: '#666666',
+    color: "#666666",
     fontSize: 12,
     marginBottom: 16,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 10,
   },
   refreshButton: {
-    backgroundColor: '#333333',
+    backgroundColor: "#333333",
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
   refreshButtonDisabled: {
-    backgroundColor: '#222222',
+    backgroundColor: "#222222",
   },
   refreshText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   refreshTextDisabled: {
-    color: '#666666',
+    color: "#666666",
   },
   dismissButton: {
-    backgroundColor: '#C41E3A',
+    backgroundColor: "#C41E3A",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   dismissText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

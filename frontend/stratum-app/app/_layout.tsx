@@ -1,36 +1,36 @@
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-import { useEffect } from 'react';
-import { View, Platform, StyleSheet } from 'react-native';
-import AuthRedirector from './AuthRedirector';
+import { DarkTheme, ThemeProvider } from "@react-navigation/native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+import { useEffect } from "react";
+import { View, Platform, StyleSheet } from "react-native";
+import AuthRedirector from "./AuthRedirector";
 
-import { AuthProvider } from '../src/contexts/AuthContext';
-import { WebSocketProvider } from '../src/contexts/WebSocketContext';
-import ConnectionStatusIndicator from '../src/components/common/OfflineBanner';
+import { AuthProvider } from "../src/contexts/AuthContext";
+import { WebSocketProvider } from "../src/contexts/WebSocketContext";
+import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: '#FF2A2A',
-    background: '#111111',
-    card: '#1A1A1A',
-    text: '#F5F5F5',
-    border: '#2A2A2A',
-    notification: '#FF2A2A',
+    primary: "#FF2A2A",
+    background: "#111111",
+    card: "#1A1A1A",
+    text: "#F5F5F5",
+    border: "#2A2A2A",
+    notification: "#FF2A2A",
   },
 };
 
 function RootLayoutNav() {
   // Web-only: keep dark inputs even when browser autofill applies
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const STYLE_ID = 'stratum-autofill-dark';
+    if (Platform.OS !== "web") return;
+    const STYLE_ID = "stratum-autofill-dark";
     if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
       input:-webkit-autofill,
@@ -66,7 +66,10 @@ function RootLayoutNav() {
           >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: "Modal" }}
+            />
           </Stack>
           <ConnectionStatusIndicator />
         </View>

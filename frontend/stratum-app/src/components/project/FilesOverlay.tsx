@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,17 @@ import {
   Platform,
   Alert,
   TextInput,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fileService } from '../../services/fileService';
-import { offlineFilesStorage } from '../../services/offlineService';
-import FileUploadMenu, { SelectedFile } from '../files/FileUploadMenu';
-import MyFolderSettingsModal from './MyFolderSettingsModal';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fileService } from "../../services/fileService";
+import { offlineFilesStorage } from "../../services/offlineService";
+import FileUploadMenu, { SelectedFile } from "../files/FileUploadMenu";
+import MyFolderSettingsModal from "./MyFolderSettingsModal";
 
 interface FileNode {
   id: string;
   name: string;
-  type: 'file' | 'folder' | 'note';
+  type: "file" | "folder" | "note";
   mime_type?: string;
   is_locked?: boolean;
   note_id?: string;
@@ -54,13 +54,18 @@ interface Props {
   onBulkDownload?: (nodes: FileNode[]) => Promise<void> | void; // Optional parent-handled bulk download
   canEdit?: boolean; // Permissions: disable editing for guests
   autoOpenMyFolder?: boolean; // When true, automatically navigate to My Folder on open
-  projectMembers?: { id: string; display_name: string; email: string; role: string }[]; // For My Folder settings
+  projectMembers?: {
+    id: string;
+    display_name: string;
+    email: string;
+    role: string;
+  }[]; // For My Folder settings
   currentUserId?: string; // For My Folder settings
 }
 
 export default function FilesOverlay({
   visible,
-  title = 'Files',
+  title = "Files",
   currentFolder,
   fileNodes,
   fileLoading,
@@ -103,11 +108,11 @@ export default function FilesOverlay({
   const [isSavingOffline, setIsSavingOffline] = useState(false);
   const [offlineFileIds, setOfflineFileIds] = useState<Set<string>>(new Set());
   // Search & filter state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [exactOnly, setExactOnly] = useState(false);
   const [extensionFilters, setExtensionFilters] = useState<string[]>([]);
   const [showExtensionFilter, setShowExtensionFilter] = useState(false);
-  const [customExtInput, setCustomExtInput] = useState('');
+  const [customExtInput, setCustomExtInput] = useState("");
   // Upload menu state (mobile only)
   const [showUploadMenu, setShowUploadMenu] = useState(false);
   const [isLoadingMyFolder, setIsLoadingMyFolder] = useState(false);
@@ -127,7 +132,7 @@ export default function FilesOverlay({
   // Navigate to user's personal folder (creates if doesn't exist)
   const handleGoToMyFolder = useCallback(async () => {
     if (!projectId) {
-      Alert.alert('Error', 'Project context missing');
+      Alert.alert("Error", "Project context missing");
       return;
     }
 
@@ -149,23 +154,23 @@ export default function FilesOverlay({
           // If creation fails with 400 (already exists), try fetching again
           // This can happen if there's a race condition or the folder name format changed
           if (createError.response?.status === 400) {
-            console.log('My Folder already exists, trying to fetch again...');
+            console.log("My Folder already exists, trying to fetch again...");
             myFolder = await fileService.getMyFolder(projectId);
             if (!myFolder) {
               // Still can't find it - there might be a naming mismatch
               Alert.alert(
-                'Error',
-                'Your personal folder exists but could not be found. Please check the file list.'
+                "Error",
+                "Your personal folder exists but could not be found. Please check the file list.",
               );
               return;
             }
           } else {
-            console.error('Failed to create My Folder:', createError);
+            console.error("Failed to create My Folder:", createError);
             Alert.alert(
-              'Error',
+              "Error",
               createError.response?.data?.detail ||
                 createError.message ||
-                'Failed to create your personal folder'
+                "Failed to create your personal folder",
             );
             return;
           }
@@ -179,14 +184,16 @@ export default function FilesOverlay({
         onOpenFolder({
           id: myFolder.id,
           name: myFolder.name,
-          type: 'folder',
+          type: "folder",
         });
       }
     } catch (error: any) {
-      console.error('Failed to access My Folder:', error);
+      console.error("Failed to access My Folder:", error);
       Alert.alert(
-        'Error',
-        error.response?.data?.detail || error.message || 'Failed to access your personal folder'
+        "Error",
+        error.response?.data?.detail ||
+          error.message ||
+          "Failed to access your personal folder",
       );
     } finally {
       setIsLoadingMyFolder(false);
@@ -198,18 +205,22 @@ export default function FilesOverlay({
     async (settings: {
       default_can_view: boolean;
       default_can_edit: boolean;
-      member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
+      member_permissions: {
+        user_id: string;
+        can_view: boolean;
+        can_edit: boolean;
+      }[];
     }) => {
       if (!projectId) return;
       try {
         await fileService.updateMyFolderPermissions(projectId, settings);
-        Alert.alert('Success', 'Privacy settings updated');
+        Alert.alert("Success", "Privacy settings updated");
       } catch (error: any) {
-        console.error('Failed to update My Folder settings:', error);
+        console.error("Failed to update My Folder settings:", error);
         throw error; // Let the modal handle the error display
       }
     },
-    [projectId]
+    [projectId],
   );
 
   // Handle file selected from upload menu
@@ -225,7 +236,7 @@ export default function FilesOverlay({
 
       // Otherwise, directly upload using fileService
       if (!projectId) {
-        Alert.alert('Error', 'Cannot upload - project context missing');
+        Alert.alert("Error", "Cannot upload - project context missing");
         return;
       }
 
@@ -235,9 +246,9 @@ export default function FilesOverlay({
       try {
         // Ensure file has proper extension based on mime type
         let fileName = file.name;
-        if (!fileName || fileName === 'undefined' || !fileName.includes('.')) {
-          const ext = file.mimeType?.split('/')[1] || 'jpg';
-          const cleanExt = ext === 'jpeg' ? 'jpg' : ext;
+        if (!fileName || fileName === "undefined" || !fileName.includes(".")) {
+          const ext = file.mimeType?.split("/")[1] || "jpg";
+          const cleanExt = ext === "jpeg" ? "jpg" : ext;
           fileName = `photo_${Date.now()}.${cleanExt}`;
         }
 
@@ -246,19 +257,19 @@ export default function FilesOverlay({
           file.uri,
           fileName,
           file.mimeType,
-          currentFolder?.id || null
+          currentFolder?.id || null,
         );
-        Alert.alert('Success', `${fileName} uploaded successfully`);
+        Alert.alert("Success", `${fileName} uploaded successfully`);
         onRefreshAfterUpload?.();
       } catch (error: any) {
-        console.error('File upload failed:', error);
-        Alert.alert('Upload Failed', error.message || 'Failed to upload file');
+        console.error("File upload failed:", error);
+        Alert.alert("Upload Failed", error.message || "Failed to upload file");
       } finally {
         setIsUploading(false);
         setUploadCount(0);
       }
     },
-    [projectId, currentFolder, onFileSelected, onRefreshAfterUpload]
+    [projectId, currentFolder, onFileSelected, onRefreshAfterUpload],
   );
 
   // Load offline file status on mount
@@ -299,8 +310,10 @@ export default function FilesOverlay({
       }
       if (!projectId) {
         if (!warnedMissingProject.current) {
-          console.warn('FilesOverlay: missing projectId prop, cannot auto-upload dropped files');
-          Alert.alert('Cannot upload', 'Project context missing.');
+          console.warn(
+            "FilesOverlay: missing projectId prop, cannot auto-upload dropped files",
+          );
+          Alert.alert("Cannot upload", "Project context missing.");
           warnedMissingProject.current = true;
         }
         return;
@@ -309,11 +322,11 @@ export default function FilesOverlay({
       setUploadCount(dropped.length);
       const tasks = dropped.map((f) => {
         const fd = new FormData();
-        fd.append('file', f);
-        if (currentFolder?.id) fd.append('parent_id', currentFolder.id);
+        fd.append("file", f);
+        if (currentFolder?.id) fd.append("parent_id", currentFolder.id);
         return fileService.uploadFile(projectId, fd).catch((err: any) => {
-          console.error('Upload failed for', f.name, err);
-          Alert.alert('Upload failed', f.name);
+          console.error("Upload failed for", f.name, err);
+          Alert.alert("Upload failed", f.name);
         });
       });
       await Promise.all(tasks);
@@ -321,18 +334,18 @@ export default function FilesOverlay({
       setUploadCount(0);
       if (onRefreshAfterUpload) onRefreshAfterUpload();
     },
-    [projectId, currentFolder, onRefreshAfterUpload, onDropFiles]
+    [projectId, currentFolder, onRefreshAfterUpload, onDropFiles],
   );
 
   // Robust drag-and-drop handling (depth + timeout + ESC) - only for users with edit permission
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== "web") return;
     // Don't set up drag-drop handlers if user can't edit
     if (!canEdit) return;
 
     const onDragEnter = (e: DragEvent) => {
       if (!e.dataTransfer) return;
-      if ([...e.dataTransfer.types].includes('Files')) {
+      if ([...e.dataTransfer.types].includes("Files")) {
         setDragDepth((d) => d + 1);
         setIsDragging(true);
         lastDragEvent.current = Date.now();
@@ -340,14 +353,14 @@ export default function FilesOverlay({
     };
     const onDragOver = (e: DragEvent) => {
       if (!e.dataTransfer) return;
-      if ([...e.dataTransfer.types].includes('Files')) {
+      if ([...e.dataTransfer.types].includes("Files")) {
         e.preventDefault();
         lastDragEvent.current = Date.now();
       }
     };
     const onDragLeave = (e: DragEvent) => {
       if (!e.dataTransfer) return;
-      if ([...e.dataTransfer.types].includes('Files')) {
+      if ([...e.dataTransfer.types].includes("Files")) {
         setDragDepth((d) => {
           const next = Math.max(0, d - 1);
           if (next === 0) setIsDragging(false);
@@ -360,7 +373,7 @@ export default function FilesOverlay({
         resetDragState();
         return;
       }
-      if ([...e.dataTransfer.types].includes('Files')) {
+      if ([...e.dataTransfer.types].includes("Files")) {
         e.preventDefault();
         const files = Array.from(e.dataTransfer.files || []);
         if (files.length) void handleFilesUpload(files);
@@ -371,7 +384,7 @@ export default function FilesOverlay({
       resetDragState();
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') resetDragState();
+      if (e.key === "Escape") resetDragState();
     };
     const resetDragState = () => {
       setDragDepth(0);
@@ -384,29 +397,29 @@ export default function FilesOverlay({
       }
     }, 1500);
 
-    window.addEventListener('dragenter', onDragEnter);
-    window.addEventListener('dragover', onDragOver);
-    window.addEventListener('dragleave', onDragLeave);
-    window.addEventListener('drop', onDrop);
-    window.addEventListener('dragend', onDragEnd);
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onDrop);
+    window.addEventListener("dragend", onDragEnd);
+    window.addEventListener("keydown", onKeyDown);
     return () => {
-      window.removeEventListener('dragenter', onDragEnter);
-      window.removeEventListener('dragover', onDragOver);
-      window.removeEventListener('dragleave', onDragLeave);
-      window.removeEventListener('drop', onDrop);
-      window.removeEventListener('dragend', onDragEnd);
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onDrop);
+      window.removeEventListener("dragend", onDragEnd);
+      window.removeEventListener("keydown", onKeyDown);
       window.clearInterval(inactivityInterval);
     };
   }, [handleFilesUpload, isDragging, canEdit]);
 
   const getExtension = (name: string) => {
-    const idx = name.lastIndexOf('.');
-    return idx === -1 ? '' : name.substring(idx + 1).toLowerCase();
+    const idx = name.lastIndexOf(".");
+    return idx === -1 ? "" : name.substring(idx + 1).toLowerCase();
   };
   const getBaseName = (name: string) => {
-    const idx = name.lastIndexOf('.');
+    const idx = name.lastIndexOf(".");
     return idx === -1 ? name : name.substring(0, idx);
   };
 
@@ -414,7 +427,7 @@ export default function FilesOverlay({
   const availableExtensions = useMemo(() => {
     const exts = new Set<string>();
     fileNodes.forEach((n) => {
-      if (n.type === 'file') {
+      if (n.type === "file") {
         const ext = getExtension(n.name);
         if (ext) exts.add(ext);
       }
@@ -427,7 +440,7 @@ export default function FilesOverlay({
     let nodes = fileNodes;
     if (extensionFilters.length > 0) {
       nodes = nodes.filter((n) => {
-        if (n.type !== 'file') return false;
+        if (n.type !== "file") return false;
         const ext = getExtension(n.name);
         return extensionFilters.includes(ext);
       });
@@ -458,19 +471,20 @@ export default function FilesOverlay({
 
   // Compute selectable (non-locked) ids for select-all behavior respecting filtered list
   const selectableIds = filteredNodes.filter((n) => !n.is_locked).map((n) => n.id);
-  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
 
   return (
     <View
       ref={rootRef}
-      style={[styles.root, { paddingTop: Platform.OS === 'ios' ? insets.top : 0 }]}
+      style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
-          <Text style={{ color: '#FF2A2A', fontSize: 18 }}>‹ Back</Text>
+          <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
         </TouchableOpacity>
         <Text
-          style={{ color: '#F5F5F5', fontSize: 18, fontWeight: '700', flex: 1 }}
+          style={{ color: "#F5F5F5", fontSize: 18, fontWeight: "700", flex: 1 }}
           numberOfLines={1}
         >
           {title}
@@ -489,7 +503,10 @@ export default function FilesOverlay({
             onPress={async () => {
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkMove) return void onBulkMove(nodes);
-              Alert.alert('Bulk move', 'Parent needs to implement bulk move destination chooser.');
+              Alert.alert(
+                "Bulk move",
+                "Parent needs to implement bulk move destination chooser.",
+              );
             }}
             style={styles.bulkBtn}
           >
@@ -500,11 +517,11 @@ export default function FilesOverlay({
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkDelete) return void onBulkDelete(nodes);
               // default: confirm once, then delete sequentially
-              Alert.alert('Delete selected', `Delete ${nodes.length} item(s)?`, [
-                { text: 'Cancel', style: 'cancel' },
+              Alert.alert("Delete selected", `Delete ${nodes.length} item(s)?`, [
+                { text: "Cancel", style: "cancel" },
                 {
-                  text: 'Delete',
-                  style: 'destructive',
+                  text: "Delete",
+                  style: "destructive",
                   onPress: async () => {
                     for (const n of nodes) {
                       await onDelete(n);
@@ -520,7 +537,9 @@ export default function FilesOverlay({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={async () => {
-              const nodes = fileNodes.filter((n) => selectedIds.has(n.id) && n.type === 'file');
+              const nodes = fileNodes.filter(
+                (n) => selectedIds.has(n.id) && n.type === "file",
+              );
               if (onBulkDownload) return void onBulkDownload(nodes);
               for (const n of nodes) {
                 await onDownload(n);
@@ -531,24 +550,26 @@ export default function FilesOverlay({
             <Text style={styles.bulkBtnText}>Download</Text>
           </TouchableOpacity>
           {/* Save for Offline button - only on native */}
-          {Platform.OS !== 'web' && projectId && (
+          {Platform.OS !== "web" && projectId && (
             <TouchableOpacity
               onPress={async () => {
-                const nodes = fileNodes.filter((n) => selectedIds.has(n.id) && n.type === 'file');
+                const nodes = fileNodes.filter(
+                  (n) => selectedIds.has(n.id) && n.type === "file",
+                );
                 if (nodes.length === 0) {
                   Alert.alert(
-                    'No files selected',
-                    'Please select files to save for offline access.'
+                    "No files selected",
+                    "Please select files to save for offline access.",
                   );
                   return;
                 }
                 Alert.alert(
-                  'Save for Offline',
+                  "Save for Offline",
                   `This will save ${nodes.length} file(s) for offline access. You can view them without an internet connection.`,
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: "Cancel", style: "cancel" },
                     {
-                      text: 'Save',
+                      text: "Save",
                       onPress: async () => {
                         setIsSavingOffline(true);
                         try {
@@ -563,16 +584,19 @@ export default function FilesOverlay({
                                 downloadUrl: url,
                                 updated_at: n.updated_at, // For sync tracking
                               };
-                            })
+                            }),
                           );
 
-                          const result = await offlineFilesStorage.saveFilesForOffline(
-                            projectId,
-                            filesToSave,
-                            (current, total, fileName) => {
-                              console.log(`[Offline] Saving ${current}/${total}: ${fileName}`);
-                            }
-                          );
+                          const result =
+                            await offlineFilesStorage.saveFilesForOffline(
+                              projectId,
+                              filesToSave,
+                              (current, total, fileName) => {
+                                console.log(
+                                  `[Offline] Saving ${current}/${total}: ${fileName}`,
+                                );
+                              },
+                            );
 
                           // Update offline file IDs
                           setOfflineFileIds((prev) => {
@@ -583,56 +607,59 @@ export default function FilesOverlay({
 
                           if (result.failed > 0) {
                             Alert.alert(
-                              'Partially Saved',
-                              `${result.success} file(s) saved, ${result.failed} failed.\n${result.errors.slice(0, 3).join('\n')}`
+                              "Partially Saved",
+                              `${result.success} file(s) saved, ${result.failed} failed.\n${result.errors.slice(0, 3).join("\n")}`,
                             );
                           } else {
                             Alert.alert(
-                              'Saved for Offline',
-                              `${result.success} file(s) are now available offline.`
+                              "Saved for Offline",
+                              `${result.success} file(s) are now available offline.`,
                             );
                           }
                           setSelectedIds(new Set());
                           setMultiSelect(false);
                         } catch (error: any) {
                           Alert.alert(
-                            'Error',
-                            error.message || 'Failed to save files for offline.'
+                            "Error",
+                            error.message || "Failed to save files for offline.",
                           );
                         } finally {
                           setIsSavingOffline(false);
                         }
                       },
                     },
-                  ]
+                  ],
                 );
               }}
               style={[styles.bulkBtn, isSavingOffline && { opacity: 0.5 }]}
               disabled={isSavingOffline}
             >
               <Text style={styles.bulkBtnText}>
-                {isSavingOffline ? 'Saving...' : 'Save Offline'}
+                {isSavingOffline ? "Saving..." : "Save Offline"}
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.bulkBtnClear}>
+          <TouchableOpacity
+            onPress={() => setSelectedIds(new Set())}
+            style={styles.bulkBtnClear}
+          >
             <Text style={styles.bulkBtnText}>Clear</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
-      {Platform.OS === 'web' && isDragging && canEdit && (
+      {Platform.OS === "web" && isDragging && canEdit && (
         <div
           style={{
-            position: 'absolute' as any,
+            position: "absolute" as any,
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            justifyContent: 'center',
-            alignItems: 'center',
+            backgroundColor: "rgba(0,0,0,0.7)",
+            justifyContent: "center",
+            alignItems: "center",
             zIndex: 9999,
-            display: 'flex',
+            display: "flex",
           }}
           onDragOver={(e: any) => {
             e.preventDefault();
@@ -652,30 +679,39 @@ export default function FilesOverlay({
         >
           <div
             style={{
-              backgroundColor: '#1A1A1A',
+              backgroundColor: "#1A1A1A",
               borderRadius: 12,
-              border: '2px dashed #FF2A2A',
+              border: "2px dashed #FF2A2A",
               padding: 40,
-              textAlign: 'center',
+              textAlign: "center",
             }}
           >
-            <Text style={{ color: '#FF2A2A', fontSize: 20, fontWeight: '700', marginBottom: 8 }}>
+            <Text
+              style={{
+                color: "#FF2A2A",
+                fontSize: 20,
+                fontWeight: "700",
+                marginBottom: 8,
+              }}
+            >
               Drop file here
             </Text>
-            <Text style={{ color: '#9A9A9A', fontSize: 14 }}>Release or press ESC to cancel</Text>
+            <Text style={{ color: "#9A9A9A", fontSize: 14 }}>
+              Release or press ESC to cancel
+            </Text>
           </div>
         </div>
       )}
-      {Platform.OS === 'web' && isUploading && (
+      {Platform.OS === "web" && isUploading && (
         <View pointerEvents="none" style={styles.uploadingBanner}>
           <ActivityIndicator color="#FF2A2A" />
           <Text style={styles.uploadingText}>
-            Uploading {uploadCount} file{uploadCount === 1 ? '' : 's'}…
+            Uploading {uploadCount} file{uploadCount === 1 ? "" : "s"}…
           </Text>
         </View>
       )}
       {/* File Upload Menu Modal (mobile only) */}
-      {Platform.OS !== 'web' && (
+      {Platform.OS !== "web" && (
         <FileUploadMenu
           visible={showUploadMenu}
           onClose={() => setShowUploadMenu(false)}
@@ -709,7 +745,11 @@ export default function FilesOverlay({
                 disabled={isLoadingMyFolder || isInMyFolder}
               >
                 <Text style={styles.actionButtonText}>
-                  {isLoadingMyFolder ? '...' : isInMyFolder ? '✓ My Folder' : '👤 My Folder'}
+                  {isLoadingMyFolder
+                    ? "..."
+                    : isInMyFolder
+                      ? "✓ My Folder"
+                      : "👤 My Folder"}
                 </Text>
               </TouchableOpacity>
               {/* Settings gear - only show when My Folder exists */}
@@ -724,11 +764,14 @@ export default function FilesOverlay({
             </View>
             {canEdit && (
               <>
-                <TouchableOpacity style={styles.actionButton} onPress={onCreateFolder}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={onCreateFolder}
+                >
                   <Text style={styles.actionButtonText}>+ Folder</Text>
                 </TouchableOpacity>
                 {/* On mobile, show dropdown menu; on web, use existing upload handler */}
-                {Platform.OS !== 'web' ? (
+                {Platform.OS !== "web" ? (
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => setShowUploadMenu(true)}
@@ -778,15 +821,20 @@ export default function FilesOverlay({
             style={styles.filterToggle}
             onPress={() => setShowExtensionFilter((v) => !v)}
           >
-            <Text style={{ color: '#F5F5F5', fontSize: 12 }}>
-              {showExtensionFilter ? 'Hide Extensions' : 'Filter by extension'}
+            <Text style={{ color: "#F5F5F5", fontSize: 12 }}>
+              {showExtensionFilter ? "Hide Extensions" : "Filter by extension"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setExactOnly((e) => !e)} style={styles.exactToggle}>
+          <TouchableOpacity
+            onPress={() => setExactOnly((e) => !e)}
+            style={styles.exactToggle}
+          >
             <View style={[styles.exactBox, exactOnly && styles.exactBoxChecked]}>
               {exactOnly && <Text style={styles.exactBoxTick}>✓</Text>}
             </View>
-            <Text style={{ color: '#9A9A9A', fontSize: 12 }}>Only exact matches</Text>
+            <Text style={{ color: "#9A9A9A", fontSize: 12 }}>
+              Only exact matches
+            </Text>
           </TouchableOpacity>
         </View>
         {showExtensionFilter && (
@@ -799,7 +847,9 @@ export default function FilesOverlay({
                     key={ext}
                     onPress={() => {
                       setExtensionFilters((prev) => {
-                        const next = active ? prev.filter((e) => e !== ext) : [...prev, ext];
+                        const next = active
+                          ? prev.filter((e) => e !== ext)
+                          : [...prev, ext];
                         return next;
                       });
                     }}
@@ -829,10 +879,12 @@ export default function FilesOverlay({
               <TouchableOpacity
                 style={styles.addExtBtn}
                 onPress={() => {
-                  const ext = customExtInput.trim().replace(/^\./, '').toLowerCase();
+                  const ext = customExtInput.trim().replace(/^\./, "").toLowerCase();
                   if (!ext) return;
-                  setExtensionFilters((prev) => (prev.includes(ext) ? prev : [...prev, ext]));
-                  setCustomExtInput('');
+                  setExtensionFilters((prev) =>
+                    prev.includes(ext) ? prev : [...prev, ext],
+                  );
+                  setCustomExtInput("");
                 }}
               >
                 <Text style={styles.addExtText}>Search</Text>
@@ -840,8 +892,11 @@ export default function FilesOverlay({
             </View>
             {customExtInput.trim().length > 0 && (
               <Text style={styles.extPreviewText}>
-                Will filter: .{customExtInput.trim().replace(/^\./, '').toLowerCase()}{' '}
-                {customExtInput.startsWith('.') ? '(dot normalized)' : '(no dot needed)'}
+                Will filter: .
+                {customExtInput.trim().replace(/^\./, "").toLowerCase()}{" "}
+                {customExtInput.startsWith(".")
+                  ? "(dot normalized)"
+                  : "(no dot needed)"}
               </Text>
             )}
           </View>
@@ -852,19 +907,22 @@ export default function FilesOverlay({
           <View>
             <View
               style={{
-                flexDirection: 'row',
+                flexDirection: "row",
                 marginBottom: 12,
-                alignItems: 'center',
-                flexWrap: 'wrap',
+                alignItems: "center",
+                flexWrap: "wrap",
               }}
             >
               {(breadcrumbs && breadcrumbs.length
                 ? breadcrumbs
-                : [{ id: null, name: 'Root' }, ...(currentFolder ? [currentFolder] : [])]
+                : [
+                    { id: null, name: "Root" },
+                    ...(currentFolder ? [currentFolder] : []),
+                  ]
               ).map((crumb, idx, arr) => (
                 <View
-                  key={`${crumb.id ?? 'root'}-${idx}`}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  key={`${crumb.id ?? "root"}-${idx}`}
+                  style={{ flexDirection: "row", alignItems: "center" }}
                 >
                   {idx < arr.length - 1 ? (
                     <TouchableOpacity
@@ -873,13 +931,17 @@ export default function FilesOverlay({
                         if (onNavigateBreadcrumb) onNavigateBreadcrumb(idx);
                       }}
                     >
-                      <Text style={{ color: '#FF2A2A' }}>{idx === 0 ? 'Root' : crumb.name}</Text>
+                      <Text style={{ color: "#FF2A2A" }}>
+                        {idx === 0 ? "Root" : crumb.name}
+                      </Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={{ color: '#9A9A9A' }}>{idx === 0 ? 'Root' : crumb.name}</Text>
+                    <Text style={{ color: "#9A9A9A" }}>
+                      {idx === 0 ? "Root" : crumb.name}
+                    </Text>
                   )}
                   {idx < arr.length - 1 && (
-                    <Text style={{ color: '#9A9A9A', marginHorizontal: 6 }}>/</Text>
+                    <Text style={{ color: "#9A9A9A", marginHorizontal: 6 }}>/</Text>
                   )}
                 </View>
               ))}
@@ -907,11 +969,13 @@ export default function FilesOverlay({
                         {allSelected && <Text style={styles.checkboxTick}>✓</Text>}
                       </View>
                     </TouchableOpacity>
-                    <Text style={{ color: '#9A9A9A', marginLeft: 8 }}>Select All</Text>
+                    <Text style={{ color: "#9A9A9A", marginLeft: 8 }}>
+                      Select All
+                    </Text>
                     {fileNodes.some((n) => n.is_locked) && (
                       <View
                         style={styles.infoWrapper}
-                        {...(Platform.OS === 'web'
+                        {...(Platform.OS === "web"
                           ? {
                               onMouseEnter: () => setShowInfoTip(true),
                               onMouseLeave: () => setShowInfoTip(false),
@@ -921,7 +985,7 @@ export default function FilesOverlay({
                         <View style={styles.infoIcon}>
                           <Text style={styles.infoIconText}>i</Text>
                         </View>
-                        {Platform.OS === 'web' && showInfoTip && (
+                        {Platform.OS === "web" && showInfoTip && (
                           <View style={styles.infoTooltip}>
                             <Text style={styles.infoTooltipText}>
                               Locked items can’t be selected
@@ -935,7 +999,10 @@ export default function FilesOverlay({
                 {filteredNodes.map((node) => (
                   <View
                     key={node.id}
-                    style={[styles.fileRow, selectedIds.has(node.id) && styles.fileRowSelected]}
+                    style={[
+                      styles.fileRow,
+                      selectedIds.has(node.id) && styles.fileRowSelected,
+                    ]}
                   >
                     {multiSelect ? (
                       node.is_locked ? (
@@ -955,7 +1022,9 @@ export default function FilesOverlay({
                               selectedIds.has(node.id) && styles.checkboxChecked,
                             ]}
                           >
-                            {selectedIds.has(node.id) && <Text style={styles.checkboxTick}>✓</Text>}
+                            {selectedIds.has(node.id) && (
+                              <Text style={styles.checkboxTick}>✓</Text>
+                            )}
                           </View>
                         </TouchableOpacity>
                       )
@@ -963,12 +1032,18 @@ export default function FilesOverlay({
                       <View style={styles.checkboxSpacer} />
                     )}
                     <Text style={styles.fileIcon}>
-                      {node.type === 'folder' ? '📁' : node.type === 'note' ? '📝' : '📄'}
+                      {node.type === "folder"
+                        ? "📁"
+                        : node.type === "note"
+                          ? "📝"
+                          : "📄"}
                     </Text>
                     <TouchableOpacity
                       style={{ flex: 1 }}
                       onPress={() =>
-                        node.type === 'folder' ? onOpenFolder(node) : onOpenFile(node)
+                        node.type === "folder"
+                          ? onOpenFolder(node)
+                          : onOpenFile(node)
                       }
                     >
                       {renderNameWithExtension(node.name, searchQuery, exactOnly)}
@@ -977,22 +1052,22 @@ export default function FilesOverlay({
                     {offlineFileIds.has(node.id) && (
                       <Text style={styles.offlineBadge}>Downloaded</Text>
                     )}
-                    <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
-                      {node.type === 'file' && (
+                    <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>
+                      {node.type === "file" && (
                         <TouchableOpacity onPress={() => onDownload(node)}>
-                          <Text style={{ color: '#9A9A9A' }}>Download</Text>
+                          <Text style={{ color: "#9A9A9A" }}>Download</Text>
                         </TouchableOpacity>
                       )}
                       {!node.is_locked && canEdit && (
                         <>
                           <TouchableOpacity onPress={() => onRename(node)}>
-                            <Text style={{ color: '#9A9A9A' }}>Rename</Text>
+                            <Text style={{ color: "#9A9A9A" }}>Rename</Text>
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onMove(node)}>
-                            <Text style={{ color: '#9A9A9A' }}>Move</Text>
+                            <Text style={{ color: "#9A9A9A" }}>Move</Text>
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onDelete(node)}>
-                            <Text style={{ color: '#FF4444' }}>Delete</Text>
+                            <Text style={{ color: "#FF4444" }}>Delete</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -1003,7 +1078,9 @@ export default function FilesOverlay({
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyStateText}>No files</Text>
-                <Text style={styles.emptyStateSubtext}>Create a folder or upload files</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Create a folder or upload files
+                </Text>
               </View>
             )}
           </View>
@@ -1015,10 +1092,10 @@ export default function FilesOverlay({
 
 // Helper to highlight matched substring
 function renderNameWithExtension(name: string, query: string, exactOnly: boolean) {
-  const idx = name.lastIndexOf('.');
+  const idx = name.lastIndexOf(".");
   const hasExt = idx !== -1;
   const base = hasExt ? name.substring(0, idx) : name;
-  const ext = hasExt ? name.substring(idx) : '';
+  const ext = hasExt ? name.substring(idx) : "";
   const highlightedBase = highlightBase(base, query, exactOnly);
   return (
     <Text style={styles.fileName}>
@@ -1049,290 +1126,324 @@ function highlightBase(base: string, query: string, exactOnly: boolean) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#111111', position: 'relative' },
+  root: { flex: 1, backgroundColor: "#111111", position: "relative" },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderBottomColor: "#2A2A2A",
+    flexDirection: "row",
+    alignItems: "center",
   },
-  bulkBarContainer: { borderBottomWidth: 1, borderBottomColor: '#2A2A2A', maxHeight: 48 },
+  bulkBarContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+    maxHeight: 48,
+  },
   bulkBarScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  bulkBar: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bulkText: { color: '#F5F5F5', marginRight: 8, fontSize: 12 },
-  bulkBtn: { backgroundColor: '#333', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  bulkBar: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  bulkText: { color: "#F5F5F5", marginRight: 8, fontSize: 12 },
+  bulkBtn: {
+    backgroundColor: "#333",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
   bulkBtnDanger: {
-    backgroundColor: '#8B0000',
+    backgroundColor: "#8B0000",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   bulkBtnClear: {
-    backgroundColor: '#444',
+    backgroundColor: "#444",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  bulkBtnText: { color: '#F5F5F5', fontSize: 12 },
+  bulkBtnText: { color: "#F5F5F5", fontSize: 12 },
   sectionHeader: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    flexDirection: "column",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
     marginBottom: 16,
     gap: 12,
   },
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#F5F5F5', letterSpacing: 0.5 },
-  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
   actionButton: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
   },
-  myFolderButton: { backgroundColor: '#2A6AFF' },
-  myFolderContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  myFolderSettingsBtn: { padding: 4, borderRadius: 6, backgroundColor: '#1A1A1A' },
+  myFolderButton: { backgroundColor: "#2A6AFF" },
+  myFolderContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
+  myFolderSettingsBtn: { padding: 4, borderRadius: 6, backgroundColor: "#1A1A1A" },
   myFolderSettingsIcon: { fontSize: 14 },
-  actionButtonText: { fontSize: 12, color: '#F5F5F5', fontWeight: '600', letterSpacing: 0.5 },
+  actionButtonText: {
+    fontSize: 12,
+    color: "#F5F5F5",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
   multiToggle: {
-    backgroundColor: '#222',
+    backgroundColor: "#222",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   multiToggleActive: {
-    backgroundColor: '#333',
+    backgroundColor: "#333",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
-  multiToggleText: { color: '#F5F5F5', fontSize: 12, fontWeight: '600' },
+  multiToggleText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600" },
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     gap: 12,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   searchInput: {
     flexGrow: 1,
     minWidth: 200,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     fontSize: 14,
   },
-  exactToggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  exactToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
   exactBox: {
     width: 18,
     height: 18,
     borderWidth: 1,
-    borderColor: '#555',
+    borderColor: "#555",
     borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  exactBoxChecked: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
-  exactBoxTick: { color: '#111', fontSize: 12, fontWeight: '700' },
+  exactBoxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+  exactBoxTick: { color: "#111", fontSize: 12, fontWeight: "700" },
   filterToggle: {
-    backgroundColor: '#222',
+    backgroundColor: "#222",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
   filterPanel: {
-    backgroundColor: '#141414',
+    backgroundColor: "#141414",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     marginBottom: 12,
   },
-  extChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  extChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   extChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#222',
+    backgroundColor: "#222",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
-  extChipActive: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
-  extChipText: { color: '#F5F5F5', fontSize: 12 },
-  customExtRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  extChipActive: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+  extChipText: { color: "#F5F5F5", fontSize: 12 },
+  customExtRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   customExtInput: {
     flexGrow: 1,
     minWidth: 120,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     fontSize: 12,
   },
   addExtBtn: {
-    backgroundColor: '#333',
+    backgroundColor: "#333",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   clearFilterBtn: {
-    backgroundColor: '#444',
+    backgroundColor: "#444",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
-  addExtText: { color: '#F5F5F5', fontSize: 12 },
+  addExtText: { color: "#F5F5F5", fontSize: 12 },
   matchHighlight: {
-    backgroundColor: '#FF2A2A',
-    color: '#111111',
-    fontWeight: '700',
+    backgroundColor: "#FF2A2A",
+    color: "#111111",
+    fontWeight: "700",
     paddingHorizontal: 2,
     borderRadius: 4,
   },
-  fileExt: { color: '#9A9A9A', fontSize: 12, marginLeft: 4 },
-  extPreviewText: { color: '#9A9A9A', fontSize: 11, marginTop: 4 },
-  listHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  fileExt: { color: "#9A9A9A", fontSize: 12, marginLeft: 4 },
+  extPreviewText: { color: "#9A9A9A", fontSize: 11, marginTop: 4 },
+  listHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   fileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
   },
-  fileRowSelected: { borderColor: '#FF2A2A', backgroundColor: '#1A1A1A' },
+  fileRowSelected: { borderColor: "#FF2A2A", backgroundColor: "#1A1A1A" },
   checkbox: {
     width: 20,
     height: 20,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#555',
+    borderColor: "#555",
     marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  checkboxDisabled: { borderColor: '#333', backgroundColor: '#222' },
+  checkboxDisabled: { borderColor: "#333", backgroundColor: "#222" },
   checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
-  checkboxChecked: { backgroundColor: '#FF2A2A', borderColor: '#FF2A2A' },
-  checkboxTick: { color: '#111111', fontSize: 14, fontWeight: '700' },
-  infoWrapper: { marginLeft: 10, position: 'relative' },
+  checkboxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+  checkboxTick: { color: "#111111", fontSize: 14, fontWeight: "700" },
+  infoWrapper: { marginLeft: 10, position: "relative" },
   infoIcon: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#2A2A2A',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: "#444",
   },
-  infoIconText: { color: '#F5F5F5', fontSize: 12, fontWeight: '700' },
+  infoIconText: { color: "#F5F5F5", fontSize: 12, fontWeight: "700" },
   infoTooltip: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 22,
     left: 0,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     maxWidth: 220,
   },
-  infoTooltipText: { color: '#F5F5F5', fontSize: 12 },
-  fileIcon: { fontSize: 18, marginRight: 10, color: '#F5F5F5' },
-  fileName: { flex: 1, color: '#F5F5F5', fontSize: 16, letterSpacing: 0.3 },
-  lockBadge: { color: '#FF4444', fontSize: 12, fontWeight: '700' },
+  infoTooltipText: { color: "#F5F5F5", fontSize: 12 },
+  fileIcon: { fontSize: 18, marginRight: 10, color: "#F5F5F5" },
+  fileName: { flex: 1, color: "#F5F5F5", fontSize: 16, letterSpacing: 0.3 },
+  lockBadge: { color: "#FF4444", fontSize: 12, fontWeight: "700" },
   offlineBadge: {
-    color: '#7A7A7A',
+    color: "#7A7A7A",
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 6,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  emptyState: { alignItems: 'center', paddingVertical: 48 },
+  emptyState: { alignItems: "center", paddingVertical: 48 },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#F5F5F5',
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 8,
     letterSpacing: 0.5,
   },
-  emptyStateSubtext: { fontSize: 14, color: '#9A9A9A', marginBottom: 24, letterSpacing: 0.5 },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    marginBottom: 24,
+    letterSpacing: 0.5,
+  },
   dropMask: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 60,
   },
   dropBox: {
     width: 320,
     paddingVertical: 36,
     paddingHorizontal: 24,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: "#1A1A1A",
     borderWidth: 2,
-    borderColor: '#FF2A2A',
-    borderStyle: 'dashed',
+    borderColor: "#FF2A2A",
+    borderStyle: "dashed",
     borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.5,
     shadowRadius: 18,
   },
   dropBoxTitle: {
-    color: '#FF2A2A',
+    color: "#FF2A2A",
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 6,
     letterSpacing: 0.5,
   },
-  dropBoxSub: { color: '#F5F5F5', fontSize: 14, opacity: 0.9 },
+  dropBoxSub: { color: "#F5F5F5", fontSize: 14, opacity: 0.9 },
   uploadingBanner: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 16,
     left: 16,
-    flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
+    flexDirection: "row",
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     zIndex: 70,
   },
-  uploadingText: { color: '#F5F5F5', fontSize: 14 },
+  uploadingText: { color: "#F5F5F5", fontSize: 14 },
 });

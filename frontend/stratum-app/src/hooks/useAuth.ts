@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { authService, User } from '../services';
+import { useState, useEffect, useCallback } from "react";
+import { authService, User } from "../services";
 
 interface AuthState {
   user: User | null;
@@ -10,7 +10,11 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, displayName: string) => Promise<boolean>;
+  register: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -38,7 +42,7 @@ export function useAuth(): UseAuthReturn {
           setIsAuthenticated(true);
         }
       } catch (e) {
-        console.error('Auth check failed:', e);
+        console.error("Auth check failed:", e);
       } finally {
         setIsLoading(false);
       }
@@ -47,30 +51,37 @@ export function useAuth(): UseAuthReturn {
     checkAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
+  const login = useCallback(
+    async (email: string, password: string): Promise<boolean> => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const result = await authService.login(email, password);
-      if (result.success && result.user) {
-        setUser(result.user);
-        setIsAuthenticated(true);
-        return true;
-      } else {
-        setError(result.error || 'Login failed');
+      try {
+        const result = await authService.login(email, password);
+        if (result.success && result.user) {
+          setUser(result.user);
+          setIsAuthenticated(true);
+          return true;
+        } else {
+          setError(result.error || "Login failed");
+          return false;
+        }
+      } catch (e: any) {
+        setError(e.message || "Login failed");
         return false;
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e: any) {
-      setError(e.message || 'Login failed');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const register = useCallback(
-    async (email: string, password: string, displayName: string): Promise<boolean> => {
+    async (
+      email: string,
+      password: string,
+      displayName: string,
+    ): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
@@ -81,17 +92,17 @@ export function useAuth(): UseAuthReturn {
           setIsAuthenticated(true);
           return true;
         } else {
-          setError(result.error || 'Registration failed');
+          setError(result.error || "Registration failed");
           return false;
         }
       } catch (e: any) {
-        setError(e.message || 'Registration failed');
+        setError(e.message || "Registration failed");
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    []
+    [],
   );
 
   const logout = useCallback(async (): Promise<void> => {

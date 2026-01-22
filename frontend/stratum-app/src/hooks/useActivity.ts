@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { activityService, ProjectActivity, socketService } from '../services';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { activityService, ProjectActivity, socketService } from "../services";
 
 interface ActivityState {
   activities: ProjectActivity[];
@@ -27,7 +27,7 @@ const ITEMS_PER_PAGE = 50;
  */
 export function useActivity(
   projectId: string | undefined,
-  personalOnly: boolean = false
+  personalOnly: boolean = false,
 ): UseActivityReturn {
   const [activities, setActivities] = useState<ProjectActivity[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +41,7 @@ export function useActivity(
     if (!projectId) return;
 
     // Listen for new activities via WebSocket
-    unsubscribeRef.current = socketService.on('activity', (data) => {
+    unsubscribeRef.current = socketService.on("activity", (data) => {
       if (data.activity) {
         setActivities((prev) => [data.activity, ...prev]);
       }
@@ -80,7 +80,11 @@ export function useActivity(
           // Apply pagination manually
           newActivities = newActivities.slice(offset, offset + ITEMS_PER_PAGE);
         } else {
-          newActivities = await activityService.getActivities(projectId, ITEMS_PER_PAGE, offset);
+          newActivities = await activityService.getActivities(
+            projectId,
+            ITEMS_PER_PAGE,
+            offset,
+          );
         }
 
         if (append) {
@@ -92,12 +96,12 @@ export function useActivity(
         currentOffset.current = offset + newActivities.length;
         setHasMore(newActivities.length === ITEMS_PER_PAGE);
       } catch (e: any) {
-        setError(e.message || 'Failed to load activities');
+        setError(e.message || "Failed to load activities");
       } finally {
         setIsLoading(false);
       }
     },
-    [projectId, personalOnly]
+    [projectId, personalOnly],
   );
 
   const loadMore = useCallback(async (): Promise<void> => {

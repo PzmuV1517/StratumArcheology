@@ -1,5 +1,5 @@
 // Shared note service types and API calls
-import api from './api';
+import api from "./api";
 
 export interface Note {
   id: string;
@@ -42,7 +42,7 @@ export const noteServiceCore = {
 
   createNote: async (data: CreateNoteData): Promise<Note> => {
     try {
-      const response = await api.post('/notes/', {
+      const response = await api.post("/notes/", {
         title: data.title,
         content: data.content,
         project_id: data.project_id,
@@ -51,15 +51,19 @@ export const noteServiceCore = {
       return response.data;
     } catch (error: any) {
       // If offline or network error, queue the action
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network') || !error.response) {
-        const { offlineQueue } = await import('./offlineQueueService');
-        const { authService } = await import('./authService');
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network") ||
+        !error.response
+      ) {
+        const { offlineQueue } = await import("./offlineQueueService");
+        const { authService } = await import("./authService");
         const user = await authService.getCurrentUser();
         const tempId = `temp_note_${Date.now()}`;
 
         if (user) {
           await offlineQueue.enqueue(
-            'CREATE_NOTE',
+            "CREATE_NOTE",
             data.project_id,
             {
               title: data.title,
@@ -67,7 +71,7 @@ export const noteServiceCore = {
               is_voice: data.is_voice || false,
             },
             user.id,
-            { priority: 1 }
+            { priority: 1 },
           );
 
           // Return a temporary note object
@@ -76,7 +80,7 @@ export const noteServiceCore = {
             title: data.title,
             content: data.content,
             project_id: data.project_id,
-            author_id: 'pending',
+            author_id: "pending",
             is_voice: data.is_voice || false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -93,16 +97,26 @@ export const noteServiceCore = {
       return response.data;
     } catch (error: any) {
       // If offline or network error, queue the action
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network') || !error.response) {
-        const { offlineQueue } = await import('./offlineQueueService');
-        const { authService } = await import('./authService');
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network") ||
+        !error.response
+      ) {
+        const { offlineQueue } = await import("./offlineQueueService");
+        const { authService } = await import("./authService");
         const user = await authService.getCurrentUser();
 
         if (user) {
-          await offlineQueue.enqueue('UPDATE_NOTE', noteData.project_id || '', noteData, user.id, {
-            entityId: noteId,
-            priority: 2,
-          });
+          await offlineQueue.enqueue(
+            "UPDATE_NOTE",
+            noteData.project_id || "",
+            noteData,
+            user.id,
+            {
+              entityId: noteId,
+              priority: 2,
+            },
+          );
 
           // Return optimistic update
           return {
