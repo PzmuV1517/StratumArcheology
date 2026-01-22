@@ -25,36 +25,18 @@ export default function ImagePreviewScreen() {
     (async () => {
       try {
         if (Platform.OS === "web") {
-          const token = await AsyncStorage.getItem("authToken");
+          // Web: downloadFile returns { blob, contentLength, mimeType }
           try {
-            const result: any = await fileService.downloadFileStream(
-              nodeId,
-              token,
-              undefined,
-            );
-            if (result && result.blob) {
-              const url = window.URL.createObjectURL(result.blob);
+            const { blob } = await fileService.downloadFile(nodeId);
+            if (blob) {
+              const url = window.URL.createObjectURL(blob);
               if (!revoked) setBlobUrl(url);
             } else {
               throw new Error("No blob returned");
             }
-          } catch (streamErr) {
-            console.warn(
-              "[ImagePreview] Stream download failed, trying fallback:",
-              streamErr,
-            );
-            try {
-              const res = await fileService.downloadFile(nodeId);
-              if (res && res.data) {
-                const url = window.URL.createObjectURL(res.data);
-                if (!revoked) setBlobUrl(url);
-              } else {
-                throw new Error("No data returned from fallback");
-              }
-            } catch (fallbackErr) {
-              console.error("[ImagePreview] Fallback download failed:", fallbackErr);
-              if (!revoked) setError("Failed to load image");
-            }
+          } catch (err) {
+            console.error("[ImagePreview] Download failed:", err);
+            if (!revoked) setError("Failed to load image");
           }
         } else {
           // On native, downloadFile returns { uri, contentLength, mimeType }

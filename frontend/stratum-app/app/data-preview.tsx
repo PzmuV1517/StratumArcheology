@@ -14,7 +14,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { fileService } from "../src/services/fileService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import TextFilePanel from "../src/components/data/TextFilePanel";
 import CsvPanel from "../src/components/data/CsvPanel";
 import ExcelPanel from "../src/components/data/ExcelPanel";
@@ -229,25 +228,89 @@ export default function DataPreviewScreen() {
     let cancelled = false;
     (async () => {
       try {
+        const ext = (name as string)?.toLowerCase() || "";
+
         if (Platform.OS !== "web") {
-          // Native: download file and read content from local file
+          // Native: download file and use local URI
           const res = await fileService.downloadFile(nodeId, name as string);
           if (!res || !res.uri) {
             throw new Error("Download failed - no result returned");
           }
-          // Read the downloaded file as text
+
+          // Handle different file types on native
+          // Audio
+          if (
+            /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(ext) ||
+            kind === "audio" ||
+            res.mimeType?.startsWith("audio/")
+          ) {
+            if (!cancelled) {
+              setAudioUrl(res.uri);
+              setLoading(false);
+            }
+            return;
+          }
+
+          // Video
+          if (
+            /\.(mp4|webm|ogg|mov)$/i.test(ext) ||
+            kind === "video" ||
+            res.mimeType?.startsWith("video/")
+          ) {
+            if (!cancelled) {
+              setVideoUrl(res.uri);
+              setLoading(false);
+            }
+            return;
+          }
+
+          // PDF
+          if (ext.endsWith(".pdf") || kind === "pdf") {
+            if (!cancelled) {
+              setPdfUrl(res.uri);
+              setLoading(false);
+            }
+            return;
+          }
+
+          // Mesh (3D models)
+          if (/\.(glb|gltf)$/i.test(ext) || kind === "mesh") {
+            if (!cancelled) {
+              setMeshUrl(res.uri);
+              setLoading(false);
+            }
+            return;
+          }
+
+          // Point cloud
+          if (/\.(las|laz|ply|pcd|rwi|rwp)$/i.test(ext) || kind === "pointcloud") {
+            if (!cancelled) {
+              setPointUrl(res.uri);
+              setLoading(false);
+            }
+            return;
+          }
+
+          // Text-based files - read content
           const content = await fileService.readFileAsText(res.uri);
-          if (!cancelled) setTextContent(content);
+          if (!cancelled) {
+            setTextContent(content);
+            if (ext.endsWith(".txt")) {
+              setIsNoteFile(true);
+              const filename = (name as string) || "";
+              const titleWithoutExt = filename.endsWith(".txt")
+                ? filename.slice(0, -4)
+                : filename;
+              setOriginalTitle(titleWithoutExt);
+              setEditableTitle(titleWithoutExt);
+            }
+          }
           setLoading(false);
           return;
         }
-        const token = await AsyncStorage.getItem("authToken");
-        const { blob }: any = await fileService.downloadFileStream(
-          nodeId,
-          token,
-          undefined,
-        );
-        const ext = (name as string)?.toLowerCase() || "";
+
+        // Web: downloadFile returns { blob, contentLength, mimeType }
+        const { blob } = await fileService.downloadFile(nodeId);
 
         // AUDIO FIRST (handles audio/webm)
         const isBlobAudio = blob.type && /^audio\//.test(blob.type);
@@ -398,12 +461,8 @@ export default function DataPreviewScreen() {
   const handleDownload = async () => {
     try {
       if (Platform.OS === "web") {
-        const token = await AsyncStorage.getItem("authToken");
-        const { blob }: any = await fileService.downloadFileStream(
-          nodeId,
-          token,
-          undefined,
-        );
+        // Web: downloadFile returns { blob, contentLength, mimeType }
+        const { blob } = await fileService.downloadFile(nodeId);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -805,6 +864,22 @@ export default function DataPreviewScreen() {
                   <MeshPanel src={meshUrl} name={name as string} />
                 ) : isPoint ? (
                   <PointCloudPanel src={pointUrl} name={name as string} />
+                ) : isUnsupported3D ? (
+                  <View style={styles.unsupportedContainer}>
+                    <Text style={styles.unsupportedIcon}>📦</Text>
+                    <Text style={styles.unsupportedTitle}>
+                      Unsupported 3D Format
+                    </Text>
+                    <Text style={styles.unsupportedText}>
+                      {(name as string)?.split(".").pop()?.toUpperCase() || "This"}{" "}
+                      files cannot be previewed in the browser.
+                    </Text>
+                    <Text style={styles.unsupportedHint}>
+                      Only GLB and GLTF formats are currently supported for 3D
+                      preview. You can download this file to view it in a 3D
+                      application.
+                    </Text>
+                  </View>
                 ) : table ? (
                   (() => {
                     const ext = (name as string)?.toLowerCase() || "";
@@ -1040,4 +1115,35 @@ const styles = StyleSheet.create({
   },
   modalButtonPrimary: { backgroundColor: "#2A2A2A", borderColor: "#FF2A2A" },
   modalButtonText: { color: "#F5F5F5", fontWeight: "600" },
+  // Unsupported 3D format display
+  unsupportedContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  unsupportedIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  unsupportedTitle: {
+    color: "#F5F5F5",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  unsupportedText: {
+    color: "#9A9A9A",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  unsupportedHint: {
+    color: "#6A6A6A",
+    fontSize: 14,
+    textAlign: "center",
+    maxWidth: 300,
+    lineHeight: 20,
+  },
 });
