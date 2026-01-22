@@ -23,17 +23,17 @@ module.exports = defineConfig([
 
     rules: {
       // ---------------- Prettier ----------------
-      'prettier/prettier': [
-        'error',
+      "prettier/prettier": [
+        "error",
         {
-          singleQuote: true,
+          singleQuote: false,
           semi: true,
-          trailingComma: 'all',
+          trailingComma: "all",
           printWidth: 85,
           tabWidth: 2,
           bracketSpacing: true,
           bracketSameLine: false,
-          arrowParens: 'always',
+          arrowParens: "always",
         },
       ],
 

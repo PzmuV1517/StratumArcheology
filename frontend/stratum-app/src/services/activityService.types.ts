@@ -54,14 +54,13 @@ export interface ActivityExtraData {
 export interface ProjectActivity {
   id: number;
   project_id: number;
-  user_id: number;
+  user_id: string;
   activity_type: ActivityType | string;
   extra_data?: ActivityExtraData;
   created_at: string;
 
-  // Joined user info
-  user_email?: string;
-  user_display_name?: string;
+  // Joined user info from backend
+  user_name?: string;
 }
 
 export interface ActivityListResponse {

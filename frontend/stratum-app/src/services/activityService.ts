@@ -147,7 +147,7 @@ export const activityService = {
   getActivityDescription: (activity: ProjectActivity, currentUserId?: string): string => {
     // Show "You" for the current user's actions
     const isCurrentUser = currentUserId && activity.user_id === currentUserId;
-    const userName = isCurrentUser ? 'You' : (activity.user_display_name || activity.user_email || 'Someone');
+    const userName = isCurrentUser ? "You" : (activity.user_name || "A team member");
     const extra = activity.extra_data || {};
 
     const descriptions: Record<string, string> = {
