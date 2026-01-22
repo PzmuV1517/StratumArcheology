@@ -4,3 +4,7 @@ dist/
 android/
 ios/
 *.lock
+coverage/
+.git/
+*.min.js
+*.min.css
