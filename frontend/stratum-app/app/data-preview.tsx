@@ -19,11 +19,12 @@ import CsvPanel from "../src/components/data/CsvPanel";
 import ExcelPanel from "../src/components/data/ExcelPanel";
 import { useAutoSave } from "../src/hooks/useAutoSave";
 
-import PdfPanel from "../src/components/data/PdfPanel.web";
-import VideoPanel from "../src/components/data/VideoPanel.web";
-import PointCloudPanel from "../src/components/data/PointCloudPanel.web";
-import MeshPanel from "../src/components/data/MeshPanel.web";
-import AudioPanel from "../src/components/data/AudioPanel.web";
+// Platform-specific panels (bundler resolves .native.tsx vs .web.tsx automatically)
+import PdfPanel from "../src/components/data/PdfPanel";
+import VideoPanel from "../src/components/data/VideoPanel";
+import PointCloudPanel from "../src/components/data/PointCloudPanel";
+import MeshPanel from "../src/components/data/MeshPanel";
+import AudioPanel from "../src/components/data/AudioPanel";
 import * as FileSystemLegacy from "expo-file-system/legacy";
 
 // Lazy import to avoid native bundling issues

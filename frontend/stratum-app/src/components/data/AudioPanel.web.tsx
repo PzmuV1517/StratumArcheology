@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
 
 export interface AudioPanelProps {
   audioUrl: string;
@@ -50,28 +49,34 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   }, [audioUrl]);
 
   return (
-    <View style={styles.wrapper}>
+    <div style={styles.wrapper}>
       {audioUrl ? (
         <>
           <audio ref={audioRef} src={audioUrl} controls style={styles.audio} />
-          <canvas ref={canvasRef} width={800} height={120} style={styles.canvas} />
-          {error && <Text style={styles.err}>{error}</Text>}
+          <canvas
+            ref={canvasRef}
+            width={800}
+            height={120}
+            style={styles.canvas}
+          />
+          {error && <span style={styles.err}>{error}</span>}
         </>
       ) : (
-        <Text style={styles.info}>No audio</Text>
+        <span style={styles.info}>No audio</span>
       )}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     flex: 1,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
+    border: "1px solid #2A2A2A",
     backgroundColor: "#0E0E0E",
     padding: 16,
+    display: "flex",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
@@ -84,6 +89,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   info: { color: "#9A9A9A" },
-  name: { color: "#F5F5F5", fontSize: 12 },
   err: { color: "#FF4444", fontSize: 12 },
-});
+};

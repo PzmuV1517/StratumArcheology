@@ -1,5 +1,4 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
 import * as THREE from "three";
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
@@ -510,8 +509,8 @@ export default function PointCloudPanel({ src, name }: Props) {
   }
 
   return (
-    <View style={styles.wrapper}>
-      <View ref={hostRef} style={styles.fill} />
+    <div style={wrapperStyle}>
+      <div ref={hostRef} style={fillStyle} />
       {/* Loading overlay with progress bar */}
       {!!src && !error && loading && (
         <div style={loadingOverlayStyle}>
@@ -623,20 +622,20 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
       </div>
       {!src && (
-        <View style={styles.center}>
-          <Text style={styles.info}>No file selected</Text>
-        </View>
+        <div style={centerStyle}>
+          <span style={infoStyle}>No file selected</span>
+        </div>
       )}
       {!!src && error && (
-        <View style={[styles.center, styles.overlay]}>
-          <Text style={styles.title}>Point Cloud Preview</Text>
-          <Text style={styles.info}>{error}</Text>
+        <div style={{ ...centerStyle, ...overlayStyle }}>
+          <span style={titleStyle}>Point Cloud Preview</span>
+          <span style={infoStyle}>{error}</span>
           {!!name && (
-            <Text style={[styles.info, { opacity: 0.8 }]}>File: {name}</Text>
+            <span style={{ ...infoStyle, opacity: 0.8 }}>File: {name}</span>
           )}
-        </View>
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
@@ -783,26 +782,41 @@ function fitViewToGeometry(
   return { center: bs.center, radius };
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#0E0E0E",
-    overflow: "hidden",
-    position: "relative",
-  },
-  fill: { position: "absolute", inset: 0 } as any,
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
-  overlay: {
-    position: "absolute",
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.3)",
-  } as any,
-  title: { color: "#F5F5F5", fontSize: 16, fontWeight: "700", marginBottom: 8 },
-  info: { color: "#9A9A9A", fontSize: 13, textAlign: "center", marginTop: 4 },
-});
+const wrapperStyle: React.CSSProperties = {
+  flex: 1,
+  borderRadius: 12,
+  border: "1px solid #2A2A2A",
+  backgroundColor: "#0E0E0E",
+  overflow: "hidden",
+  position: "relative",
+  display: "flex",
+};
+const fillStyle: React.CSSProperties = { position: "absolute", inset: 0 };
+const centerStyle: React.CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+};
+const overlayStyle: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.3)",
+};
+const titleStyle: React.CSSProperties = {
+  color: "#F5F5F5",
+  fontSize: 16,
+  fontWeight: 700,
+  marginBottom: 8,
+};
+const infoStyle: React.CSSProperties = {
+  color: "#9A9A9A",
+  fontSize: 13,
+  textAlign: "center",
+  marginTop: 4,
+};
 
 // Inline CSS for the web controls overlay
 const controlsStyle: React.CSSProperties = {

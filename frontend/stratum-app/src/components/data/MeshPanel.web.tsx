@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet } from "react-native";
 
 // Lightweight web viewer for .glb/.gltf using Google's <model-viewer> web component
 // No runtime dependency in package.json; we inject the script once on web.
@@ -82,7 +81,7 @@ export default function MeshPanel({
   }, [src]);
 
   return (
-    <View style={styles.wrapper}>
+    <div style={styles.wrapper}>
       <div
         ref={containerRef}
         style={{
@@ -92,24 +91,19 @@ export default function MeshPanel({
           display: src ? "flex" : "none",
         }}
       />
-      {!src && <View style={styles.fallback} />}
-    </View>
+      {!src && <div style={styles.fallback} />}
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
+const styles: Record<string, React.CSSProperties> = {
   wrapper: {
     flex: 1,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
+    border: "1px solid #2A2A2A",
     backgroundColor: "#0E0E0E",
     overflow: "hidden",
-  },
-  viewer: {
-    width: "100%",
-    height: "100%",
     display: "flex",
   },
   fallback: { flex: 1 },
-});
+};
