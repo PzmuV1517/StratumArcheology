@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -15,6 +15,9 @@ interface Props {
   onOpenMembers: () => void;
   onOpenSettings: () => void;
   onExitProject?: () => void;
+  onDeleteProject?: () => void;
+  onTransferLeadership?: () => void;
+  isOwner?: boolean;
   canChangeSettings?: boolean;
 }
 
