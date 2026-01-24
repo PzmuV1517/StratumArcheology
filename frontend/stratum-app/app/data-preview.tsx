@@ -473,7 +473,13 @@ export default function DataPreviewScreen() {
         a.remove();
         window.URL.revokeObjectURL(url);
       } else {
-        Alert.alert("Download", "File downloaded (placeholder).");
+        // Native: download file and share
+        const result = await fileService.downloadFile(nodeId, name as string);
+        if (result?.uri) {
+          await fileService.shareFile(result.uri);
+        } else {
+          Alert.alert("Error", "Failed to download file");
+        }
       }
     } catch (e) {
       console.error(e);

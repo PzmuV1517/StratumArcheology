@@ -53,12 +53,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
       {audioUrl ? (
         <>
           <audio ref={audioRef} src={audioUrl} controls style={styles.audio} />
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={120}
-            style={styles.canvas}
-          />
+          <canvas ref={canvasRef} width={800} height={120} style={styles.canvas} />
           {error && <span style={styles.err}>{error}</span>}
         </>
       ) : (
