@@ -22,14 +22,32 @@ export default function MeshPanel({
   src: string | null;
   name?: string;
 }) {
-  const viewerRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     ensureModelViewerScript();
 
+    if (!src || !containerRef.current) return;
+
+    // Clear previous viewer
+    containerRef.current.innerHTML = "";
+
+    // Create model-viewer element directly
+    const viewer = document.createElement("model-viewer");
+    viewer.setAttribute("src", src);
+    viewer.setAttribute("camera-controls", "");
+    viewer.setAttribute("interaction-policy", "always-allow");
+    viewer.setAttribute("exposure", "1.0");
+    viewer.setAttribute("shadow-intensity", "0.5");
+    viewer.setAttribute("autoplay", "");
+    viewer.setAttribute("ar-modes", "webxr scene-viewer quick-look");
+    viewer.style.width = "100%";
+    viewer.style.height = "100%";
+    viewer.style.display = "block";
+
+    containerRef.current.appendChild(viewer);
+
     const onKey = (e: KeyboardEvent) => {
-      const el = viewerRef.current as HTMLElement | null;
-      if (!el) return;
       const k = e.key;
       let deltaY = 0;
       if (k === "i" || k === "I")
@@ -46,12 +64,12 @@ export default function MeshPanel({
           cancelable: true,
           view: window,
         });
-        el.dispatchEvent(wheelEvent);
+        viewer.dispatchEvent(wheelEvent);
       } catch {
         const evt: any = document.createEvent("Event");
         evt.initEvent("wheel", true, true);
         evt.deltaY = deltaY;
-        (el as any).dispatchEvent(evt);
+        viewer.dispatchEvent(evt);
       }
 
       e.preventDefault();
@@ -61,26 +79,20 @@ export default function MeshPanel({
     document.addEventListener("keydown", onKey, { capture: true });
     return () =>
       document.removeEventListener("keydown", onKey, { capture: true } as any);
-  }, []);
+  }, [src]);
 
   return (
     <View style={styles.wrapper}>
-      {src ? (
-        // @ts-ignore - custom element available after script loads
-        <model-viewer
-          src={src}
-          camera-controls
-          interaction-policy="always-allow"
-          exposure="1.0"
-          shadow-intensity="0.5"
-          style={styles.viewer as any}
-          autoplay=""
-          ar-modes="webxr scene-viewer quick-look"
-          ref={viewerRef}
-        />
-      ) : (
-        <View style={styles.fallback} />
-      )}
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          flex: 1,
+          display: src ? "flex" : "none",
+        }}
+      />
+      {!src && <View style={styles.fallback} />}
     </View>
   );
 }
