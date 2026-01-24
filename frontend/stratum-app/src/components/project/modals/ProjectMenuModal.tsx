@@ -28,9 +28,37 @@ export default function ProjectMenuModal({
   onOpenMembers,
   onOpenSettings,
   onExitProject,
+  onDeleteProject,
+  onTransferLeadership,
+  isOwner = false,
   canChangeSettings = true,
 }: Props) {
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  const handleExitPress = () => {
+    setShowExitConfirm(true);
+  };
+
+  const handleConfirmExit = () => {
+    setShowExitConfirm(false);
+    onClose();
+    onExitProject?.();
+  };
+
+  const handleTransferLeadership = () => {
+    setShowExitConfirm(false);
+    onClose();
+    onTransferLeadership?.();
+  };
+
+  const handleDeleteProject = () => {
+    setShowExitConfirm(false);
+    onClose();
+    onDeleteProject?.();
+  };
+
   return (
+    <>
     <Modal
       visible={visible}
       transparent
