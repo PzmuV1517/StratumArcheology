@@ -71,3 +71,5 @@ storage/
 *.tmp
 *.temp
 CHATGPT_CONTEXT_PROMPT.md
+
+frontend/stratum-app/package-lock.json

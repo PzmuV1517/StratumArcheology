@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  ScrollView,
-  TextInput,
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -47,7 +45,6 @@ export default function DataPreviewScreen() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [gridReady, setGridReady] = useState(false);
   const [originalTitle, setOriginalTitle] = useState<string>("");
   const [editableTitle, setEditableTitle] = useState<string>("");
   const [isNoteFile, setIsNoteFile] = useState(false);
@@ -64,18 +61,6 @@ export default function DataPreviewScreen() {
   } | null>(null);
   const wrapperRef = useRef<any>(null);
   // markdown handled by TextFilePanel
-  const gridRef = useRef<any>(null);
-  const defaultCols = 1000; // virtual infinite feel
-  const defaultRows = 1000;
-  const colWidthPx = 96; // ~12ch monospace approximation in px
-  const rowHeaderWidth = 28; // slimmer index column
-  const rowHeightPx = 30;
-  const [gridScroll, setGridScroll] = useState({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-  });
 
   // Determine if file is editable (text or spreadsheet only)
   const isEditableFile = useMemo(() => {
@@ -91,29 +76,22 @@ export default function DataPreviewScreen() {
   }, [name]);
 
   // AutoSave hook - only for editable files
-  const {
-    saveStatus,
-    wasRestored,
-    saveDraft,
-    clearDraft,
-    hasDraft,
-    getDraft,
-    scheduleAutoSave,
-  } = useAutoSave<{
-    textContent?: string | null;
-    table?: string[][] | null;
-    editableTitle?: string;
-  }>({
-    formId: `data-preview-${nodeId}`,
-    initialData: { textContent: null, table: null, editableTitle: "" },
-    skipRestore: true, // We'll handle restore manually to show confirmation
-    onRestore: (data) => {
-      if (data.textContent !== undefined && data.textContent !== null)
-        setTextContent(data.textContent);
-      if (data.table) setTable(data.table);
-      if (data.editableTitle) setEditableTitle(data.editableTitle);
-    },
-  });
+  const { saveStatus, clearDraft, hasDraft, getDraft, scheduleAutoSave } =
+    useAutoSave<{
+      textContent?: string | null;
+      table?: string[][] | null;
+      editableTitle?: string;
+    }>({
+      formId: `data-preview-${nodeId}`,
+      initialData: { textContent: null, table: null, editableTitle: "" },
+      skipRestore: true, // We'll handle restore manually to show confirmation
+      onRestore: (data) => {
+        if (data.textContent !== undefined && data.textContent !== null)
+          setTextContent(data.textContent);
+        if (data.table) setTable(data.table);
+        if (data.editableTitle) setEditableTitle(data.editableTitle);
+      },
+    });
 
   // Check for draft on mount and show recovery modal
   useEffect(() => {
@@ -128,7 +106,7 @@ export default function DataPreviewScreen() {
         }
       }
     })();
-  }, [nodeId, isEditableFile]);
+  }, [nodeId, isEditableFile, hasDraft, getDraft]);
 
   // Auto-save when content changes (debounced)
   useEffect(() => {
@@ -200,30 +178,6 @@ export default function DataPreviewScreen() {
       document.head.appendChild(link);
     }
   }, []);
-
-  const ensureSize = useCallback((r: number, c: number) => {
-    setTable((prev) => {
-      if (!prev) return prev;
-      const rows = prev.slice();
-      while (rows.length <= r) rows.push([] as any);
-      const row = rows[r] ? rows[r].slice() : [];
-      while (row.length <= c) row.push("");
-      rows[r] = row;
-      return rows;
-    });
-  }, []);
-
-  // Wrap a string at fixed N-character chunks with explicit newlines
-  const WRAP_CHARS = 12;
-  const wrap15 = (value: any): string => {
-    const s = String(value ?? "");
-    if (!s) return "";
-    const out: string[] = [];
-    for (let i = 0; i < s.length; i += WRAP_CHARS) {
-      out.push(s.slice(i, i + WRAP_CHARS));
-    }
-    return out.join("\n");
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -419,7 +373,6 @@ export default function DataPreviewScreen() {
             AutoSizer = (await import("react-virtualized-auto-sizer")).default;
           if (!VariableSizeGrid)
             VariableSizeGrid = (await import("react-window")).VariableSizeGrid;
-          setGridReady(true);
 
           // (moved markdown preloading to the txt/md branch above)
 
@@ -804,13 +757,6 @@ export default function DataPreviewScreen() {
     window.addEventListener("wheel", onWheel, { passive: false });
     return () => window.removeEventListener("wheel", onWheel as any);
   }, [canZoomWeb]);
-
-  const handleNotePress = (noteId: string) => {
-    // Navigate to note detail - projectId should be passed through navigation params if available
-    const params: any = { noteId };
-    // Try to get projectId from previous route or pass it through params
-    router.push({ pathname: "/note-detail", params });
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

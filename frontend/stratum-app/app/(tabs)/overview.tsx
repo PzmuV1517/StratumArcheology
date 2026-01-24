@@ -270,9 +270,17 @@ export default function OverviewScreen() {
 
       {/* Quick Actions Section */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>
-          Quick Actions
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+            Quick Actions
+          </Text>
+          <TouchableOpacity
+            style={styles.modifyButton}
+            onPress={() => router.push("/settings")}
+          >
+            <Text style={styles.modifyButtonText}>Modify</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}
@@ -485,6 +493,17 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     fontSize: 16,
     fontWeight: "600",
+  },
+  modifyButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#2A2A2A",
+  },
+  modifyButtonText: {
+    color: "#9A9A9A",
+    fontSize: 12,
+    fontWeight: "500",
   },
   quickActions: {
     flexDirection: "row",
