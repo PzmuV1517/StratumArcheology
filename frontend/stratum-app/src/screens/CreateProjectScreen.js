@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,17 +8,17 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-} from 'react-native';
-import { projectService } from '../services/projectService';
+} from "react-native";
+import { projectService } from "../services/projectService";
 
 export default function CreateProjectScreen({ navigation }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a project name');
+      Alert.alert("Error", "Please enter a project name");
       return;
     }
 
@@ -28,11 +28,11 @@ export default function CreateProjectScreen({ navigation }) {
         name: name.trim(),
         description: description.trim() || null,
       });
-      Alert.alert('Success', 'Project created successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+      Alert.alert("Success", "Project created successfully", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to create project');
+      Alert.alert("Error", "Failed to create project");
     } finally {
       setLoading(false);
     }
@@ -87,56 +87,56 @@ export default function CreateProjectScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   form: {
     padding: 20,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
+    fontWeight: "bold",
+    color: "#2c3e50",
     marginBottom: 30,
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: "600",
+    color: "#2c3e50",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     fontSize: 16,
   },
   textArea: {
     height: 120,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   button: {
-    backgroundColor: '#3498db',
+    backgroundColor: "#3498db",
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cancelButton: {
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   cancelButtonText: {
-    color: '#7f8c8d',
+    color: "#7f8c8d",
     fontSize: 16,
   },
 });

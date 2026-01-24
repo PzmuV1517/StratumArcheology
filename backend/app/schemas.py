@@ -1,13 +1,20 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+
+from pydantic import BaseModel, EmailStr
 
 
 class UserRole(str, Enum):
     LEADER = "leader"
     RESEARCHER = "researcher"
     GUEST = "guest"
+
+
+class PrivacyLevel(str, Enum):
+    PRIVATE = "private"  # Only owner can see
+    SHARED = "shared"  # Shared with specific users
+    PROJECT = "project"  # All project members can see (default)
+    PUBLIC = "public"  # Anyone with project access can see
 
 
 # Auth Schemas
@@ -24,19 +31,19 @@ class RegisterRequest(BaseModel):
 
 class FirebaseTokenRequest(BaseModel):
     firebase_token: str
-    display_name: Optional[str] = None
+    display_name: str | None = None
 
 
 class AuthResponse(BaseModel):
     access_token: str
-    user: 'UserResponse'
+    user: "UserResponse"
 
 
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
-    display_name: Optional[str] = None
-    photo_url: Optional[str] = None
+    display_name: str | None = None
+    photo_url: str | None = None
 
 
 class UserCreate(UserBase):
@@ -47,20 +54,25 @@ class UserResponse(UserBase):
     id: str
     firebase_uid: str
     created_at: datetime
-    last_login: Optional[datetime] = None
-    
+    last_login: datetime | None = None
+
     class Config:
         from_attributes = True
+
+
+class ProfileUpdateRequest(BaseModel):
+    display_name: str | None = None
+    photo_url: str | None = None
 
 
 # Project Member Response (includes role from join table)
 class ProjectMemberResponse(BaseModel):
     id: str
     email: str
-    display_name: Optional[str] = None
-    photo_url: Optional[str] = None
+    display_name: str | None = None
+    photo_url: str | None = None
     role: UserRole
-    
+
     class Config:
         from_attributes = True
 
@@ -68,8 +80,8 @@ class ProjectMemberResponse(BaseModel):
 # Project Schemas
 class ProjectBase(BaseModel):
     name: str
-    description: Optional[str] = None
-    ran_lmi_id: Optional[str] = None
+    description: str | None = None
+    ran_lmi_id: str | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -82,13 +94,13 @@ class ProjectResponse(ProjectBase):
     created_at: datetime
     updated_at: datetime
     is_active: bool
-    
+
     class Config:
         from_attributes = True
 
 
 class ProjectWithMembers(ProjectResponse):
-    members: List[ProjectMemberResponse] = []
+    members: list[ProjectMemberResponse] = []
 
 
 # Project Member Schemas
@@ -104,7 +116,7 @@ class ProjectMemberUpdate(BaseModel):
 # Note Schemas
 class NoteBase(BaseModel):
     title: str
-    content: Optional[str] = None
+    content: str | None = None
 
 
 class NoteCreate(NoteBase):
@@ -112,18 +124,18 @@ class NoteCreate(NoteBase):
 
 
 class NoteUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
+    title: str | None = None
+    content: str | None = None
 
 
 class NoteAttachmentResponse(BaseModel):
     id: str
     filename: str
     file_type: str
-    file_size: Optional[str] = None
+    file_size: str | None = None
     uploaded_at: datetime
-    url: Optional[str] = None  # Presigned URL
-    
+    url: str | None = None  # Presigned URL
+
     class Config:
         from_attributes = True
 
@@ -134,11 +146,21 @@ class NoteResponse(NoteBase):
     author_id: str
     created_at: datetime
     updated_at: datetime
-    last_synced: Optional[datetime] = None
-    attachments: List[NoteAttachmentResponse] = []
-    
+    last_synced: datetime | None = None
+    version: int = 1
+    privacy: PrivacyLevel = PrivacyLevel.PROJECT
+    shared_with: list[str] | None = None
+    attachments: list[NoteAttachmentResponse] = []
+
     class Config:
         from_attributes = True
+
+
+class NoteUpdateWithPrivacy(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    privacy: PrivacyLevel | None = None
+    shared_with: list[str] | None = None
 
 
 # Sync Schemas
@@ -151,7 +173,7 @@ class SyncConflict(BaseModel):
 
 
 class SyncRequest(BaseModel):
-    conflicts: List[SyncConflict]
+    conflicts: list[SyncConflict]
 
 
 # Authentication Schemas
@@ -170,12 +192,17 @@ class FileNodeType(str, Enum):
 class FileNodeBase(BaseModel):
     id: str
     project_id: str
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
     name: str
     type: FileNodeType
-    mime_type: Optional[str] = None
-    size: Optional[str] = None
+    mime_type: str | None = None
+    size: str | None = None
     is_locked: bool = False
+    version: int = 1
+    checksum: str | None = None
+    owner_id: str | None = None
+    privacy: PrivacyLevel = PrivacyLevel.PROJECT
+    shared_with: list[str] | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -183,9 +210,27 @@ class FileNodeBase(BaseModel):
         from_attributes = True
 
 
+class FileVersionResponse(BaseModel):
+    id: str
+    file_node_id: str
+    version: int
+    storage_path: str
+    size: str | None = None
+    checksum: str | None = None
+    created_at: datetime
+    created_by: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class FileNodeWithVersions(FileNodeBase):
+    versions: list[FileVersionResponse] = []
+
+
 class FileNodeCreateFolder(BaseModel):
     name: str
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
 
 
 class FileNodeRenameRequest(BaseModel):
@@ -193,14 +238,35 @@ class FileNodeRenameRequest(BaseModel):
 
 
 class FileNodeMoveRequest(BaseModel):
-    new_parent_id: Optional[str] = None
+    new_parent_id: str | None = None
+
+
+class FilePrivacyUpdateRequest(BaseModel):
+    privacy: PrivacyLevel
+    shared_with: list[str] | None = None  # List of user IDs for SHARED privacy
+
+
+class ShareWithUsersRequest(BaseModel):
+    user_ids: list[str]
+
+
+class SharedFilesResponse(BaseModel):
+    shared_with_me: list[FileNodeBase]
+    shared_by_me: list[FileNodeBase]
+
+
+class SharedNotesResponse(BaseModel):
+    shared_with_me: list["NoteResponse"]
+    shared_by_me: list["NoteResponse"]
 
 
 # Invite Schemas
 class InviteCreateRequest(BaseModel):
     role: UserRole = UserRole.GUEST
-    ttl_hours: Optional[int] = None  # optional time-to-live in hours, default 14 days
-    max_uses: Optional[int] = None  # None = unlimited uses, otherwise limit to this many redemptions
+    ttl_hours: int | None = None  # optional time-to-live in hours, default 14 days
+    max_uses: int | None = (
+        None  # None = unlimited uses, otherwise limit to this many redemptions
+    )
 
 
 class InviteResponse(BaseModel):
@@ -208,8 +274,8 @@ class InviteResponse(BaseModel):
     code: str  # Short code like "PRJ-ABC123"
     project_id: str
     role: str
-    expires_at: Optional[datetime] = None
-    max_uses: Optional[int] = None  # None = unlimited
+    expires_at: datetime | None = None
+    max_uses: int | None = None  # None = unlimited
     use_count: int = 0  # How many times used
     accept_path: str  # client path such as /invite?token=...
 

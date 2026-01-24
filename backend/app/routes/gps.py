@@ -1,12 +1,12 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Optional, Any, Dict
-import json
 
 from app.database import get_db
-from app.models import Project, ProjectGPS, User
 from app.dependencies import get_current_user
+from app.models import Project, ProjectGPS, User
 from app.websocket import log_activity
 
 router = APIRouter()
@@ -18,13 +18,13 @@ class LatLng(BaseModel):
 
 
 class PolyShape(BaseModel):
-    points: List[LatLng]
+    points: list[LatLng]
     closed: bool = False
 
 
 class GPSState(BaseModel):
-    work: Optional[PolyShape] = None
-    sites: List[PolyShape] = []
+    work: PolyShape | None = None
+    sites: list[PolyShape] = []
 
 
 @router.get("/projects/{project_id}/gps", response_model=GPSState)
@@ -50,7 +50,7 @@ async def put_project_gps(
     project_id: str,
     state: GPSState,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     # Validate project exists
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -66,15 +66,18 @@ async def put_project_gps(
         row = ProjectGPS(project_id=project_id, data=data_str)
         db.add(row)
     db.commit()
-    
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
-        activity_type='gps_updated',
-        description='Updated GPS coordinates',
+        activity_type="gps_updated",
+        description="Updated GPS coordinates",
         user_id=current_user.id,
-        metadata={'has_work_area': state.work is not None, 'sites_count': len(state.sites)}
+        metadata={
+            "has_work_area": state.work is not None,
+            "sites_count": len(state.sites),
+        },
     )
-    
+
     return state

@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaEyeSlash } from 'react-icons/fa';
-import { FaEye } from 'react-icons/fa';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { FaEyeSlash, FaEye } from "react-icons/fa";
 import {
   View,
   Text,
@@ -13,21 +12,21 @@ import {
   Platform,
   Animated,
   Easing,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Link, useLocalSearchParams } from 'expo-router';
-import { useAuth } from '../../src/contexts/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../src/services/api';
-import { config } from '../../src/config/config';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const FaultyTerminal = require('../../components/FaultyTerminal.jsx').default;
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Link, useLocalSearchParams } from "expo-router";
+import { useAuth } from "../../src/contexts/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../../src/services/api";
+import { config } from "../../src/config/config";
+
+const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
 // Prevent unnecessary re-renders of the heavy background
 const MemoFaultyTerminal = React.memo(FaultyTerminal);
 // Load component CSS only on web
-if (Platform.OS === 'web') {
+if (Platform.OS === "web") {
   // @ts-ignore - CSS handled by web bundler
-  require('../../components/FaultyTerminal.css');
+  require("../../components/FaultyTerminal.css");
 }
 
 export default function LoginScreen() {
@@ -51,20 +50,20 @@ export default function LoginScreen() {
     }, fadeDelayMs);
     return () => clearTimeout(t);
   }, [fade, fadeDelayMs]);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const [showDevModal, setShowDevModal] = useState(false);
-  const [apiInput, setApiInput] = useState('');
+  const [apiInput, setApiInput] = useState("");
   const [savingApi, setSavingApi] = useState(false);
 
   // Stable props for FaultyTerminal so typing doesn't restart its animation
   const terminalGridMul = useMemo(() => [2, 1] as [number, number], []);
   const terminalStyle = useMemo(
-    () => ({ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 } as const),
-    []
+    () => ({ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }) as const,
+    [],
   );
   const terminalProps = useMemo(
     () => ({
@@ -80,19 +79,19 @@ export default function LoginScreen() {
       chromaticAberration: 0,
       dither: 0,
       curvature: 0.1,
-      tint: '#ff0000',
+      tint: "#ff0000",
       mouseReact: true,
       mouseStrength: 0.5,
       pageLoadAnimation: true,
       brightness: 0.6,
       style: terminalStyle,
     }),
-    [terminalGridMul, terminalStyle]
+    [terminalGridMul, terminalStyle],
   );
 
   useEffect(() => {
     (async () => {
-      const override = await AsyncStorage.getItem('apiBaseUrlOverride');
+      const override = await AsyncStorage.getItem("apiBaseUrlOverride");
       const current = override || config.apiBaseUrl;
       setApiInput(current);
       if (override) api.defaults.baseURL = override;
@@ -103,17 +102,20 @@ export default function LoginScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert('Invalid URL', 'Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api');
+      Alert.alert(
+        "Invalid URL",
+        "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api",
+      );
       return;
     }
     try {
       setSavingApi(true);
-      await AsyncStorage.setItem('apiBaseUrlOverride', apiInput);
+      await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
       api.defaults.baseURL = apiInput;
       setShowDevModal(false);
-      Alert.alert('Applied', 'Backend API base URL updated for this app.');
+      Alert.alert("Applied", "Backend API base URL updated for this app.");
     } catch (e) {
-      Alert.alert('Error', 'Failed to save API URL override');
+      Alert.alert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -122,13 +124,13 @@ export default function LoginScreen() {
   const resetApiOverride = async () => {
     try {
       setSavingApi(true);
-      await AsyncStorage.removeItem('apiBaseUrlOverride');
+      await AsyncStorage.removeItem("apiBaseUrlOverride");
       api.defaults.baseURL = config.apiBaseUrl;
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
-      Alert.alert('Reset', 'Reverted to default backend API URL.');
+      Alert.alert("Reset", "Reverted to default backend API URL.");
     } catch (e) {
-      Alert.alert('Error', 'Failed to reset API URL override');
+      Alert.alert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -141,140 +143,167 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    console.log('[Login] handleLogin called, email:', email);
+    console.log("[Login] handleLogin called, email:", email);
     if (!email || !password) {
-      if (Platform.OS === 'web') {
-        window.alert('Please fill in all fields');
+      if (Platform.OS === "web") {
+        window.alert("Please fill in all fields");
       } else {
-        Alert.alert('Error', 'Please fill in all fields');
+        Alert.alert("Error", "Please fill in all fields");
       }
       return;
     }
 
     if (!isValidEmail(email)) {
-      if (Platform.OS === 'web') {
-        window.alert('Please enter a valid email address (e.g., user@example.com)');
+      if (Platform.OS === "web") {
+        window.alert("Please enter a valid email address (e.g., user@example.com)");
       } else {
-        Alert.alert('Invalid Email', 'Please enter a valid email address (e.g., user@example.com)');
+        Alert.alert(
+          "Invalid Email",
+          "Please enter a valid email address (e.g., user@example.com)",
+        );
       }
       return;
     }
 
     setLoading(true);
-    console.log('[Login] Calling login...');
+    console.log("[Login] Calling login...");
     const result = await login(email, password);
-    console.log('[Login] Result:', result);
+    console.log("[Login] Result:", result);
     setLoading(false);
 
     if (!result.success) {
-      console.log('[Login] Login failed:', result.error);
-      if (Platform.OS === 'web') {
-        window.alert('Login Failed: ' + (result.error || 'Unknown error'));
+      console.log("[Login] Login failed:", result.error);
+      if (Platform.OS === "web") {
+        window.alert("Login Failed: " + (result.error || "Unknown error"));
       } else {
-        Alert.alert('Login Failed', result.error);
+        Alert.alert("Login Failed", result.error);
       }
     } else {
-      console.log('[Login] Login successful, user should be set in context');
+      console.log("[Login] Login successful, user should be set in context");
     }
   };
 
   return (
     <View style={styles.container}>
       {/* Background: FaultyTerminal (web only) */}
-      {Platform.OS === 'web' ? (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', inset: 0 }}>
+      {Platform.OS === "web" ? (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
+        >
+          <div style={{ position: "absolute", inset: 0 }}>
             {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
         </div>
       ) : null}
       {/* Login card with fade-up */}
-      <Animated.View style={[styles.loginCard, { opacity: fade, transform: [{ translateY: translate }] }]}>      
-      <View style={styles.header}>
-        <Text style={styles.logo}>STRATUM</Text>
-      </View>
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>EMAIL</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#4A4A4A"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
+      <Animated.View
+        style={[
+          styles.loginCard,
+          { opacity: fade, transform: [{ translateY: translate }] },
+        ]}
+      >
+        <View style={styles.header}>
+          <Text style={styles.logo}>STRATUM</Text>
         </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>PASSWORD</Text>
-          <View style={styles.inputWrapper}>
+        <View style={styles.form}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>EMAIL</Text>
             <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="Enter your password"
+              style={styles.input}
+              placeholder="Enter your email"
               placeholderTextColor="#4A4A4A"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoComplete="current-password"
-              textContentType="password"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="username"
+              textContentType="username"
+              importantForAutofill="yes"
             />
-            <TouchableOpacity
-              style={styles.passwordToggle}
-              onPress={() => setShowPassword((v) => !v)}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {Platform.OS === 'web' ? (
-                showPassword ? (
-                  <FaEyeSlash size={18} color="#FF2A2A" />
-                ) : (
-                  <FaEye size={18} color="#FF2A2A" />
-                )
-              ) : (
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
-              )}
-            </TouchableOpacity>
           </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>PASSWORD</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                placeholder="Enter your password"
+                placeholderTextColor="#4A4A4A"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
+                importantForAutofill="yes"
+              />
+              <TouchableOpacity
+                style={styles.passwordToggle}
+                onPress={() => setShowPassword((v) => !v)}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              >
+                {Platform.OS === "web" ? (
+                  showPassword ? (
+                    <FaEyeSlash size={18} color="#FF2A2A" />
+                  ) : (
+                    <FaEye size={18} color="#FF2A2A" />
+                  )
+                ) : (
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#FF2A2A"
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#F5F5F5" />
+            ) : (
+              <Text style={styles.buttonText}>LOGIN</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.devButton}
+            onPress={() => setShowDevModal(true)}
+          >
+            <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#F5F5F5" />
-          ) : (
-            <Text style={styles.buttonText}>LOGIN</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.devButton} onPress={() => setShowDevModal(true)}>
-          <Text style={styles.devButtonText}>Dev: API Base URL</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <Link href="/(auth)/register" asChild>
-          <TouchableOpacity>
-            <Text style={styles.linkText}>Register</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <Link href="/(auth)/register" asChild>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Register</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
       </Animated.View>
 
       {/* Dev modal for API override */}
-      <Modal visible={showDevModal} transparent animationType="fade" onRequestClose={() => setShowDevModal(false)}>
+      <Modal
+        visible={showDevModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDevModal(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Backend API Base URL</Text>
-            <Text style={styles.modalText}>Enter the full API url including /api. Example: http://192.168.1.100:8000/api</Text>
+            <Text style={styles.modalText}>
+              Enter the full API url including /api. Example:
+              http://192.168.1.100:8000/api
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="http://host:port/api"
@@ -285,14 +314,45 @@ export default function LoginScreen() {
               autoCorrect={false}
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowDevModal(false)} disabled={savingApi}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowDevModal(false)}
+                disabled={savingApi}
+              >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#3A0C0C', borderWidth: 1, borderColor: '#FF4444' }]} onPress={resetApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#FF4444' }]}>Reset</Text>}
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: "#3A0C0C",
+                    borderWidth: 1,
+                    borderColor: "#FF4444",
+                  },
+                ]}
+                onPress={resetApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: "#FF4444" }]}>
+                    Reset
+                  </Text>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#FF2A2A' }]} onPress={saveApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: '#F5F5F5' }]}>Save</Text>}
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#FF2A2A" }]}
+                onPress={saveApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: "#F5F5F5" }]}>
+                    Save
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -305,179 +365,177 @@ export default function LoginScreen() {
 const styles: any = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    padding: 24
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    padding: 24,
   },
   logo: {
-    color: '#ffffff',
+    color: "#ffffff",
     opacity: 0.9,
     fontSize: 14,
     letterSpacing: 6,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 25,
-    textAlign: 'center',
+    textAlign: "center",
   },
   loginCard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 520,
-    alignSelf: 'center',
-    backgroundColor: '#0A0A0A',
+    alignSelf: "center",
+    backgroundColor: "#0A0A0A",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     borderRadius: 16,
     padding: 20,
   },
   header: {
     minHeight: 80,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    justifyContent: "flex-end",
+    alignItems: "center",
     marginBottom: 8,
   },
   title: {
     fontSize: 48,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
     marginBottom: 8,
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
-    color: '#9A9A9A',
-    letterSpacing: 0.5
+    color: "#9A9A9A",
+    letterSpacing: 0.5,
   },
   form: {
-    marginBottom: 24
+    marginBottom: 24,
   },
   inputGroup: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   label: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginBottom: 8,
     letterSpacing: 0.5,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    color: '#F5F5F5',
-    letterSpacing: 0.5
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
   },
   inputWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
+    position: "relative",
+    justifyContent: "center",
   },
   passwordInput: {
     paddingRight: 48,
   },
   passwordToggle: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
   },
   button: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     padding: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
-    shadowColor: '#FF2A2A',
+    shadowColor: "#FF2A2A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    elevation: 8
+    elevation: 8,
   },
   buttonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A'
+    borderTopColor: "#2A2A2A",
   },
   footerText: {
     fontSize: 14,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginRight: 8,
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   linkText: {
     fontSize: 14,
-    color: '#FF2A2A',
-    fontWeight: '600',
-    letterSpacing: 0.5
-  }
-  ,
+    color: "#FF2A2A",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
   devButton: {
     marginTop: 12,
     padding: 10,
     borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
     borderWidth: 1,
-    borderColor: '#2A2A2A'
+    borderColor: "#2A2A2A",
   },
   devButtonText: {
-    color: '#F5F5F5',
-    fontWeight: '600'
+    color: "#F5F5F5",
+    fontWeight: "600",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#1E1E1E',
+    backgroundColor: "#1E1E1E",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#333',
-    width: '100%'
+    borderColor: "#333",
+    width: "100%",
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#F5F5F5',
-    marginBottom: 8
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 8,
   },
   modalText: {
     fontSize: 14,
-    color: '#CCCCCC',
-    marginBottom: 12
+    color: "#CCCCCC",
+    marginBottom: 12,
   },
   modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
   },
   modalButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#2A2A2A'
+    backgroundColor: "#2A2A2A",
   },
   modalButtonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 14,
-    fontWeight: '600'
+    fontWeight: "600",
   },
-  
 });

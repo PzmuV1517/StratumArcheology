@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { FaEyeSlash } from 'react-icons/fa';
-import { FaEye } from 'react-icons/fa';
+import React, { useState } from "react";
+import { FaEyeSlash, FaEye } from "react-icons/fa";
 import {
   View,
   Text,
@@ -10,17 +9,17 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-} from 'react-native';
-import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Link } from 'expo-router';
-import { useAuth } from '../../src/contexts/AuthContext';
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Link } from "expo-router";
+import { useAuth } from "../../src/contexts/AuthContext";
 
 export default function RegisterScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,22 +33,25 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!email || !password || !displayName) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     if (!isValidEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address (e.g., user@example.com)');
+      Alert.alert(
+        "Invalid Email",
+        "Please enter a valid email address (e.g., user@example.com)",
+      );
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert("Error", "Password must be at least 6 characters");
       return;
     }
 
@@ -58,7 +60,7 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert('Registration Failed', result.error);
+      Alert.alert("Registration Failed", result.error);
     }
   };
 
@@ -115,16 +117,20 @@ export default function RegisterScreen() {
               style={styles.passwordToggle}
               onPress={() => setShowPassword((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
             >
-              {Platform.OS === 'web' ? (
+              {Platform.OS === "web" ? (
                 showPassword ? (
                   <FaEyeSlash size={18} color="#FF2A2A" />
                 ) : (
                   <FaEye size={18} color="#FF2A2A" />
                 )
               ) : (
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#FF2A2A"
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -147,16 +153,22 @@ export default function RegisterScreen() {
               style={styles.passwordToggle}
               onPress={() => setShowConfirmPassword((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+              accessibilityLabel={
+                showConfirmPassword ? "Hide password" : "Show password"
+              }
             >
-              {Platform.OS === 'web' ? (
+              {Platform.OS === "web" ? (
                 showConfirmPassword ? (
                   <FaEyeSlash size={18} color="#FF2A2A" />
                 ) : (
                   <FaEye size={18} color="#FF2A2A" />
                 )
               ) : (
-                <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#FF2A2A" />
+                <Ionicons
+                  name={showConfirmPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#FF2A2A"
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -190,101 +202,101 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#111111',
-    justifyContent: 'center',
-    padding: 24
+    backgroundColor: "#111111",
+    justifyContent: "center",
+    padding: 24,
   },
   header: {
     marginBottom: 48,
-    alignItems: 'center'
+    alignItems: "center",
   },
   title: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#F5F5F5',
+    fontWeight: "700",
+    color: "#F5F5F5",
     marginBottom: 8,
-    letterSpacing: 1
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
-    color: '#9A9A9A',
-    letterSpacing: 0.5
+    color: "#9A9A9A",
+    letterSpacing: 0.5,
   },
   form: {
-    marginBottom: 24
+    marginBottom: 24,
   },
   inputGroup: {
-    marginBottom: 16
+    marginBottom: 16,
   },
   label: {
     fontSize: 12,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginBottom: 8,
     letterSpacing: 0.5,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   input: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: "#2A2A2A",
     borderRadius: 16,
     padding: 16,
     fontSize: 16,
-    color: '#F5F5F5',
-    letterSpacing: 0.5
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
   },
   inputWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
+    position: "relative",
+    justifyContent: "center",
   },
   passwordInput: {
     paddingRight: 48,
   },
   passwordToggle: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 6,
   },
   button: {
-    backgroundColor: '#FF2A2A',
+    backgroundColor: "#FF2A2A",
     padding: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
-    shadowColor: '#FF2A2A',
+    shadowColor: "#FF2A2A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    elevation: 8
+    elevation: 8,
   },
   buttonText: {
-    color: '#F5F5F5',
+    color: "#F5F5F5",
     fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#2A2A2A'
+    borderTopColor: "#2A2A2A",
   },
   footerText: {
     fontSize: 14,
-    color: '#9A9A9A',
+    color: "#9A9A9A",
     marginRight: 8,
-    letterSpacing: 0.5
+    letterSpacing: 0.5,
   },
   linkText: {
     fontSize: 14,
-    color: '#FF2A2A',
-    fontWeight: '600',
-    letterSpacing: 0.5
-  }
+    color: "#FF2A2A",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
 });

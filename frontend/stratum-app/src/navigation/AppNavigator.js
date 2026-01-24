@@ -1,17 +1,17 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { useAuth } from '../contexts/AuthContext';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { useAuth } from "../contexts/AuthContext";
 
 // Auth Screens
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
+import LoginScreen from "../screens/LoginScreen";
+import RegisterScreen from "../screens/RegisterScreen";
 
 // Main Screens
-import ProjectsScreen from '../screens/ProjectsScreen';
-import CreateProjectScreen from '../screens/CreateProjectScreen';
-import ProjectDetailScreen from '../screens/ProjectDetailScreen';
-import CreateNoteScreen from '../screens/CreateNoteScreen';
+import ProjectsScreen from "../screens/ProjectsScreen";
+import CreateProjectScreen from "../screens/CreateProjectScreen";
+import ProjectDetailScreen from "../screens/ProjectDetailScreen";
+import CreateNoteScreen from "../screens/CreateNoteScreen";
 
 const Stack = createStackNavigator();
 
@@ -32,17 +32,17 @@ const MainStack = () => (
     <Stack.Screen
       name="CreateProject"
       component={CreateProjectScreen}
-      options={{ title: 'Create Project' }}
+      options={{ title: "Create Project" }}
     />
     <Stack.Screen
       name="ProjectDetail"
       component={ProjectDetailScreen}
-      options={{ title: 'Project Details' }}
+      options={{ title: "Project Details" }}
     />
     <Stack.Screen
       name="CreateNote"
       component={CreateNoteScreen}
-      options={{ title: 'Create Note' }}
+      options={{ title: "Create Note" }}
     />
   </Stack.Navigator>
 );
@@ -55,8 +55,6 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
-      {user ? <MainStack /> : <AuthStack />}
-    </NavigationContainer>
+    <NavigationContainer>{user ? <MainStack /> : <AuthStack />}</NavigationContainer>
   );
 }

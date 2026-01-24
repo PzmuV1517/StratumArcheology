@@ -35,7 +35,12 @@ docker run -p 9000:9000 -p 9001:9001 \
 
 5. Run the application:
 ```bash
+# For local development (simulator/emulator only):
 python -m uvicorn app.main:app --reload
+
+# For physical device testing (Expo Go on iPhone/Android):
+# This binds to all interfaces so devices on your network can connect
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## API Documentation

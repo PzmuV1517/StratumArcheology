@@ -1,11 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import * as THREE from 'three';
-import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
-import { PCDLoader } from 'three/examples/jsm/loaders/PCDLoader.js';
-import { config } from '../../config/config';
-import { parseLAS } from './las';
+import React from "react";
+import * as THREE from "three";
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
+import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
+import { config } from "../../config/config";
+import { parseLAS } from "./las";
 
 type Props = { src: string | null; name?: string };
 
@@ -18,27 +17,36 @@ export default function PointCloudPanel({ src, name }: Props) {
   const pointsRef = React.useRef<THREE.Points | null>(null);
   const axesRef = React.useRef<THREE.AxesHelper | null>(null);
   const gridRef = React.useRef<THREE.GridHelper | null>(null);
-  const geomMetaRef = React.useRef<{ zMin?: number; zMax?: number; hasRGB?: boolean; hasIntensity?: boolean } | null>(null);
+  const geomMetaRef = React.useRef<{
+    zMin?: number;
+    zMax?: number;
+    hasRGB?: boolean;
+    hasIntensity?: boolean;
+  } | null>(null);
   const radiusRef = React.useRef<number>(1);
 
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [progress, setProgress] = React.useState(0); // 0..1
-  const [loadingText, setLoadingText] = React.useState<string>('');
+  const [loadingText, setLoadingText] = React.useState<string>("");
   const [showAxes, setShowAxes] = React.useState(true);
   const [showGrid, setShowGrid] = React.useState(true);
-  const [bg, setBg] = React.useState('#0E0E0E');
+  const [bg, setBg] = React.useState("#0E0E0E");
   // Point size controls: 'pixel' uses constant on-screen size, 'world' scales with scene units
-  const [sizeMode, setSizeMode] = React.useState<'pixel' | 'world'>('pixel');
+  const [sizeMode, setSizeMode] = React.useState<"pixel" | "world">("pixel");
   const [sizePx, setSizePx] = React.useState<number>(1); // pixels (default)
   const [sizeWorld, setSizeWorld] = React.useState<number>(0.01); // fraction of radius
-  const [colorMode, setColorMode] = React.useState<'auto' | 'rgb' | 'intensity' | 'elevation'>('auto');
-  const [colormap, setColormap] = React.useState<'turbo' | 'viridis' | 'gray'>('turbo');
+  const [colorMode, setColorMode] = React.useState<
+    "auto" | "rgb" | "intensity" | "elevation"
+  >("auto");
+  const [colormap, setColormap] = React.useState<"turbo" | "viridis" | "gray">(
+    "turbo",
+  );
 
   const ext = React.useMemo(() => {
     if (!src && !name) return null;
-    const target = (name || src || '').split('?')[0];
-    const idx = target.lastIndexOf('.');
+    const target = (name || src || "").split("?")[0];
+    const idx = target.lastIndexOf(".");
     return idx >= 0 ? target.substring(idx + 1).toLowerCase() : null;
   }, [src, name]);
 
@@ -47,39 +55,44 @@ export default function PointCloudPanel({ src, name }: Props) {
     if (!host) return;
 
     // init three
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(bg);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(bg);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.01, 5000);
     camera.position.set(0.5, 0.5, 1.5);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' as any });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: false,
+      logarithmicDepthBuffer: true,
+      powerPreference: "high-performance" as any,
+    });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(host.clientWidth, host.clientHeight);
     host.appendChild(renderer.domElement);
 
-  const controls = new TrackballControls(camera, renderer.domElement);
-  controls.rotateSpeed = 5.0;
-  controls.zoomSpeed = 2.0;
-  controls.panSpeed = 1.2;
-  (controls as any).noRotate = false;
-  (controls as any).noZoom = false;
-  (controls as any).noPan = false;
-  (controls as any).staticMoving = true; // stop smoothing after input, reduces post-drag jitter
-  (controls as any).dynamicDampingFactor = 0.06;
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 5.0;
+    controls.zoomSpeed = 2.0;
+    controls.panSpeed = 1.2;
+    (controls as any).noRotate = false;
+    (controls as any).noZoom = false;
+    (controls as any).noPan = false;
+    (controls as any).staticMoving = true; // stop smoothing after input, reduces post-drag jitter
+    (controls as any).dynamicDampingFactor = 0.06;
     controls.target.set(0, 0, 0);
 
-  const light = new THREE.AmbientLight(0xffffff, 1.0);
-  scene.add(light);
+    const light = new THREE.AmbientLight(0xffffff, 1.0);
+    scene.add(light);
 
-  // Helpers
-  const axes = new THREE.AxesHelper(1);
-  axes.visible = showAxes;
-  scene.add(axes);
-  axesRef.current = axes;
+    // Helpers
+    const axes = new THREE.AxesHelper(1);
+    axes.visible = showAxes;
+    scene.add(axes);
+    axesRef.current = axes;
 
-  const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-  grid.visible = showGrid;
-  scene.add(grid);
-  gridRef.current = grid;
+    const grid = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+    grid.visible = showGrid;
+    scene.add(grid);
+    gridRef.current = grid;
 
     rendererRef.current = renderer;
     sceneRef.current = scene;
@@ -101,19 +114,21 @@ export default function PointCloudPanel({ src, name }: Props) {
       renderer.render(scene, camera);
       requestAnimationFrame(raf);
     };
-    window.addEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
 
     // Ensure wheel always zooms within the viewer area (even when page is scrollable or overlay is on top)
-    try { (host.style as any).overscrollBehavior = 'contain'; } catch {}
+    try {
+      (host.style as any).overscrollBehavior = "contain";
+    } catch {}
     const onWheel = (e: WheelEvent) => {
       const target = e.target as HTMLElement | null;
-      const tag = target?.tagName || '';
+      const tag = target?.tagName || "";
       // Don't hijack wheel on interactive controls
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       e.preventDefault();
       e.stopPropagation();
       const canvas = renderer.domElement;
-      const ev = new WheelEvent('wheel', {
+      const ev = new WheelEvent("wheel", {
         deltaX: e.deltaX,
         deltaY: e.deltaY,
         deltaMode: e.deltaMode,
@@ -128,14 +143,14 @@ export default function PointCloudPanel({ src, name }: Props) {
       });
       canvas.dispatchEvent(ev);
     };
-    host.addEventListener('wheel', onWheel, { passive: false });
+    host.addEventListener("wheel", onWheel, { passive: false });
     onResize();
     requestAnimationFrame(raf);
 
     return () => {
       mounted = false;
-      window.removeEventListener('resize', onResize);
-      host.removeEventListener('wheel', onWheel as any);
+      window.removeEventListener("resize", onResize);
+      host.removeEventListener("wheel", onWheel as any);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement && renderer.domElement.parentElement) {
@@ -183,7 +198,7 @@ export default function PointCloudPanel({ src, name }: Props) {
     // init loading state
     setLoading(true);
     setProgress(0);
-    setLoadingText('Starting…');
+    setLoadingText("Starting…");
 
     const loadPLY = async () => {
       const loader = new PLYLoader();
@@ -202,12 +217,15 @@ export default function PointCloudPanel({ src, name }: Props) {
           geomMetaRef.current = {
             zMin: zStats.min,
             zMax: zStats.max,
-            hasRGB: !!geometry.getAttribute('color'),
-            hasIntensity: !!geometry.getAttribute('intensity'),
+            hasRGB: !!geometry.getAttribute("color"),
+            hasIntensity: !!geometry.getAttribute("intensity"),
           };
           // initial coloring
           applyColorMode(geometry, colorMode, colormap);
-          const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!geometry.getAttribute('color') });
+          const material = new THREE.PointsMaterial({
+            size: 1,
+            vertexColors: !!geometry.getAttribute("color"),
+          });
           const pts = new THREE.Points(geometry, material);
           scene.add(pts);
           pointsRef.current = pts;
@@ -217,19 +235,19 @@ export default function PointCloudPanel({ src, name }: Props) {
           tuneHelpersToFit(fit.radius);
         },
         (evt: any) => {
-          setLoadingText('Loading PLY…');
+          setLoadingText("Loading PLY…");
           if ((evt as any)?.lengthComputable) {
             const p = (evt as any).loaded / Math.max(1, (evt as any).total);
             setProgress(Math.max(0, Math.min(1, p)));
           } else {
             // fallback: nudge progress up to 0.9 while unknown
-            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+            setProgress((prev) => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
           }
         },
         (err: any) => {
           setLoading(false);
-          setError('Failed to load PLY: ' + (err?.message || String(err)));
-        }
+          setError("Failed to load PLY: " + (err?.message || String(err)));
+        },
       );
     };
 
@@ -250,12 +268,15 @@ export default function PointCloudPanel({ src, name }: Props) {
           geomMetaRef.current = {
             zMin: zStats.min,
             zMax: zStats.max,
-            hasRGB: !!geom.getAttribute('color'),
-            hasIntensity: !!geom.getAttribute('intensity'),
+            hasRGB: !!geom.getAttribute("color"),
+            hasIntensity: !!geom.getAttribute("intensity"),
           };
           applyColorMode(geom, colorMode, colormap);
           // ensure material uses vertex colors
-          const mat = new THREE.PointsMaterial({ size: 1, vertexColors: !!geom.getAttribute('color') });
+          const mat = new THREE.PointsMaterial({
+            size: 1,
+            vertexColors: !!geom.getAttribute("color"),
+          });
           const pts = new THREE.Points(geom, mat);
           scene.add(pts);
           pointsRef.current = pts;
@@ -265,39 +286,39 @@ export default function PointCloudPanel({ src, name }: Props) {
           tuneHelpersToFit(fit.radius);
         },
         (evt: any) => {
-          setLoadingText('Loading PCD…');
+          setLoadingText("Loading PCD…");
           if ((evt as any)?.lengthComputable) {
             const p = (evt as any).loaded / Math.max(1, (evt as any).total);
             setProgress(Math.max(0, Math.min(1, p)));
           } else {
-            setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+            setProgress((prev) => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
           }
         },
         (err: any) => {
           setLoading(false);
-          setError('Failed to load PCD: ' + (err?.message || String(err)));
-        }
+          setError("Failed to load PCD: " + (err?.message || String(err)));
+        },
       );
     };
 
-    if (ext === 'ply') loadPLY();
-    else if (ext === 'pcd') loadPCD();
+    if (ext === "ply") loadPLY();
+    else if (ext === "pcd") loadPCD();
     else {
       // For anything else, use server conversion endpoint → returns PLY URL
       (async () => {
         try {
           let convertedUrl: string | undefined;
-          const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
+          const isBlobLike = src.startsWith("blob:") || src.startsWith("data:");
           if (isBlobLike) {
-            setLoadingText('Uploading for conversion…');
-            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
+            setLoadingText("Uploading for conversion…");
+            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
             // Upload file bytes via multipart/form-data
-            const blob = await fetch(src).then(r => r.blob());
+            const blob = await fetch(src).then((r) => r.blob());
             const form = new FormData();
-            form.append('file', blob, name || `upload.${ext}`);
-            if (name) form.append('name', name);
+            form.append("file", blob, name || `upload.${ext}`);
+            if (name) form.append("name", name);
             const resp = await fetch(`${config.apiBaseUrl}/convert/pointcloud`, {
-              method: 'POST',
+              method: "POST",
               body: form,
             });
             if (!resp.ok) {
@@ -307,19 +328,23 @@ export default function PointCloudPanel({ src, name }: Props) {
                 if (j?.detail) msg += `: ${j.detail}`;
                 else if (j?.message) msg += `: ${j.message}`;
               } catch {
-                try { msg += `: ${await resp.text()}`; } catch {}
+                try {
+                  msg += `: ${await resp.text()}`;
+                } catch {}
               }
               throw new Error(msg);
             }
             const data = await resp.json();
             convertedUrl = data?.url;
           } else {
-            setLoadingText('Requesting conversion…');
-            setProgress(prev => (prev < 0.05 ? 0.05 : prev));
+            setLoadingText("Requesting conversion…");
+            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
             const qs = new URLSearchParams();
-            if (src) qs.set('src', src);
-            if (name) qs.set('name', name);
-            const resp = await fetch(`${config.apiBaseUrl}/convert/pointcloud?${qs.toString()}`);
+            if (src) qs.set("src", src);
+            if (name) qs.set("name", name);
+            const resp = await fetch(
+              `${config.apiBaseUrl}/convert/pointcloud?${qs.toString()}`,
+            );
             if (!resp.ok) {
               let msg = `Convert HTTP ${resp.status}`;
               try {
@@ -327,7 +352,9 @@ export default function PointCloudPanel({ src, name }: Props) {
                 if (j?.detail) msg += `: ${j.detail}`;
                 else if (j?.message) msg += `: ${j.message}`;
               } catch {
-                try { msg += `: ${await resp.text()}`; } catch {}
+                try {
+                  msg += `: ${await resp.text()}`;
+                } catch {}
               }
               throw new Error(msg);
             }
@@ -335,7 +362,7 @@ export default function PointCloudPanel({ src, name }: Props) {
             convertedUrl = data?.url;
           }
 
-          if (!convertedUrl) throw new Error('No URL returned from converter');
+          if (!convertedUrl) throw new Error("No URL returned from converter");
           const loader = new PLYLoader();
           loader.load(
             convertedUrl,
@@ -350,11 +377,14 @@ export default function PointCloudPanel({ src, name }: Props) {
               geomMetaRef.current = {
                 zMin: zStats.min,
                 zMax: zStats.max,
-                hasRGB: !!geometry.getAttribute('color'),
-                hasIntensity: !!geometry.getAttribute('intensity'),
+                hasRGB: !!geometry.getAttribute("color"),
+                hasIntensity: !!geometry.getAttribute("intensity"),
               };
               applyColorMode(geometry, colorMode, colormap);
-              const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!geometry.getAttribute('color') });
+              const material = new THREE.PointsMaterial({
+                size: 1,
+                vertexColors: !!geometry.getAttribute("color"),
+              });
               const pts = new THREE.Points(geometry, material);
               scene.add(pts);
               pointsRef.current = pts;
@@ -364,35 +394,51 @@ export default function PointCloudPanel({ src, name }: Props) {
               tuneHelpersToFit(fit.radius);
             },
             (evt: any) => {
-              setLoadingText('Downloading point cloud…');
+              setLoadingText("Downloading point cloud…");
               if ((evt as any)?.lengthComputable) {
                 const p = (evt as any).loaded / Math.max(1, (evt as any).total);
                 setProgress(Math.max(0, Math.min(1, p)));
               } else {
-                setProgress(prev => (prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev));
+                setProgress((prev) =>
+                  prev < 0.9 ? Math.min(0.9, prev + 0.02) : prev,
+                );
               }
             },
-            (err: any) => { setLoading(false); setError('Failed to load converted PLY: ' + (err?.message || String(err))); }
+            (err: any) => {
+              setLoading(false);
+              setError(
+                "Failed to load converted PLY: " + (err?.message || String(err)),
+              );
+            },
           );
         } catch (e: any) {
           // Fallback: if this was a local LAS (blob/data) and conversion failed, try in-browser LAS parse (uncompressed only)
           try {
-            const isBlobLike = src.startsWith('blob:') || src.startsWith('data:');
-            if (ext === 'las' && isBlobLike) {
-              setLoadingText('Parsing LAS (client)…');
-              const blob = await fetch(src).then(r => r.blob());
+            const isBlobLike = src.startsWith("blob:") || src.startsWith("data:");
+            if (ext === "las" && isBlobLike) {
+              setLoadingText("Parsing LAS (client)…");
+              const blob = await fetch(src).then((r) => r.blob());
               const ab = await blob.arrayBuffer();
               const res = parseLAS(ab, { maxPoints: 2_000_000 });
               const geometry = new THREE.BufferGeometry();
-              geometry.setAttribute('position', new THREE.BufferAttribute(res.positions, 3));
+              geometry.setAttribute(
+                "position",
+                new THREE.BufferAttribute(res.positions, 3),
+              );
               if (res.colors) {
-                geometry.setAttribute('color', new THREE.BufferAttribute(res.colors, 3));
+                geometry.setAttribute(
+                  "color",
+                  new THREE.BufferAttribute(res.colors, 3),
+                );
               }
               geometry.computeBoundingSphere();
               const bs = geometry.boundingSphere!;
               geometry.translate(-bs.center.x, -bs.center.y, -bs.center.z);
               geometry.computeBoundingSphere();
-              const material = new THREE.PointsMaterial({ size: 1, vertexColors: !!res.colors });
+              const material = new THREE.PointsMaterial({
+                size: 1,
+                vertexColors: !!res.colors,
+              });
               const pts = new THREE.Points(geometry, material);
               scene.add(pts);
               pointsRef.current = pts;
@@ -409,28 +455,31 @@ export default function PointCloudPanel({ src, name }: Props) {
             // fall through to display the original conversion error below
           }
           setLoading(false);
-          setError('Conversion error: ' + (e?.message || String(e)));
+          setError("Conversion error: " + (e?.message || String(e)));
         }
       })();
     }
   }, [src, ext]);
 
-  const tuneHelpersToFit = React.useCallback((radius: number) => {
-    const axes = axesRef.current;
-    const grid = gridRef.current;
-    const scene = sceneRef.current;
-    const scale = Math.max(1, radius);
-    if (axes) axes.scale.setScalar(scale * 0.5);
-    if (grid && scene) {
-      scene.remove(grid);
-      const divisions = 10;
-      const size = Math.max(1, radius * 2);
-      const newGrid = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
-      newGrid.visible = showGrid;
-      scene.add(newGrid);
-      gridRef.current = newGrid;
-    }
-  }, [showGrid]);
+  const tuneHelpersToFit = React.useCallback(
+    (radius: number) => {
+      const axes = axesRef.current;
+      const grid = gridRef.current;
+      const scene = sceneRef.current;
+      const scale = Math.max(1, radius);
+      if (axes) axes.scale.setScalar(scale * 0.5);
+      if (grid && scene) {
+        scene.remove(grid);
+        const divisions = 10;
+        const size = Math.max(1, radius * 2);
+        const newGrid = new THREE.GridHelper(size, divisions, 0x444444, 0x222222);
+        newGrid.visible = showGrid;
+        scene.add(newGrid);
+        gridRef.current = newGrid;
+      }
+    },
+    [showGrid],
+  );
 
   // Re-apply color mode when controls change
   React.useEffect(() => {
@@ -439,7 +488,7 @@ export default function PointCloudPanel({ src, name }: Props) {
     const geom = pts.geometry as THREE.BufferGeometry;
     applyColorMode(geom, colorMode, colormap);
     const mat = pts.material as THREE.PointsMaterial;
-    mat.vertexColors = !!geom.getAttribute('color');
+    mat.vertexColors = !!geom.getAttribute("color");
     mat.needsUpdate = true;
   }, [colorMode, colormap]);
 
@@ -447,9 +496,9 @@ export default function PointCloudPanel({ src, name }: Props) {
     const pts = pointsRef.current;
     if (!pts) return;
     const mat = pts.material as THREE.PointsMaterial;
-    if (sizeMode === 'pixel') {
+    if (sizeMode === "pixel") {
       mat.sizeAttenuation = false;
-      const dpr = (window.devicePixelRatio || 1);
+      const dpr = window.devicePixelRatio || 1;
       mat.size = sizePx * dpr;
     } else {
       mat.sizeAttenuation = true;
@@ -460,15 +509,20 @@ export default function PointCloudPanel({ src, name }: Props) {
   }
 
   return (
-    <View style={styles.wrapper}>
-      <View ref={hostRef} style={styles.fill} />
+    <div style={wrapperStyle}>
+      <div ref={hostRef} style={fillStyle} />
       {/* Loading overlay with progress bar */}
       {!!src && !error && loading && (
         <div style={loadingOverlayStyle}>
           <div style={loadingBoxStyle}>
-            <div style={loadingLabelStyle}>{loadingText || 'Loading…'}</div>
+            <div style={loadingLabelStyle}>{loadingText || "Loading…"}</div>
             <div style={progressBarOuterStyle}>
-              <div style={{ ...progressBarInnerStyle, width: `${Math.round(progress * 100)}%` }} />
+              <div
+                style={{
+                  ...progressBarInnerStyle,
+                  width: `${Math.round(progress * 100)}%`,
+                }}
+              />
             </div>
             <div style={percentStyle}>{Math.round(progress * 100)}%</div>
             {!!name && <div style={fileNameStyle}>{name}</div>}
@@ -479,11 +533,15 @@ export default function PointCloudPanel({ src, name }: Props) {
       <div style={controlsStyle}>
         <div style={rowStyle}>
           <label style={labelStyle}>Size mode</label>
-          <select value={sizeMode} onChange={(e) => setSizeMode(e.currentTarget.value as any)} style={selectStyle}>
+          <select
+            value={sizeMode}
+            onChange={(e) => setSizeMode(e.currentTarget.value as any)}
+            style={selectStyle}
+          >
             <option value="pixel">Pixel</option>
             <option value="world">World</option>
           </select>
-          {sizeMode === 'pixel' ? (
+          {sizeMode === "pixel" ? (
             <>
               <label style={{ ...labelStyle, minWidth: 72 }}>Size (px)</label>
               <input
@@ -515,14 +573,22 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
         <div style={rowStyle}>
           <label style={labelStyle}>Color</label>
-          <select value={colorMode} onChange={(e) => setColorMode(e.currentTarget.value as any)} style={selectStyle}>
+          <select
+            value={colorMode}
+            onChange={(e) => setColorMode(e.currentTarget.value as any)}
+            style={selectStyle}
+          >
             <option value="auto">Auto</option>
             <option value="rgb">RGB</option>
             <option value="intensity">Intensity</option>
             <option value="elevation">Elevation</option>
           </select>
-          {colorMode !== 'rgb' && (
-            <select value={colormap} onChange={(e) => setColormap(e.currentTarget.value as any)} style={selectStyle}>
+          {colorMode !== "rgb" && (
+            <select
+              value={colormap}
+              onChange={(e) => setColormap(e.currentTarget.value as any)}
+              style={selectStyle}
+            >
               <option value="turbo">Turbo</option>
               <option value="viridis">Viridis</option>
               <option value="gray">Grayscale</option>
@@ -531,11 +597,23 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
         <div style={rowStyle}>
           <label style={labelStyle}>Axes</label>
-          <input type="checkbox" checked={showAxes} onChange={(e) => setShowAxes(e.currentTarget.checked)} />
+          <input
+            type="checkbox"
+            checked={showAxes}
+            onChange={(e) => setShowAxes(e.currentTarget.checked)}
+          />
           <label style={{ ...labelStyle, marginLeft: 12 }}>Grid</label>
-          <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.currentTarget.checked)} />
+          <input
+            type="checkbox"
+            checked={showGrid}
+            onChange={(e) => setShowGrid(e.currentTarget.checked)}
+          />
           <label style={{ ...labelStyle, marginLeft: 12 }}>Background</label>
-          <select value={bg} onChange={(e) => setBg(e.currentTarget.value)} style={selectStyle}>
+          <select
+            value={bg}
+            onChange={(e) => setBg(e.currentTarget.value)}
+            style={selectStyle}
+          >
             <option value="#0E0E0E">Dark</option>
             <option value="#FFFFFF">White</option>
             <option value="#1E1E1E">Charcoal</option>
@@ -544,23 +622,25 @@ export default function PointCloudPanel({ src, name }: Props) {
         </div>
       </div>
       {!src && (
-        <View style={styles.center}> 
-          <Text style={styles.info}>No file selected</Text>
-        </View>
+        <div style={centerStyle}>
+          <span style={infoStyle}>No file selected</span>
+        </div>
       )}
       {!!src && error && (
-        <View style={[styles.center, styles.overlay]}> 
-          <Text style={styles.title}>Point Cloud Preview</Text>
-          <Text style={styles.info}>{error}</Text>
-          {!!name && <Text style={[styles.info, { opacity: 0.8 }]}>File: {name}</Text>}
-        </View>
+        <div style={{ ...centerStyle, ...overlayStyle }}>
+          <span style={titleStyle}>Point Cloud Preview</span>
+          <span style={infoStyle}>{error}</span>
+          {!!name && (
+            <span style={{ ...infoStyle, opacity: 0.8 }}>File: {name}</span>
+          )}
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
 function getZStats(geometry: THREE.BufferGeometry) {
-  const pos = geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+  const pos = geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
   let min = Infinity;
   let max = -Infinity;
   if (pos) {
@@ -571,29 +651,37 @@ function getZStats(geometry: THREE.BufferGeometry) {
     }
   }
   if (!isFinite(min) || !isFinite(max)) {
-    min = 0; max = 1;
+    min = 0;
+    max = 1;
   }
   return { min, max };
 }
 
-function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | 'intensity' | 'elevation', map: 'turbo' | 'viridis' | 'gray') {
-  const hasRGB = !!geometry.getAttribute('color');
-  const intensity = geometry.getAttribute('intensity') as THREE.BufferAttribute | undefined;
+function applyColorMode(
+  geometry: THREE.BufferGeometry,
+  mode: "auto" | "rgb" | "intensity" | "elevation",
+  map: "turbo" | "viridis" | "gray",
+) {
+  const hasRGB = !!geometry.getAttribute("color");
+  const intensity = geometry.getAttribute("intensity") as
+    | THREE.BufferAttribute
+    | undefined;
 
-  let resolved: 'rgb' | 'intensity' | 'elevation' = mode as any;
-  if (mode === 'auto') {
-    resolved = hasRGB ? 'rgb' : intensity ? 'intensity' : 'elevation';
+  let resolved: "rgb" | "intensity" | "elevation" = mode as any;
+  if (mode === "auto") {
+    resolved = hasRGB ? "rgb" : intensity ? "intensity" : "elevation";
   }
 
-  if (resolved === 'rgb') {
+  if (resolved === "rgb") {
     // keep existing colors if present; otherwise fall back to elevation
-    if (!hasRGB) resolved = intensity ? 'intensity' : 'elevation';
+    if (!hasRGB) resolved = intensity ? "intensity" : "elevation";
   }
 
-  if (resolved === 'intensity' && intensity) {
+  if (resolved === "intensity" && intensity) {
     const count = intensity.count;
     const colors = new Float32Array(count * 3);
-    let min = Infinity, max = -Infinity;
+    let min = Infinity,
+      max = -Infinity;
     for (let i = 0; i < count; i++) {
       const v = intensity.getX(i);
       if (v < min) min = v;
@@ -607,16 +695,19 @@ function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | '
       colors[i * 3 + 1] = c.g;
       colors[i * 3 + 2] = c.b;
     }
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     return;
   }
 
-  if (resolved === 'elevation') {
-    const pos = geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+  if (resolved === "elevation") {
+    const pos = geometry.getAttribute("position") as
+      | THREE.BufferAttribute
+      | undefined;
     if (pos) {
       const count = pos.count;
       const colors = new Float32Array(count * 3);
-      let min = Infinity, max = -Infinity;
+      let min = Infinity,
+        max = -Infinity;
       for (let i = 2; i < count * 3; i += 3) {
         const z = pos.array[i] as number;
         if (z < min) min = z;
@@ -631,24 +722,29 @@ function applyColorMode(geometry: THREE.BufferGeometry, mode: 'auto' | 'rgb' | '
         colors[i * 3 + 1] = c.g;
         colors[i * 3 + 2] = c.b;
       }
-      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       return;
     }
   }
   // default: leave colors as-is
 }
 
-function colormapFn(map: 'turbo' | 'viridis' | 'gray', t: number) {
+function colormapFn(map: "turbo" | "viridis" | "gray", t: number) {
   const clamp = (x: number) => Math.max(0, Math.min(1, x));
   t = clamp(t);
-  if (map === 'gray') {
+  if (map === "gray") {
     return { r: t, g: t, b: t };
   }
-  if (map === 'viridis') {
+  if (map === "viridis") {
     // simple viridis approx
-    const r = clamp(0.267 + 2.151*t - 1.820*t*t);
-    const g = clamp(0.005 + 1.120*t + 1.614*t*t - 1.870*t*t*t);
-    const b = clamp(0.329 + 2.190*(1-t) - 4.292*(1-t)*(1-t) + 2.146*(1-t)*(1-t)*(1-t));
+    const r = clamp(0.267 + 2.151 * t - 1.82 * t * t);
+    const g = clamp(0.005 + 1.12 * t + 1.614 * t * t - 1.87 * t * t * t);
+    const b = clamp(
+      0.329 +
+        2.19 * (1 - t) -
+        4.292 * (1 - t) * (1 - t) +
+        2.146 * (1 - t) * (1 - t) * (1 - t),
+    );
     return { r, g, b };
   }
   // turbo-like
@@ -670,7 +766,7 @@ function colormapFn(map: 'turbo' | 'viridis' | 'gray', t: number) {
 function fitViewToGeometry(
   camera: THREE.PerspectiveCamera,
   controls: { target: THREE.Vector3 },
-  geometry: THREE.BufferGeometry
+  geometry: THREE.BufferGeometry,
 ) {
   geometry.computeBoundingSphere();
   const bs = geometry.boundingSphere!;
@@ -686,70 +782,128 @@ function fitViewToGeometry(
   return { center: bs.center, radius };
 }
 
-const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', overflow: 'hidden', position: 'relative' },
-  fill: { position: 'absolute', inset: 0 } as any,
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
-  overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)' } as any,
-  title: { color: '#F5F5F5', fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  info: { color: '#9A9A9A', fontSize: 13, textAlign: 'center', marginTop: 4 },
-});
+const wrapperStyle: React.CSSProperties = {
+  flex: 1,
+  borderRadius: 12,
+  border: "1px solid #2A2A2A",
+  backgroundColor: "#0E0E0E",
+  overflow: "hidden",
+  position: "relative",
+  display: "flex",
+};
+const fillStyle: React.CSSProperties = { position: "absolute", inset: 0 };
+const centerStyle: React.CSSProperties = {
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+};
+const overlayStyle: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.3)",
+};
+const titleStyle: React.CSSProperties = {
+  color: "#F5F5F5",
+  fontSize: 16,
+  fontWeight: 700,
+  marginBottom: 8,
+};
+const infoStyle: React.CSSProperties = {
+  color: "#9A9A9A",
+  fontSize: 13,
+  textAlign: "center",
+  marginTop: 4,
+};
 
 // Inline CSS for the web controls overlay
 const controlsStyle: React.CSSProperties = {
-  position: 'absolute',
+  position: "absolute",
   top: 8,
   left: 8,
   right: 8,
-  display: 'flex',
-  flexWrap: 'wrap',
+  display: "flex",
+  flexWrap: "wrap",
   gap: 8,
-  padding: '8px 10px',
-  background: 'rgba(0,0,0,0.35)',
+  padding: "8px 10px",
+  background: "rgba(0,0,0,0.35)",
   borderRadius: 8,
-  alignItems: 'center',
+  alignItems: "center",
 };
-const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8 };
-const labelStyle: React.CSSProperties = { color: '#ddd', fontSize: 12, minWidth: 72 };
-const selectStyle: React.CSSProperties = { background: '#111', color: '#eee', border: '1px solid #444', borderRadius: 6, padding: '4px 6px' };
-const valueStyle: React.CSSProperties = { color: '#aaa', width: 48, textAlign: 'right', fontVariantNumeric: 'tabular-nums' };
+const rowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+};
+const labelStyle: React.CSSProperties = {
+  color: "#ddd",
+  fontSize: 12,
+  minWidth: 72,
+};
+const selectStyle: React.CSSProperties = {
+  background: "#111",
+  color: "#eee",
+  border: "1px solid #444",
+  borderRadius: 6,
+  padding: "4px 6px",
+};
+const valueStyle: React.CSSProperties = {
+  color: "#aaa",
+  width: 48,
+  textAlign: "right",
+  fontVariantNumeric: "tabular-nums",
+};
 
 // Loading overlay styles
 const loadingOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
+  position: "absolute",
   inset: 0,
-  background: 'rgba(0,0,0,0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  background: "rgba(0,0,0,0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   zIndex: 2,
 };
 const loadingBoxStyle: React.CSSProperties = {
-  background: 'rgba(16,16,16,0.9)',
-  border: '1px solid #333',
+  background: "rgba(16,16,16,0.9)",
+  border: "1px solid #333",
   borderRadius: 10,
-  padding: '16px 18px',
+  padding: "16px 18px",
   minWidth: 260,
   maxWidth: 420,
-  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+  boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
 };
 const loadingLabelStyle: React.CSSProperties = {
-  color: '#eee',
+  color: "#eee",
   fontSize: 13,
   marginBottom: 8,
 };
 const progressBarOuterStyle: React.CSSProperties = {
-  width: '100%',
+  width: "100%",
   height: 10,
-  background: '#1a1a1a',
-  border: '1px solid #333',
+  background: "#1a1a1a",
+  border: "1px solid #333",
   borderRadius: 6,
-  overflow: 'hidden',
+  overflow: "hidden",
 };
 const progressBarInnerStyle: React.CSSProperties = {
-  height: '100%',
-  background: 'linear-gradient(90deg, #58a6ff, #79c0ff)',
-  transition: 'width 120ms ease',
+  height: "100%",
+  background: "linear-gradient(90deg, #58a6ff, #79c0ff)",
+  transition: "width 120ms ease",
 };
-const percentStyle: React.CSSProperties = { color: '#aaa', fontSize: 12, marginTop: 6, textAlign: 'right' };
-const fileNameStyle: React.CSSProperties = { color: '#888', fontSize: 12, marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const percentStyle: React.CSSProperties = {
+  color: "#aaa",
+  fontSize: 12,
+  marginTop: 6,
+  textAlign: "right",
+};
+const fileNameStyle: React.CSSProperties = {
+  color: "#888",
+  fontSize: 12,
+  marginTop: 6,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};

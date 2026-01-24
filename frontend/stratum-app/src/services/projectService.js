@@ -1,10 +1,10 @@
-import api from './api';
+import api from "./api";
 
 export const projectService = {
   // Get all projects for the current user
   getProjects: async () => {
     try {
-      const response = await api.get('/projects');
+      const response = await api.get("/projects");
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -29,7 +29,7 @@ export const projectService = {
   // Create a new project
   createProject: async (projectData) => {
     try {
-      const response = await api.post('/projects', projectData);
+      const response = await api.post("/projects", projectData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -115,9 +115,12 @@ export const projectService = {
   // Update member role
   updateMemberRole: async (projectId, userId, role) => {
     try {
-      const response = await api.put(`/projects/${projectId}/members/${userId}/role`, {
-        role,
-      });
+      const response = await api.put(
+        `/projects/${projectId}/members/${userId}/role`,
+        {
+          role,
+        },
+      );
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -127,7 +130,9 @@ export const projectService = {
   // Transfer project ownership to another member
   transferOwnership: async (projectId, newOwnerId) => {
     try {
-      const response = await api.post(`/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`);
+      const response = await api.post(
+        `/projects/${projectId}/transfer-ownership?new_owner_id=${newOwnerId}`,
+      );
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

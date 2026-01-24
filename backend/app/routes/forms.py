@@ -1,20 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import Optional, Tuple, List
-from app.database import get_db
-from app.dependencies import get_current_user, check_project_permission
-from app.models import User, FileNode, FileNodeType
-from app.minio_client import minio_client
-from app.websocket import emit_content_update
-from datetime import datetime
-import io
 import csv
+import io
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.dependencies import check_project_permission, get_current_user
+from app.minio_client import minio_client
+from app.models import FileNode, FileNodeType, User
+from app.websocket import emit_content_update, log_activity
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
 
-def _find_child_by_name(db: Session, project_id: str, parent_id: Optional[str], name: str) -> Optional[FileNode]:
-    q = db.query(FileNode).filter(FileNode.project_id == project_id, FileNode.name == name)
+def _find_child_by_name(
+    db: Session, project_id: str, parent_id: str | None, name: str
+) -> FileNode | None:
+    q = db.query(FileNode).filter(
+        FileNode.project_id == project_id, FileNode.name == name
+    )
     if parent_id:
         q = q.filter(FileNode.parent_id == parent_id)
     else:
@@ -22,7 +27,9 @@ def _find_child_by_name(db: Session, project_id: str, parent_id: Optional[str], 
     return q.first()
 
 
-def _ensure_locked_folder(db: Session, project_id: str, name: str, parent_id: Optional[str] = None) -> FileNode:
+def _ensure_locked_folder(
+    db: Session, project_id: str, name: str, parent_id: str | None = None
+) -> FileNode:
     node = _find_child_by_name(db, project_id, parent_id, name)
     if node is None:
         node = FileNode(
@@ -46,12 +53,8 @@ def _ensure_locked_folder(db: Session, project_id: str, name: str, parent_id: Op
 
 
 def _ensure_locked_csv_file(
-    db: Session,
-    project_id: str,
-    parent_id: str,
-    filename: str,
-    header: List[str]
-) -> Tuple[FileNode, List[List[str]]]:
+    db: Session, project_id: str, parent_id: str, filename: str, header: list[str]
+) -> tuple[FileNode, list[list[str]]]:
     """
     Ensure a locked CSV file exists under parent_id and return (node, existing_rows).
     existing_rows excludes the header row.
@@ -63,9 +66,11 @@ def _ensure_locked_csv_file(
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(header)
-        data_bytes = output.getvalue().encode('utf-8')
+        data_bytes = output.getvalue().encode("utf-8")
         # Upload and create node
-        awaitable = minio_client.upload_file(data_bytes, object_path, content_type="text/csv")
+        awaitable = minio_client.upload_file(
+            data_bytes, object_path, content_type="text/csv"
+        )
         # minio_client methods are async; but FastAPI handlers will call this inside async context
         # We'll execute upload in the handler; here we just prepare
         node = FileNode(
@@ -99,17 +104,19 @@ def _ensure_locked_csv_file(
             db.commit()
             db.refresh(node)
         # Load existing content (if any) and parse rows excluding header
-        rows: List[List[str]] = []
+        rows: list[list[str]] = []
         try:
             data = None
             # minio get_file returns None if missing
-            data = minio_client.client.get_object(minio_client.bucket_name, node.storage_path)
+            data = minio_client.client.get_object(
+                minio_client.bucket_name, node.storage_path
+            )
             # Stream read
             buf = data.read()
             data.close()
             data.release_conn()
             if buf:
-                s = buf.decode('utf-8', errors='ignore')
+                s = buf.decode("utf-8", errors="ignore")
                 r = csv.reader(io.StringIO(s))
                 for i, row in enumerate(r):
                     if i == 0:
@@ -121,16 +128,18 @@ def _ensure_locked_csv_file(
         return node, rows
 
 
-def _serialize_bool(v: Optional[bool]) -> str:
-    return '1' if v else '0'
+def _serialize_bool(v: bool | None) -> str:
+    return "1" if v else "0"
 
 
-@router.post("/project/{project_id}/context-feature", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/project/{project_id}/context-feature", status_code=status.HTTP_201_CREATED
+)
 async def append_context_feature(
     project_id: str,
     payload: dict,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Append a Context Feature record to CSV in a locked Forms folder."""
     check_project_permission(project_id, current_user, db)
@@ -140,80 +149,126 @@ async def append_context_feature(
 
     # Prepare header and row (flatten payload)
     header = [
-        "id", "featureNumber", "sector", "earlierThan", "laterThan",
-        "featureType", "location", "length", "width", "depth",
-        "x", "y", "zMasl", "shape", "orientation",
-        "finds_pottery", "finds_metal", "finds_flint", "finds_stone", "finds_wood", "finds_charcoal", "finds_shell", "finds_snail", "finds_ash", "finds_adobe", "finds_beads", "finds_pendant", "finds_ring", "finds_seed", "finds_animalBones", "finds_humanBones", "finds_other",
-        "description", "doc_drawing", "doc_plan", "doc_photogrammetry", "doc_photos", "doc_video", "planNumber",
-        "samp_environmental", "samp_aDNA", "samp_c14", "samp_isotopic", "samp_other", "sampleOtherType", "sampleBagNo", "sampleQty",
-        "author", "dateCreated", "checkedBy", "dateChecked"
+        "id",
+        "featureNumber",
+        "sector",
+        "earlierThan",
+        "laterThan",
+        "featureType",
+        "location",
+        "length",
+        "width",
+        "depth",
+        "x",
+        "y",
+        "zMasl",
+        "shape",
+        "orientation",
+        "finds_pottery",
+        "finds_metal",
+        "finds_flint",
+        "finds_stone",
+        "finds_wood",
+        "finds_charcoal",
+        "finds_shell",
+        "finds_snail",
+        "finds_ash",
+        "finds_adobe",
+        "finds_beads",
+        "finds_pendant",
+        "finds_ring",
+        "finds_seed",
+        "finds_animalBones",
+        "finds_humanBones",
+        "finds_other",
+        "description",
+        "doc_drawing",
+        "doc_plan",
+        "doc_photogrammetry",
+        "doc_photos",
+        "doc_video",
+        "planNumber",
+        "samp_environmental",
+        "samp_aDNA",
+        "samp_c14",
+        "samp_isotopic",
+        "samp_other",
+        "sampleOtherType",
+        "sampleBagNo",
+        "sampleQty",
+        "author",
+        "dateCreated",
+        "checkedBy",
+        "dateChecked",
     ]
 
     def val(k, default=None):
         return payload.get(k, default)
 
-    dims = (payload.get('dimensions') or {})
-    coords = (payload.get('coordinates') or {})
-    finds = (payload.get('findsPresent') or {})
-    docs = (payload.get('documentation') or {})
-    samp = (payload.get('samples') or {})
+    dims = payload.get("dimensions") or {}
+    coords = payload.get("coordinates") or {}
+    finds = payload.get("findsPresent") or {}
+    docs = payload.get("documentation") or {}
+    samp = payload.get("samples") or {}
 
     row = [
-        val('id', ''),
-        payload.get('featureNumber', ''),
-        payload.get('sector', ''),
-        ';'.join(payload.get('earlierThan') or []),
-        ';'.join(payload.get('laterThan') or []),
-        payload.get('featureType', ''),
-        payload.get('location', ''),
-        str(dims.get('length') or ''),
-        str(dims.get('width') or ''),
-        str(dims.get('depth') or ''),
-        str(coords.get('x') or ''),
-        str(coords.get('y') or ''),
-        str(coords.get('zMasl') or ''),
-        payload.get('shape', ''),
-        payload.get('orientation', ''),
-        _serialize_bool(finds.get('pottery')),
-        _serialize_bool(finds.get('metal')),
-        _serialize_bool(finds.get('flint')),
-        _serialize_bool(finds.get('stone')),
-        _serialize_bool(finds.get('wood')),
-        _serialize_bool(finds.get('charcoal')),
-        _serialize_bool(finds.get('shell')),
-        _serialize_bool(finds.get('snail')),
-        _serialize_bool(finds.get('ash')),
-        _serialize_bool(finds.get('adobe')),
-        _serialize_bool(finds.get('beads')),
-        _serialize_bool(finds.get('pendant')),
-        _serialize_bool(finds.get('ring')),
-        _serialize_bool(finds.get('seed')),
-        _serialize_bool(finds.get('animalBones')),
-        _serialize_bool(finds.get('humanBones')),
-        _serialize_bool(finds.get('other')),
-        payload.get('description', ''),
-        _serialize_bool(docs.get('drawing')),
-        _serialize_bool(docs.get('plan')),
-        _serialize_bool(docs.get('photogrammetry')),
-        _serialize_bool(docs.get('photos')),
-        _serialize_bool(docs.get('video')),
-        docs.get('planNumber', ''),
-        _serialize_bool(samp.get('environmental')),
-        _serialize_bool(samp.get('aDNA')),
-        _serialize_bool(samp.get('c14')),
-        _serialize_bool(samp.get('isotopic')),
-        _serialize_bool(samp.get('other')),
-        samp.get('otherType', ''),
-        samp.get('bagNo', ''),
-        str(samp.get('quantity') or ''),
-        payload.get('author', ''),
-        payload.get('dateCreated', ''),
-        payload.get('checkedBy', ''),
-        payload.get('dateChecked', ''),
+        val("id", ""),
+        payload.get("featureNumber", ""),
+        payload.get("sector", ""),
+        ";".join(payload.get("earlierThan") or []),
+        ";".join(payload.get("laterThan") or []),
+        payload.get("featureType", ""),
+        payload.get("location", ""),
+        str(dims.get("length") or ""),
+        str(dims.get("width") or ""),
+        str(dims.get("depth") or ""),
+        str(coords.get("x") or ""),
+        str(coords.get("y") or ""),
+        str(coords.get("zMasl") or ""),
+        payload.get("shape", ""),
+        payload.get("orientation", ""),
+        _serialize_bool(finds.get("pottery")),
+        _serialize_bool(finds.get("metal")),
+        _serialize_bool(finds.get("flint")),
+        _serialize_bool(finds.get("stone")),
+        _serialize_bool(finds.get("wood")),
+        _serialize_bool(finds.get("charcoal")),
+        _serialize_bool(finds.get("shell")),
+        _serialize_bool(finds.get("snail")),
+        _serialize_bool(finds.get("ash")),
+        _serialize_bool(finds.get("adobe")),
+        _serialize_bool(finds.get("beads")),
+        _serialize_bool(finds.get("pendant")),
+        _serialize_bool(finds.get("ring")),
+        _serialize_bool(finds.get("seed")),
+        _serialize_bool(finds.get("animalBones")),
+        _serialize_bool(finds.get("humanBones")),
+        _serialize_bool(finds.get("other")),
+        payload.get("description", ""),
+        _serialize_bool(docs.get("drawing")),
+        _serialize_bool(docs.get("plan")),
+        _serialize_bool(docs.get("photogrammetry")),
+        _serialize_bool(docs.get("photos")),
+        _serialize_bool(docs.get("video")),
+        docs.get("planNumber", ""),
+        _serialize_bool(samp.get("environmental")),
+        _serialize_bool(samp.get("aDNA")),
+        _serialize_bool(samp.get("c14")),
+        _serialize_bool(samp.get("isotopic")),
+        _serialize_bool(samp.get("other")),
+        samp.get("otherType", ""),
+        samp.get("bagNo", ""),
+        str(samp.get("quantity") or ""),
+        payload.get("author", ""),
+        payload.get("dateCreated", ""),
+        payload.get("checkedBy", ""),
+        payload.get("dateChecked", ""),
     ]
 
     # Ensure file and existing rows
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "context_features.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "context_features.csv", header
+    )
 
     # Append new row and upload entire content
     output = io.StringIO()
@@ -222,36 +277,42 @@ async def append_context_feature(
     for r in existing:
         writer.writerow(r)
     writer.writerow(row)
-    data_bytes = output.getvalue().encode('utf-8')
-    await minio_client.upload_file(data_bytes, node.storage_path or f"forms/{project_id}/context_features.csv", content_type="text/csv")
+    data_bytes = output.getvalue().encode("utf-8")
+    await minio_client.upload_file(
+        data_bytes,
+        node.storage_path or f"forms/{project_id}/context_features.csv",
+        content_type="text/csv",
+    )
 
     # Update size/mtime
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
-    
+
     # Notify all users in project that forms have been updated (context feature added)
-    await emit_content_update(project_id, 'forms')
-    
+    await emit_content_update(project_id, "forms")
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
-        activity_type='context_feature_added',
-        description=f'Added context feature: {payload.get("feature_type", payload.get("name", "unknown"))}',
+        activity_type="context_feature_added",
+        description=f"Added context feature: {payload.get('feature_type', payload.get('name', 'unknown'))}",
         user_id=current_user.id,
-        metadata={'form_data': payload}
+        metadata={"form_data": payload},
     )
-    
+
     return {"status": "ok"}
 
 
-@router.post("/project/{project_id}/stratigraphic-unit", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/project/{project_id}/stratigraphic-unit", status_code=status.HTTP_201_CREATED
+)
 async def append_stratigraphic_unit(
     project_id: str,
     payload: dict,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Append a Stratigraphic Unit record to CSV in a locked Forms folder."""
     check_project_permission(project_id, current_user, db)
@@ -259,87 +320,139 @@ async def append_stratigraphic_unit(
     forms_folder = _ensure_locked_folder(db, project_id, "Forms")
 
     header = [
-        "id", "sector", "complexFeatureNo", "earlierThan", "laterThan", "unitType", "location",
-        "length", "thickness", "depth", "areaSurface", "orientation",
-        "structure_compaction", "structure_colour", "structure_munsell", "structure_homogeneous", "structure_heterogeneous",
-        "comp_pottery", "comp_flint", "comp_stone", "comp_wood", "comp_charcoal", "comp_shell", "comp_snail", "comp_ash", "comp_adobe", "comp_metal", "comp_organic", "comp_mineral", "comp_gravels", "comp_silt", "comp_sand", "comp_argil", "comp_loess", "comp_mud", "comp_other",
-        "granulation", "contaminationRisk", "bones", "seed",
-        "pert_natural", "pert_anthropic", "pert_burrow", "pert_roots", "pert_other", "pert_otherType",
-        "description", "doc_drawing", "doc_plan", "doc_photogrammetry", "doc_samples", "doc_photos", "doc_video", "planNumber",
-        "author", "dateCreated", "checkedBy", "dateChecked"
+        "id",
+        "sector",
+        "complexFeatureNo",
+        "earlierThan",
+        "laterThan",
+        "unitType",
+        "location",
+        "length",
+        "thickness",
+        "depth",
+        "areaSurface",
+        "orientation",
+        "structure_compaction",
+        "structure_colour",
+        "structure_munsell",
+        "structure_homogeneous",
+        "structure_heterogeneous",
+        "comp_pottery",
+        "comp_flint",
+        "comp_stone",
+        "comp_wood",
+        "comp_charcoal",
+        "comp_shell",
+        "comp_snail",
+        "comp_ash",
+        "comp_adobe",
+        "comp_metal",
+        "comp_organic",
+        "comp_mineral",
+        "comp_gravels",
+        "comp_silt",
+        "comp_sand",
+        "comp_argil",
+        "comp_loess",
+        "comp_mud",
+        "comp_other",
+        "granulation",
+        "contaminationRisk",
+        "bones",
+        "seed",
+        "pert_natural",
+        "pert_anthropic",
+        "pert_burrow",
+        "pert_roots",
+        "pert_other",
+        "pert_otherType",
+        "description",
+        "doc_drawing",
+        "doc_plan",
+        "doc_photogrammetry",
+        "doc_samples",
+        "doc_photos",
+        "doc_video",
+        "planNumber",
+        "author",
+        "dateCreated",
+        "checkedBy",
+        "dateChecked",
     ]
 
     def val(k, default=None):
         return payload.get(k, default)
 
-    dims = (payload.get('dimensions') or {})
-    structure = (payload.get('structure') or {})
-    comp = (payload.get('composition') or {})
-    pert = (payload.get('perturbation') or {})
-    docs = (payload.get('documentation') or {})
+    dims = payload.get("dimensions") or {}
+    structure = payload.get("structure") or {}
+    comp = payload.get("composition") or {}
+    pert = payload.get("perturbation") or {}
+    docs = payload.get("documentation") or {}
 
     row = [
-        val('id', ''),
-        payload.get('sector', ''),
-        payload.get('complexFeatureNo', ''),
-        ';'.join(payload.get('earlierThan') or []),
-        ';'.join(payload.get('laterThan') or []),
-        payload.get('unitType', ''),
-        payload.get('location', ''),
-        str(dims.get('length') or ''),
-        str(dims.get('thickness') or ''),
-        str(dims.get('depth') or ''),
-        str(dims.get('areaSurface') or ''),
-        payload.get('orientation', ''),
-        structure.get('compaction', ''),
-        structure.get('colour', ''),
-        structure.get('munsellCode', ''),
-        _serialize_bool(structure.get('homogeneous')),
-        _serialize_bool(structure.get('heterogeneous')),
-        _serialize_bool(comp.get('pottery')),
-        _serialize_bool(comp.get('flint')),
-        _serialize_bool(comp.get('stone')),
-        _serialize_bool(comp.get('wood')),
-        _serialize_bool(comp.get('charcoal')),
-        _serialize_bool(comp.get('shell')),
-        _serialize_bool(comp.get('snail')),
-        _serialize_bool(comp.get('ash')),
-        _serialize_bool(comp.get('adobe')),
-        _serialize_bool(comp.get('metal')),
-        _serialize_bool(comp.get('organic')),
-        _serialize_bool(comp.get('mineral')),
-        _serialize_bool(comp.get('gravels')),
-        _serialize_bool(comp.get('silt')),
-        _serialize_bool(comp.get('sand')),
-        _serialize_bool(comp.get('argil')),
-        _serialize_bool(comp.get('loess')),
-        _serialize_bool(comp.get('mud')),
-        _serialize_bool(comp.get('other')),
-        payload.get('granulation', ''),
-        payload.get('contaminationRisk', ''),
-        _serialize_bool(payload.get('bones')),
-        _serialize_bool(payload.get('seed')),
-        _serialize_bool(pert.get('natural')),
-        _serialize_bool(pert.get('anthropic')),
-        _serialize_bool(pert.get('burrow')),
-        _serialize_bool(pert.get('roots')),
-        _serialize_bool(pert.get('other')),
-        pert.get('otherType', ''),
-        payload.get('description', ''),
-        _serialize_bool(docs.get('drawing')),
-        _serialize_bool(docs.get('plan')),
-        _serialize_bool(docs.get('photogrammetry')),
-        _serialize_bool(docs.get('samples')),
-        _serialize_bool(docs.get('photos')),
-        _serialize_bool(docs.get('video')),
-        docs.get('planNumber', ''),
-        payload.get('author', ''),
-        payload.get('dateCreated', ''),
-        payload.get('checkedBy', ''),
-        payload.get('dateChecked', ''),
+        val("id", ""),
+        payload.get("sector", ""),
+        payload.get("complexFeatureNo", ""),
+        ";".join(payload.get("earlierThan") or []),
+        ";".join(payload.get("laterThan") or []),
+        payload.get("unitType", ""),
+        payload.get("location", ""),
+        str(dims.get("length") or ""),
+        str(dims.get("thickness") or ""),
+        str(dims.get("depth") or ""),
+        str(dims.get("areaSurface") or ""),
+        payload.get("orientation", ""),
+        structure.get("compaction", ""),
+        structure.get("colour", ""),
+        structure.get("munsellCode", ""),
+        _serialize_bool(structure.get("homogeneous")),
+        _serialize_bool(structure.get("heterogeneous")),
+        _serialize_bool(comp.get("pottery")),
+        _serialize_bool(comp.get("flint")),
+        _serialize_bool(comp.get("stone")),
+        _serialize_bool(comp.get("wood")),
+        _serialize_bool(comp.get("charcoal")),
+        _serialize_bool(comp.get("shell")),
+        _serialize_bool(comp.get("snail")),
+        _serialize_bool(comp.get("ash")),
+        _serialize_bool(comp.get("adobe")),
+        _serialize_bool(comp.get("metal")),
+        _serialize_bool(comp.get("organic")),
+        _serialize_bool(comp.get("mineral")),
+        _serialize_bool(comp.get("gravels")),
+        _serialize_bool(comp.get("silt")),
+        _serialize_bool(comp.get("sand")),
+        _serialize_bool(comp.get("argil")),
+        _serialize_bool(comp.get("loess")),
+        _serialize_bool(comp.get("mud")),
+        _serialize_bool(comp.get("other")),
+        payload.get("granulation", ""),
+        payload.get("contaminationRisk", ""),
+        _serialize_bool(payload.get("bones")),
+        _serialize_bool(payload.get("seed")),
+        _serialize_bool(pert.get("natural")),
+        _serialize_bool(pert.get("anthropic")),
+        _serialize_bool(pert.get("burrow")),
+        _serialize_bool(pert.get("roots")),
+        _serialize_bool(pert.get("other")),
+        pert.get("otherType", ""),
+        payload.get("description", ""),
+        _serialize_bool(docs.get("drawing")),
+        _serialize_bool(docs.get("plan")),
+        _serialize_bool(docs.get("photogrammetry")),
+        _serialize_bool(docs.get("samples")),
+        _serialize_bool(docs.get("photos")),
+        _serialize_bool(docs.get("video")),
+        docs.get("planNumber", ""),
+        payload.get("author", ""),
+        payload.get("dateCreated", ""),
+        payload.get("checkedBy", ""),
+        payload.get("dateChecked", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "stratigraphic_units.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "stratigraphic_units.csv", header
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -347,26 +460,30 @@ async def append_stratigraphic_unit(
     for r in existing:
         writer.writerow(r)
     writer.writerow(row)
-    data_bytes = output.getvalue().encode('utf-8')
-    await minio_client.upload_file(data_bytes, node.storage_path or f"forms/{project_id}/stratigraphic_units.csv", content_type="text/csv")
+    data_bytes = output.getvalue().encode("utf-8")
+    await minio_client.upload_file(
+        data_bytes,
+        node.storage_path or f"forms/{project_id}/stratigraphic_units.csv",
+        content_type="text/csv",
+    )
 
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
-    
+
     # Notify all users in project that forms have been updated (stratigraphic unit added)
-    await emit_content_update(project_id, 'forms')
-    
+    await emit_content_update(project_id, "forms")
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
-        activity_type='stratigraphic_unit_added',
-        description=f'Added stratigraphic unit: {payload.get("id", payload.get("sector", "unknown"))}',
+        activity_type="stratigraphic_unit_added",
+        description=f"Added stratigraphic unit: {payload.get('id', payload.get('sector', 'unknown'))}",
         user_id=current_user.id,
-        metadata={'form_data': payload}
+        metadata={"form_data": payload},
     )
-    
+
     return {"status": "ok"}
 
 
@@ -375,7 +492,7 @@ async def append_artefact(
     project_id: str,
     payload: dict,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Append an Artefact registry entry to CSV in a locked Forms folder."""
     check_project_permission(project_id, current_user, db)
@@ -383,23 +500,34 @@ async def append_artefact(
     forms_folder = _ensure_locked_folder(db, project_id, "Forms")
 
     header = [
-        "category", "number", "type", "complexFeature", "areaSurface", "gridSquare", "depth", "stratigraphicUnit", "quantity", "otherObservations"
+        "category",
+        "number",
+        "type",
+        "complexFeature",
+        "areaSurface",
+        "gridSquare",
+        "depth",
+        "stratigraphicUnit",
+        "quantity",
+        "otherObservations",
     ]
 
     row = [
-        payload.get('category', ''),
-        payload.get('number', ''),
-        payload.get('type', ''),
-        payload.get('complexFeature', ''),
-        payload.get('areaSurface', ''),
-        payload.get('gridSquare', ''),
-        payload.get('depth', ''),
-        payload.get('stratigraphicUnit', ''),
-        str(payload.get('quantity') or ''),
-        payload.get('otherObservations', ''),
+        payload.get("category", ""),
+        payload.get("number", ""),
+        payload.get("type", ""),
+        payload.get("complexFeature", ""),
+        payload.get("areaSurface", ""),
+        payload.get("gridSquare", ""),
+        payload.get("depth", ""),
+        payload.get("stratigraphicUnit", ""),
+        str(payload.get("quantity") or ""),
+        payload.get("otherObservations", ""),
     ]
 
-    node, existing = _ensure_locked_csv_file(db, project_id, forms_folder.id, "artefacts.csv", header)
+    node, existing = _ensure_locked_csv_file(
+        db, project_id, forms_folder.id, "artefacts.csv", header
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -407,24 +535,28 @@ async def append_artefact(
     for r in existing:
         writer.writerow(r)
     writer.writerow(row)
-    data_bytes = output.getvalue().encode('utf-8')
-    await minio_client.upload_file(data_bytes, node.storage_path or f"forms/{project_id}/artefacts.csv", content_type="text/csv")
+    data_bytes = output.getvalue().encode("utf-8")
+    await minio_client.upload_file(
+        data_bytes,
+        node.storage_path or f"forms/{project_id}/artefacts.csv",
+        content_type="text/csv",
+    )
 
     node.size = str(len(data_bytes))
     node.updated_at = datetime.utcnow()
     db.commit()
-    
+
     # Notify all users in project that forms have been updated (artefact added)
-    await emit_content_update(project_id, 'forms')
-    
+    await emit_content_update(project_id, "forms")
+
     # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
-        activity_type='artefact_added',
-        description=f'Added artefact: {data.get("artefact_id", data.get("name", data.get("type", "unknown")))}',
+        activity_type="artefact_added",
+        description=f"Added artefact: {payload.get('artefact_id', payload.get('name', payload.get('type', 'unknown')))}",
         user_id=current_user.id,
-        metadata={'form_data': data}
+        metadata={"form_data": payload},
     )
-    
+
     return {"status": "ok"}

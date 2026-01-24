@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { authService } from '../services/authService';
+import React, { createContext, useState, useEffect, useContext } from "react";
+import { authService } from "../services/authService";
 
 const AuthContext = createContext({});
 
@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error("Auth check error:", error);
     } finally {
       setLoading(false);
     }
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message || 'Login failed' };
+      return { success: false, error: error.message || "Login failed" };
     }
   };
 
@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message || 'Registration failed' };
+      return { success: false, error: error.message || "Registration failed" };
     }
   };
 
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       await authService.logout();
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 

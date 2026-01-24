@@ -1,0 +1,38 @@
+# Ruff configuration for STRATUM backend
+
+target-version = "py313"
+line-length = 85
+
+[lint]
+extend-select = ["I"]
+select = [
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "F",      # Pyflakes
+  "I",      # isort
+  "B",      # flake8-bugbear
+  "UP",     # pyupgrade
+]
+ignore = [
+  "E501",   # line too long (handled by formatter)
+  "E701",   # multiple statements on one line (colon)
+  "E702",   # multiple statements on one line (semicolon)
+  "E711",   # comparison to None (SQLAlchemy requires == None)
+  "E741",   # ambiguous variable name
+  "B008",   # function calls in argument defaults (FastAPI)
+  "B904",   # raise from in except
+  "B905",   # zip(strict=)
+  "W293",   # whitespace on blank line
+  "UP028",  # yield from
+  "UP045",  # Optional[X] vs X | None
+  "F841",   # unused local variable
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"alembic/*" = ["E402", "F401"]
+"app/routes/convert.py" = ["E402"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

@@ -1,9 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { fileService } from '../src/services/fileService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import PhotoPanel from '../src/components/data/PhotoPanel';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { fileService } from "../src/services/fileService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import PhotoPanel from "../src/components/data/PhotoPanel";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();
@@ -16,51 +24,64 @@ export default function ImagePreviewScreen() {
     let revoked = false;
     (async () => {
       try {
-        if (Platform.OS === 'web') {
-          const token = await AsyncStorage.getItem('authToken');
+        if (Platform.OS === "web") {
+          // Web: downloadFile returns { blob, contentLength, mimeType }
           try {
-            const result: any = await fileService.downloadFileStream(nodeId, token, undefined);
-            const url = window.URL.createObjectURL(result.blob);
-            if (!revoked) setBlobUrl(url);
-          } catch {
-            const res = await fileService.downloadFile(nodeId);
-            const url = window.URL.createObjectURL(res.data);
-            if (!revoked) setBlobUrl(url);
+            const { blob } = await fileService.downloadFile(nodeId);
+            if (blob) {
+              const url = window.URL.createObjectURL(blob);
+              if (!revoked) setBlobUrl(url);
+            } else {
+              throw new Error("No blob returned");
+            }
+          } catch (err) {
+            console.error("[ImagePreview] Download failed:", err);
+            if (!revoked) setError("Failed to load image");
           }
         } else {
-          const res = await fileService.downloadFile(nodeId);
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            if (typeof reader.result === 'string' && !revoked) setBlobUrl(reader.result);
-          };
-            reader.readAsDataURL(res.data);
+          // On native, downloadFile returns { uri, contentLength, mimeType }
+          try {
+            const res = await fileService.downloadFile(nodeId, name as string);
+            console.log("[ImagePreview] Native download result:", res);
+            if (!revoked && res && res.uri) {
+              // Use the local file URI directly for native platforms
+              setBlobUrl(res.uri);
+            } else {
+              if (!revoked) setError("Failed to load image - no URI returned");
+            }
+          } catch (nativeErr) {
+            console.error("[ImagePreview] Native download failed:", nativeErr);
+            if (!revoked) setError("Failed to load image");
+          }
         }
       } catch (e) {
-        console.error(e);
-        setError('Failed to load image');
+        console.error("[ImagePreview] Unexpected error:", e);
+        if (!revoked) setError("Failed to load image");
       } finally {
-        setLoading(false);
+        if (!revoked) setLoading(false);
       }
     })();
     return () => {
       revoked = true;
-      if (blobUrl && Platform.OS === 'web') {
-        try { window.URL.revokeObjectURL(blobUrl); } catch {}
+      if (blobUrl && Platform.OS === "web") {
+        try {
+          window.URL.revokeObjectURL(blobUrl);
+        } catch {}
       }
     };
-  }, [nodeId]);
+  }, [nodeId, name]);
 
   const handleDownload = async () => {
     if (!blobUrl) return;
-    if (Platform.OS === 'web') {
-      const a = document.createElement('a');
+    if (Platform.OS === "web") {
+      const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = (name as string) || 'image';
+      a.download = (name as string) || "image";
       document.body.appendChild(a);
       a.click();
       a.remove();
     } else {
-      Alert.alert('Download', 'Mobile download not implemented yet.');
+      Alert.alert("Download", "Mobile download not implemented yet.");
     }
   };
 
@@ -68,10 +89,10 @@ export default function ImagePreviewScreen() {
     <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: (name as string) || 'Image',
-          headerStyle: { backgroundColor: '#111111' },
-          headerTintColor: '#FF2A2A',
-          headerTitleStyle: { color: '#F5F5F5' },
+          title: (name as string) || "Image",
+          headerStyle: { backgroundColor: "#111111" },
+          headerTintColor: "#FF2A2A",
+          headerTitleStyle: { color: "#F5F5F5" },
         }}
       />
       <View style={styles.content}>
@@ -89,11 +110,18 @@ export default function ImagePreviewScreen() {
         {!loading && !error && blobUrl && <PhotoPanel uri={blobUrl} />}
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleDownload} disabled={!blobUrl}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleDownload}
+          disabled={!blobUrl}
+        >
           <Text style={styles.actionButtonText}>Download</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.closeButton]} onPress={() => router.back()}>
-          <Text style={[styles.actionButtonText, { color: '#9A9A9A' }]}>Close</Text>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.closeButton]}
+          onPress={() => router.back()}
+        >
+          <Text style={[styles.actionButtonText, { color: "#9A9A9A" }]}>Close</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -101,13 +129,21 @@ export default function ImagePreviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111111' },
+  container: { flex: 1, backgroundColor: "#111111" },
   content: { flex: 1, padding: 12 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, color: '#9A9A9A' },
-  errorText: { color: '#FF4444', fontSize: 16 },
-  actions: { flexDirection: 'row', gap: 12, padding: 16 },
-  actionButton: { flex: 1, backgroundColor: '#2A2A2A', padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#333' },
-  closeButton: { backgroundColor: '#1A1A1A' },
-  actionButtonText: { color: '#F5F5F5', fontWeight: '600' },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 12, color: "#9A9A9A" },
+  errorText: { color: "#FF4444", fontSize: 16 },
+  actions: { flexDirection: "row", gap: 12, padding: 16 },
+  actionButton: {
+    flex: 1,
+    backgroundColor: "#2A2A2A",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  closeButton: { backgroundColor: "#1A1A1A" },
+  actionButtonText: { color: "#F5F5F5", fontWeight: "600" },
 });

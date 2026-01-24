@@ -1,13 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from "react";
 
-export default function AudioPanel({ src, name }: { src: string | null; name?: string }) {
+export interface AudioPanelProps {
+  audioUrl: string;
+}
+
+export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!src || !audioRef.current || !canvasRef.current) return;
+    if (!audioUrl || !audioRef.current || !canvasRef.current) return;
     let ctx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let raf = 0;
@@ -20,7 +23,7 @@ export default function AudioPanel({ src, name }: { src: string | null; name?: s
       analyser.connect(ctx.destination);
       const buffer = new Uint8Array(analyser.frequencyBinCount);
       const canvas = canvasRef.current;
-      const g = canvas.getContext('2d')!;
+      const g = canvas.getContext("2d")!;
       const draw = () => {
         raf = requestAnimationFrame(draw);
         analyser!.getByteFrequencyData(buffer);
@@ -28,42 +31,58 @@ export default function AudioPanel({ src, name }: { src: string | null; name?: s
         const w = canvas.width / buffer.length;
         for (let i = 0; i < buffer.length; i++) {
           const v = buffer[i] / 255;
-            const h = v * canvas.height;
-          g.fillStyle = '#FF2A2A';
+          const h = v * canvas.height;
+          g.fillStyle = "#FF2A2A";
           g.fillRect(i * w, canvas.height - h, w - 1, h);
         }
       };
       draw();
     } catch (e: any) {
-      setError('Audio visualizer error');
+      setError("Audio visualizer error");
     }
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      try { ctx?.close(); } catch {}
+      try {
+        ctx?.close();
+      } catch {}
     };
-  }, [src]);
+  }, [audioUrl]);
 
   return (
-    <View style={styles.wrapper}>
-      {src ? (
+    <div style={styles.wrapper}>
+      {audioUrl ? (
         <>
-          <audio ref={audioRef} src={src} controls style={styles.audio} />
+          <audio ref={audioRef} src={audioUrl} controls style={styles.audio} />
           <canvas ref={canvasRef} width={800} height={120} style={styles.canvas} />
-          {!!name && <Text style={styles.name}>{name}</Text>}
-          {error && <Text style={styles.err}>{error}</Text>}
+          {error && <span style={styles.err}>{error}</span>}
         </>
       ) : (
-        <Text style={styles.info}>No audio</Text>
+        <span style={styles.info}>No audio</span>
       )}
-    </View>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#2A2A2A', backgroundColor: '#0E0E0E', padding: 16, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  audio: { width: '100%' },
-  canvas: { width: '100%', height: 120, backgroundColor: '#111111', borderRadius: 8 },
-  info: { color: '#9A9A9A' },
-  name: { color: '#F5F5F5', fontSize: 12 },
-  err: { color: '#FF4444', fontSize: 12 },
-});
+const styles: Record<string, React.CSSProperties> = {
+  wrapper: {
+    flex: 1,
+    borderRadius: 12,
+    border: "1px solid #2A2A2A",
+    backgroundColor: "#0E0E0E",
+    padding: 16,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  audio: { width: "100%" },
+  canvas: {
+    width: "100%",
+    height: 120,
+    backgroundColor: "#111111",
+    borderRadius: 8,
+  },
+  info: { color: "#9A9A9A" },
+  err: { color: "#FF4444", fontSize: 12 },
+};

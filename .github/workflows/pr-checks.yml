@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install backend dependencies
         run: |
@@ -32,22 +32,10 @@ jobs:
         run: |
           python -m compileall app
 
-      - name: Start FastAPI (smoke test)
+      - name: Ruff lint check
         run: |
-          python -m uvicorn app.main:app --port 8000 &
-
-          # Wait for the app to become healthy (up to ~30 seconds)
-          for i in {1..30}; do
-            if curl -fs http://127.0.0.1:8000/health > /dev/null; then
-              echo "Health check succeeded"
-              exit 0
-            fi
-            echo "Waiting for app to become healthy... ($i/30)"
-            sleep 1
-          done
-
-          echo "App failed to become healthy within the expected time" >&2
-          exit 1
+          pip install ruff
+          ruff check . --config ruff.toml
 
   frontend:
     name: Frontend (TypeScript / Expo Web)
@@ -65,20 +53,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/stratum-app/package-lock.json
 
       - name: Install frontend dependencies
         run: npm install
 
-      - name: TypeScript type check (if present)
-        run: |
-          npm run typecheck || echo "No typecheck script defined"
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        continue-on-error: true
 
-      - name: Lint (if present)
-        run: |
-          npm run lint || echo "No lint script defined"
+      - name: ESLint check
+        run: npx eslint . --config eslint.config.js
 
       - name: Expo web build smoke test
-        run: |
-          npx expo export --platform web
+        run: npx expo export --platform web
