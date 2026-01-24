@@ -675,6 +675,7 @@ export default function ProjectDetailScreen() {
         }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showFilesOverlay, id]);
 
   const openGalleryItem = (node: any) => {
