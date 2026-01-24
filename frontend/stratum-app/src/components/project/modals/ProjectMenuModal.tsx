@@ -14,6 +14,7 @@ interface Props {
   onClose: () => void;
   onOpenMembers: () => void;
   onOpenSettings: () => void;
+  onExitProject?: () => void;
   canChangeSettings?: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function ProjectMenuModal({
   onClose,
   onOpenMembers,
   onOpenSettings,
+  onExitProject,
   canChangeSettings = true,
 }: Props) {
   return (
@@ -65,8 +67,19 @@ export default function ProjectMenuModal({
               </Text>
             </View>
           )}
+          {onExitProject && (
+            <TouchableOpacity
+              style={[styles.menuItem]}
+              onPress={() => {
+                onClose();
+                onExitProject();
+              }}
+            >
+              <Text style={[styles.menuItemText, styles.exitButtonText]}>Exit Project</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={[styles.menuItem, { justifyContent: "center" }]}
+            style={[styles.menuItem, styles.closeButton, { justifyContent: "center" }]}
             onPress={onClose}
           >
             <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
@@ -97,6 +110,15 @@ const styles = StyleSheet.create({
   menuItemText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
   disabledMenuItem: { opacity: 0.6 },
   disabledText: { color: "#666" },
+  exitButtonText: {
+    color: "#888",
+  },
+  closeButton: {
+    borderTopWidth: 1,
+    borderTopColor: "#333",
+    marginTop: 8,
+    paddingTop: 16,
+  },
   permissionHint: {
     color: "#FF6B6B",
     fontSize: 12,

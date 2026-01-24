@@ -1450,6 +1450,9 @@ export default function ProjectDetailScreen() {
         onClose={() => setShowMenu(false)}
         onOpenMembers={() => setShowMembersModal(true)}
         onOpenSettings={handleProjectSettings}
+        onExitProject={() => {
+          router.back();
+        }}
         canChangeSettings={canChangeSettings}
       />
 

@@ -1,17 +1,13 @@
-import React, { useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  PanResponder,
 } from "react-native";
-import { GLView, ExpoWebGLRenderingContext } from "expo-gl";
-import { Renderer, loadAsync } from "expo-three";
-import * as THREE from "three";
+import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
-import { Asset } from "expo-asset";
 
 interface MeshPanelProps {
   src: string | null;
@@ -21,85 +17,46 @@ interface MeshPanelProps {
 export default function MeshPanel({ src, name }: MeshPanelProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const glRef = useRef<GLView>(null);
-  const rendererRef = useRef<Renderer | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const meshRef = useRef<THREE.Object3D | null>(null);
+  const [webViewReady, setWebViewReady] = useState(false);
+  const webViewRef = useRef<WebView>(null);
 
-  // Touch controls state
-  const rotationRef = useRef({ x: 0, y: 0 });
-  const scaleRef = useRef(1);
-  const lastTouchRef = useRef({ x: 0, y: 0 });
-  const lastDistanceRef = useRef(0);
+  // Fetch the GLB file and inject it into WebView after it's ready
+  useEffect(() => {
+    if (!src || !webViewReady) return;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        const touches = evt.nativeEvent.touches;
-        if (touches.length === 1) {
-          lastTouchRef.current = { x: touches[0].pageX, y: touches[0].pageY };
-        } else if (touches.length === 2) {
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          lastDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+    const fetchAndInject = async () => {
+      try {
+        const response = await fetch(src);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
-      },
-      onPanResponderMove: (evt) => {
-        const touches = evt.nativeEvent.touches;
-        if (touches.length === 1) {
-          // Rotation
-          const dx = touches[0].pageX - lastTouchRef.current.x;
-          const dy = touches[0].pageY - lastTouchRef.current.y;
-          rotationRef.current.y += dx * 0.01;
-          rotationRef.current.x += dy * 0.01;
-          lastTouchRef.current = { x: touches[0].pageX, y: touches[0].pageY };
 
-          if (meshRef.current) {
-            meshRef.current.rotation.y = rotationRef.current.y;
-            meshRef.current.rotation.x = rotationRef.current.x;
-          }
-        } else if (touches.length === 2) {
-          // Pinch zoom
-          const dx = touches[0].pageX - touches[1].pageX;
-          const dy = touches[0].pageY - touches[1].pageY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const scaleFactor = distance / lastDistanceRef.current;
-          scaleRef.current = Math.max(0.3, Math.min(5, scaleRef.current * scaleFactor));
-          lastDistanceRef.current = distance;
+        const arrayBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
 
-          if (meshRef.current) {
-            meshRef.current.scale.setScalar(scaleRef.current);
-          }
+        // Convert to base64 in chunks to avoid call stack issues
+        const chunkSize = 8192;
+        let base64 = "";
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.slice(i, i + chunkSize);
+          base64 += String.fromCharCode.apply(null, Array.from(chunk));
         }
-      },
-    })
-  ).current;
+        base64 = btoa(base64);
 
-  const resetView = () => {
-    rotationRef.current = { x: 0, y: 0 };
-    scaleRef.current = 1;
-    if (meshRef.current) {
-      meshRef.current.rotation.set(0, 0, 0);
-      meshRef.current.scale.setScalar(1);
-    }
-  };
+        // Inject the model data into the WebView
+        webViewRef.current?.injectJavaScript(`
+          window.loadModelFromBase64("${base64}");
+          true;
+        `);
+      } catch (err) {
+        console.error("Failed to fetch GLB:", err);
+        setError(err instanceof Error ? err.message : "Failed to load model");
+        setLoading(false);
+      }
+    };
 
-  const zoomIn = () => {
-    scaleRef.current = Math.min(5, scaleRef.current * 1.25);
-    if (meshRef.current) {
-      meshRef.current.scale.setScalar(scaleRef.current);
-    }
-  };
-
-  const zoomOut = () => {
-    scaleRef.current = Math.max(0.3, scaleRef.current * 0.8);
-    if (meshRef.current) {
-      meshRef.current.scale.setScalar(scaleRef.current);
-    }
-  };
+    fetchAndInject();
+  }, [src, webViewReady]);
 
   if (!src) {
     return (
@@ -111,92 +68,228 @@ export default function MeshPanel({ src, name }: MeshPanelProps) {
     );
   }
 
-  const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
-    try {
-      const { drawingBufferWidth: width, drawingBufferHeight: height } = gl;
-
-      // Create renderer
-      const renderer = new Renderer({ gl });
-      renderer.setSize(width, height);
-      renderer.setClearColor(0x0e0e0e, 1);
-      rendererRef.current = renderer;
-
-      // Create scene
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0e0e0e);
-      sceneRef.current = scene;
-
-      // Create camera
-      const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-      camera.position.z = 3;
-      cameraRef.current = camera;
-
-      // Add lights
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(5, 5, 5);
-      scene.add(directionalLight);
-
-      // Load the model using fetch + manual parsing for GLB/GLTF
-      await loadModel(scene, src);
-
-      setLoading(false);
-
-      // Animation loop
-      const animate = () => {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-        gl.endFrameEXP();
-      };
-      animate();
-    } catch (err) {
-      console.error("GL context error:", err);
-      setError("Failed to initialize 3D viewer");
-      setLoading(false);
+  // HTML that waits for model data to be injected
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: 100%; 
+      height: 100%; 
+      background: #0E0E0E; 
+      overflow: hidden;
+      touch-action: none;
     }
-  };
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background-color: #0E0E0E;
+      --poster-color: #0E0E0E;
+    }
+    .controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .control-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      border: none;
+      background: #333;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .control-btn:active {
+      background: #FF2A2A;
+    }
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #9A9A9A;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-size: 14px;
+    }
+    .error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #FF4444;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-size: 14px;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading" class="loading">Waiting for model data...</div>
+  <model-viewer
+    id="viewer"
+    camera-controls
+    touch-action="pan-y"
+    interaction-prompt="none"
+    auto-rotate
+    auto-rotate-delay="3000"
+    rotation-per-second="30deg"
+    shadow-intensity="0.5"
+    exposure="1.0"
+    camera-orbit="45deg 55deg auto"
+    min-camera-orbit="auto auto 10%"
+    max-camera-orbit="auto auto 500%"
+    style="opacity: 0; transition: opacity 0.3s;"
+  ></model-viewer>
+  <div class="controls">
+    <button class="control-btn" onclick="resetCamera()" title="Reset">↺</button>
+    <button class="control-btn" onclick="zoomIn()" title="Zoom In">+</button>
+    <button class="control-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+    <button class="control-btn" onclick="toggleRotate()" id="rotateBtn" title="Auto-rotate">⟳</button>
+  </div>
+  <script>
+    const viewer = document.getElementById('viewer');
+    const loadingEl = document.getElementById('loading');
+    let autoRotating = true;
 
-  const loadModel = async (scene: THREE.Scene, url: string) => {
-    try {
-      // For now, create a placeholder cube to show the viewer works
-      // Full GLB loading requires the GLTFLoader from three/examples
-      const geometry = new THREE.BoxGeometry(1, 1, 1);
-      const material = new THREE.MeshStandardMaterial({
-        color: 0xff2a2a,
-        metalness: 0.3,
-        roughness: 0.7,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      meshRef.current = mesh;
-      scene.add(mesh);
-
-      // Try loading GLB if it's a GLB file
-      const ext = url.split(".").pop()?.toLowerCase();
-      if (ext === "glb" || ext === "gltf") {
-        // GLTFLoader needs to be imported dynamically
-        // For full support, we'd need: import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-        // But that has issues with metro bundler in RN
-        // The cube placeholder shows the GL context is working
-        console.log("3D model URL:", url);
+    // Function called from React Native with base64 model data
+    window.loadModelFromBase64 = function(base64Data) {
+      try {
+        loadingEl.textContent = 'Processing model...';
+        
+        // Decode base64 to binary
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Create blob and object URL
+        const blob = new Blob([bytes], { type: 'model/gltf-binary' });
+        const url = URL.createObjectURL(blob);
+        
+        // Set the model source
+        viewer.src = url;
+        loadingEl.textContent = 'Rendering model...';
+      } catch (e) {
+        loadingEl.innerHTML = '<div class="error">Failed to process model: ' + e.message + '</div>';
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'error', message: e.message }));
       }
-    } catch (err) {
-      console.error("Model load error:", err);
-      throw err;
+    };
+
+    // Tell React Native the WebView is ready
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'ready' }));
+    
+    function resetCamera() {
+      viewer.cameraOrbit = '45deg 55deg auto';
+      viewer.fieldOfView = 'auto';
     }
-  };
+    
+    function zoomIn() {
+      const orbit = viewer.getCameraOrbit();
+      orbit.radius = Math.max(orbit.radius * 0.75, viewer.getMinimumFieldOfView());
+      viewer.cameraOrbit = \`\${orbit.theta}rad \${orbit.phi}rad \${orbit.radius}m\`;
+    }
+    
+    function zoomOut() {
+      const orbit = viewer.getCameraOrbit();
+      orbit.radius = Math.min(orbit.radius * 1.33, 100);
+      viewer.cameraOrbit = \`\${orbit.theta}rad \${orbit.phi}rad \${orbit.radius}m\`;
+    }
+    
+    function toggleRotate() {
+      autoRotating = !autoRotating;
+      viewer.autoRotate = autoRotating;
+      document.getElementById('rotateBtn').style.background = autoRotating ? '#FF2A2A' : '#333';
+    }
+    
+    viewer.addEventListener('load', () => {
+      loadingEl.style.display = 'none';
+      viewer.style.opacity = '1';
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'loaded' }));
+    });
+    
+    viewer.addEventListener('error', (e) => {
+      const errorDetail = e.detail ? JSON.stringify(e.detail) : (e.message || 'Unknown error');
+      loadingEl.innerHTML = '<div class="error">Failed to load 3D model</div>';
+      console.error('Model viewer error:', e);
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'error', message: errorDetail }));
+    });
+    
+    // Initialize rotate button state
+    document.getElementById('rotateBtn').style.background = '#FF2A2A';
+  </script>
+</body>
+</html>
+  `;
 
   return (
-    <View style={styles.wrapper} {...panResponder.panHandlers}>
+    <View style={styles.wrapper}>
+      <WebView
+        ref={webViewRef}
+        source={{ html }}
+        style={styles.webview}
+        originWhitelist={["*"]}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        javaScriptEnabled
+        domStorageEnabled
+        scrollEnabled={false}
+        bounces={false}
+        mixedContentMode="always"
+        allowFileAccess
+        allowUniversalAccessFromFileURLs
+        onMessage={(event) => {
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === "ready") {
+              setWebViewReady(true);
+            } else if (data.type === "loaded") {
+              setLoading(false);
+            } else if (data.type === "error") {
+              const errorMsg =
+                typeof data.message === "string"
+                  ? data.message
+                  : "Failed to load model";
+              setError(errorMsg);
+              setLoading(false);
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.warn("WebView error:", nativeEvent);
+          setError("Failed to load 3D viewer");
+          setLoading(false);
+        }}
+      />
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#FF2A2A" />
           <Text style={styles.loadingText}>Loading 3D model...</Text>
         </View>
       )}
-      {error ? (
-        <View style={styles.errorContainer}>
+      {error && (
+        <View style={styles.errorOverlay}>
           <Ionicons name="alert-circle" size={48} color="#FF4444" />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
@@ -204,30 +297,14 @@ export default function MeshPanel({ src, name }: MeshPanelProps) {
             onPress={() => {
               setError(null);
               setLoading(true);
+              setWebViewReady(false);
+              webViewRef.current?.reload();
             }}
           >
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <GLView style={styles.glView} onContextCreate={onContextCreate} ref={glRef} />
       )}
-
-      {/* Control buttons */}
-      {!error && !loading && (
-        <View style={styles.controls}>
-          <TouchableOpacity style={styles.controlBtn} onPress={resetView}>
-            <Ionicons name="refresh" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlBtn} onPress={zoomIn}>
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.controlBtn} onPress={zoomOut}>
-            <Ionicons name="remove" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      )}
-
       {!!name && !error && (
         <View style={styles.nameBar}>
           <Text style={styles.fileName} numberOfLines={1}>
@@ -247,12 +324,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2A2A2A",
     overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
   },
-  glView: {
+  webview: {
     flex: 1,
     width: "100%",
+    backgroundColor: "#0E0E0E",
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -265,10 +341,12 @@ const styles = StyleSheet.create({
     color: "#9A9A9A",
     marginTop: 12,
   },
-  errorContainer: {
-    flex: 1,
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#0E0E0E",
+    zIndex: 2,
     padding: 20,
   },
   errorText: {
@@ -294,7 +372,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   fileName: {
-    color: "#666",
+    color: "#AAAAAA",
     fontSize: 12,
     textAlign: "center",
   },
@@ -303,26 +381,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 8,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  controls: {
-    position: "absolute",
-    bottom: 50,
-    left: "50%",
-    transform: [{ translateX: -60 }],
-    flexDirection: "row",
-    gap: 8,
-    padding: 8,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 20,
-  },
-  controlBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#333",
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 10,
+    paddingBottom: 70, // Above the controls
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
 });
