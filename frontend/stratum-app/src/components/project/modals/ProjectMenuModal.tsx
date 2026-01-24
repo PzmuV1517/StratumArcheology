@@ -59,134 +59,127 @@ export default function ProjectMenuModal({
 
   return (
     <>
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.menuBackdrop}>
-        {/* Click outside to close */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.menuCard}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => {
-              onClose();
-              onOpenMembers();
-            }}
-          >
-            <Text style={styles.menuItemText}>Members ({membersCount})</Text>
-          </TouchableOpacity>
-          {canChangeSettings ? (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.menuBackdrop}>
+          {/* Click outside to close */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          <View style={styles.menuCard}>
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
                 onClose();
-                onOpenSettings();
+                onOpenMembers();
               }}
             >
-              <Text style={styles.menuItemText}>Settings</Text>
+              <Text style={styles.menuItemText}>Members ({membersCount})</Text>
             </TouchableOpacity>
-          ) : (
-            <View style={[styles.menuItem, styles.disabledMenuItem]}>
-              <Text style={[styles.menuItemText, styles.disabledText]}>
-                Settings
-              </Text>
-              <Text style={styles.permissionHint}>
-                Only the leader can change settings
-              </Text>
-            </View>
-          )}
-          {onExitProject && (
-            <TouchableOpacity
-              style={[styles.menuItem]}
-              onPress={handleExitPress}
-            >
-              <Text style={[styles.menuItemText, styles.exitButtonText]}>
-                Exit Project
-              </Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.menuItem,
-              styles.closeButton,
-              { justifyContent: "center" },
-            ]}
-            onPress={onClose}
-          >
-            <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>
-              Close
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-
-    {/* Exit confirmation modal */}
-    <Modal
-      visible={showExitConfirm}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowExitConfirm(false)}
-    >
-      <View style={styles.menuBackdrop}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={() => setShowExitConfirm(false)}
-        />
-        <View style={styles.menuCard}>
-          <Text style={styles.confirmTitle}>
-            {isOwner ? "Leave Project" : "Exit Project?"}
-          </Text>
-          <Text style={styles.confirmText}>
-            {isOwner
-              ? "You are the owner of this project. You must either transfer leadership to another member or delete the project."
-              : "Are you sure you want to leave this project? You will need to be re-invited to rejoin."}
-          </Text>
-
-          {isOwner ? (
-            <>
-              {membersCount > 1 && (
-                <TouchableOpacity
-                  style={styles.confirmButton}
-                  onPress={handleTransferLeadership}
-                >
-                  <Text style={styles.confirmButtonText}>
-                    Transfer Leadership
-                  </Text>
-                </TouchableOpacity>
-              )}
+            {canChangeSettings ? (
               <TouchableOpacity
-                style={[styles.confirmButton, styles.dangerButton]}
-                onPress={handleDeleteProject}
+                style={styles.menuItem}
+                onPress={() => {
+                  onClose();
+                  onOpenSettings();
+                }}
               >
-                <Text style={[styles.confirmButtonText, styles.dangerText]}>
-                  Delete Project
+                <Text style={styles.menuItemText}>Settings</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.menuItem, styles.disabledMenuItem]}>
+                <Text style={[styles.menuItemText, styles.disabledText]}>
+                  Settings
+                </Text>
+                <Text style={styles.permissionHint}>
+                  Only the leader can change settings
+                </Text>
+              </View>
+            )}
+            {onExitProject && (
+              <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
+                <Text style={[styles.menuItemText, styles.exitButtonText]}>
+                  Exit Project
                 </Text>
               </TouchableOpacity>
-            </>
-          ) : (
+            )}
             <TouchableOpacity
-              style={[styles.confirmButton, styles.dangerButton]}
-              onPress={handleConfirmExit}
+              style={[
+                styles.menuItem,
+                styles.closeButton,
+                { justifyContent: "center" },
+              ]}
+              onPress={onClose}
             >
-              <Text style={[styles.confirmButtonText, styles.dangerText]}>
-                Leave Project
-              </Text>
+              <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
             </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowExitConfirm(false)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Exit confirmation modal */}
+      <Modal
+        visible={showExitConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExitConfirm(false)}
+      >
+        <View style={styles.menuBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowExitConfirm(false)}
+          />
+          <View style={styles.menuCard}>
+            <Text style={styles.confirmTitle}>
+              {isOwner ? "Leave Project" : "Exit Project?"}
+            </Text>
+            <Text style={styles.confirmText}>
+              {isOwner
+                ? "You are the owner of this project. You must either transfer leadership to another member or delete the project."
+                : "Are you sure you want to leave this project? You will need to be re-invited to rejoin."}
+            </Text>
+
+            {isOwner ? (
+              <>
+                {membersCount > 1 && (
+                  <TouchableOpacity
+                    style={styles.confirmButton}
+                    onPress={handleTransferLeadership}
+                  >
+                    <Text style={styles.confirmButtonText}>Transfer Leadership</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.confirmButton, styles.dangerButton]}
+                  onPress={handleDeleteProject}
+                >
+                  <Text style={[styles.confirmButtonText, styles.dangerText]}>
+                    Delete Project
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.dangerButton]}
+                onPress={handleConfirmExit}
+              >
+                <Text style={[styles.confirmButtonText, styles.dangerText]}>
+                  Leave Project
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowExitConfirm(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
