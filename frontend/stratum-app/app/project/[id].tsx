@@ -1450,9 +1450,37 @@ export default function ProjectDetailScreen() {
         onClose={() => setShowMenu(false)}
         onOpenMembers={() => setShowMembersModal(true)}
         onOpenSettings={handleProjectSettings}
-        onExitProject={() => {
-          router.back();
+        onExitProject={async () => {
+          // Leave the project by removing self from members
+          if (currentUser?.id && id) {
+            try {
+              await projectService.removeMember(id as string, currentUser.id);
+              router.replace("/(tabs)");
+            } catch (e) {
+              console.error("Failed to leave project:", e);
+              Alert.alert("Error", "Failed to leave the project");
+            }
+          }
         }}
+        onDeleteProject={async () => {
+          // Delete the project entirely
+          if (id) {
+            try {
+              await projectService.deleteProject(id as string);
+              router.replace("/(tabs)");
+            } catch (e) {
+              console.error("Failed to delete project:", e);
+              Alert.alert("Error", "Failed to delete the project");
+            }
+          }
+        }}
+        onTransferLeadership={() => {
+          // Open members modal for leadership transfer
+          setShowMenu(false);
+          setShowMembersModal(true);
+          // Could add specific transfer UI in future
+        }}
+        isOwner={isOwner}
         canChangeSettings={canChangeSettings}
       />
 
