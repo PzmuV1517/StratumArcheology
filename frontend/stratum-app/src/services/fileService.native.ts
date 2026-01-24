@@ -8,12 +8,18 @@ import * as ImagePicker from "expo-image-picker";
 import { Platform, ActionSheetIOS, Alert } from "react-native";
 
 // Note: expo-sharing must be installed separately: npx expo install expo-sharing
-let Sharing: any;
-try {
-  Sharing = require("expo-sharing");
-} catch {
-  Sharing = null;
-}
+// Using lazy load to avoid bundling issues
+let Sharing: typeof import("expo-sharing") | null = null;
+const getSharingModule = async () => {
+  if (!Sharing) {
+    try {
+      Sharing = await import("expo-sharing");
+    } catch {
+      Sharing = null;
+    }
+  }
+  return Sharing;
+};
 
 // Get cache directory with fallback - ensure we always have a valid directory
 const getCacheDir = (): string => {
@@ -484,11 +490,12 @@ export const fileService = {
 
   // Native-specific: share file using Sharing API
   shareFile: async (uri: string): Promise<void> => {
-    if (!Sharing) {
+    const sharingModule = await getSharingModule();
+    if (!sharingModule) {
       throw new Error("expo-sharing not installed");
     }
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri);
+    if (await sharingModule.isAvailableAsync()) {
+      await sharingModule.shareAsync(uri);
     } else {
       throw new Error("Sharing is not available on this device");
     }

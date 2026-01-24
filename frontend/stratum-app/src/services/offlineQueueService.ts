@@ -26,7 +26,8 @@ const generateUUID = (): string => {
 // Storage keys
 const QUEUE_KEY = "@stratum_offline_queue";
 const FILE_VERSIONS_KEY = "@stratum_file_versions";
-const PENDING_UPLOADS_KEY = "@stratum_pending_uploads";
+// Reserved for future use
+// const PENDING_UPLOADS_KEY = "@stratum_pending_uploads";
 const PENDING_EDITS_KEY = "@stratum_pending_edits";
 const CONFLICTS_KEY = "@stratum_conflicts";
 
@@ -643,7 +644,7 @@ export const getOfflineStorageStats = async (): Promise<OfflineStorageStats> => 
         }
 
         return size;
-      } catch (error) {
+      } catch {
         return 0;
       }
     };

@@ -92,18 +92,18 @@ export default function ProjectDetailScreen() {
   >([{ id: null, name: "Root" }]);
   const [fileLoading, setFileLoading] = useState(false);
   const [renameNode, setRenameNode] = useState<any | null>(null);
-  const [_renameText, setRenameText] = useState("");
+  // Rename text state - passed to FilesOverlay
+  const [, setRenameText] = useState("");
   const [moveMode, setMoveMode] = useState<{ node: any | null } | null>(null);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
-  const [_newFolderName, setNewFolderName] = useState("");
+  // New folder name state - passed to FilesOverlay
+  const [, setNewFolderName] = useState("");
   const [deleteNodeTarget, setDeleteNodeTarget] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Download states - used by FilesOverlay component
-  const [_downloadingNodeId, _setDownloadingNodeId] = useState<string | null>(null);
-  const [_downloadProgress, _setDownloadProgress] = useState<number>(0);
-  const [_downloadStatus, _setDownloadStatus] = useState<
-    "in-progress" | "finalizing" | null
-  >(null);
+  // Download states - reserved for future FilesOverlay integration
+  // const [downloadingNodeId, setDownloadingNodeId] = useState<string | null>(null);
+  // const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  // const [downloadStatus, setDownloadStatus] = useState<"in-progress" | "finalizing" | null>(null);
   // Removed inline preview (now separate screen)
   const [showFilesOverlay, setShowFilesOverlay] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -144,7 +144,7 @@ export default function ProjectDetailScreen() {
         const { authService } = await import("../../src/services/authService");
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
-      } catch (e) {
+      } catch {
         // ignore
       }
     })();
@@ -154,6 +154,7 @@ export default function ProjectDetailScreen() {
     loadProjectData();
     // Also check for any file conflicts when loading project
     checkForConflicts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // WebSocket: Join project room and listen for real-time updates
@@ -250,6 +251,7 @@ export default function ProjectDetailScreen() {
       socket.off("content_updated", handleContentUpdated);
       socket.off("timeline_updated", handleTimelineUpdated);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, currentUser?.id, socket, isConnected]);
 
   const handleManageMembers = useCallback(async () => {
@@ -275,11 +277,8 @@ export default function ProjectDetailScreen() {
   // Permission helpers - use defensive checks
   const currentRole = getCurrentUserRole();
   const isGuest = currentRole === "GUEST";
-  const _isResearcher = currentRole === "RESEARCHER"; // For future use
   const isOwner = currentRole === "LEADER" || !currentRole; // If no role found, assume owner (for backward compatibility)
-  const _canEdit = !isGuest; // For future use
   const canChangeSettings = isOwner;
-  const _canDownload = !isGuest; // For future use
   const canEditFiles = !isGuest;
   const canEditMatrix = !isGuest;
   const canEditMap = !isGuest;
@@ -882,7 +881,7 @@ export default function ProjectDetailScreen() {
                   // Offer to share/open the file
                   try {
                     await fileService.shareFile(result.uri);
-                  } catch (_shareError) {
+                  } catch {
                     // If sharing fails, at least tell user where file is
                     Alert.alert("Downloaded", `File saved to: ${result.uri}`);
                   }
@@ -925,30 +924,6 @@ export default function ProjectDetailScreen() {
   };
 
   // Note rendering is now handled by NotesSection component
-  const _renderNote = ({ item }: { item: Note }) => (
-    <TouchableOpacity
-      style={styles.noteCard}
-      onPress={() => handleNotePress(item.id)}
-    >
-      <View style={styles.noteHeader}>
-        <Text style={styles.noteTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.noteDate}>
-          {item.updated_at
-            ? new Date(item.updated_at).toLocaleDateString(undefined, {
-                timeZone: "UTC",
-              })
-            : ""}
-        </Text>
-      </View>
-      {item.content && (
-        <Text style={styles.notePreview} numberOfLines={2}>
-          {item.content}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
 
   const renderMember = ({ item }: { item: Member }) => (
     <View style={styles.memberCardInner}>

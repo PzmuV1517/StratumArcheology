@@ -44,7 +44,7 @@ export default function Timeline({
         if (user?.id) {
           setCurrentUserId(user.id);
         }
-      } catch (e) {
+      } catch {
         // Ignore - will just show usernames instead of "You"
       }
     })();

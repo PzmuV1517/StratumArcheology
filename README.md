@@ -1,329 +1,194 @@
 # STRATUM - Archaeological Site Management Platform
 
-![Phase 1 - Foundation](https://img.shields.io/badge/Phase-1%20Foundation-blue)
+![Phase 3 - Advanced Features](https://img.shields.io/badge/Phase-3%20Advanced-green)
 ![FLL 2025-2026](https://img.shields.io/badge/FLL-UNEARTHED-orange)
 
-**STRATUM** is a comprehensive digital platform designed to help archaeologists plan expeditions, take notes during excavations, collaborate with team members, and export data efficiently. This Innovation Project for FLL 2025-2026 UNEARTHED addresses the lack of standardization in archaeological documentation.
+**STRATUM** is a comprehensive digital platform for archaeologists to plan excavations, document findings, collaborate in real-time, and export standardized data. Built for the FLL 2025-2026 UNEARTHED Innovation Project.
 
-## 📋 Table of Contents
+## Quick Start
 
-- [Project Overview](#project-overview)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Phase 1 Features](#phase-1-features)
-- [Setup Instructions](#setup-instructions)
-- [Environment Configuration](#environment-configuration)
-- [Running the Application](#running-the-application)
-- [API Documentation](#api-documentation)
-
----
-
-## 🎯 Project Overview
-
-STRATUM solves the critical problem of unorganized paper-based note-taking in archaeology by providing:
-
-1. **Digital Note-Taking**: Structured, searchable, and organized documentation
-2. **Team Collaboration**: Role-based access control (Leader, Researcher, Guest)
-3. **Expedition Planning**: Project management for archaeological sites
-4. **Data Export**: Standardized data formats for analysis and reporting
-5. **Offline Support**: Local data syncing with cloud backup
-
----
-
-## 🛠 Tech Stack
-
-### Backend
-- **Framework**: Python with FastAPI
-- **Database**: PostgreSQL (structured data)
-- **Object Storage**: MinIO (photos and files)
-- **Authentication**: Firebase Admin SDK
-- **ORM**: SQLAlchemy
-
-### Frontend
-- **Framework**: React Native with Expo
-- **Navigation**: Expo Router
-- **State Management**: React Context API
-- **HTTP Client**: Axios
-- **Storage**: AsyncStorage
-
----
-
-## 📁 Project Structure
-
-```
-QuantumBitsFLL2025-2026/
-├── backend/
-│   ├── app/
-│   │   ├── routes/          # API endpoints
-│   │   ├── config.py        # Configuration
-│   │   ├── database.py      # Database connection
-│   │   ├── firebase_config.py # Firebase setup
-│   │   ├── minio_client.py  # Object storage
-│   │   ├── models.py        # Database models
-│   │   ├── schemas.py       # API schemas
-│   │   └── main.py          # App entry point
-│   ├── .env                 # Environment variables
-│   └── requirements.txt     # Dependencies
-│
-├── frontend/
-│   └── stratum-app/
-│       ├── app/             # Expo Router pages
-│       │   ├── (auth)/      # Auth screens
-│       │   └── (tabs)/      # Main app tabs
-│       ├── src/
-│       │   ├── contexts/    # React contexts
-│       │   ├── services/    # API services
-│       │   └── config/      # Configuration
-│       └── .env             # Environment variables
-│
-└── resources/               # Documentation
-```
-
----
-
-## ✨ Phase 1 Features
-
-### 1. Authentication System ✅
-- Firebase-based user authentication
-- Login and registration screens
-- JWT token management
-
-### 2. Project Creation ✅
-- Create archaeological site projects
-- Project metadata management
-- Ownership and access control
-
-### 3. Collaboration ✅
-- Invite team members
-- Role-based permissions (Leader, Researcher, Guest)
-- Member management
-
-### 4. Basic Notes System ✅
-- Create and edit notes
-- Upload photos to notes
-- Link notes to projects
-
-### 5. Files & Previews ✅
-- File tree with folders and breadcrumbs
-- Upload and download files
-- Move files with conflict detection (HTTP 409) and UI feedback
-- Previews:
-  - CSV (table) and Excel (grid) via data-preview
-  - Text and Markdown (with KaTeX) via [`MarkdownView`](frontend/stratum-app/src/components/common/MarkdownView.tsx)
-  - Images
-  - PDF (Web only, view-only) via [`PdfPanel.web`](frontend/stratum-app/src/components/data/PdfPanel.web.tsx) in [`data-preview`](frontend/stratum-app/app/data-preview.tsx)
-
-### 6. File Gallery ✅
-
-- Unified gallery across the project with two views: Grid and List
-- Time-based grouping: Day, Week, Month
-- File-type aware icons and quick open actions
-- Deep-link routing to specialized preview screens (image-preview, data-preview)
-- PDF files route to data-preview and open inline (Chromium, view-only)
-- Source: [`FileGallery.tsx`](frontend/stratum-app/src/components/project/FileGallery.tsx) and integration in [`app/project/[id].tsx`](frontend/stratum-app/app/project/%5Bid%5D.tsx)
-
-### 7. UX & UI Improvements ✅
-
-- Consistent STRATUM dark theme with better contrast
-- Files overlay with breadcrumbs, locked folders, and action rows (download/move)
-- Safer moves with backend conflict detection surfaced to the user
-- Markdown rendering with math (KaTeX) and sanitized HTML
-- Autofill-safe inputs styling on web
-- Password show/hide toggles in auth screens
-
----
-
-## 🚀 Setup Instructions
-
-### Prerequisites
-
-- Python 3.9+
-- Node.js 18+ and npm
-- PostgreSQL 14+
-- MinIO (or Docker)
-- Firebase Project
-
-### Backend Setup
-
-1. **Navigate to backend:**
-   ```bash
-   cd backend
-   ```
-
-2. **Create virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up PostgreSQL:**
-   ```bash
-   createdb stratum_db
-   ```
-
-5. **Set up MinIO (Docker):**
-   ```bash
-   docker run -d -p 9000:9000 -p 9001:9001 \
-     -e "MINIO_ROOT_USER=minioadmin" \
-     -e "MINIO_ROOT_PASSWORD=minioadmin" \
-     minio/minio server /data --console-address ":9001"
-   ```
-
-6. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your credentials
-   ```
-
-7. **Run backend:**
-   ```bash
-   python -m uvicorn app.main:app --reload
-   ```
-   
-   Access at: http://localhost:8000
-
-### Frontend Setup
-
-1. **Navigate to frontend:**
-   ```bash
-   cd frontend/stratum-app
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with Firebase and API config
-   ```
-
-4. **Start app:**
-   ```bash
-   npm start
-   ```
-
-5. **Run on platform:**
-   ```bash
-   npm run ios      # iOS (Mac only)
-   npm run android  # Android
-   npm run web      # Web browser
-   ```
-
----
-
-## 🔐 Environment Configuration
-
-### Backend `.env`
-
-```env
-# Firebase (get from Firebase Console → Project Settings → Service Accounts)
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk@...
-FIREBASE_CLIENT_ID=your-client-id
-
-# PostgreSQL
-DATABASE_URL=postgresql://stratum_user:password@localhost:5432/stratum_db
-
-# MinIO
-MINIO_ENDPOINT=localhost:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET_NAME=stratum-files
-
-# App
-APP_SECRET_KEY=your-random-secret-key
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:19006
-```
-
-### Frontend `.env`
-
-```env
-# API
-API_BASE_URL=http://localhost:8000/api
-
-# Firebase Web Config (get from Firebase Console → Project Settings → Web App)
-FIREBASE_API_KEY=your-api-key
-FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_APP_ID=your-app-id
-```
-
-**Note**: Also update `app.json` with Firebase config in the `extra` section.
-
----
-
-## 🎮 Running the Application
-
-### Start Backend
 ```bash
-cd backend
-source venv/bin/activate
+# Backend
+cd backend && pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
-```
 
-### Start Frontend
-```bash
-cd frontend/stratum-app
+# Frontend
+cd frontend/stratum-app && npm install
 npm start
 ```
 
-### Access Points
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- MinIO Console: http://localhost:9001
+See [docs/Installation-&-Setup.md](docs/Installation-&-Setup.md) for full setup instructions.
 
 ---
 
-## 📚 API Documentation
+## Tech Stack
 
-Visit http://localhost:8000/docs for interactive API documentation.
-
-### Key Endpoints
-
-**Authentication**
-- `GET /auth/me` - Current user info
-- `GET /auth/users/search` - Search users
-
-**Projects**
-- `POST /projects` - Create project
-- `GET /projects` - List projects
-- `GET /projects/{id}` - Project details
-- `POST /projects/{id}/members` - Add member
-
-**Notes**
-- `POST /notes` - Create note
-- `GET /notes/project/{project_id}` - Project notes
-- `POST /notes/{id}/attachments` - Upload photo
+| Layer         | Technology                                      |
+| ------------- | ----------------------------------------------- |
+| **Backend**   | Python 3.13, FastAPI, SQLAlchemy, PostgreSQL    |
+| **Storage**   | MinIO (S3-compatible object storage)            |
+| **Auth**      | Firebase Admin SDK                              |
+| **Frontend**  | React Native + Expo SDK 54                      |
+| **Web**       | Expo Web with full feature parity               |
+| **Native**    | iOS/Android with platform-specific optimizations|
 
 ---
 
-## 🗺 Roadmap
+## Features
 
-- [x] **Phase 1**: Foundation (Auth, Projects, Notes, Collaboration)
-- [ ] **Phase 2**: Site Planning (GPS, Tasks, Artifacts)
-- [ ] **Phase 3**: Expedition & AI (LiDAR, AI summaries)
-- [ ] **Phase 4**: Professional Features (Cloud, Advanced collaboration)
+### Core Platform
+
+- **Authentication**: Firebase-based auth with JWT tokens
+- **Projects**: Create/manage archaeological site projects
+- **Collaboration**: Role-based access (Leader, Researcher, Guest)
+- **Notes**: Rich text notes with photo attachments
+- **Files**: Full file management with folders, breadcrumbs, upload/download
+
+### Data Visualization
+
+- **Harris Matrix**: Interactive stratigraphic relationship diagrams
+- **3D Models**: GLB/GLTF mesh viewing with touch controls (Web + Native)
+- **Point Clouds**: PLY/PCD/LAS visualization with WebGL
+- **GPS/Maps**: Site mapping with coordinate tracking
+- **Gallery**: Grid/list views with time-based grouping
+
+### File Previews
+
+| Type              | Web              | Native                      |
+| ----------------- | ---------------- | --------------------------- |
+| Images            | ✅ Full preview  | ✅ Full preview             |
+| PDF               | ✅ Embedded      | ✅ WebView + Google Docs    |
+| CSV/Excel         | ✅ Editable grid | ✅ Editable grid            |
+| Text/Markdown     | ✅ With KaTeX    | ✅ With KaTeX math          |
+| 3D Models (GLB)   | ✅ Three.js      | ✅ WebView + model-viewer   |
+| Point Clouds      | ✅ Three.js      | ✅ expo-gl + THREE          |
+| Video/Audio       | ✅ Native player | ✅ expo-av                  |
+
+### Advanced Features
+
+- **Offline Support**: Queue operations when offline, sync on reconnect
+- **Real-time Sync**: WebSocket-based live collaboration
+- **Time Machine**: Version history and rollback
+- **Artefacts**: QR code generation and manifest tracking
+- **Tools Tab**: Native camera, file sharing, device info
 
 ---
 
-## 🆕 What’s New (Last Few Weeks)
+## Project Structure
 
-- Web PDF preview in data-preview (view-only; Edit/Save hidden) using [`frontend/stratum-app/src/components/data/PdfPanel.web.tsx`](frontend/stratum-app/src/components/data/PdfPanel.web.tsx) and [`frontend/stratum-app/app/data-preview.tsx`](frontend/stratum-app/app/data-preview.tsx)
-- Files UX polish: red-styled Download/Move actions and red “\root” header link in [`frontend/stratum-app/app/project/[id].tsx`](frontend/stratum-app/app/project/%5Bid%5D.tsx) and [`frontend/stratum-app/src/components/project/FilesOverlay.tsx`](frontend/stratum-app/src/components/project/FilesOverlay.tsx)
-- Safer moves: backend returns 409 on name collisions in [`app.routes.files.move_node`](backend/app/routes/files.py); surfaced as alerts in UI
-- Artefacts: QR generation + artefact.json manifest builder in [`frontend/stratum-app/src/components/project/ArtefactsTab.tsx`](frontend/stratum-app/src/components/project/ArtefactsTab.tsx); uploads images/notes and updates manifest
-- Markdown rendering upgraded with math and raw HTML support via [`MarkdownView`](frontend/stratum-app/src/components/common/MarkdownView.tsx)
-- Gallery: PDF recognized (📑) and routed to data-preview in [`frontend/stratum-app/src/components/project/FileGallery.tsx`](frontend/stratum-app/src/components/project/FileGallery.tsx)
+```text
+├── backend/                 # FastAPI server
+│   ├── app/
+│   │   ├── routes/         # API endpoints
+│   │   ├── middleware/     # Logging, error handling
+│   │   ├── models.py       # SQLAlchemy models
+│   │   └── schemas.py      # Pydantic schemas
+│   ├── alembic/            # Database migrations
+│   └── tests/              # Backend tests
+│
+├── frontend/stratum-app/   # Expo app
+│   ├── app/                # Expo Router pages
+│   │   ├── (auth)/         # Login/register
+│   │   ├── (tabs)/         # Main navigation
+│   │   └── project/        # Project screens
+│   ├── src/
+│   │   ├── components/     # Reusable components
+│   │   │   ├── data/       # Preview panels (*.web.tsx, *.native.tsx)
+│   │   │   ├── project/    # Project-specific UI
+│   │   │   └── matrix/     # Harris Matrix
+│   │   ├── services/       # API clients
+│   │   └── contexts/       # React contexts
+│   └── assets/             # Images, fonts
+│
+├── docs/                   # Documentation
+└── resources/              # Design assets
+```
 
 ---
 
-**Built with ❤️ by QuantumBits FLL Team 2025-2026**
+## Development
+
+### Linting & Formatting
+
+```bash
+# Backend (Python)
+cd backend
+ruff check . --fix          # Lint
+ruff format .               # Format
+
+# Frontend (TypeScript)
+cd frontend/stratum-app
+npx eslint . --fix          # Lint
+npx prettier --write .      # Format
+```
+
+### Running Tests
+
+```bash
+# Backend
+cd backend && pytest
+
+# Frontend
+cd frontend/stratum-app && npm test
+```
+
+---
+
+## Development Phases
+
+### Phase 1: Foundation ✅
+
+- Authentication system with Firebase
+- Project creation and management
+- Team collaboration with roles
+- Basic notes with attachments
+- File upload/download
+
+### Phase 2: Data & Visualization ✅
+
+- Harris Matrix stratigraphic diagrams
+- GPS mapping and coordinates
+- File gallery with grouping
+- CSV/Excel editing
+- PDF preview
+
+### Phase 3: Native & Advanced ✅ (Current)
+
+- Native iOS/Android support
+- 3D model viewing (GLB/GLTF)
+- Point cloud visualization
+- Video/audio playback
+- Offline queue system
+- Real-time WebSocket sync
+- Time Machine versioning
+
+### Phase 4: Polish & Launch (Planned)
+
+- AI-assisted documentation
+- Advanced export formats
+- Cloud deployment
+- Performance optimization
+
+---
+
+## API Documentation
+
+Interactive docs available at `http://localhost:8000/docs` when running backend.
+
+Key endpoints:
+
+- `POST /auth/register` - Create account
+- `GET /projects` - List user's projects
+- `POST /projects/{id}/files` - Upload files
+- `GET /files/{id}/download` - Download file
+- `WS /ws/project/{id}` - Real-time updates
+
+---
+
+## Contributing
+
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines.
+
+---
+
+Built with ❤️ by QuantumBits FLL Team 2025-2026
