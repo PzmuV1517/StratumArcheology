@@ -58,10 +58,7 @@ Thumbs.db
 *.log
 
 # Build outputs
-dist/
-build/
-.expo/
-web-build/
+
 
 # MinIO/Storage
 minio-data/
