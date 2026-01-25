@@ -1,4 +1,6 @@
 #!/bin/bash
+# Deprecated file notice: This file is deprecated and will be removed in future versions.
+# Please refer to the updated documentation for the latest testing procedures.
 # Mobile Testing over Hotspot
 # This script tunnels both backend and frontend for testing on physical iOS devices
 # when both devices are connected via iPhone hotspot (which has client isolation)
