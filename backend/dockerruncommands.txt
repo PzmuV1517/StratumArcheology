@@ -7,3 +7,5 @@ python -m uvicorn app.main:app --reload --port 8000
 npx -y eas-cli build -p android --profile production --non-interactive --no-wait
 
 npx expo start
+
+expo export --platform web
