@@ -14,7 +14,7 @@ Built for the **FLL 2025-2026 UNEARTHED** Innovation Project by the **QuantumBit
 
 ## 📖 Documentation
 
-**Full documentation:** [**stratum.readthedocs.io**](https://stratum.readthedocs.io)
+**Full documentation:** [**here**](https://stratumapp.readthedocs.io)
 
 ### Quick Links
 
