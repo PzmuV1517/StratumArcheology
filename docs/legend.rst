@@ -1153,23 +1153,23 @@ Where to Find Information
    * - To Learn About...
      - Read This Documentation
    * - Setting up STRATUM
-     - :doc:`installation`
+     - `installation.rst <installation.rst>`_
    * - Getting started quickly
-     - :doc:`quickstart`
+     - `quickstart.rst <quickstart.rst>`_
    * - How STRATUM works
-     - :doc:`architecture`
+     - `architecture.rst <architecture.rst>`_
    * - All features
-     - :doc:`features`
+     - `features.rst <features.rst>`_
    * - API endpoints
-     - :doc:`api/overview`
+     - `api/overview.rst <api/overview.rst>`_
    * - Database structure
-     - :doc:`database-schema`
+     - `database-schema.rst <database-schema.rst>`_
    * - Real-time features
-     - :doc:`websockets-realtime`
+     - `websockets-realtime.rst <websockets-realtime.rst>`_
    * - Common problems
-     - :doc:`troubleshooting`
+     - `troubleshooting.rst <troubleshooting.rst>`_
    * - Frequently asked questions
-     - :doc:`faq`
+     - `faq.rst <faq.rst>`_
 
 Common Patterns
 ===============
@@ -1218,15 +1218,15 @@ Tips for Beginners
    **Don't Panic!**
    
    - You don't need to understand everything at once
-   - Start with :doc:`quickstart` and come back here when confused
+   - Start with `quickstart.rst <quickstart.rst>`_ and come back here when confused
    - It's okay to ask for help
    - Most developers look things up constantly
 
 .. tip::
    **Learning Strategy:**
    
-   1. Start with high-level overview (:doc:`architecture`)
-   2. Follow step-by-step guides (:doc:`quickstart`)
+   1. Start with high-level overview (`architecture.rst <architecture.rst>`_)
+   2. Follow step-by-step guides (`quickstart.rst <quickstart.rst>`_)
    3. Reference detailed docs when needed
    4. Come back to this legend when you see unfamiliar terms
 
@@ -1236,7 +1236,7 @@ Tips for Beginners
    - Keep this legend open in another tab
    - Use Ctrl+F to search for terms
    - Read error messages carefully
-   - Check :doc:`troubleshooting` for common issues
+   - Check `troubleshooting.rst <troubleshooting.rst>`_ for common issues
 
 Additional Resources
 ====================
@@ -1692,8 +1692,8 @@ Still Confused?
    
    1. Check if it's in this legend (use Ctrl+F to search)
    2. Look in the relevant documentation section
-   3. Check :doc:`faq` for frequently asked questions
-   4. See :doc:`troubleshooting` for common issues
+   3. Check `faq.rst <faq.rst>`_ for frequently asked questions
+   4. See `troubleshooting.rst <troubleshooting.rst>`_ for common issues
    5. Ask for help - everyone starts as a beginner!
 
 .. important::

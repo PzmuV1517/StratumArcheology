@@ -45,12 +45,12 @@ STRATUM provides a unified digital suite that streamlines archaeological workflo
    **Team Members: Start Here!** 👋
    
    If you're a QuantumBits team member preparing for the competition interview/presentation, 
-   read :doc:`help` first! It provides a structured learning path and reading order.
+   read `help.rst <help.rst>`_ first! It provides a structured learning path and reading order.
 
 .. seealso::
    **New to programming or technical documentation?**
    
-   Check out :doc:`legend` for explanations of all technical terms, symbols, and conventions used throughout this documentation.
+   Check out `legend.rst <legend.rst>`_ for explanations of all technical terms, symbols, and conventions used throughout this documentation.
 
 The Problem We're Solving
 --------------------------

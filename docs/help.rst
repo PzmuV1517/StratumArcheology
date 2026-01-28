@@ -19,7 +19,7 @@ This guide is designed for QuantumBits team members who need to understand the S
 .. tip::
    **Don't understand a technical term?** 🤔
    
-   Check the :doc:`legend` - it explains all programming concepts, terminology, and symbols used in this documentation in beginner-friendly language.
+   Check the `legend.rst <legend.rst>`_ - it explains all programming concepts, terminology, and symbols used in this documentation in beginner-friendly language.
 
 What is STRATUM?
 ----------------
@@ -75,14 +75,14 @@ Phase 1: The Big Picture (30 minutes)
 .. admonition:: Step 1.2 - Understand the Problem
    :class: note
    
-   Read the "Problem We're Solving" section in :doc:`index`.
+   Read the "Problem We're Solving" section in `index.rst <index.rst>`_.
    
    **Key takeaway:** Archaeologists use paper notes that get lost, damaged, and can't be searched. We're fixing that.
 
 .. admonition:: Step 1.3 - See All Features
    :class: note
    
-   Skim :doc:`features` to see what STRATUM can do.
+   Skim `features.rst <features.rst>`_ to see what STRATUM can do.
    
    Don't read every detail - just get a sense of the capabilities.
 
@@ -100,7 +100,7 @@ Phase 2: How It Works (1 hour)
 .. admonition:: Step 2.1 - Architecture Overview
    :class: note
    
-   Read :doc:`architecture` carefully. This is the most important technical document.
+   Read `architecture.rst <architecture.rst>`_ carefully. This is the most important technical document.
    
    **Focus on:**
    
@@ -111,7 +111,7 @@ Phase 2: How It Works (1 hour)
 .. admonition:: Step 2.2 - Database Structure
    :class: note
    
-   Skim :doc:`database-schema` - just look at the diagram and table names.
+   Skim `database-schema.rst <database-schema.rst>`_ - just look at the diagram and table names.
    
    **Key tables to understand:**
    
@@ -124,7 +124,7 @@ Phase 2: How It Works (1 hour)
 .. admonition:: Step 2.3 - Real-Time Features
    :class: note
    
-   Read the Overview section of :doc:`websockets-realtime`.
+   Read the Overview section of `websockets-realtime.rst <websockets-realtime.rst>`_.
    
    **Key takeaway:** When one user makes a change, everyone else sees it instantly without refreshing.
 
@@ -188,7 +188,7 @@ Phase 3: The Code Structure (1 hour)
 .. admonition:: Step 3.3 - API Reference
    :class: note
    
-   Skim :doc:`api/overview` to see all the API endpoints.
+   Skim `api/overview.rst <api/overview.rst>`_ to see all the API endpoints.
    
    Don't memorize them - just know they exist and follow REST conventions.
 
@@ -212,15 +212,15 @@ Pick 2-3 features that interest you most and read their documentation:
    * - Feature
      - Documentation
    * - Team collaboration & roles
-     - :doc:`collaboration`
+     - `collaboration.rst <collaboration.rst>`_
    * - File management & versioning
-     - :doc:`files-management`
+     - `files-management.rst <files-management.rst>`_
    * - Archaeological forms
-     - :doc:`forms`
+     - `forms.rst <forms.rst>`_
    * - GPS mapping
-     - :doc:`gps-mapping`
+     - `gps-mapping.rst <gps-mapping.rst>`_
    * - Real-time updates
-     - :doc:`websockets-realtime`
+     - `websockets-realtime.rst <websockets-realtime.rst>`_
 
 **For each feature, understand:**
 
@@ -236,17 +236,17 @@ Phase 5: Interview Preparation (30 mins)
 .. admonition:: Review Common Questions
    :class: tip
    
-   Read :doc:`faq` - it answers questions judges might ask. (these only contain technical questions, and not project management or team questions which should be prepared separately)
+   Read `faq.rst <faq.rst>`_ - it answers questions judges might ask. (these only contain technical questions, and not project management or team questions which should be prepared separately)
 
 .. admonition:: Know Our Challenges
    :class: tip
    
-   Read :doc:`troubleshooting` - it shows problems we encountered and how we solved them.
+   Read `troubleshooting.rst <troubleshooting.rst>`_ - it shows problems we encountered and how we solved them.
 
 .. admonition:: Know Future Plans
    :class: tip
    
-   Skim :doc:`roadmap` - shows we have a vision beyond the competition.
+   Skim `roadmap.rst <roadmap.rst>`_ - shows we have a vision beyond the competition.
 
 ----
 
@@ -342,14 +342,14 @@ STRATUM has four permission levels:
 Check the Legend
 ----------------
 
-The :doc:`legend` explains all technical terms used in this documentation:
+The `legend.rst <legend.rst>`_ explains all technical terms used in this documentation:
 
 - Programming concepts (API, database, server, client)
 - STRATUM-specific terms (project, note, file node)
 - Symbols and conventions (code blocks, terminal commands)
 - Common error messages and what they mean
 
-If you see a term you don't understand, it's probably explained there.
+If you see a term you don't understand, it's probably explained there. Any other unanswered questions? Ask @levinismynameirl or @Pzmuv1517!
 
 Ask These Questions
 -------------------
@@ -379,13 +379,13 @@ Getting Started
 
    * - Document
      - Purpose
-   * - :doc:`legend`
+   * - `legend.rst <legend.rst>`_
      - Explains all technical terms and symbols
-   * - :doc:`installation`
+   * - `installation.rst <installation.rst>`_
      - How to set up the development environment
-   * - :doc:`quickstart`
+   * - `quickstart.rst <quickstart.rst>`_
      - Quick walkthrough of basic usage
-   * - :doc:`architecture`
+   * - `architecture.rst <architecture.rst>`_
      - System design and technology choices
 
 User Guide
@@ -397,15 +397,15 @@ User Guide
 
    * - Document
      - Purpose
-   * - :doc:`features`
+   * - `features.rst <features.rst>`_
      - Complete list of STRATUM capabilities
-   * - :doc:`collaboration`
+   * - `collaboration.rst <collaboration.rst>`_
      - Team roles, permissions, invitations
-   * - :doc:`files-management`
+   * - `files-management.rst <files-management.rst>`_
      - File uploads, versioning, privacy
-   * - :doc:`forms`
+   * - `forms.rst <forms.rst>`_
      - Archaeological data entry forms
-   * - :doc:`gps-mapping`
+   * - `gps-mapping.rst <gps-mapping.rst>`_
      - GPS boundaries and mapping features
 
 API Documentation
@@ -417,19 +417,19 @@ API Documentation
 
    * - Document
      - Purpose
-   * - :doc:`api/overview`
+   * - `api/overview.rst <api/overview.rst>`_
      - All API endpoints at a glance
-   * - :doc:`api/authentication`
+   * - `api/authentication.rst <api/authentication.rst>`_
      - Login/register endpoints
-   * - :doc:`api/projects`
+   * - `api/projects.rst <api/projects.rst>`_
      - Project management endpoints
-   * - :doc:`api/notes`
+   * - `api/notes.rst <api/notes.rst>`_
      - Note CRUD endpoints
-   * - :doc:`api/files`
+   * - `api/files.rst <api/files.rst>`_
      - File management endpoints
-   * - :doc:`api/forms`
+   * - `api/forms.rst <api/forms.rst>`_
      - Archaeological form endpoints
-   * - :doc:`api/websockets`
+   * - `api/websockets.rst <api/websockets.rst>`_
      - Real-time event documentation
 
 Developer Guide
@@ -441,13 +441,13 @@ Developer Guide
 
    * - Document
      - Purpose
-   * - :doc:`development`
+   * - `development.rst <development.rst>`_
      - Contributing guidelines, code style
-   * - :doc:`database-schema`
+   * - `database-schema.rst <database-schema.rst>`_
      - Database tables and relationships
-   * - :doc:`websockets-realtime`
+   * - `websockets-realtime.rst <websockets-realtime.rst>`_
      - WebSocket implementation details
-   * - :doc:`deployment`
+   * - `deployment.rst <deployment.rst>`_
      - Production deployment guide
 
 Reference
@@ -459,13 +459,13 @@ Reference
 
    * - Document
      - Purpose
-   * - :doc:`faq`
+   * - `faq.rst <faq.rst>`_
      - Frequently asked questions
-   * - :doc:`troubleshooting`
+   * - `troubleshooting.rst <troubleshooting.rst>`_
      - Common problems and solutions
-   * - :doc:`roadmap`
+   * - `roadmap.rst <roadmap.rst>`_
      - Future features and plans
-   * - :doc:`changelog`
+   * - `changelog.rst <changelog.rst>`_
      - Version history
 
 ----

@@ -5,7 +5,7 @@ WebSockets & Real-Time
 STRATUM uses Socket.IO for real-time bidirectional communication between clients and the server.
 
 .. seealso::
-   **What are WebSockets?** See :doc:`legend` for definitions of WebSockets, real-time communication, and all technical terms in this guide.
+   **What are WebSockets?** See `legend.rst <legend.rst>`_ for definitions of WebSockets, real-time communication, and all technical terms in this guide.
 
 .. contents:: Table of Contents
    :local:
@@ -807,7 +807,7 @@ Security
 Next Steps
 ==========
 
-- Review :doc:`api/websockets` for API details
-- Check :doc:`architecture` for system design
-- Read :doc:`development` for contributing
-- See :doc:`troubleshooting` for common issues
+- Review `api/websockets.rst <api/websockets.rst>`_ for API details
+- Check `architecture.rst <architecture.rst>`_ for system design
+- Read `development.rst <development.rst>`_ for contributing
+- See `troubleshooting.rst <troubleshooting.rst>`_ for common issues

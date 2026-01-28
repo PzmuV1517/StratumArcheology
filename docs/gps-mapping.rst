@@ -5,7 +5,7 @@ GPS Mapping
 Create and manage GPS boundaries for archaeological sites.
 
 .. seealso::
-   **Confused by technical jargon?** Check :doc:`legend` for clear definitions of GPS terms, coordinates, and all technical concepts.
+   **Confused by technical jargon?** Check `legend.rst <legend.rst>`_ for clear definitions of GPS terms, coordinates, and all technical concepts.
 
 .. contents:: Table of Contents
    :local:

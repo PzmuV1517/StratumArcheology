@@ -5,7 +5,7 @@ Deployment Guide
 Deploy STRATUM to production environments.
 
 .. seealso::
-   **Unfamiliar with deployment concepts?** Visit :doc:`legend` for explanations of servers, environments, and deployment terminology.
+   **Unfamiliar with deployment concepts?** Visit `legend.rst <legend.rst>`_ for explanations of servers, environments, and deployment terminology.
 
 .. contents:: Table of Contents
    :local:

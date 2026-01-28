@@ -5,7 +5,7 @@ Roadmap & Future Plans
 Upcoming features and long-term vision for STRATUM.
 
 .. seealso::
-   **Not sure what a feature means?** Check :doc:`legend` for explanations of technical features and concepts.
+   **Not sure what a feature means?** Check `legend.rst <legend.rst>`_ for explanations of technical features and concepts.
 
 .. contents:: Table of Contents
    :local:

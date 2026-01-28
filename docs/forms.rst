@@ -5,7 +5,7 @@ Archaeological Forms
 Standardized data collection forms for archaeological documentation.
 
 .. seealso::
-   **Need help understanding technical terms?** Visit :doc:`legend` for explanations of all terminology and concepts used here.
+   **Need help understanding technical terms?** Visit `legend.rst <legend.rst>`_ for explanations of all terminology and concepts used here.
 
 .. contents:: Table of Contents
    :local:
@@ -62,4 +62,4 @@ Register finds with QR codes:
 **CSV Export Location:** ``/Forms/Artefacts.csv``
 
 .. seealso::
-   :doc:`api/forms` for Forms API
+   `api/forms.rst <api/forms.rst>`_ for Forms API

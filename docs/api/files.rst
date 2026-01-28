@@ -5,6 +5,6 @@ Files API
 File upload, download, and management endpoints.
 
 .. seealso::
-   **Confused by file-related terms?** See :doc:`../legend` for explanations of binary data, storage, and file system concepts.
+   **Confused by file-related terms?** See `../legend.rst <../legend.rst>`_ for explanations of binary data, storage, and file system concepts.
 
-**See:** :doc:`overview` for complete API documentation.
+**See:** `overview.rst <overview.rst>`_ for complete API documentation.

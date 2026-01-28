@@ -5,12 +5,12 @@ Quick Start Guide
 This guide will get you up and running with STRATUM in minutes.
 
 .. seealso::
-   **New to software development?** Check :doc:`legend` to understand all technical terms and commands used in this guide.
+   **New to software development?** Check `legend.rst <legend.rst>`_ to understand all technical terms and commands used in this guide.
 
 Prerequisites
 =============
 
-Ensure you have completed the :doc:`installation` process before proceeding.
+Ensure you have completed the `installation.rst <installation.rst>`_ process before proceeding.
 
 Your First Project
 ==================
@@ -198,7 +198,7 @@ Document using standardized forms:
    - QR code (auto-generated)
 
 .. seealso::
-   :doc:`forms` for detailed form documentation
+   `forms.rst <forms.rst>`_ for detailed form documentation
 
 Step 7: Map Your Site
 ---------------------
@@ -225,7 +225,7 @@ You can create multiple polygons for:
 - Protected areas
 
 .. seealso::
-   :doc:`gps-mapping` for advanced GPS features
+   `gps-mapping.rst <gps-mapping.rst>`_ for advanced GPS features
 
 Step 8: Real-Time Collaboration
 --------------------------------
@@ -439,15 +439,15 @@ Next Steps
 
 Now that you're familiar with the basics:
 
-- Explore :doc:`features` for advanced capabilities
-- Review :doc:`api/overview` for API integration
-- Check :doc:`forms` for archaeological form details
-- Read :doc:`gps-mapping` for GPS features
-- See :doc:`troubleshooting` for common issues
+- Explore `features.rst <features.rst>`_ for advanced capabilities
+- Review `api/overview.rst <api/overview.rst>`_ for API integration
+- Check `forms.rst <forms.rst>`_ for archaeological form details
+- Read `gps-mapping.rst <gps-mapping.rst>`_ for GPS features
+- See `troubleshooting.rst <troubleshooting.rst>`_ for common issues
 
 Need Help?
 ==========
 
-- Read the :doc:`faq`
-- Check :doc:`troubleshooting`
+- Read the `faq.rst <faq.rst>`_
+- Check `troubleshooting.rst <troubleshooting.rst>`_
 - GitHub Issues: https://github.com/QuantumBits/QuantumBitsFLL2025-2026/issues

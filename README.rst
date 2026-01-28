@@ -24,9 +24,9 @@ STRATUM - Archaeological Site Management Platform
    
    Preparing for the competition interview/presentation? Start here:
    
-   📚 :doc:`Team Onboarding Guide <docs/help>` - Structured learning path with reading order
+   📚 `Team Onboarding Guide <docs/help.rst>`_ - Structured learning path with reading order
    
-   📖 :doc:`Legend <docs/legend>` - Explains all technical terms and symbols
+   📖 `Legend <docs/legend.rst>`_ - Explains all technical terms and symbols
 
 .. tip::
    **How to Read These Docs on GitHub:**
@@ -41,22 +41,22 @@ STRATUM - Archaeological Site Management Platform
    :depth: 2
 **Core Documentation:**
 
-:doc:`Installation Guide <docs/installation>`
+`Installation Guide <docs/installation.rst>`_
    Complete setup instructions for development and production
 
-:doc:`Quick Start <docs/quickstart>`
+`Quick Start <docs/quickstart.rst>`_
    Get started in minutes with step-by-step guide
 
-:doc:`Architecture Overview <docs/architecture>`
+`Architecture Overview <docs/architecture.rst>`_
    System design with Graphviz diagrams and data flow
 
-:doc:`API Reference <docs/api/overview>`
+`API Reference <docs/api/overview.rst>`_
    Complete REST API documentation with examples
 
-:doc:`Features Guide <docs/features>`
+`Features Guide <docs/features.rst>`_
    Comprehensive platform capabilities
 
-:doc:`WebSockets & Real-Time <docs/websockets-realtime>`
+`WebSockets & Real-Time <docs/websockets-realtime.rst>`_
 **Build Documentation:**
 
 .. code-block:: bash
@@ -73,7 +73,7 @@ Quick Start
 ===========
 
 .. note::
-   This is a quick overview. For detailed setup instructions, see :doc:`docs/installation`.
+   This is a quick overview. For detailed setup instructions, see `docs/installation.rst <docs/installation.rst>`_.
 
 **Prerequisites:**
 
@@ -107,7 +107,7 @@ Quick Start
    npx expo start
 
 .. seealso::
-   :doc:`docs/installation` for complete setup instructions including Firebase configuration, MinIO setup, and database migrations.
+   `docs/installation.rst <docs/installation.rst>`_ for complete setup instructions including Firebase configuration, MinIO setup, and database migrations.
 
 🚀 Tech Stack
 =============
@@ -232,7 +232,7 @@ See `docs/installation.rst <docs/installation.rst>`_ for complete setup instruct
       Native iOS/Android apps with full web parity
 
 .. seealso::
-   :doc:`docs/features` for complete feature documentation with examples
+   `docs/features.rst <docs/features.rst>`_ for complete feature documentation with examples
 
 Project Structure
 =================
@@ -363,7 +363,7 @@ Key Endpoints
      - Real-time updates
 
 .. seealso::
-   :doc:`docs/api/overview` for complete API reference with request/response examples
+   `docs/api/overview.rst <docs/api/overview.rst>`_ for complete API reference with request/response examples
 
 Contributing
 ============
@@ -417,7 +417,7 @@ Support & Resources
 .. hlist::
    :columns: 3
 
-   * Documentation: :doc:`docs/index`
+   * Documentation: `docs/index.rst <docs/index.rst>`_
    * Issues: GitHub Issues
    * Email: support@stratum.app
 

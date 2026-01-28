@@ -5,7 +5,7 @@ Projects API
 Project management endpoints for creating and managing archaeological site projects.
 
 .. seealso::
-   **Not familiar with API terminology?** See :doc:`../legend` for explanations of endpoints, requests, responses, and HTTP methods.
+   **Not familiar with API terminology?** See `../legend.rst <../legend.rst>`_ for explanations of endpoints, requests, responses, and HTTP methods.
 
 .. contents:: Table of Contents
    :local:
@@ -65,4 +65,4 @@ Returns all projects where user is owner or member.
    ]
 
 .. seealso::
-   Full API documentation: :doc:`overview`
+   Full API documentation: `overview.rst <overview.rst>`_

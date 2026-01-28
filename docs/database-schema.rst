@@ -5,7 +5,7 @@ Database Schema
 Complete documentation of STRATUM's PostgreSQL database schema.
 
 .. seealso::
-   **New to databases?** The :doc:`legend` explains database terminology like tables, rows, foreign keys, and all other technical concepts.
+   **New to databases?** The `legend.rst <legend.rst>`_ explains database terminology like tables, rows, foreign keys, and all other technical concepts.
 
 .. contents:: Table of Contents
    :local:
@@ -270,7 +270,7 @@ Project team membership and roles.
    leader > researcher > guest > (no access)
 
 .. seealso::
-   :doc:`collaboration` for detailed role permissions
+   `collaboration.rst <collaboration.rst>`_ for detailed role permissions
 
 notes
 -----
@@ -894,7 +894,7 @@ Database Statistics
 Next Steps
 ==========
 
-- Review :doc:`architecture` for system design
-- Check :doc:`api/overview` for API endpoints
-- Read :doc:`development` for model changes
-- See :doc:`websockets-realtime` for real-time features
+- Review `architecture.rst <architecture.rst>`_ for system design
+- Check `api/overview.rst <api/overview.rst>`_ for API endpoints
+- Read `development.rst <development.rst>`_ for model changes
+- See `websockets-realtime.rst <websockets-realtime.rst>`_ for real-time features
