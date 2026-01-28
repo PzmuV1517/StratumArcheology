@@ -3,6 +3,8 @@ STRATUM API - Archaeological Site Management Platform
 
 Main FastAPI application entry point with:
 - Error handling middleware
+- Security headers middleware
+- Rate limiting
 - Structured logging
 - CORS configuration
 - Route registration
@@ -11,13 +13,20 @@ IMPORTANT: Database migrations are handled by Alembic, NOT create_all().
 Run migrations with: alembic upgrade head
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.firebase_config import initialize_firebase
-from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
+from app.middleware import (
+    ErrorHandlingMiddleware,
+    SecurityHeadersMiddleware,
+    configure_logging,
+    get_logger,
+)
 from app.minio_client import minio_client
+from app.rate_limiter import init_rate_limiter, limiter
 from app.routes import (
     activities,
     auth,
@@ -63,7 +72,21 @@ app = FastAPI(
     title="STRATUM API",
     description="Archaeological site management and collaboration platform",
     version="1.0.0",
+    docs_url="/api/docs" if settings.APP_DEBUG else None,  # Disable docs in production
+    redoc_url="/api/redoc" if settings.APP_DEBUG else None,
+    openapi_url="/api/openapi.json" if settings.APP_DEBUG else None,
 )
+
+# =============================================================================
+# MIDDLEWARE CONFIGURATION (Order matters - last added = first executed)
+# =============================================================================
+
+# Initialize rate limiter
+init_rate_limiter(app)
+logger.info("Rate limiter initialized")
+
+# Add security headers middleware
+app.add_middleware(SecurityHeadersMiddleware, environment=settings.ENVIRONMENT)
 
 # Add error handling middleware (must be first to catch all errors)
 # This provides:
@@ -80,7 +103,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
 )
+
+# Add trusted host middleware in production
+if settings.ENVIRONMENT == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=settings.allowed_origins_list + ["localhost", "127.0.0.1"],
+    )
 
 # Include routers
 app.include_router(auth.router, prefix="/api")

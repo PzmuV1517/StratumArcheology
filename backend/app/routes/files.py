@@ -17,7 +17,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
+from app.config import settings
 from app.database import get_db
+from app.rate_limiter import limiter
 from app.dependencies import (
     check_project_permission,
     get_current_user,
@@ -868,6 +870,7 @@ async def delete_node(
     response_model=FileNodeBase,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_file(
     project_id: str,
     request: Request,

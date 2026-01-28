@@ -1,11 +1,13 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.rate_limiter import limiter
 from app.models import Project, ProjectGPS, User
 from app.websocket import log_activity
 
@@ -46,7 +48,9 @@ def get_project_gps(project_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/projects/{project_id}/gps", response_model=GPSState)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def put_project_gps(
+    request: Request,
     project_id: str,
     state: GPSState,
     db: Session = Depends(get_db),

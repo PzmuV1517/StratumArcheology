@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.rate_limiter import limiter
 from app.models import FileNode, FileNodeType, Project, User, project_members
 from app.schemas import (
     ProjectCreate,
@@ -32,7 +34,9 @@ router = APIRouter(prefix="/projects", tags=["projects"])
     status_code=status.HTTP_201_CREATED,
     include_in_schema=False,
 )
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_project(
+    request: Request,
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

@@ -17,9 +17,18 @@ export const authService = {
       return { success: true, token: access_token, user };
     } catch (error) {
       console.error("Login error:", error);
+      // Handle rate limiting
+      if (error.isRateLimited) {
+        return {
+          success: false,
+          error: error.message,
+          isRateLimited: true,
+          contact: error.contact,
+        };
+      }
       return {
         success: false,
-        error: error.response?.data?.detail || error.message || "Login failed",
+        error: error.response?.data?.detail?.message || error.response?.data?.detail || error.message || "Login failed",
       };
     }
   },
@@ -40,10 +49,27 @@ export const authService = {
       return { success: true, token: access_token, user };
     } catch (error) {
       console.error("Register error:", error);
+      // Handle rate limiting
+      if (error.isRateLimited) {
+        return {
+          success: false,
+          error: error.message,
+          isRateLimited: true,
+          contact: error.contact,
+        };
+      }
+      // Handle email already exists
+      if (error.isEmailExists) {
+        return {
+          success: false,
+          error: error.message,
+          isEmailExists: true,
+        };
+      }
       return {
         success: false,
         error:
-          error.response?.data?.detail || error.message || "Registration failed",
+          error.response?.data?.detail?.message || error.response?.data?.detail || error.message || "Registration failed",
       };
     }
   },

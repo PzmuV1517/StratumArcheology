@@ -1,11 +1,13 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.rate_limiter import limiter
 from app.minio_client import minio_client
 from app.models import (
     FileNode,
@@ -25,7 +27,9 @@ router = APIRouter(prefix="/notes", tags=["notes"])
 @router.post(
     "", response_model=NoteResponse, status_code=status.HTTP_201_CREATED
 )  # accept no-trailing-slash to avoid CORS redirect
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_note(
+    request: Request,
     note_data: NoteCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

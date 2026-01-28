@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
+import re
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class UserRole(str, Enum):
@@ -22,11 +23,47 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+    @field_validator("password")
+    @classmethod
+    def password_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Password cannot be empty")
+        return v
+
 
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     display_name: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters long")
+        if len(v) > 128:
+            raise ValueError("Password must be less than 128 characters")
+        # Check for at least one letter and one number for basic strength
+        if not re.search(r"[a-zA-Z]", v):
+            raise ValueError("Password must contain at least one letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v
+
+    @field_validator("display_name")
+    @classmethod
+    def validate_display_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Display name cannot be empty")
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("Display name must be at least 2 characters")
+        if len(v) > 100:
+            raise ValueError("Display name must be less than 100 characters")
+        # Prevent HTML/script injection in display name
+        if re.search(r"[<>\"']", v):
+            raise ValueError("Display name contains invalid characters")
+        return v
 
 
 class FirebaseTokenRequest(BaseModel):

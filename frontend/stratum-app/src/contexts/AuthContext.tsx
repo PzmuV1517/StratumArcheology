@@ -132,7 +132,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: true };
       } else {
         console.log("[AuthContext] Login failed:", result.error);
-        return { success: false, error: result.error };
+        return { 
+          success: false, 
+          error: result.error,
+          isRateLimited: result.isRateLimited,
+          contact: result.contact,
+        };
       }
     } catch (error: any) {
       console.error("[AuthContext] Login exception:", error);
@@ -147,7 +152,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(result.user || null);
         return { success: true };
       } else {
-        return { success: false, error: result.error };
+        return { 
+          success: false, 
+          error: result.error,
+          isRateLimited: result.isRateLimited,
+          isEmailExists: result.isEmailExists,
+          contact: result.contact,
+        };
       }
     } catch (error: any) {
       return { success: false, error: error.message || "Registration failed" };

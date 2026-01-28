@@ -1,12 +1,14 @@
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.rate_limiter import limiter
 from app.models import ProjectActivity, User
 
 router = APIRouter(prefix="/activities", tags=["activities"])
@@ -28,7 +30,9 @@ class ActivityResponse(BaseModel):
 
 
 @router.get("/project/{project_id}", response_model=list[ActivityResponse])
+@limiter.limit(settings.RATE_LIMIT_READ)
 async def get_project_activities(
+    request: Request,
     project_id: str,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),

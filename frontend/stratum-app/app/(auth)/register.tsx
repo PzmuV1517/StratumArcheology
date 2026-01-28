@@ -60,7 +60,26 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert("Registration Failed", result.error);
+      // Check for rate limiting
+      if (result.isRateLimited) {
+        Alert.alert(
+          "Too Many Requests (429)",
+          `${result.error}\n\nContact: ${result.contact || "quantumrobotics.bits@ichb.ro"}`,
+          [{ text: "OK" }],
+        );
+      } else if (result.isEmailExists) {
+        // Email already exists - prompt to login instead
+        Alert.alert(
+          "Account Exists",
+          result.error,
+          [
+            { text: "OK" },
+            { text: "Go to Login", onPress: () => {} }, // Router handled elsewhere
+          ],
+        );
+      } else {
+        Alert.alert("Registration Failed", result.error);
+      }
     }
   };
 

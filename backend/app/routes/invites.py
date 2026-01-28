@@ -2,12 +2,14 @@ import secrets
 import string
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.rate_limiter import limiter
 from app.models import Project, ProjectInvite, User, project_members
 from app.schemas import (
     InviteAcceptRequest,
@@ -50,7 +52,9 @@ def generate_unique_code(
     response_model=InviteResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit(settings.RATE_LIMIT_INVITES)
 async def create_invite(
+    request: Request,
     project_id: str,
     body: InviteCreateRequest,
     current_user: User = Depends(get_current_user),

@@ -217,6 +217,31 @@ api.interceptors.response.use(
       console.log("[API] Unknown error without response:", error.message);
     }
 
+    // Handle rate limiting (429 Too Many Requests)
+    if (error.response?.status === 429) {
+      const detail = error.response?.data?.detail;
+      const rateLimitError = new Error(
+        detail?.message ||
+          "You are sending requests too fast! Please wait a moment and try again.",
+      );
+      (rateLimitError as any).isRateLimited = true;
+      (rateLimitError as any).statusCode = 429;
+      (rateLimitError as any).contact = detail?.contact || "quantumrobotics.bits@ichb.ro";
+      return Promise.reject(rateLimitError);
+    }
+
+    // Handle email already exists (409 Conflict)
+    if (error.response?.status === 409) {
+      const detail = error.response?.data?.detail;
+      if (detail?.code === "EMAIL_ALREADY_EXISTS") {
+        const emailError = new Error(detail?.message || "An account with this email already exists.");
+        (emailError as any).isEmailExists = true;
+        (emailError as any).statusCode = 409;
+        (emailError as any).code = detail?.code;
+        return Promise.reject(emailError);
+      }
+    }
+
     if (error.response?.status === 401) {
       // Token expired, clear storage
       await AsyncStorage.removeItem("authToken");

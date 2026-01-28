@@ -48,6 +48,32 @@ class Settings(BaseSettings):
 
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "100 per minute"
+    
+    # Strict limits for sensitive operations
+    RATE_LIMIT_AUTH_LOGIN: str = "5 per minute"
+    RATE_LIMIT_AUTH_REGISTER: str = "3 per minute"
+    RATE_LIMIT_PASSWORD_RESET: str = "3 per minute"
+    
+    # Moderate limits for write operations
+    RATE_LIMIT_CREATE_PROJECT: str = "10 per minute"
+    RATE_LIMIT_CREATE_NOTE: str = "30 per minute"
+    RATE_LIMIT_FILE_UPLOAD: str = "20 per minute"
+    RATE_LIMIT_INVITE_CREATE: str = "10 per minute"
+    RATE_LIMIT_WRITE: str = "30 per minute"  # General write operations
+    RATE_LIMIT_UPLOAD: str = "20 per minute"  # File uploads
+    RATE_LIMIT_INVITES: str = "10 per minute"  # Invite operations
+    
+    # Relaxed limits for read operations
+    RATE_LIMIT_READ: str = "200 per minute"  # General read operations
+    RATE_LIMIT_READ_OPERATIONS: str = "200 per minute"
+    RATE_LIMIT_LIST_OPERATIONS: str = "100 per minute"
+    RATE_LIMIT_SEARCH: str = "60 per minute"
+    
+    # Special limits
+    RATE_LIMIT_HEALTH_CHECK: str = "1000 per minute"
+    RATE_LIMIT_WEBSOCKET: str = "30 per minute"
+    RATE_LIMIT_FILE_DOWNLOAD: str = "100 per minute"
+    RATE_LIMIT_CONVERT: str = "10 per minute"
 
     @property
     def allowed_origins_list(self) -> list[str]:

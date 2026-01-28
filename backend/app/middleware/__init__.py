@@ -6,13 +6,16 @@ Contains middleware components for:
 - Structured logging with context
 - Request/response logging
 - Database transaction management
+- Security headers
 """
 
 from .error_handler import ErrorHandlingMiddleware
 from .logging_config import LogContext, configure_logging, get_logger
+from .security_headers import SecurityHeadersMiddleware
 
 __all__ = [
     "ErrorHandlingMiddleware",
+    "SecurityHeadersMiddleware",
     "configure_logging",
     "get_logger",
     "LogContext",

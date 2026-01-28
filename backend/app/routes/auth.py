@@ -2,14 +2,14 @@ import uuid
 from datetime import datetime, timedelta
 
 import firebase_admin.auth as firebase_auth
-import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
+from app.rate_limiter import limiter
 from app.schemas import (
     AuthResponse,
     FirebaseTokenRequest,
@@ -18,12 +18,14 @@ from app.schemas import (
     RegisterRequest,
     UserResponse,
 )
+from app.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_AUTH_LOGIN)
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """Login with email and password using Firebase authentication"""
     try:
         # Authenticate with Firebase using email and password
@@ -31,7 +33,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         # For production, you might want to use Firebase Auth REST API
 
         # Try to get user by email first to check if they exist
-        user = db.query(User).filter(User.email == request.email).first()
+        user = db.query(User).filter(User.email == login_data.email).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,17 +52,11 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             user.last_login = datetime.utcnow()
             db.commit()
 
-            # Generate JWT token for our API
-            jwt_payload = {
-                "user_id": user.id,
-                "firebase_uid": user.firebase_uid,
-                "email": user.email,
-                "exp": datetime.utcnow()
-                + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
-            }
-
-            jwt_token = jwt.encode(
-                jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+            # Generate JWT token using the new security module
+            jwt_token = create_access_token(
+                user_id=user.id,
+                firebase_uid=user.firebase_uid,
+                email=user.email,
             )
 
             return AuthResponse(
@@ -83,30 +79,51 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_AUTH_REGISTER)
+async def register(request: Request, register_data: RegisterRequest, db: Session = Depends(get_db)):
     """Register new user with email and password"""
     try:
-        # Check if user already exists
-        existing_user = db.query(User).filter(User.email == request.email).first()
+        # Check if user already exists in our database
+        existing_user = db.query(User).filter(User.email == register_data.email).first()
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "EMAIL_ALREADY_EXISTS",
+                    "message": "An account with this email already exists. Please log in instead.",
+                    "email": register_data.email,
+                },
             )
+
+        # Also check Firebase for existing email (in case DB is out of sync)
+        try:
+            firebase_auth.get_user_by_email(register_data.email)
+            # If we get here, user exists in Firebase but not in our DB
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "EMAIL_ALREADY_EXISTS",
+                    "message": "An account with this email already exists. Please log in instead.",
+                    "email": register_data.email,
+                },
+            )
+        except firebase_auth.UserNotFoundError:
+            # Good - user doesn't exist in Firebase, we can create them
+            pass
 
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
-            email=request.email,
-            password=request.password,
-            display_name=request.display_name,
+            email=register_data.email,
+            password=register_data.password,
+            display_name=register_data.display_name,
         )
 
         # Create user in our database
         user = User(
             id=str(uuid.uuid4()),
             firebase_uid=firebase_user.uid,
-            email=request.email,
-            display_name=request.display_name,
+            email=register_data.email,
+            display_name=register_data.display_name,
             created_at=datetime.utcnow(),
             last_login=datetime.utcnow(),
         )
@@ -114,46 +131,50 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-        # Generate JWT token for our API
-        jwt_payload = {
-            "user_id": user.id,
-            "firebase_uid": user.firebase_uid,
-            "email": user.email,
-            "exp": datetime.utcnow()
-            + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
-        }
-
-        jwt_token = jwt.encode(
-            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        # Generate JWT token using the new security module
+        jwt_token = create_access_token(
+            user_id=user.id,
+            firebase_uid=user.firebase_uid,
+            email=user.email,
         )
 
         return AuthResponse(
             access_token=jwt_token, user=UserResponse.model_validate(user)
         )
 
+    except HTTPException:
+        raise
     except firebase_auth.EmailAlreadyExistsError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "EMAIL_ALREADY_EXISTS",
+                "message": "An account with this email already exists. Please log in instead.",
+                "email": register_data.email,
+            },
         )
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed",
+            detail={
+                "code": "REGISTRATION_FAILED",
+                "message": "Registration failed. Please try again later.",
+            },
         )
 
 
 @router.post("/verify-token", response_model=AuthResponse)
+@limiter.limit(settings.RATE_LIMIT_AUTH_LOGIN)
 async def verify_firebase_token(
-    request: FirebaseTokenRequest, db: Session = Depends(get_db)
+    request: Request, token_data: FirebaseTokenRequest, db: Session = Depends(get_db)
 ):
     """Verify Firebase ID token and return user data"""
     try:
         # Verify the Firebase ID token
-        decoded_token = firebase_auth.verify_id_token(request.firebase_token)
+        decoded_token = firebase_auth.verify_id_token(token_data.firebase_token)
         firebase_uid = decoded_token["uid"]
         email = decoded_token.get("email")
-        display_name = request.display_name or decoded_token.get("name", "")
+        display_name = token_data.display_name or decoded_token.get("name", "")
 
         if not email:
             raise HTTPException(
@@ -181,16 +202,11 @@ async def verify_firebase_token(
             user.last_login = datetime.utcnow()
             db.commit()
 
-        # Generate JWT token for our API
-        jwt_payload = {
-            "user_id": user.id,
-            "firebase_uid": user.firebase_uid,
-            "email": user.email,
-            "exp": datetime.utcnow().timestamp() + (24 * 60 * 60),  # 24 hours
-        }
-
-        access_token = jwt.encode(
-            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        # Generate JWT token using the new security module
+        access_token = create_access_token(
+            user_id=user.id,
+            firebase_uid=user.firebase_uid,
+            email=user.email,
         )
 
         return AuthResponse(access_token=access_token, user=user)
@@ -208,22 +224,25 @@ async def verify_firebase_token(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+@limiter.limit(settings.RATE_LIMIT_READ_OPERATIONS)
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
     """Get current authenticated user information"""
     return current_user
 
 
 @router.patch("/me", response_model=UserResponse)
+@limiter.limit(settings.RATE_LIMIT_CREATE_NOTE)
 async def update_profile(
-    request: ProfileUpdateRequest,
+    request: Request,
+    profile_data: ProfileUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Update current user's profile information"""
-    if request.display_name is not None:
-        current_user.display_name = request.display_name
-    if request.photo_url is not None:
-        current_user.photo_url = request.photo_url
+    if profile_data.display_name is not None:
+        current_user.display_name = profile_data.display_name
+    if profile_data.photo_url is not None:
+        current_user.photo_url = profile_data.photo_url
 
     db.commit()
     db.refresh(current_user)
@@ -231,7 +250,9 @@ async def update_profile(
 
 
 @router.get("/users/search")
+@limiter.limit(settings.RATE_LIMIT_SEARCH)
 async def search_users(
+    request: Request,
     query: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
