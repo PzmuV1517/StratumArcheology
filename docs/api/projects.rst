@@ -4,6 +4,9 @@ Projects API
 
 Project management endpoints for creating and managing archaeological site projects.
 
+.. seealso::
+   **Not familiar with API terminology?** See :doc:`../legend` for explanations of endpoints, requests, responses, and HTTP methods.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

@@ -4,6 +4,9 @@ Authentication API
 
 User authentication and management endpoints.
 
+.. seealso::
+   **Unfamiliar with authentication terms?** Check :doc:`../legend` for explanations of JWT, tokens, Firebase, and authentication concepts.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

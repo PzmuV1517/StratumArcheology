@@ -4,6 +4,9 @@ API Overview
 
 Complete REST API reference for STRATUM backend.
 
+.. seealso::
+   **New to APIs?** The :doc:`../legend` explains all API concepts, HTTP methods, status codes, and technical terminology.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2
@@ -14,7 +17,7 @@ Base URL
 .. code-block:: text
 
    Development: http://localhost:8000/api
-   Production:  https://api.stratum.app/api
+   Production:  https://your-server.com/api
 
 Authentication
 ==============
@@ -51,6 +54,15 @@ Authentication
    * - Method
      - Endpoint
      - Description
+   * - ``POST``
+     - ``/api/auth/login``
+     - Login with email/password
+   * - ``POST``
+     - ``/api/auth/register``
+     - Register new account
+   * - ``POST``
+     - ``/api/auth/verify-token``
+     - Verify Firebase token
    * - ``GET``
      - ``/api/auth/me``
      - Get current user profile
@@ -143,25 +155,52 @@ Files
      - Upload file
    * - ``GET``
      - ``/api/files/project/{id}``
-     - List files (tree)
+     - List root files/folders
    * - ``GET``
-     - ``/api/files/{id}/download``
+     - ``/api/files/{node_id}/children``
+     - List folder children
+   * - ``GET``
+     - ``/api/files/{node_id}/download``
      - Download file
-   * - ``PUT``
-     - ``/api/files/{id}``
-     - Update file metadata
    * - ``DELETE``
-     - ``/api/files/{id}``
+     - ``/api/files/{node_id}``
      - Delete file/folder
-   * - ``POST``
-     - ``/api/files/{id}/move``
+   * - ``PUT``
+     - ``/api/files/{node_id}/move``
      - Move file/folder
+   * - ``PUT``
+     - ``/api/files/{node_id}/rename``
+     - Rename file/folder
+   * - ``PUT``
+     - ``/api/files/{node_id}/content``
+     - Update file content
+   * - ``PUT``
+     - ``/api/files/{node_id}/privacy``
+     - Update privacy settings
+   * - ``GET``
+     - ``/api/files/{node_id}/versions``
+     - Get version history
+   * - ``GET``
+     - ``/api/files/{node_id}/version/{v}/download``
+     - Download specific version
    * - ``POST``
-     - ``/api/files/{id}/copy``
-     - Copy file
+     - ``/api/files/{node_id}/restore/{version}``
+     - Restore file version
    * - ``POST``
      - ``/api/files/project/{id}/folder``
      - Create folder
+   * - ``GET``
+     - ``/api/files/project/{id}/my-folder``
+     - Get user's personal folder
+   * - ``GET``
+     - ``/api/files/project/{id}/time-machine``
+     - Time machine view
+   * - ``GET``
+     - ``/api/files/project/{id}/shared-with-me``
+     - Files shared with user
+   * - ``GET``
+     - ``/api/files/project/{id}/shared-by-me``
+     - Files user shared
 
 Forms
 -----
@@ -174,23 +213,14 @@ Forms
      - Endpoint
      - Description
    * - ``POST``
-     - ``/api/forms/project/{id}/context``
-     - Create context feature
-   * - ``GET``
-     - ``/api/forms/project/{id}/context``
-     - List context features
+     - ``/api/forms/project/{id}/context-feature``
+     - Add context feature record
    * - ``POST``
-     - ``/api/forms/project/{id}/stratigraphic``
-     - Create stratigraphic unit
-   * - ``GET``
-     - ``/api/forms/project/{id}/stratigraphic``
-     - List stratigraphic units
+     - ``/api/forms/project/{id}/stratigraphic-unit``
+     - Add stratigraphic unit record
    * - ``POST``
      - ``/api/forms/project/{id}/artefact``
      - Register artifact
-   * - ``GET``
-     - ``/api/forms/project/{id}/artefact``
-     - List artifacts
 
 GPS
 ---
@@ -203,10 +233,10 @@ GPS
      - Endpoint
      - Description
    * - ``GET``
-     - ``/api/gps/project/{id}``
+     - ``/api/projects/{id}/gps``
      - Get GPS data
-   * - ``POST``
-     - ``/api/gps/project/{id}``
+   * - ``PUT``
+     - ``/api/projects/{id}/gps``
      - Update GPS data
 
 Invites
@@ -220,17 +250,14 @@ Invites
      - Endpoint
      - Description
    * - ``POST``
-     - ``/api/invites/project/{id}``
-     - Create invite
-   * - ``GET``
-     - ``/api/invites/project/{id}``
-     - List invites
-   * - ``DELETE``
-     - ``/api/invites/{token}``
-     - Revoke invite
+     - ``/api/projects/{id}/invites``
+     - Create invite link
    * - ``POST``
-     - ``/api/invites/redeem``
-     - Redeem invite
+     - ``/api/invites/accept``
+     - Accept invite by token
+   * - ``POST``
+     - ``/api/invites/join-by-code``
+     - Join by invite code
 
 Activities
 ----------
@@ -244,7 +271,10 @@ Activities
      - Description
    * - ``GET``
      - ``/api/activities/project/{id}``
-     - Get activity feed
+     - Get project activity feed
+   * - ``GET``
+     - ``/api/activities/me``
+     - Get user's activity feed
 
 Convert
 -------

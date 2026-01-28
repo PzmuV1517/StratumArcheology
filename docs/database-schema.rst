@@ -4,6 +4,9 @@ Database Schema
 
 Complete documentation of STRATUM's PostgreSQL database schema.
 
+.. seealso::
+   **New to databases?** The :doc:`legend` explains database terminology like tables, rows, foreign keys, and all other technical concepts.
+
 .. contents:: Table of Contents
    :local:
    :depth: 3

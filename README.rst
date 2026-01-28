@@ -11,13 +11,30 @@ STRATUM - Archaeological Site Management Platform
 .. image:: https://img.shields.io/badge/python-3.13-blue
    :alt: Python 3.13
 
-.. image:: https://img.shields.io/badge/react--native-0.76-blue
+.. image:: https://img.shields.io/badge/react--native-0.81-blue
    :alt: React Native
 
 .. image:: https://img.shields.io/badge/docs-Sphinx-blue
    :alt: Documentation
 
 **STRATUM** (Latin for "layer") is a comprehensive digital platform for archaeologists to plan excavations, document findings, collaborate in real-time, and export standardized data. Built for the FLL 2025-2026 UNEARTHED Innovation Project.
+
+.. important::
+   **QuantumBits Team Members** 👋
+   
+   Preparing for the competition interview/presentation? Start here:
+   
+   📚 :doc:`Team Onboarding Guide <docs/help>` - Structured learning path with reading order
+   
+   📖 :doc:`Legend <docs/legend>` - Explains all technical terms and symbols
+
+.. tip::
+   **How to Read These Docs on GitHub:**
+   
+   1. **Use Desktop** - GitHub renders ``.rst`` files much better on desktop browsers
+   2. **Click "Preview"** - When viewing ``.rst`` files, click the **Preview** tab (not Code) to see formatted text
+   3. **Follow hyperlinks** - Click the blue links to navigate between documentation files
+   4. **Mobile?** - If you must use mobile, the **GitHub mobile app** renders better than the browser
 
 .. contents:: Table of Contents
    :local:
@@ -56,15 +73,39 @@ Quick Start
 ===========
 
 .. note::
-   This is a quick start guide. For detailed setup instructions, see :doc:`docs/installation`.ts & Real-Time <docs/websockets-realtime.rst>`_ - Real-time features
-- `Database Schema <docs/database-schema.rst>`_ - Data architecture
+   This is a quick overview. For detailed setup instructions, see :doc:`docs/installation`.
 
-To build the documentation locally:
+**Prerequisites:**
+
+- Python 3.13+
+- Node.js 18+
+- PostgreSQL 14+
+- Docker (for MinIO)
+
+**Backend Setup:**
 
 .. code-block:: bash
 
-   cd docs
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
+   
+   # Set up environment variables (copy .env.example to .env)
+   # Run database migrations
+   alembic upgrade head
+   
+   # Start the server
+   python -m uvicorn app.main:app --reload
+
+**Frontend Setup:**
+
+.. code-block:: bash
+
+   cd frontend/stratum-app
+   npm install
+   npx expo start
+
 .. seealso::
    :doc:`docs/installation` for complete setup instructions including Firebase configuration, MinIO setup, and database migrations.
 

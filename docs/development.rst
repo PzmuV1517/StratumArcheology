@@ -4,6 +4,9 @@ Development Guide
 
 Contributing to STRATUM development.
 
+.. seealso::
+   **New to development?** See :doc:`legend` for explanations of all development terminology, Git commands, and code concepts.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

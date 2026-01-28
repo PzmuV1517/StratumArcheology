@@ -4,6 +4,9 @@ Changelog
 
 Version history and release notes.
 
+.. seealso::
+   **Confused by technical terms in the changelog?** See :doc:`legend` for all terminology explanations.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

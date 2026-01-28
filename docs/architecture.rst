@@ -4,6 +4,9 @@ Architecture Overview
 
 Understanding STRATUM's architecture will help you navigate the codebase and build features effectively.
 
+.. seealso::
+   **Unfamiliar with architecture terms?** The :doc:`legend` explains all technical concepts, acronyms, and symbols used throughout this documentation.
+
 .. contents:: Table of Contents
    :local:
    :depth: 3
@@ -102,27 +105,28 @@ Python Ecosystem
 .. code-block:: python
 
    # Core Framework
-   FastAPI==0.109.0          # Modern async web framework
-   Uvicorn==0.27.0          # ASGI server
+   fastapi>=0.104.1         # Modern async web framework
+   uvicorn[standard]>=0.24.0 # ASGI server
    
    # Database
-   SQLAlchemy==2.0.25       # ORM
-   Alembic==1.13.1          # Migrations
-   psycopg2-binary==2.9.9   # PostgreSQL driver
+   sqlalchemy>=2.0.23       # ORM
+   alembic>=1.12.1          # Migrations
+   psycopg[binary]>=3.2.10  # PostgreSQL driver
    
    # Authentication
-   firebase-admin==6.4.0    # Firebase Admin SDK
-   PyJWT==2.8.0            # JWT handling
+   firebase-admin>=6.2.0    # Firebase Admin SDK
+   python-jose[cryptography]>=3.3.0 # JWT handling
    
    # Storage
-   minio==7.2.3            # S3-compatible client
+   minio>=7.2.0             # S3-compatible client
    
    # WebSockets
-   python-socketio==5.11.0  # Real-time communication
+   python-socketio>=5.11.0  # Real-time communication
    
    # Utilities
-   python-dotenv==1.0.0    # Environment variables
-   Pillow==10.2.0          # Image processing
+   python-dotenv>=1.0.0     # Environment variables
+   pillow>=10.1.0           # Image processing
+   structlog>=25.5.0        # Structured logging
 
 .. seealso::
    :file:`backend/requirements.txt` for complete dependencies
@@ -136,14 +140,14 @@ JavaScript/TypeScript Ecosystem
 .. code-block:: json
 
    {
-     "expo": "~54.0.0",
-     "react": "18.3.1",
-     "react-native": "0.76.6",
-     "expo-router": "~4.0.0",
+     "expo": "~54.0.29",
+     "react": "19.1.0",
+     "react-native": "0.81.5",
+     "expo-router": "~6.0.13",
      "socket.io-client": "^4.8.1",
-     "firebase": "^10.7.1",
-     "@react-three/fiber": "^8.15.0",
-     "@react-three/drei": "^9.93.0"
+     "firebase": "^12.4.0",
+     "three": "^0.181.0",
+     "expo-three": "^8.0.0"
    }
 
 .. seealso::

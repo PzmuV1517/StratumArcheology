@@ -4,6 +4,9 @@ Troubleshooting
 
 Common issues and solutions.
 
+.. seealso::
+   **Need help understanding error messages?** The :doc:`legend` explains technical terms and error codes.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

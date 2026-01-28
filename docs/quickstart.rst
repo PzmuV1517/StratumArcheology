@@ -4,6 +4,9 @@ Quick Start Guide
 
 This guide will get you up and running with STRATUM in minutes.
 
+.. seealso::
+   **New to software development?** Check :doc:`legend` to understand all technical terms and commands used in this guide.
+
 Prerequisites
 =============
 
@@ -87,10 +90,9 @@ Collaborate with your team:
 .. code-block:: text
 
    Invite Code: PRJ-ABC123
-   Link: https://stratum.app/invite/abc-def-ghi
 
 .. warning::
-   Invite links can be used by anyone who has them. Use expiration dates for security.
+   Invite codes can be used by anyone who has them. Use expiration dates for security.
 
 Step 4: Document Your Findings
 -------------------------------
@@ -448,5 +450,4 @@ Need Help?
 
 - Read the :doc:`faq`
 - Check :doc:`troubleshooting`
-- Contact support: support@stratum.app
-- GitHub Issues: https://github.com/your-org/stratum/issues
+- GitHub Issues: https://github.com/QuantumBits/QuantumBitsFLL2025-2026/issues

@@ -4,6 +4,9 @@ Deployment Guide
 
 Deploy STRATUM to production environments.
 
+.. seealso::
+   **Unfamiliar with deployment concepts?** Visit :doc:`legend` for explanations of servers, environments, and deployment terminology.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2
@@ -26,8 +29,8 @@ Quick Deploy
 .. code-block:: bash
 
    # Clone repository
-   git clone https://github.com/your-org/stratum.git
-   cd stratum/backend
+   git clone https://github.com/QuantumBits/QuantumBitsFLL2025-2026.git
+   cd QuantumBitsFLL2025-2026/backend
    
    # Configure environment
    cp .env.example .env.production

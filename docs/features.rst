@@ -4,6 +4,9 @@ Features Documentation
 
 Complete guide to STRATUM's features and capabilities.
 
+.. seealso::
+   **Not sure what a term means?** Check :doc:`legend` for clear explanations of all technical terminology.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

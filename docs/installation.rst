@@ -4,6 +4,9 @@ Installation & Setup
 
 This guide will walk you through setting up STRATUM for development or production use.
 
+.. seealso::
+   **Not familiar with technical terms?** See :doc:`legend` for explanations of all terminology, commands, and symbols used in this guide.
+
 Prerequisites
 =============
 
@@ -31,7 +34,7 @@ Quick Start
 .. code-block:: bash
 
    # Clone the repository
-   git clone https://github.com/your-org/QuantumBitsFLL2025-2026.git
+   git clone https://github.com/QuantumBits/QuantumBitsFLL2025-2026.git
    cd QuantumBitsFLL2025-2026
 
 Backend Setup
@@ -64,7 +67,7 @@ Backend Setup
 3. Configure Environment Variables
 -----------------------------------
 
-Create a ``.env`` file in the ``backend/`` directory:
+Create a ``.env`` file in the ``backend/`` directory: (ask @levinismynameirl or @Pzmuv1517 for actual values)
 
 .. code-block:: bash
 

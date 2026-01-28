@@ -7,6 +7,7 @@ The STRATUM documentation is written in reStructuredText (RST) and built with Sp
 ### Prerequisites
 
 ```bash
+cd docs
 pip install -r requirements.txt
 ```
 

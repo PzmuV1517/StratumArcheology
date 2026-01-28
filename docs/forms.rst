@@ -4,6 +4,9 @@ Archaeological Forms
 
 Standardized data collection forms for archaeological documentation.
 
+.. seealso::
+   **Need help understanding technical terms?** Visit :doc:`legend` for explanations of all terminology and concepts used here.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

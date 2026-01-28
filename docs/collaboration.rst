@@ -4,6 +4,9 @@ Team Collaboration
 
 Work together seamlessly with role-based permissions and real-time updates.
 
+.. seealso::
+   **Not familiar with technical terms?** Check :doc:`legend` for explanations of roles, permissions, and collaboration concepts.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2

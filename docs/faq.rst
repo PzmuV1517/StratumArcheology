@@ -4,6 +4,9 @@ FAQ
 
 Frequently Asked Questions about STRATUM.
 
+.. seealso::
+   **Don't understand a term?** Check :doc:`legend` for comprehensive explanations of all technical terminology.
+
 .. contents:: Table of Contents
    :local:
    :depth: 2
