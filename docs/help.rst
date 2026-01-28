@@ -236,7 +236,7 @@ Phase 5: Interview Preparation (30 mins)
 .. admonition:: Review Common Questions
    :class: tip
    
-   Read :doc:`faq` - it answers questions judges might ask.
+   Read :doc:`faq` - it answers questions judges might ask. (these only contain technical questions, and not project management or team questions which should be prepared separately)
 
 .. admonition:: Know Our Challenges
    :class: tip
