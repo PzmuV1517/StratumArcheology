@@ -5,7 +5,7 @@ FAQ
 Frequently Asked Questions about STRATUM.
 
 .. seealso::
-   **Don't understand a term?** Check `legend.rst <legend.rst>`_ for comprehensive explanations of all technical terminology.
+   **Don't understand a term?** Check :doc:`legend <legend>` for comprehensive explanations of all technical terminology.
 
 .. contents:: Table of Contents
    :local:
@@ -58,4 +58,4 @@ Yes, STRATUM uses:
 - Regular backups
 
 .. seealso::
-   `troubleshooting.rst <troubleshooting.rst>`_ for common issues
+   :doc:`troubleshooting <troubleshooting>` for common issues

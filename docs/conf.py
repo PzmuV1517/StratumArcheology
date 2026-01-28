@@ -20,6 +20,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
+    'sphinx.ext.graphviz',  # For graphviz diagrams
     'sphinx_rtd_theme',
     'myst_parser',  # Optional: for markdown support if needed
 ]
@@ -67,3 +68,6 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'fastapi': ('https://fastapi.tiangolo.com', None),
 }
+
+# Graphviz settings
+graphviz_output_format = 'svg'

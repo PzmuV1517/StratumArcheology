@@ -5,7 +5,7 @@ Troubleshooting
 Common issues and solutions.
 
 .. seealso::
-   **Need help understanding error messages?** The `legend.rst <legend.rst>`_ explains technical terms and error codes.
+   **Need help understanding error messages?** The :doc:`legend <legend>` explains technical terms and error codes.
 
 .. contents:: Table of Contents
    :local:
@@ -68,4 +68,4 @@ Cannot Connect to Backend
 4. Firewall not blocking
 
 .. seealso::
-   `installation.rst <installation.rst>`_ for setup instructions
+   :doc:`installation <installation>` for setup instructions

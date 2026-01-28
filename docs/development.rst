@@ -5,7 +5,7 @@ Development Guide
 Contributing to STRATUM development.
 
 .. seealso::
-   **New to development?** See `legend.rst <legend.rst>`_ for explanations of all development terminology, Git commands, and code concepts.
+   **New to development?** See :doc:`legend <legend>` for explanations of all development terminology, Git commands, and code concepts.
 
 .. contents:: Table of Contents
    :local:
@@ -14,7 +14,7 @@ Contributing to STRATUM development.
 Setup
 =====
 
-See `installation.rst <installation.rst>`_ for development environment setup.
+See :doc:`installation <installation>` for development environment setup.
 
 Code Style
 ==========

@@ -5,7 +5,7 @@ Authentication API
 User authentication and management endpoints.
 
 .. seealso::
-   **Unfamiliar with authentication terms?** Check `../legend.rst <../legend.rst>`_ for explanations of JWT, tokens, Firebase, and authentication concepts.
+   **Unfamiliar with authentication terms?** Check :doc:`../legend <../legend>` for explanations of JWT, tokens, Firebase, and authentication concepts.
 
 .. contents:: Table of Contents
    :local:
@@ -128,4 +128,4 @@ Search for users by email (for project invitations).
    ]
 
 .. seealso::
-   `../architecture.rst <../architecture.rst>`_ for authentication architecture details
+   :doc:`../architecture <../architecture>` for authentication architecture details

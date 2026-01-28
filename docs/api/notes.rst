@@ -5,6 +5,6 @@ Notes API
 Note creation and management endpoints.
 
 .. seealso::
-   **Need help with API terms?** Check `../legend.rst <../legend.rst>`_ for explanations of all technical concepts.
+   **Need help with API terms?** Check :doc:`../legend <../legend>` for explanations of all technical concepts.
 
-**See:** `overview.rst <overview.rst>`_ for complete API documentation.
+**See:** :doc:`overview <overview>` for complete API documentation.

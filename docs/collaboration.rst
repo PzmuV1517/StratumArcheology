@@ -5,7 +5,7 @@ Team Collaboration
 Work together seamlessly with role-based permissions and real-time updates.
 
 .. seealso::
-   **Not familiar with technical terms?** Check `legend.rst <legend.rst>`_ for explanations of roles, permissions, and collaboration concepts.
+   **Not familiar with technical terms?** Check :doc:`legend <legend>` for explanations of roles, permissions, and collaboration concepts.
 
 .. contents:: Table of Contents
    :local:
@@ -89,4 +89,4 @@ Role Comparison
      - ❌
 
 .. seealso::
-   `api/projects.rst <api/projects.rst>`_ for role management API
+   :doc:`api/projects <api/projects>` for role management API

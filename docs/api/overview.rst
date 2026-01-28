@@ -5,7 +5,7 @@ API Overview
 Complete REST API reference for STRATUM backend.
 
 .. seealso::
-   **New to APIs?** The `../legend.rst <../legend.rst>`_ explains all API concepts, HTTP methods, status codes, and technical terminology.
+   **New to APIs?** The :doc:`../legend <../legend>` explains all API concepts, HTTP methods, status codes, and technical terminology.
 
 .. contents:: Table of Contents
    :local:
@@ -39,7 +39,7 @@ Getting a Token
 3. Include in requests as shown above
 
 .. seealso::
-   `authentication.rst <authentication.rst>`_ for detailed auth documentation
+   :doc:`authentication <authentication>` for detailed auth documentation
 
 API Endpoints by Category
 ==========================
@@ -669,14 +669,14 @@ Next Steps
 
 Explore specific API documentation:
 
-- `authentication.rst <authentication.rst>`_ - User authentication
-- `projects.rst <projects.rst>`_ - Project management
-- `notes.rst <notes.rst>`_ - Note operations
-- `files.rst <files.rst>`_ - File management
-- `forms.rst <forms.rst>`_ - Archaeological forms
-- `websockets.rst <websockets.rst>`_ - Real-time updates
+- :doc:`authentication <authentication>` - User authentication
+- :doc:`projects <projects>` - Project management
+- :doc:`notes <notes>` - Note operations
+- :doc:`files <files>` - File management
+- :doc:`forms <forms>` - Archaeological forms
+- :doc:`websockets <websockets>` - Real-time updates
 
 .. seealso::
-   - `../architecture.rst <../architecture.rst>`_ for system design
-   - `../database-schema.rst <../database-schema.rst>`_ for data models
-   - `../development.rst <../development.rst>`_ for contributing
+   - :doc:`../architecture <../architecture>` for system design
+   - :doc:`../database-schema <../database-schema>` for data models
+   - :doc:`../development <../development>` for contributing

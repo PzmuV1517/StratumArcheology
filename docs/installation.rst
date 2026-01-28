@@ -5,7 +5,7 @@ Installation & Setup
 This guide will walk you through setting up STRATUM for development or production use.
 
 .. seealso::
-   **Not familiar with technical terms?** See `legend.rst <legend.rst>`_ for explanations of all terminology, commands, and symbols used in this guide.
+   **Not familiar with technical terms?** See :doc:`legend <legend>` for explanations of all terminology, commands, and symbols used in this guide.
 
 Prerequisites
 =============
@@ -379,7 +379,7 @@ Frontend Issues
 Next Steps
 ==========
 
-* Read the `quickstart.rst <quickstart.rst>`_ guide
-* Explore `features.rst <features.rst>`_ documentation
-* Review `api/overview.rst <api/overview.rst>`_ for API details
-* Check out `development.rst <development.rst>`_ for contribution guidelines
+* Read the :doc:`quickstart <quickstart>` guide
+* Explore :doc:`features <features>` documentation
+* Review :doc:`api/overview <api/overview>` for API details
+* Check out :doc:`development <development>` for contribution guidelines

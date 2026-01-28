@@ -5,6 +5,6 @@ WebSockets API
 Real-time WebSocket events and communication.
 
 .. seealso::
-   **What are WebSockets?** The `../legend.rst <../legend.rst>`_ explains WebSockets, real-time communication, and all technical terminology.
+   **What are WebSockets?** The :doc:`../legend <../legend>` explains WebSockets, real-time communication, and all technical terminology.
 
-**See:** `../websockets-realtime.rst <../websockets-realtime.rst>`_ for complete WebSocket documentation.
+**See:** :doc:`../websockets-realtime <../websockets-realtime>` for complete WebSocket documentation.

@@ -5,7 +5,7 @@ Changelog
 Version history and release notes.
 
 .. seealso::
-   **Confused by technical terms in the changelog?** See `legend.rst <legend.rst>`_ for all terminology explanations.
+   **Confused by technical terms in the changelog?** See :doc:`legend <legend>` for all terminology explanations.
 
 .. contents:: Table of Contents
    :local:

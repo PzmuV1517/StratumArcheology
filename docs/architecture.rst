@@ -5,7 +5,7 @@ Architecture Overview
 Understanding STRATUM's architecture will help you navigate the codebase and build features effectively.
 
 .. seealso::
-   **Unfamiliar with architecture terms?** The `legend.rst <legend.rst>`_ explains all technical concepts, acronyms, and symbols used throughout this documentation.
+   **Unfamiliar with architecture terms?** The :doc:`legend <legend>` explains all technical concepts, acronyms, and symbols used throughout this documentation.
 
 .. contents:: Table of Contents
    :local:
@@ -269,7 +269,7 @@ Database Models
        files = relationship("FileNode", back_populates="project")
 
 .. seealso::
-   `database-schema.rst <database-schema.rst>`_ for detailed schema documentation
+   :doc:`database-schema <database-schema>` for detailed schema documentation
 
 Authentication Flow
 ~~~~~~~~~~~~~~~~~~~
@@ -527,7 +527,7 @@ Core Tables
    :align: center
 
 .. seealso::
-   `database-schema.rst <database-schema.rst>`_ for complete schema documentation
+   :doc:`database-schema <database-schema>` for complete schema documentation
 
 Relationships
 -------------
@@ -691,12 +691,12 @@ Production Stack
    }
 
 .. seealso::
-   `deployment.rst <deployment.rst>`_ for deployment guide
+   :doc:`deployment <deployment>` for deployment guide
 
 Next Steps
 ==========
 
-- Explore `database-schema.rst <database-schema.rst>`_ for detailed schema
-- Read `websockets-realtime.rst <websockets-realtime.rst>`_ for real-time features
-- Check `development.rst <development.rst>`_ for contribution guidelines
-- Review `api/overview.rst <api/overview.rst>`_ for API documentation
+- Explore :doc:`database-schema <database-schema>` for detailed schema
+- Read :doc:`websockets-realtime <websockets-realtime>` for real-time features
+- Check :doc:`development <development>` for contribution guidelines
+- Review :doc:`api/overview <api/overview>` for API documentation

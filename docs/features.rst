@@ -5,7 +5,7 @@ Features Documentation
 Complete guide to STRATUM's features and capabilities.
 
 .. seealso::
-   **Not sure what a term means?** Check `legend.rst <legend.rst>`_ for clear explanations of all technical terminology.
+   **Not sure what a term means?** Check :doc:`legend <legend>` for clear explanations of all technical terminology.
 
 .. contents:: Table of Contents
    :local:
@@ -58,7 +58,7 @@ Real-Time Collaboration
 ✅ Live content updates
 
 .. seealso::
-   `websockets-realtime.rst <websockets-realtime.rst>`_ for WebSocket details
+   :doc:`websockets-realtime <websockets-realtime>` for WebSocket details
 
 Documentation
 =============
@@ -107,7 +107,7 @@ Standardized data collection:
 - Photo documentation
 
 .. seealso::
-   `forms.rst <forms.rst>`_ for detailed form documentation
+   :doc:`forms <forms>` for detailed form documentation
 
 File Management
 ===============
@@ -184,7 +184,7 @@ Coordinate Systems
 - Custom projections
 
 .. seealso::
-   `gps-mapping.rst <gps-mapping.rst>`_ for GPS documentation
+   :doc:`gps-mapping <gps-mapping>` for GPS documentation
 
 Data Visualization
 ==================
@@ -388,7 +388,7 @@ Scalability
 Next Steps
 ==========
 
-- Read `quickstart.rst <quickstart.rst>`_ to get started
-- Explore `api/overview.rst <api/overview.rst>`_ for API integration
-- Check `collaboration.rst <collaboration.rst>`_ for team features
-- See `forms.rst <forms.rst>`_ for archaeological forms
+- Read :doc:`quickstart <quickstart>` to get started
+- Explore :doc:`api/overview <api/overview>` for API integration
+- Check :doc:`collaboration <collaboration>` for team features
+- See :doc:`forms <forms>` for archaeological forms
