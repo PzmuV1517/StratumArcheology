@@ -36,4 +36,4 @@ async def verify_firebase_token(token: str) -> dict:
         return decoded_token
     except Exception as e:
         print(f"Token verification error: {e}")
-        return None
+        return None # type: ignore
