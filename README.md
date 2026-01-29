@@ -1,10 +1,10 @@
 # STRATUM - Archaeological Site Management Platform
 
-[![Phase 3 - Advanced Features](https://img.shields.io/badge/Phase-3%20Advanced-green)](https://stratum.readthedocs.io)
+[![Phase 3 - Advanced Features](https://img.shields.io/badge/Phase-3%20Advanced-green)](https://stratumapp.readthedocs.io)
 [![FLL 2025-2026](https://img.shields.io/badge/FLL-UNEARTHED-orange)](https://firstlegoleague.org)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue)](https://python.org)
 [![React Native](https://img.shields.io/badge/react--native-0.81-blue)](https://reactnative.dev)
-[![Documentation Status](https://readthedocs.org/projects/stratum/badge/?version=latest)](https://stratum.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/stratum/badge/?version=latest)](https://stratumapp.readthedocs.io/en/latest/?badge=latest)
 
 **STRATUM** (Latin for "layer") is a comprehensive digital platform for archaeologists to plan excavations, document findings, collaborate in real-time, and export standardized data.
 
@@ -14,19 +14,21 @@ Built for the **FLL 2025-2026 UNEARTHED** Innovation Project by the **QuantumBit
 
 ## 📖 Documentation
 
-**Full documentation:** [**here**](https://stratumapp.readthedocs.io)
+**Full documentation:** [**stratumapp.readthedocs.io**](https://stratumapp.readthedocs.io)
+
+> 📁 Documentation source is in the [`docs/`](docs/) folder (can be used as a standalone repo).
 
 ### Quick Links
 
 | Document | Description |
 |----------|-------------|
-| [Team Onboarding Guide](https://stratum.readthedocs.io/en/latest/help.html) | Start here! Structured learning path for team members |
-| [Legend](https://stratum.readthedocs.io/en/latest/legend.html) | All technical terms explained |
-| [Installation](https://stratum.readthedocs.io/en/latest/installation.html) | Setup instructions |
-| [Quick Start](https://stratum.readthedocs.io/en/latest/quickstart.html) | Get started in minutes |
-| [Architecture](https://stratum.readthedocs.io/en/latest/architecture.html) | System design with diagrams |
-| [API Reference](https://stratum.readthedocs.io/en/latest/api/overview.html) | Complete REST API docs |
-| [Features](https://stratum.readthedocs.io/en/latest/features.html) | All platform capabilities |
+| [Team Onboarding Guide](https://stratumapp.readthedocs.io/en/latest/help.html) | Start here! Structured learning path for team members |
+| [Legend](https://stratumapp.readthedocs.io/en/latest/legend.html) | All technical terms explained |
+| [Installation](https://stratumapp.readthedocs.io/en/latest/installation.html) | Setup instructions |
+| [Quick Start](https://stratumapp.readthedocs.io/en/latest/quickstart.html) | Get started in minutes |
+| [Architecture](https://stratumapp.readthedocs.io/en/latest/architecture.html) | System design with diagrams |
+| [API Reference](https://stratumapp.readthedocs.io/en/latest/api/overview.html) | Complete REST API docs |
+| [Features](https://stratumapp.readthedocs.io/en/latest/features.html) | All platform capabilities |
 
 ---
 
@@ -58,7 +60,7 @@ npm install
 npx expo start
 ```
 
-See the [Installation Guide](https://stratum.readthedocs.io/en/latest/installation.html) for complete setup instructions.
+See the [Installation Guide](https://stratumapp.readthedocs.io/en/latest/installation.html) for complete setup instructions.
 
 ---
 
