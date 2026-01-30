@@ -13,7 +13,7 @@ IMPORTANT: Database migrations are handled by Alembic, NOT create_all().
 Run migrations with: alembic upgrade head
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
@@ -26,7 +26,7 @@ from app.middleware import (
     get_logger,
 )
 from app.minio_client import minio_client
-from app.rate_limiter import init_rate_limiter, limiter
+from app.rate_limiter import init_rate_limiter
 from app.routes import (
     activities,
     auth,
@@ -72,7 +72,9 @@ app = FastAPI(
     title="STRATUM API",
     description="Archaeological site management and collaboration platform",
     version="1.0.0",
-    docs_url="/api/docs" if settings.APP_DEBUG else None,  # Disable docs in production
+    docs_url="/api/docs"
+    if settings.APP_DEBUG
+    else None,  # Disable docs in production
     redoc_url="/api/redoc" if settings.APP_DEBUG else None,
     openapi_url="/api/openapi.json" if settings.APP_DEBUG else None,
 )
@@ -103,7 +105,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"],
+    expose_headers=[
+        "X-RateLimit-Limit",
+        "X-RateLimit-Remaining",
+        "X-RateLimit-Reset",
+        "Retry-After",
+    ],
 )
 
 # Add trusted host middleware in production

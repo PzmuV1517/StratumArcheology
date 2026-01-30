@@ -226,7 +226,8 @@ api.interceptors.response.use(
       );
       (rateLimitError as any).isRateLimited = true;
       (rateLimitError as any).statusCode = 429;
-      (rateLimitError as any).contact = detail?.contact || "quantumrobotics.bits@ichb.ro";
+      (rateLimitError as any).contact =
+        detail?.contact || "quantumrobotics.bits@ichb.ro";
       return Promise.reject(rateLimitError);
     }
 
@@ -234,7 +235,9 @@ api.interceptors.response.use(
     if (error.response?.status === 409) {
       const detail = error.response?.data?.detail;
       if (detail?.code === "EMAIL_ALREADY_EXISTS") {
-        const emailError = new Error(detail?.message || "An account with this email already exists.");
+        const emailError = new Error(
+          detail?.message || "An account with this email already exists.",
+        );
         (emailError as any).isEmailExists = true;
         (emailError as any).statusCode = 409;
         (emailError as any).code = detail?.code;

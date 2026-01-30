@@ -146,7 +146,7 @@
   gap: 8px;
 }
 
-.harris-matrix .color-input-row input[type='color'] {
+.harris-matrix .color-input-row input[type="color"] {
   width: 44px;
   height: 32px;
   padding: 0;
@@ -541,7 +541,7 @@
   font-family:
     system-ui,
     -apple-system,
-    'Segoe UI',
+    "Segoe UI",
     Roboto,
     Helvetica,
     Arial,

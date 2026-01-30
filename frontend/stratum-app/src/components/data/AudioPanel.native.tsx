@@ -1,5 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -46,7 +52,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
           { shouldPlay: false },
           (newStatus) => {
             if (mounted) setStatus(newStatus);
-          }
+          },
         );
 
         if (mounted) {
@@ -127,7 +133,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
                     {
                       height: 10 + Math.sin(i * 0.5) * 20 + Math.random() * 10,
                       backgroundColor:
-                        duration > 0 && (i / 40) < (position / duration)
+                        duration > 0 && i / 40 < position / duration
                           ? "#FF2A2A"
                           : "#444",
                     },

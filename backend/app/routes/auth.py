@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import firebase_admin.auth as firebase_auth
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -25,7 +25,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/login", response_model=AuthResponse)
 @limiter.limit(settings.RATE_LIMIT_AUTH_LOGIN)
-async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
+async def login(
+    request: Request, login_data: LoginRequest, db: Session = Depends(get_db)
+):
     """Login with email and password using Firebase authentication"""
     try:
         # Authenticate with Firebase using email and password
@@ -80,11 +82,15 @@ async def login(request: Request, login_data: LoginRequest, db: Session = Depend
 
 @router.post("/register", response_model=AuthResponse)
 @limiter.limit(settings.RATE_LIMIT_AUTH_REGISTER)
-async def register(request: Request, register_data: RegisterRequest, db: Session = Depends(get_db)):
+async def register(
+    request: Request, register_data: RegisterRequest, db: Session = Depends(get_db)
+):
     """Register new user with email and password"""
     try:
         # Check if user already exists in our database
-        existing_user = db.query(User).filter(User.email == register_data.email).first()
+        existing_user = (
+            db.query(User).filter(User.email == register_data.email).first()
+        )
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -225,7 +231,9 @@ async def verify_firebase_token(
 
 @router.get("/me", response_model=UserResponse)
 @limiter.limit(settings.RATE_LIMIT_READ_OPERATIONS)
-async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
+async def get_current_user_info(
+    request: Request, current_user: User = Depends(get_current_user)
+):
     """Get current authenticated user information"""
     return current_user
 

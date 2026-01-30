@@ -28,7 +28,11 @@ export const authService = {
       }
       return {
         success: false,
-        error: error.response?.data?.detail?.message || error.response?.data?.detail || error.message || "Login failed",
+        error:
+          error.response?.data?.detail?.message ||
+          error.response?.data?.detail ||
+          error.message ||
+          "Login failed",
       };
     }
   },
@@ -69,7 +73,10 @@ export const authService = {
       return {
         success: false,
         error:
-          error.response?.data?.detail?.message || error.response?.data?.detail || error.message || "Registration failed",
+          error.response?.data?.detail?.message ||
+          error.response?.data?.detail ||
+          error.message ||
+          "Registration failed",
       };
     }
   },

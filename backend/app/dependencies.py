@@ -3,7 +3,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
 from app.models import User
 from app.security import decode_token, is_token_blacklisted
@@ -29,14 +28,14 @@ async def get_current_user(
     try:
         # Verify our JWT token using the security module
         payload = decode_token(token)
-        
+
         if payload is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         # Check if token is blacklisted
         jti = payload.get("jti")
         if jti and is_token_blacklisted(jti):
@@ -45,7 +44,7 @@ async def get_current_user(
                 detail="Token has been revoked",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         user_id = payload.get("user_id")
 
         if not user_id:
@@ -105,14 +104,14 @@ async def get_current_user_or_token(
     try:
         # Verify our JWT token using the security module
         payload = decode_token(jwt_token)
-        
+
         if payload is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         # Check if token is blacklisted
         jti = payload.get("jti")
         if jti and is_token_blacklisted(jti):
@@ -121,7 +120,7 @@ async def get_current_user_or_token(
                 detail="Token has been revoked",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
+
         user_id = payload.get("user_id")
 
         if not user_id:

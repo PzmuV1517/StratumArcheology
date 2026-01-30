@@ -1,5 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 
 export default function VideoPanel({ src }: { src: string | null }) {

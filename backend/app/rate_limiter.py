@@ -64,7 +64,9 @@ limiter = Limiter(
 #   - RATE_LIMIT_CONVERT: File conversion (strict, resource intensive)
 
 
-def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+def rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
     """
     Custom handler for rate limit exceeded errors.
     Returns a user-friendly error message for the frontend.
@@ -75,7 +77,9 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
             "error": "rate_limit_exceeded",
             "message": "You are sending too many requests to the server! Please wait.",
             "detail": "If you believe this is a mistake, contact us at quantumrobotics.bits@ichb.ro",
-            "retry_after": exc.detail.split("per")[0].strip() if exc.detail else "1 minute",
+            "retry_after": exc.detail.split("per")[0].strip()
+            if exc.detail
+            else "1 minute",
         },
         headers={
             "Retry-After": "60",  # Suggest retry after 60 seconds

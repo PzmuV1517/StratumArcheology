@@ -66,7 +66,10 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           const dy = touches[0].pageY - touches[1].pageY;
           const distance = Math.sqrt(dx * dx + dy * dy);
           const scaleFactor = distance / lastDistanceRef.current;
-          scaleRef.current = Math.max(0.3, Math.min(5, scaleRef.current * scaleFactor));
+          scaleRef.current = Math.max(
+            0.3,
+            Math.min(5, scaleRef.current * scaleFactor),
+          );
           lastDistanceRef.current = distance;
 
           if (pointsRef.current) {
@@ -74,7 +77,7 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           }
         }
       },
-    })
+    }),
   ).current;
 
   const resetView = () => {
@@ -225,7 +228,11 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           </TouchableOpacity>
         </View>
       ) : (
-        <GLView style={styles.glView} onContextCreate={onContextCreate} ref={glRef} />
+        <GLView
+          style={styles.glView}
+          onContextCreate={onContextCreate}
+          ref={glRef}
+        />
       )}
 
       {/* Control buttons */}

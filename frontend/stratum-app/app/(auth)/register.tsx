@@ -69,14 +69,10 @@ export default function RegisterScreen() {
         );
       } else if (result.isEmailExists) {
         // Email already exists - prompt to login instead
-        Alert.alert(
-          "Account Exists",
-          result.error,
-          [
-            { text: "OK" },
-            { text: "Go to Login", onPress: () => {} }, // Router handled elsewhere
-          ],
-        );
+        Alert.alert("Account Exists", result.error, [
+          { text: "OK" },
+          { text: "Go to Login", onPress: () => {} }, // Router handled elsewhere
+        ]);
       } else {
         Alert.alert("Registration Failed", result.error);
       }

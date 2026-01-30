@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -79,9 +85,7 @@ export default function PdfPanel({ src }: { src: string | null }) {
       {/* Simple page indicator - Google Docs viewer handles pagination internally */}
       {!loading && !error && (
         <View style={styles.pageIndicator}>
-          <Text style={styles.pageText}>
-            Use pinch to zoom • Swipe to navigate
-          </Text>
+          <Text style={styles.pageText}>Use pinch to zoom • Swipe to navigate</Text>
         </View>
       )}
     </View>

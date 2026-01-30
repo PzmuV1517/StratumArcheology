@@ -30,13 +30,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Prevent XSS attacks
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        
+
         # Prevent clickjacking
         response.headers["X-Frame-Options"] = "DENY"
-        
+
         # Control referrer information
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
+
         # Permissions policy (formerly Feature-Policy)
         response.headers["Permissions-Policy"] = (
             "accelerometer=(), "
@@ -48,25 +48,23 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "payment=(), "
             "usb=()"
         )
-        
+
         # Content Security Policy (relaxed for API)
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "frame-ancestors 'none'; "
-            "form-action 'self'"
+            "default-src 'self'; frame-ancestors 'none'; form-action 'self'"
         )
-        
+
         # HSTS (only in production)
         if self.environment == "production":
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains; preload"
             )
-        
+
         # Remove server identification headers
         if "server" in response.headers:
             del response.headers["server"]
-        
+
         # Add custom server header (optional, for identification without version)
         response.headers["X-Powered-By"] = "STRATUM"
-        
+
         return response

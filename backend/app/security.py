@@ -21,7 +21,6 @@ from pydantic import BaseModel
 
 from app.config import settings
 
-
 # =============================================================================
 # PASSWORD HASHING
 # =============================================================================
@@ -57,6 +56,7 @@ ALGORITHM = "HS256"
 
 class TokenPayload(BaseModel):
     """Structured JWT token payload."""
+
     user_id: str
     firebase_uid: str
     email: str
@@ -74,23 +74,23 @@ def create_access_token(
 ) -> str:
     """
     Create a JWT access token with enhanced security.
-    
+
     Args:
         user_id: The user's database ID
         firebase_uid: The user's Firebase UID
         email: The user's email
         expires_delta: Optional custom expiration time
-    
+
     Returns:
         Encoded JWT token string
     """
     now = datetime.utcnow()
-    
+
     if expires_delta:
         expire = now + expires_delta
     else:
         expire = now + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
-    
+
     payload = {
         "user_id": user_id,
         "firebase_uid": firebase_uid,
@@ -100,7 +100,7 @@ def create_access_token(
         "iat": now,
         "jti": secrets.token_urlsafe(16),  # Unique token ID
     }
-    
+
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -111,19 +111,19 @@ def create_refresh_token(
 ) -> str:
     """
     Create a refresh token with longer expiration.
-    
+
     Args:
         user_id: The user's database ID
         firebase_uid: The user's Firebase UID
         email: The user's email
-    
+
     Returns:
         Encoded JWT refresh token string
     """
     now = datetime.utcnow()
     # Refresh tokens last 7 days
     expire = now + timedelta(days=7)
-    
+
     payload = {
         "user_id": user_id,
         "firebase_uid": firebase_uid,
@@ -133,20 +133,20 @@ def create_refresh_token(
         "iat": now,
         "jti": secrets.token_urlsafe(16),
     }
-    
+
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
 def decode_token(token: str) -> dict[str, Any] | None:
     """
     Decode and validate a JWT token.
-    
+
     Args:
         token: The JWT token string
-    
+
     Returns:
         Decoded payload dict or None if invalid
-    
+
     Raises:
         JWTError: If token is invalid or expired
     """
@@ -159,31 +159,33 @@ def decode_token(token: str) -> dict[str, Any] | None:
                 "verify_exp": True,
                 "verify_iat": True,
                 "require_exp": True,
-            }
+            },
         )
         return payload
     except JWTError:
         return None
 
 
-def verify_token(token: str, expected_type: str = ACCESS_TOKEN_TYPE) -> dict[str, Any] | None:
+def verify_token(
+    token: str, expected_type: str = ACCESS_TOKEN_TYPE
+) -> dict[str, Any] | None:
     """
     Verify a token and check its type.
-    
+
     Args:
         token: The JWT token string
         expected_type: Expected token type (access or refresh)
-    
+
     Returns:
         Decoded payload if valid, None otherwise
     """
     payload = decode_token(token)
     if payload is None:
         return None
-    
+
     if payload.get("token_type") != expected_type:
         return None
-    
+
     return payload
 
 
@@ -218,6 +220,7 @@ def clear_expired_blacklist() -> None:
 # SECURITY UTILITIES
 # =============================================================================
 
+
 def generate_secure_token(length: int = 32) -> str:
     """Generate a cryptographically secure random token."""
     return secrets.token_urlsafe(length)
@@ -226,20 +229,20 @@ def generate_secure_token(length: int = 32) -> str:
 def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     Validate password meets security requirements.
-    
+
     Returns:
         Tuple of (is_valid, error_message)
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
-    
+
     if not any(c.isupper() for c in password):
         return False, "Password must contain at least one uppercase letter"
-    
+
     if not any(c.islower() for c in password):
         return False, "Password must contain at least one lowercase letter"
-    
+
     if not any(c.isdigit() for c in password):
         return False, "Password must contain at least one digit"
-    
+
     return True, ""

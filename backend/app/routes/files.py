@@ -19,7 +19,6 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.database import get_db
-from app.rate_limiter import limiter
 from app.dependencies import (
     check_project_permission,
     get_current_user,
@@ -35,6 +34,7 @@ from app.models import (
     Project,
     User,
 )
+from app.rate_limiter import limiter
 from app.schemas import (
     FileNodeBase,
     FileNodeCreateFolder,

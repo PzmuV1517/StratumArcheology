@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.rate_limiter import limiter
 from app.models import Project, ProjectGPS, User
+from app.rate_limiter import limiter
 from app.websocket import log_activity
 
 router = APIRouter()

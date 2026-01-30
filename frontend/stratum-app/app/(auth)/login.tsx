@@ -179,11 +179,7 @@ export default function LoginScreen() {
         if (Platform.OS === "web") {
           window.alert("Too Many Requests (429)\n\n" + msg);
         } else {
-          Alert.alert(
-            "Too Many Requests",
-            msg,
-            [{ text: "OK" }],
-          );
+          Alert.alert("Too Many Requests", msg, [{ text: "OK" }]);
         }
       } else if (Platform.OS === "web") {
         window.alert("Login Failed: " + (result.error || "Unknown error"));
