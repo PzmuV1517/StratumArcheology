@@ -10,10 +10,10 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import { activityService } from "../../src/services/activityService";
-import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
-import type { Project } from "../../src/services/projectService.types";
+import { projectService } from "@/services/projectService";
+import { activityService } from "@/services/activityService";
+import { ProjectActionModal } from "@/components/project/modals/ProjectActionModal";
+import type { Project } from "@/services/projectService.types";
 
 interface Activity {
   id: string;

@@ -15,18 +15,18 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, useLocalSearchParams } from "expo-router";
-import { useAuth } from "../../src/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../src/services/api";
-import { config } from "../../src/config/config";
+import api from "@/services/api";
+import { config } from "@/config/config";
 
-const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
+const FaultyTerminal = require("@/components/effects/FaultyTerminal.jsx").default;
 // Prevent unnecessary re-renders of the heavy background
 const MemoFaultyTerminal = React.memo(FaultyTerminal);
 // Load component CSS only on web
 if (Platform.OS === "web") {
   // @ts-ignore - CSS handled by web bundler
-  require("../../components/FaultyTerminal.css");
+  require("@/components/effects/FaultyTerminal.css");
 }
 
 export default function LoginScreen() {

@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import MarkdownView from "../../components/common/MarkdownView";
+import MarkdownView from "../common/MarkdownView";
 
 interface Props {
   editing: boolean;

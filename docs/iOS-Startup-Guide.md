@@ -23,7 +23,7 @@ cd QuantumBitsFLL2025-2026/frontend/stratum-app
 
 ### b. Install Dependencies
 ```
-npm install
+npm install --legacy-peer-deps
 ```
 
 ### c. Generate the iOS Folder (if missing)

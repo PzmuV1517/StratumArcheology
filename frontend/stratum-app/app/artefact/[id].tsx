@@ -14,13 +14,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import QRCodeView from "../../src/components/common/QRCodeView";
-import { fileService } from "../../src/services/fileService";
-import { useAuth } from "../../src/contexts/AuthContext";
+import QRCodeView from "@/components/common/QRCodeView";
+import { fileService } from "@/services/fileService";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   buildManifestFromChildren,
   ArtefactManifest,
-} from "../../src/utils/artefactManifest";
+} from "@/utils/artefactManifest";
 
 interface FileNode {
   id: string;

@@ -11,18 +11,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { fileService } from "../src/services/fileService";
-import TextFilePanel from "../src/components/data/TextFilePanel";
-import CsvPanel from "../src/components/data/CsvPanel";
-import ExcelPanel from "../src/components/data/ExcelPanel";
-import { useAutoSave } from "../src/hooks/useAutoSave";
+import { fileService } from "@/services/fileService";
+import TextFilePanel from "@/components/data/TextFilePanel";
+import CsvPanel from "@/components/data/CsvPanel";
+import ExcelPanel from "@/components/data/ExcelPanel";
+import { useAutoSave } from "@/hooks/useAutoSave";
 
 // Platform-specific panels (bundler resolves .native.tsx vs .web.tsx automatically)
-import PdfPanel from "../src/components/data/PdfPanel";
-import VideoPanel from "../src/components/data/VideoPanel";
-import PointCloudPanel from "../src/components/data/PointCloudPanel";
-import MeshPanel from "../src/components/data/MeshPanel";
-import AudioPanel from "../src/components/data/AudioPanel";
+import PdfPanel from "@/components/data/PdfPanel";
+import VideoPanel from "@/components/data/VideoPanel";
+import PointCloudPanel from "@/components/data/PointCloudPanel";
+import MeshPanel from "@/components/data/MeshPanel";
+import AudioPanel from "@/components/data/AudioPanel";
 import * as FileSystemLegacy from "expo-file-system/legacy";
 
 // Lazy import to avoid native bundling issues

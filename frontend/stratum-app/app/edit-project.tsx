@@ -11,8 +11,8 @@ import {
   Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { projectService } from "../src/services/projectService";
-import { authService } from "../src/services/authService";
+import { projectService } from "@/services/projectService";
+import { authService } from "@/services/authService";
 
 interface Member {
   id: string;

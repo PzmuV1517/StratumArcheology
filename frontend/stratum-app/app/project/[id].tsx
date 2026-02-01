@@ -17,29 +17,29 @@ import {
   useGlobalSearchParams,
   Stack,
 } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import { noteService } from "../../src/services/noteService";
-import { fileService } from "../../src/services/fileService";
+import { projectService } from "@/services/projectService";
+import { noteService } from "@/services/noteService";
+import { fileService } from "@/services/fileService";
 import * as DocumentPicker from "expo-document-picker";
-import MembersModal from "../../src/components/project/MembersModal";
-import FilesOverlay from "../../src/components/project/FilesOverlay";
-import NotesSection from "../../src/components/project/NotesSection";
-import FileGallery from "../../src/components/project/FileGallery";
-import ArtefactsTab from "../../src/components/project/ArtefactsTab";
-import TimeMachineTab from "../../src/components/project/TimeMachineTab";
-import ToolsTab from "../../src/components/project/ToolsTab";
-import Timeline from "../../src/components/timeline/Timeline";
-import MapEditor from "../../src/components/map/MapEditor";
+import MembersModal from "@/components/project/MembersModal";
+import FilesOverlay from "@/components/project/FilesOverlay";
+import NotesSection from "@/components/project/NotesSection";
+import FileGallery from "@/components/project/FileGallery";
+import ArtefactsTab from "@/components/project/ArtefactsTab";
+import TimeMachineTab from "@/components/project/TimeMachineTab";
+import ToolsTab from "@/components/project/ToolsTab";
+import Timeline from "@/components/timeline/Timeline";
+import MapEditor from "@/components/map/MapEditor";
 // Harris Matrix (web only) dynamic require later to avoid SSR issues
-import ProjectMenuModal from "../../src/components/project/modals/ProjectMenuModal";
-import NewFolderModal from "../../src/components/project/modals/NewFolderModal";
-import DeleteConfirmModal from "../../src/components/project/modals/DeleteConfirmModal";
-import RenameModal from "../../src/components/project/modals/RenameModal";
-import MoveBanner from "../../src/components/project/MoveBanner";
-import { ConflictResolutionModal } from "../../src/components/sync/ConflictResolutionModal";
-import { conflicts, FileConflict } from "../../src/services/offlineQueueService";
-import { useWebSocket } from "../../src/contexts/WebSocketContext";
-import type { Project as ServiceProject } from "../../src/services/projectService.types";
+import ProjectMenuModal from "@/components/project/modals/ProjectMenuModal";
+import NewFolderModal from "@/components/project/modals/NewFolderModal";
+import DeleteConfirmModal from "@/components/project/modals/DeleteConfirmModal";
+import RenameModal from "@/components/project/modals/RenameModal";
+import MoveBanner from "@/components/project/MoveBanner";
+import { ConflictResolutionModal } from "@/components/sync/ConflictResolutionModal";
+import { conflicts, FileConflict } from "@/services/offlineQueueService";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import type { Project as ServiceProject } from "@/services/projectService.types";
 
 // Use types from service with local aliases
 type Project = ServiceProject & {

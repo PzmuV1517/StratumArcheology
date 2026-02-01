@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-router";
-import { noteService } from "../src/services/noteService";
+import { noteService } from "@/services/noteService";
 
 interface Note {
   id: string;

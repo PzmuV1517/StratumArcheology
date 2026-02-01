@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import type { Project } from "../../src/services/projectService.types";
+import { projectService } from "@/services/projectService";
+import type { Project } from "@/services/projectService.types";
 
 export default function ExploreScreen() {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);

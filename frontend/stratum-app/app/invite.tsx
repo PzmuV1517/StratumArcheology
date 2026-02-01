@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { projectService } from "../src/services/projectService";
+import { projectService } from "@/services/projectService";
 
 export default function InviteAcceptScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
