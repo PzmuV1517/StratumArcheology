@@ -61,6 +61,8 @@ export default function MembersModal({
   const canManage = isOwner || isResearcher; // Both can manage, but with different permissions
 
   const [inviteRole, setInviteRole] = useState<"RESEARCHER" | "GUEST">("GUEST");
+  const [inviteMaxUses, setInviteMaxUses] = useState<number | null>(null); // null = unlimited
+  const [inviteTtlHours, setInviteTtlHours] = useState<number>(336); // 14 days default
   const appOrigin =
     Platform.OS === "web"
       ? typeof window !== "undefined"
@@ -73,6 +75,7 @@ export default function MembersModal({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [generatedExpiresAt, setGeneratedExpiresAt] = useState<string | null>(null);
+  const [generatedMaxUses, setGeneratedMaxUses] = useState<number | null>(null);
   const [isManaging, setIsManaging] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(
@@ -229,11 +232,14 @@ export default function MembersModal({
       const resp = await projectService.createInvite(
         projectId,
         inviteRole.toLowerCase(),
+        inviteTtlHours,
+        inviteMaxUses,
       );
       const link = `${appOrigin || "stratum://app"}${resp.accept_path}`;
       setGeneratedLink(link);
       setGeneratedCode(resp.code || null);
       setGeneratedExpiresAt(resp.expires_at || (null as any));
+      setGeneratedMaxUses(resp.max_uses ?? null);
     } catch (e: any) {
       setManageError(e?.detail || e?.message || "Failed to generate invite");
     } finally {
@@ -526,6 +532,9 @@ export default function MembersModal({
           {isOwner && (
             <View style={styles.inviteSection}>
               <Text style={styles.inviteTitle}>Invite to project</Text>
+              
+              {/* Role selector */}
+              <Text style={styles.inviteSubtitle}>Role</Text>
               <View style={styles.roleSelector}>
                 <TouchableOpacity
                   style={[
@@ -544,6 +553,88 @@ export default function MembersModal({
                   onPress={() => setInviteRole("RESEARCHER")}
                 >
                   <Text style={styles.roleBtnText}>Researcher</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Expiration selector */}
+              <Text style={styles.inviteSubtitle}>Expires after</Text>
+              <View style={styles.roleSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 24 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(24)}
+                >
+                  <Text style={styles.roleBtnText}>1 day</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 168 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(168)}
+                >
+                  <Text style={styles.roleBtnText}>7 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 336 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(336)}
+                >
+                  <Text style={styles.roleBtnText}>14 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 720 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(720)}
+                >
+                  <Text style={styles.roleBtnText}>30 days</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Max uses selector */}
+              <Text style={styles.inviteSubtitle}>Max uses</Text>
+              <View style={styles.roleSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 1 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(1)}
+                >
+                  <Text style={styles.roleBtnText}>1</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 5 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(5)}
+                >
+                  <Text style={styles.roleBtnText}>5</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 10 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(10)}
+                >
+                  <Text style={styles.roleBtnText}>10</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === null && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(null)}
+                >
+                  <Text style={styles.roleBtnText}>∞</Text>
                 </TouchableOpacity>
               </View>
 
@@ -569,6 +660,7 @@ export default function MembersModal({
                       setGeneratedLink(null);
                       setGeneratedCode(null);
                       setGeneratedExpiresAt(null);
+                      setGeneratedMaxUses(null);
                       setCopiedLink(false);
                       setCopiedCode(false);
                     }}
@@ -620,6 +712,9 @@ export default function MembersModal({
                       Expires: {new Date(generatedExpiresAt).toLocaleString()}
                     </Text>
                   )}
+                  <Text style={styles.expiresText}>
+                    Max uses: {generatedMaxUses ?? "Unlimited"}
+                  </Text>
                 </View>
               )}
 
@@ -838,10 +933,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 10,
   },
+  inviteSubtitle: {
+    color: "#AAA",
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: 6,
+    marginTop: 4,
+  },
   roleSelector: {
     flexDirection: "row",
     gap: 8,
     marginBottom: 12,
+    flexWrap: "wrap",
   },
   roleBtn: {
     backgroundColor: "#333",
