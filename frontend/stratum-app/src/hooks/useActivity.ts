@@ -34,26 +34,31 @@ export function useActivity(
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentOffset = useRef(0);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Subscribe to real-time activity updates
   useEffect(() => {
     if (!projectId) return;
 
     // Listen for new activities via WebSocket
-    unsubscribeRef.current = socketService.on("activity", (data) => {
+    const unsubscribeActivity = socketService.on("activity", (data) => {
       if (data.activity) {
         setActivities((prev) => [data.activity, ...prev]);
       }
     });
 
-    return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
+    // Also listen for timeline_updated events to refresh silently
+    const unsubscribeTimeline = socketService.on("timeline_updated", (data) => {
+      if (data.project_id === projectId) {
+        // Silently refresh the timeline
+        loadActivities();
       }
+    });
+
+    return () => {
+      unsubscribeActivity();
+      unsubscribeTimeline();
     };
-  }, [projectId]);
+  }, [projectId, loadActivities]);
 
   // Load initial activities when projectId or personalOnly changes
   useEffect(() => {

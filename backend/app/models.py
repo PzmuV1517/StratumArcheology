@@ -123,6 +123,7 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    harris_matrix_data = Column(JSON, nullable=True)  # Harris Matrix visualization data
 
     # Relationships
     owner = relationship("User", back_populates="owned_projects")

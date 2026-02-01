@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fileService } from "../../services/fileService";
 import { offlineFilesStorage } from "../../services/offlineService";
+import { useWebSocket } from "../../contexts/WebSocketContext";
 import FileUploadMenu, { SelectedFile } from "../files/FileUploadMenu";
 import MyFolderSettingsModal from "./MyFolderSettingsModal";
 
@@ -95,6 +96,7 @@ export default function FilesOverlay({
 }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
+  const { socket } = useWebSocket();
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
   const lastDragEvent = useRef<number>(0);
@@ -439,6 +441,33 @@ export default function FilesOverlay({
     // Only run when overlay becomes visible or autoOpenMyFolder changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, autoOpenMyFolder]);
+
+  // Listen for WebSocket file updates to silently refresh the file list
+  useEffect(() => {
+    if (!socket || !projectId || !visible) return;
+
+    const handleFilesUpdated = (data: any) => {
+      if (data.project_id === projectId) {
+        // Silently refresh the file list
+        console.log("[FilesOverlay] Received files_updated, refreshing...");
+        if (onRefreshAfterUpload) {
+          onRefreshAfterUpload();
+        }
+      }
+    };
+
+    socket.on("files_updated", handleFilesUpdated);
+    socket.on("content_updated", (data: any) => {
+      if (data.project_id === projectId && data.content_type === "files") {
+        handleFilesUpdated(data);
+      }
+    });
+
+    return () => {
+      socket.off("files_updated", handleFilesUpdated);
+      socket.off("content_updated");
+    };
+  }, [socket, projectId, visible, onRefreshAfterUpload]);
 
   const handleFilesUpload = useCallback(
     async (dropped: File[]) => {

@@ -217,6 +217,18 @@ async def emit_content_update(project_id: str, content_type: str = "general"):
             },
             room=room,
         )
+        
+        # Also emit specific files_updated event for file changes
+        if content_type == "files":
+            await sio.emit(
+                "files_updated",
+                {
+                    "project_id": project_id,
+                    "message": "Project files have been updated",
+                },
+                room=room,
+            )
+        
         logger.info(
             f"Emitted content_updated ({content_type}) for project {project_id}"
         )

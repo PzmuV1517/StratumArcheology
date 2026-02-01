@@ -10,8 +10,7 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "../../config/config";
+import api from "../../services/api";
 
 interface FileVersion {
   id: string;
@@ -73,26 +72,12 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const loadTimeMachineData = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
       const url = selectedCategory
-        ? `${apiBaseUrl}/api/files/project/${projectId}/time-machine?category=${selectedCategory}`
-        : `${apiBaseUrl}/api/files/project/${projectId}/time-machine`;
+        ? `/files/project/${projectId}/time-machine?category=${selectedCategory}`
+        : `/files/project/${projectId}/time-machine`;
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to load version history");
-      }
-
-      const result = await response.json();
-      setData(result);
+      const response = await api.get(url);
+      setData(response.data);
     } catch (error) {
       console.error("Error loading time machine data:", error);
       Alert.alert("Error", "Failed to load version history");

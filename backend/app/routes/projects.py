@@ -528,3 +528,51 @@ async def transfer_ownership(
         "message": "Ownership transferred successfully",
         "new_owner_id": new_owner_id,
     }
+
+
+@router.get("/{project_id}/harris-matrix")
+async def get_harris_matrix(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get Harris Matrix data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Return the stored Harris Matrix data or empty default
+    return {
+        "project_id": project_id,
+        "data": project.harris_matrix_data or {},
+    }
+
+
+@router.put("/{project_id}/harris-matrix")
+async def update_harris_matrix(
+    project_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update Harris Matrix data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Store the Harris Matrix data
+    project.harris_matrix_data = payload.get("data", {})
+    db.commit()
+
+    return {
+        "message": "Harris Matrix data updated successfully",
+        "project_id": project_id,
+    }

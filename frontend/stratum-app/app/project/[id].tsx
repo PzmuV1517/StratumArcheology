@@ -170,6 +170,7 @@ export default function ProjectDetailScreen() {
     const handleMemberKicked = (data: any) => {
       console.log("[Project] Received member_kicked event:", data);
       if (data.user_id === currentUser.id && data.project_id === id) {
+        // Only show alert when user is kicked - this is critical
         Alert.alert(
           "Removed from Project",
           "You have been removed from this project.",
@@ -182,13 +183,34 @@ export default function ProjectDetailScreen() {
     const handleRoleChanged = (data: any) => {
       console.log("[Project] Received role_changed event:", data);
       if (data.user_id === currentUser.id && data.project_id === id) {
-        // Refresh project data to get updated role
-        loadProjectData();
-        Alert.alert(
-          "Role Updated",
-          `Your role has been changed to ${data.new_role}.`,
-          [{ text: "OK" }],
-        );
+        // Silently refresh project data to get updated role
+        // Only show alert if role was changed to a lower permission level
+        const roleHierarchy: Record<string, number> = { leader: 3, researcher: 2, guest: 1 };
+        const newRoleLevel = roleHierarchy[data.new_role?.toLowerCase()] || 0;
+        const currentRoleLevel = roleHierarchy[currentRole?.toLowerCase() || ""] || 0;
+        
+        (async () => {
+          try {
+            const [projectData, notesData] = await Promise.all([
+              projectService.getProject(id as string),
+              noteService.getNotes(id as string),
+            ]);
+            setProject(projectData);
+            setNotes(notesData);
+            setMembers(projectData?.members || []);
+          } catch (e) {
+            console.warn("[Project] Silent role update refresh failed:", e);
+          }
+        })();
+        
+        // Only alert if permissions were reduced (might affect what they can do)
+        if (newRoleLevel < currentRoleLevel) {
+          Alert.alert(
+            "Permissions Updated",
+            `Your role has been changed to ${data.new_role}. Some actions may now be restricted.`,
+            [{ text: "OK" }],
+          );
+        }
       }
     };
 
@@ -212,16 +234,25 @@ export default function ProjectDetailScreen() {
     const handleContentUpdated = (data: any) => {
       console.log("[Project] Received content_updated event:", data);
       if (data.project_id === id) {
-        // Silently refresh data without UI disruption - only refresh relevant data
+        // Silently refresh data without UI disruption - only refresh relevant data based on content_type
         (async () => {
           try {
-            const [projectData, notesData] = await Promise.all([
-              projectService.getProject(id as string),
-              noteService.getNotes(id as string),
-            ]);
-            setProject(projectData);
-            setNotes(notesData);
-            setMembers(projectData?.members || []);
+            if (data.content_type === "notes") {
+              const notesData = await noteService.getNotes(id as string);
+              setNotes(notesData);
+            } else if (data.content_type === "files") {
+              // Refresh file list if FilesOverlay is open
+              // The FilesOverlay component will handle its own refresh via useEffect
+            } else {
+              // General update - refresh all
+              const [projectData, notesData] = await Promise.all([
+                projectService.getProject(id as string),
+                noteService.getNotes(id as string),
+              ]);
+              setProject(projectData);
+              setNotes(notesData);
+              setMembers(projectData?.members || []);
+            }
           } catch (e) {
             console.warn("[Project] Silent content refresh failed:", e);
           }
@@ -229,16 +260,26 @@ export default function ProjectDetailScreen() {
       }
     };
 
+    // Listen for file-specific updates (for FilesOverlay and Gallery)
+    const handleFilesUpdated = (data: any) => {
+      console.log("[Project] Received files_updated event:", data);
+      if (data.project_id === id) {
+        // File list components will refresh themselves via their own listeners
+        // This is just for logging/debugging
+      }
+    };
+
     // Listen for timeline updates
     const handleTimelineUpdated = (data: any) => {
       console.log("[Project] Received timeline_updated event:", data);
-      // Timeline component handles its own data loading
+      // Timeline component handles its own data loading via its own WebSocket listener
     };
 
     socket.on("member_kicked", handleMemberKicked);
     socket.on("role_changed", handleRoleChanged);
     socket.on("members_updated", handleMembersUpdated);
     socket.on("content_updated", handleContentUpdated);
+    socket.on("files_updated", handleFilesUpdated);
     socket.on("timeline_updated", handleTimelineUpdated);
 
     // Cleanup listeners on unmount
@@ -249,6 +290,7 @@ export default function ProjectDetailScreen() {
       socket.off("role_changed", handleRoleChanged);
       socket.off("members_updated", handleMembersUpdated);
       socket.off("content_updated", handleContentUpdated);
+      socket.off("files_updated", handleFilesUpdated);
       socket.off("timeline_updated", handleTimelineUpdated);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
