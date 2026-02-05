@@ -337,37 +337,86 @@ export default function OverviewScreen() {
           </Text>
           <TouchableOpacity
             style={styles.modifyButton}
-            onPress={() => router.push("/settings")}
+            onPress={openModifyModal}
           >
             <Text style={styles.modifyButtonText}>Modify</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/modal")}
-          >
-            <Text style={styles.quickActionIcon}>⚙️</Text>
-            <Text style={styles.quickActionText}>New Project</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/join-project")}
-          >
-            <Text style={styles.quickActionIcon}>🔗</Text>
-            <Text style={styles.quickActionText}>Join Project</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/settings")}
-          >
-            <Text style={styles.quickActionIcon}>⚙️</Text>
-            <Text style={styles.quickActionText}>Settings</Text>
-          </TouchableOpacity>
+          {getSelectedActions().map((action) => (
+            <TouchableOpacity
+              key={action.id}
+              style={styles.quickActionButton}
+              onPress={() => router.push(action.route as any)}
+            >
+              <Text style={styles.quickActionIcon}>{action.icon}</Text>
+              <Text style={styles.quickActionText}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
+
+      {/* Modify Quick Actions Modal */}
+      <Modal
+        visible={showModifyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowModifyModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Customize Quick Actions</Text>
+            <Text style={styles.modalSubtitle}>
+              Select 1-4 actions to show on your overview
+            </Text>
+            
+            <View style={styles.actionsList}>
+              {ALL_QUICK_ACTIONS.map((action) => {
+                const isSelected = tempSelectedIds.includes(action.id);
+                return (
+                  <TouchableOpacity
+                    key={action.id}
+                    style={[
+                      styles.actionItem,
+                      isSelected && styles.actionItemSelected,
+                    ]}
+                    onPress={() => toggleAction(action.id)}
+                  >
+                    <Text style={styles.actionItemIcon}>{action.icon}</Text>
+                    <Text style={[
+                      styles.actionItemLabel,
+                      isSelected && styles.actionItemLabelSelected,
+                    ]}>
+                      {action.label}
+                    </Text>
+                    <View style={[
+                      styles.checkbox,
+                      isSelected && styles.checkboxSelected,
+                    ]}>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowModifyModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={saveQuickActions}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -589,5 +638,111 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     fontWeight: "500",
     textAlign: "center",
+  },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  actionsList: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    backgroundColor: "#111111",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  actionItemSelected: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "rgba(255, 42, 42, 0.1)",
+  },
+  actionItemIcon: {
+    fontSize: 22,
+    marginRight: 14,
+  },
+  actionItemLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: "#9A9A9A",
+    fontWeight: "500",
+  },
+  actionItemLabelSelected: {
+    color: "#F5F5F5",
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#3A3A3A",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxSelected: {
+    backgroundColor: "#FF2A2A",
+    borderColor: "#FF2A2A",
+  },
+  checkmark: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#9A9A9A",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#FF2A2A",
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#F5F5F5",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
