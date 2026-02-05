@@ -35,11 +35,17 @@ interface QuickAction {
 
 const ALL_QUICK_ACTIONS: QuickAction[] = [
   { id: "new-project", icon: "➕", label: "New Project", route: "/modal" },
-  { id: "join-project", icon: "🔗", label: "Join Project", route: "/join-project" },
+  { id: "join-project", icon: "🔗", label: "Join", route: "/join-project" },
   { id: "settings", icon: "⚙️", label: "Settings", route: "/settings" },
-  { id: "projects", icon: "📁", label: "All Projects", route: "/(tabs)/projects" },
-  { id: "voice-note", icon: "🎙️", label: "Voice Note", route: "/create-note?voice=true" },
-  { id: "new-note", icon: "📝", label: "New Note", route: "/create-note" },
+  { id: "projects", icon: "📁", label: "Projects", route: "/(tabs)/projects" },
+  { id: "voice-note", icon: "🎙️", label: "Voice Note", route: "/voice-note" },
+  { id: "overview", icon: "🏠", label: "Overview", route: "/(tabs)/overview" },
+  { id: "matrix", icon: "📊", label: "Matrix", route: "/(tabs)/projects" },
+  { id: "timeline", icon: "📅", label: "Timeline", route: "/(tabs)/projects" },
+  { id: "camera", icon: "📷", label: "Camera", route: "/settings" },
+  { id: "files", icon: "📂", label: "Files", route: "/(tabs)/projects" },
+  { id: "members", icon: "👥", label: "Team", route: "/(tabs)/projects" },
+  { id: "export", icon: "📤", label: "Export", route: "/settings" },
 ];
 
 const DEFAULT_ACTIONS = ["new-project", "join-project", "settings"];
@@ -366,39 +372,53 @@ export default function OverviewScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Customize Quick Actions</Text>
-            <Text style={styles.modalSubtitle}>
-              Select 1-4 actions to show on your overview
-            </Text>
             
-            <View style={styles.actionsList}>
-              {ALL_QUICK_ACTIONS.map((action) => {
-                const isSelected = tempSelectedIds.includes(action.id);
-                return (
-                  <TouchableOpacity
-                    key={action.id}
-                    style={[
-                      styles.actionItem,
-                      isSelected && styles.actionItemSelected,
-                    ]}
-                    onPress={() => toggleAction(action.id)}
-                  >
-                    <Text style={styles.actionItemIcon}>{action.icon}</Text>
-                    <Text style={[
-                      styles.actionItemLabel,
-                      isSelected && styles.actionItemLabelSelected,
-                    ]}>
-                      {action.label}
-                    </Text>
-                    <View style={[
-                      styles.checkbox,
-                      isSelected && styles.checkboxSelected,
-                    ]}>
-                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+            {/* Selection counter */}
+            <View style={styles.selectionCounter}>
+              <Text style={styles.selectionCounterText}>
+                {tempSelectedIds.length}/4 selected
+              </Text>
+              {tempSelectedIds.length >= 4 && (
+                <Text style={styles.maxReachedText}>Maximum reached</Text>
+              )}
             </View>
+            
+            <ScrollView style={styles.actionsScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.actionsList}>
+                {ALL_QUICK_ACTIONS.map((action) => {
+                  const isSelected = tempSelectedIds.includes(action.id);
+                  const isDisabled = !isSelected && tempSelectedIds.length >= 4;
+                  return (
+                    <TouchableOpacity
+                      key={action.id}
+                      style={[
+                        styles.actionItem,
+                        isSelected && styles.actionItemSelected,
+                        isDisabled && styles.actionItemDisabled,
+                      ]}
+                      onPress={() => toggleAction(action.id)}
+                      disabled={isDisabled}
+                    >
+                      <Text style={[styles.actionItemIcon, isDisabled && styles.actionItemIconDisabled]}>{action.icon}</Text>
+                      <Text style={[
+                        styles.actionItemLabel,
+                        isSelected && styles.actionItemLabelSelected,
+                        isDisabled && styles.actionItemLabelDisabled,
+                      ]}>
+                        {action.label}
+                      </Text>
+                      <View style={[
+                        styles.checkbox,
+                        isSelected && styles.checkboxSelected,
+                        isDisabled && styles.checkboxDisabled,
+                      ]}>
+                        {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -617,11 +637,12 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 12,
   },
   quickActionButton: {
-    flex: 1,
+    width: "47%",
     backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 16,
@@ -630,13 +651,13 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
   },
   quickActionIcon: {
-    fontSize: 24,
+    fontSize: 28,
     marginBottom: 8,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#F5F5F5",
-    fontWeight: "500",
+    fontWeight: "600",
     textAlign: "center",
   },
   // Modal styles
@@ -660,18 +681,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: "#F5F5F5",
-    marginBottom: 8,
+    marginBottom: 16,
     textAlign: "center",
   },
-  modalSubtitle: {
-    fontSize: 14,
+  selectionCounter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#111111",
+    borderRadius: 10,
+  },
+  selectionCounterText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FF2A2A",
+  },
+  maxReachedText: {
+    fontSize: 12,
     color: "#9A9A9A",
-    marginBottom: 24,
-    textAlign: "center",
+    fontStyle: "italic",
+  },
+  actionsScrollView: {
+    maxHeight: 350,
+    marginBottom: 16,
   },
   actionsList: {
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
   },
   actionItem: {
     flexDirection: "row",
@@ -686,9 +725,15 @@ const styles = StyleSheet.create({
     borderColor: "#FF2A2A",
     backgroundColor: "rgba(255, 42, 42, 0.1)",
   },
+  actionItemDisabled: {
+    opacity: 0.4,
+  },
   actionItemIcon: {
     fontSize: 22,
     marginRight: 14,
+  },
+  actionItemIconDisabled: {
+    opacity: 0.5,
   },
   actionItemLabel: {
     flex: 1,
@@ -698,6 +743,9 @@ const styles = StyleSheet.create({
   },
   actionItemLabelSelected: {
     color: "#F5F5F5",
+  },
+  actionItemLabelDisabled: {
+    color: "#5A5A5A",
   },
   checkbox: {
     width: 24,
@@ -711,6 +759,9 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     backgroundColor: "#FF2A2A",
     borderColor: "#FF2A2A",
+  },
+  checkboxDisabled: {
+    borderColor: "#2A2A2A",
   },
   checkmark: {
     color: "#FFFFFF",
