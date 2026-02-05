@@ -47,6 +47,53 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 
 # =============================================================================
+# PROFILE PICTURE UPLOAD
+# =============================================================================
+
+
+@router.post("/profile-picture")
+async def upload_profile_picture(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a profile picture for the current user"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}",
+        )
+
+    # Limit file size (5MB)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 5MB.",
+        )
+
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"profile_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    storage_path = f"profiles/{current_user.id}/{filename}"
+
+    # Upload to MinIO
+    await minio_client.upload_file(content, storage_path, file.content_type)
+
+    # Get public URL
+    url = await minio_client.get_presigned_url(storage_path)
+
+    # Update user's photo_url
+    current_user.photo_url = url
+    db.commit()
+    db.refresh(current_user)
+
+    return {"url": url, "filename": filename}
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 

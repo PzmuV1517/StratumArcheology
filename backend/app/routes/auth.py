@@ -224,10 +224,28 @@ async def update_profile(
         current_user.display_name = request.display_name
     if request.photo_url is not None:
         current_user.photo_url = request.photo_url
+    if request.bio is not None:
+        current_user.bio = request.bio
 
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a user's public profile by ID"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
 
 
 @router.get("/users/search")

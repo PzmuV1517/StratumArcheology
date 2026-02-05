@@ -151,6 +151,7 @@ export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(user?.display_name || "");
   const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
+  const [newBio, setNewBio] = useState(user?.bio || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -469,12 +470,15 @@ export default function SettingsScreen() {
         }
       }
 
-      const updates: { display_name?: string; photo_url?: string } = {};
+      const updates: { display_name?: string; photo_url?: string; bio?: string } = {};
       if (newDisplayName !== user?.display_name) {
         updates.display_name = newDisplayName;
       }
       if (photoUrl !== user?.photo_url) {
         updates.photo_url = photoUrl;
+      }
+      if (newBio !== (user?.bio || "")) {
+        updates.bio = newBio;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -492,6 +496,14 @@ export default function SettingsScreen() {
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const openProfileModal = () => {
+    setNewDisplayName(user?.display_name || "");
+    setNewPhotoUrl(user?.photo_url || "");
+    setNewBio(user?.bio || "");
+    setSelectedImage(null);
+    setShowProfileModal(true);
   };
 
   // Group offline files by project
@@ -533,12 +545,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => {
-              setNewDisplayName(user?.display_name || "");
-              setNewPhotoUrl(user?.photo_url || "");
-              setSelectedImage(null);
-              setShowProfileModal(true);
-            }}
+            onPress={openProfileModal}
           >
             <View style={styles.profilePreview}>
               {user?.photo_url ? (
@@ -921,6 +928,23 @@ export default function SettingsScreen() {
                 autoCapitalize="words"
               />
             </View>
+
+            {/* Bio */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bio</Text>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={newBio}
+                onChangeText={setNewBio}
+                placeholder="Tell us about yourself..."
+                placeholderTextColor="#666"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={300}
+              />
+              <Text style={styles.charCount}>{newBio.length}/300</Text>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -1208,6 +1232,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
+  },
+  bioInput: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 12,
+    padding: 16,
+    color: "#F5F5F5",
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    height: 100,
+    textAlignVertical: "top",
+  },
+  charCount: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "right",
+    marginTop: 4,
   },
   // Connection & Sync styles
   connectionRow: {

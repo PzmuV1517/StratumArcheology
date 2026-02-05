@@ -10,15 +10,19 @@ import {
   Image,
   Alert,
   Clipboard,
+  ActivityIndicator,
 } from "react-native";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { projectService } from "../../services/projectService";
+import api from "../../services/api";
 
 interface Member {
   id: string;
   display_name: string;
   email: string;
   role: "LEADER" | "RESEARCHER" | "GUEST" | "leader" | "researcher" | "guest";
+  photo_url?: string;
+  bio?: string;
 }
 
 interface Props {
@@ -89,6 +93,49 @@ export default function MembersModal({
   } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Profile viewing state
+  const [viewingProfile, setViewingProfile] = useState<{
+    id: string;
+    display_name: string;
+    email: string;
+    photo_url?: string;
+    bio?: string;
+    role: string;
+  } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Fetch and show user profile
+  const viewProfile = async (member: Member) => {
+    setLoadingProfile(true);
+    setViewingProfile({
+      id: member.id,
+      display_name: member.display_name,
+      email: member.email,
+      photo_url: member.photo_url,
+      bio: member.bio,
+      role: getMemberRole(member),
+    });
+    
+    // Try to fetch the full profile with bio if not already present
+    if (!member.bio && !member.photo_url) {
+      try {
+        const response = await api.get(`/auth/users/${member.id}`);
+        setViewingProfile({
+          id: member.id,
+          display_name: response.data.display_name || member.display_name,
+          email: response.data.email || member.email,
+          photo_url: response.data.photo_url,
+          bio: response.data.bio,
+          role: getMemberRole(member),
+        });
+      } catch (e) {
+        // Ignore errors, just show what we have
+        console.log("Could not fetch full profile:", e);
+      }
+    }
+    setLoadingProfile(false);
+  };
 
   // Role hierarchy for permission checks
   const roleHierarchy: Record<string, number> = {
