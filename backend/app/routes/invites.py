@@ -1,3 +1,7 @@
+"""
+Docstring for backend.app.routes.invites
+"""
+
 import secrets
 import string
 from datetime import datetime, timedelta
