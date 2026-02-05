@@ -13,6 +13,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { Project } from "../../src/services/projectService.types";
 
 interface Activity {
@@ -257,7 +258,7 @@ export default function ProjectsScreen() {
       )}
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
-        <Text style={styles.fabText}>+</Text>
+        <IconSymbol name="plus" size={28} color="#F5F5F5" />
       </TouchableOpacity>
 
       <ProjectActionModal
@@ -401,7 +402,6 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
-  fabText: { fontSize: 32, color: "#F5F5F5", lineHeight: 36, fontWeight: "300" },
 
   // My Stuff styles
   myStuffContainer: {
