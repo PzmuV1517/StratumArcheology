@@ -1,5 +1,5 @@
 """
-I
+Invite management routes for creating and accepting project invites. This includes generating unique invite codes, validating invite tokens, and handling membership additions when invites are accepted.
 """
 
 import secrets
