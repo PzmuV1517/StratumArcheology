@@ -324,7 +324,7 @@ export default function MembersModal({
             )}
           </View>
 
-          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+          <ScrollView style={{ maxHeight: "60%" }}>
             {members.length > 0 ? (
               members.map((m) => {
                 const memberRole = getMemberRole(m);
@@ -422,6 +422,7 @@ export default function MembersModal({
                 </Text>
               </View>
             )}
+          </ScrollView>
 
           {/* Transfer ownership confirmation modal */}
           {showTransferConfirm && (
@@ -724,7 +725,6 @@ export default function MembersModal({
           )}
 
           {manageError && <Text style={styles.errorText}>{manageError}</Text>}
-          </ScrollView>
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>

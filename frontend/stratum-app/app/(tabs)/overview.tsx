@@ -9,11 +9,11 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "@/services/projectService";
-import { useAuth } from "@/contexts/AuthContext";
-import type { Project } from "@/services/projectService.types";
+import { projectService } from "../../src/services/projectService";
+import { useAuth } from "../../src/contexts/AuthContext";
+import type { Project } from "../../src/services/projectService.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "@/config/config";
+import { config } from "../../src/config/config";
 
 interface Activity {
   id: string;

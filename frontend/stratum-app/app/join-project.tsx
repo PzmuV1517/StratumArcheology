@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { projectService } from "@/services/projectService";
+import { projectService } from "../src/services/projectService";
 
 type JoinMethod = "link" | "code";
 

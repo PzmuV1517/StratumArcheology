@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { noteService } from "@/services/noteService";
-import AudioPanel from "@/components/data/AudioPanel"; // platform auto-resolution
+import { noteService } from "../../src/services/noteService";
+import AudioPanel from "../../src/components/data/AudioPanel"; // platform auto-resolution
 
 export default function VoiceNoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

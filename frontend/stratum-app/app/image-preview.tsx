@@ -9,9 +9,9 @@ import {
   Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { fileService } from "@/services/fileService";
+import { fileService } from "../src/services/fileService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import PhotoPanel from "@/components/data/PhotoPanel";
+import PhotoPanel from "../src/components/data/PhotoPanel";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();

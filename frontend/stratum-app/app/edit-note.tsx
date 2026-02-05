@@ -11,8 +11,8 @@ import {
   Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { noteService } from "@/services/noteService";
-import { useAutoSave, SaveStatus } from "@/hooks/useAutoSave";
+import { noteService } from "../src/services/noteService";
+import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
 
 interface Note {
   id: string;

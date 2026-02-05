@@ -10,7 +10,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { projectService } from "@/services/projectService";
+import { projectService } from "../src/services/projectService";
 
 export default function CreateProjectModal() {
   const [name, setName] = useState("");

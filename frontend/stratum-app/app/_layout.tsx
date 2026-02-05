@@ -6,9 +6,9 @@ import { useEffect } from "react";
 import { View, Platform, StyleSheet } from "react-native";
 import AuthRedirector from "./AuthRedirector";
 
-import { AuthProvider } from "@/contexts/AuthContext";
-import { WebSocketProvider } from "@/contexts/WebSocketContext";
-import ConnectionStatusIndicator from "@/components/common/OfflineBanner";
+import { AuthProvider } from "../src/contexts/AuthContext";
+import { WebSocketProvider } from "../src/contexts/WebSocketContext";
+import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {

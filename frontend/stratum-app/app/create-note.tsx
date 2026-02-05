@@ -12,8 +12,8 @@ import {
   Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { noteService } from "@/services/noteService";
-import { useAutoSave } from "@/hooks/useAutoSave";
+import { noteService } from "../src/services/noteService";
+import { useAutoSave } from "../src/hooks/useAutoSave";
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
 if (Platform.OS !== "web") {

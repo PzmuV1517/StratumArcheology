@@ -3,7 +3,7 @@ import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { BlurView } from "expo-blur";
 
-import { HapticTab } from "@/components/ui/haptic-tab";
+import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 /**

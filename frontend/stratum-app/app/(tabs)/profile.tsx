@@ -13,10 +13,10 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../../src/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "@/services/api";
-import { config } from "@/config/config";
+import api from "../../src/services/api";
+import { config } from "../../src/config/config";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();

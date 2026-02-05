@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useSegments, usePathname } from "expo-router";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../src/contexts/AuthContext";
 
 /**
  * AuthRedirector handles auth-based navigation:

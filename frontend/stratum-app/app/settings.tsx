@@ -14,21 +14,21 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/contexts/AuthContext";
-import api from "@/services/api";
+import { useAuth } from "../src/contexts/AuthContext";
+import api from "../src/services/api";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import {
   offlineFilesStorage,
   recentProjectsCache,
-} from "@/services/offlineService";
+} from "../src/services/offlineService";
 import {
   offlineQueue,
   getOfflineStorageStats,
   OfflineStorageStats,
-} from "@/services/offlineQueueService";
-import { OfflineFile } from "@/db/schema";
+} from "../src/services/offlineQueueService";
+import { OfflineFile } from "../src/db/schema";
 
 // Storage bar component
 function StorageBar({
