@@ -1,5 +1,6 @@
 import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 export default function DeleteConfirmModal({
   visible,
@@ -69,6 +70,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#333",
+    width: "100%",
+  },
+  modalCardGlass: {
+    borderRadius: 20,
+    padding: 20,
     width: "100%",
   },
   modalTitle: { color: "#F5F5F5", fontWeight: "700", fontSize: 18, marginBottom: 6 },

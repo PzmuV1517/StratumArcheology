@@ -309,7 +309,7 @@ export default function MembersModal({
       return (
         <GlassView
           style={[styles.modalCard, styles.glassCard, style]}
-          glassStyle="regular"
+          glassEffectStyle="regular"
         >
           {children}
         </GlassView>

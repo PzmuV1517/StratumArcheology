@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
+  Platform,
 } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 interface Props {
   visible: boolean;
@@ -68,6 +70,56 @@ export default function ProjectMenuModal({
         <View style={styles.menuBackdrop}>
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+            <GlassView style={styles.menuCardGlass} glassEffectStyle="regular">
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  onClose();
+                  onOpenMembers();
+                }}
+              >
+                <Text style={styles.menuItemText}>Members ({membersCount})</Text>
+              </TouchableOpacity>
+              {canChangeSettings ? (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onOpenSettings();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>Settings</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.menuItem, styles.disabledMenuItem]}>
+                  <Text style={[styles.menuItemText, styles.disabledText]}>
+                    Settings
+                  </Text>
+                  <Text style={styles.permissionHint}>
+                    Only the leader can change settings
+                  </Text>
+                </View>
+              )}
+              {onExitProject && (
+                <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
+                  <Text style={[styles.menuItemText, styles.exitButtonText]}>
+                    Exit Project
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.menuItem,
+                  styles.closeButton,
+                  { justifyContent: "center" },
+                ]}
+                onPress={onClose}
+              >
+                <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
+              </TouchableOpacity>
+            </GlassView>
+          ) : (
           <View style={styles.menuCard}>
             <TouchableOpacity
               style={styles.menuItem}
@@ -116,6 +168,7 @@ export default function ProjectMenuModal({
               <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
             </TouchableOpacity>
           </View>
+          )}
         </View>
       </Modal>
 
@@ -198,6 +251,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#333",
+    width: "100%",
+  },
+  menuCardGlass: {
+    borderRadius: 20,
+    padding: 20,
     width: "100%",
   },
   menuItem: { paddingVertical: 12 },

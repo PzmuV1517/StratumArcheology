@@ -1287,26 +1287,125 @@ export default function ProjectDetailScreen() {
       </ScrollView>
 
       {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
-      <View style={styles.bottomTabContainer}>
-        <TouchableOpacity
-          style={[
-            styles.bottomTab,
-            activeTab === "overview" && styles.activeBottomTab,
-          ]}
-          onPress={() => setActiveTab("overview")}
-        >
-          <Text
+      {isLiquidGlassAvailable() ? (
+        <GlassView style={styles.bottomTabContainerGlass} glassEffectStyle="regular">
+          <TouchableOpacity
             style={[
-              styles.bottomTabText,
-              activeTab === "overview" && styles.activeBottomTabText,
+              styles.bottomTab,
+              activeTab === "overview" && styles.activeBottomTab,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
+            onPress={() => setActiveTab("overview")}
           >
-            Overview
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.bottomTabText,
+                activeTab === "overview" && styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              Overview
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.bottomTab, activeTab === "notes" && styles.activeBottomTab]}
+            onPress={() => setActiveTab("notes")}
+          >
+            <Text
+              style={[
+                styles.bottomTabText,
+                activeTab === "notes" && styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              Notes
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.bottomTab,
+              activeTab === "artefacts" && styles.activeBottomTab,
+            ]}
+            onPress={() => setActiveTab("artefacts")}
+          >
+            <Text
+              style={[
+                styles.bottomTabText,
+                activeTab === "artefacts" && styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              Artefacts
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.bottomTab,
+              activeTab === "matrix" && styles.activeBottomTab,
+            ]}
+            onPress={() => setActiveTab("matrix")}
+          >
+            <Text
+              style={[
+                styles.bottomTabText,
+                activeTab === "matrix" && styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              Matrix
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.bottomTab,
+              styles.moreTab,
+              ["gallery", "gps", "history", "tools"].includes(activeTab) &&
+                styles.activeBottomTab,
+            ]}
+            onPress={() => setShowMoreMenu(!showMoreMenu)}
+          >
+            <Text
+              style={[
+                styles.bottomTabText,
+                ["gallery", "gps", "history", "tools"].includes(activeTab) &&
+                  styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              More ▾
+            </Text>
+          </TouchableOpacity>
+        </GlassView>
+      ) : (
+        <View style={styles.bottomTabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.bottomTab,
+              activeTab === "overview" && styles.activeBottomTab,
+            ]}
+            onPress={() => setActiveTab("overview")}
+          >
+            <Text
+              style={[
+                styles.bottomTabText,
+                activeTab === "overview" && styles.activeBottomTabText,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              Overview
+            </Text>
+          </TouchableOpacity>
         <TouchableOpacity
           style={[styles.bottomTab, activeTab === "notes" && styles.activeBottomTab]}
           onPress={() => setActiveTab("notes")}
@@ -1384,7 +1483,8 @@ export default function ProjectDetailScreen() {
             More ▾
           </Text>
         </TouchableOpacity>
-      </View>
+        </View>
+      )}
 
       {/* More menu dropdown */}
       {showMoreMenu && (
@@ -1397,7 +1497,7 @@ export default function ProjectDetailScreen() {
           {isLiquidGlassAvailable() ? (
             <GlassView
               style={[styles.moreMenu, styles.moreMenuGlass]}
-              glassStyle="regular"
+              glassEffectStyle="regular"
             >
               <TouchableOpacity
                 style={[
@@ -2025,6 +2125,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderTopWidth: 1,
     borderTopColor: "#2A2A2A",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  bottomTabContainerGlass: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -2742,9 +2849,8 @@ const styles = StyleSheet.create({
     }),
   },
   moreMenuGlass: {
-    backgroundColor: "rgba(30, 30, 26, 0.6)",
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    overflow: "hidden",
+    borderWidth: 0,
+    borderRadius: 20,
   },
   moreMenuItem: {
     flexDirection: "row",

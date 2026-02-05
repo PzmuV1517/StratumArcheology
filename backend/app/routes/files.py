@@ -50,6 +50,14 @@ router = APIRouter(prefix="/files", tags=["files"])
 # HELPER FUNCTIONS
 # =============================================================================
 
+def __compute_checksum(file: UploadFile) -> str:
+    """Compute SHA256 checksum of an uploaded file"""
+    hash_sha256 = hashlib.sha256()
+    for chunk in iter(lambda: file.file.read(8192), b""):
+        hash_sha256.update(chunk)
+    # Reset file pointer to the beginning after reading
+    file.file.seek(0)
+    return hash_sha256.hexdigest()
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
     """Check if a user can access a file based on privacy settings"""
@@ -1517,3 +1525,4 @@ async def get_files_info_batch(
     accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
 
     return accessible_nodes
+

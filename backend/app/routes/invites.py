@@ -44,7 +44,6 @@ def generate_unique_code(
     # If we can't generate unique after max attempts, use longer random
     return generate_short_code(project_id, length=10)
 
-
 @router.post(
     "/projects/{project_id}/invites",
     response_model=InviteResponse,
