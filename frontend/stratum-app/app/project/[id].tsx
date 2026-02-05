@@ -10,7 +10,10 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import {
   useLocalSearchParams,
@@ -985,19 +988,22 @@ export default function ProjectDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Stack.Screen options={{ title: "Loading..." }} />
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading project details...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <Stack.Screen options={{ title: "Loading..." }} />
+          <ActivityIndicator size="large" color="#FF2A2A" />
+          <Text style={styles.loadingText}>Loading project details...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!project) {
     return (
-      <View style={styles.centerContainer}>
-        <Stack.Screen
-          options={{
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <Stack.Screen
+            options={{
             title: "Project Not Found",
             headerStyle: { backgroundColor: "#111111" },
             headerTintColor: "#FF2A2A",
@@ -1019,14 +1025,16 @@ export default function ProjectDetailScreen() {
         >
           <Text style={styles.backButtonText}>Go to Projects</Text>
         </TouchableOpacity>
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen
-        options={{
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
           // Remove visible title next to back while keeping header spacing
           headerTitle: " ",
           headerStyle: { backgroundColor: "#111111" },
@@ -1038,20 +1046,6 @@ export default function ProjectDetailScreen() {
           },
           headerBackTitle: "Projects",
           headerShown: true,
-          // On iOS, hide custom back button to avoid duplicate with native back
-          headerLeft:
-            Platform.OS === "ios"
-              ? undefined
-              : () => (
-                  <TouchableOpacity
-                    onPress={() => router.replace("/(tabs)")}
-                    style={styles.headerBackButton}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.headerBackIcon}>‹</Text>
-                  </TouchableOpacity>
-                ),
           headerBackVisible: true,
           presentation: "card",
           // Right side: Files icon (left) + Burger (right)
@@ -1088,7 +1082,12 @@ export default function ProjectDetailScreen() {
 
       <ScrollView
         style={styles.content}
-        scrollEnabled={activeTab !== "matrix"}
+        contentContainerStyle={
+          ["matrix", "gps", "history", "tools"].includes(activeTab)
+            ? { flex: 1 }
+            : undefined
+        }
+        scrollEnabled={!["matrix", "gps", "history", "tools"].includes(activeTab)}
         refreshControl={
           Platform.OS !== "web" ? (
             <RefreshControl
@@ -1102,7 +1101,11 @@ export default function ProjectDetailScreen() {
         }
       >
         {/* Tab Content */}
-        <View style={styles.tabContent}>
+        <View
+          style={[
+            ["matrix", "gps", "history", "tools"].includes(activeTab) && { flex: 1 },
+          ]}
+        >
           {activeTab === "overview" ? (
             <View style={styles.overviewContainer}>
               {/* Hero Section */}
@@ -1174,47 +1177,26 @@ export default function ProjectDetailScreen() {
             />
           ) : activeTab === "gps" ? (
             <View
-              style={
-                Platform.OS === "web"
-                  ? ({
-                      height: "calc(100vh - 280px)",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                    } as any)
-                  : {
-                      height: 520,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                    }
-              }
+              style={{
+                flex: 1,
+                borderRadius: 12,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+              }}
             >
               <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
             </View>
           ) : activeTab === "matrix" ? (
             <View
-              style={
-                Platform.OS === "web"
-                  ? ({
-                      height: "calc(100vh - 280px)",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    } as any)
-                  : {
-                      height: 520,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    }
-              }
+              style={{
+                flex: 1,
+                borderRadius: 12,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                backgroundColor: "#0A0A0A",
+              }}
             >
               {Platform.OS === "web" ? (
                 <div style={{ height: "100%", width: "100%" }}>
@@ -1225,60 +1207,38 @@ export default function ProjectDetailScreen() {
                     })}
                 </div>
               ) : (
-                HarrisMatrixComponent &&
-                React.createElement(HarrisMatrixComponent, {
-                  projectId: project?.id as string,
-                  canEdit: canEditMatrix,
-                })
+                <View style={{ flex: 1, width: "100%" }}>
+                  {HarrisMatrixComponent &&
+                    React.createElement(HarrisMatrixComponent, {
+                      projectId: project?.id as string,
+                      canEdit: canEditMatrix,
+                    })}
+                </View>
               )}
             </View>
           ) : activeTab === "history" ? (
             <View
-              style={
-                Platform.OS === "web"
-                  ? ({
-                      height: "calc(100vh - 280px)",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    } as any)
-                  : {
-                      flex: 1,
-                      minHeight: 520,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    }
-              }
+              style={{
+                flex: 1,
+                borderRadius: 12,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                backgroundColor: "#0A0A0A",
+              }}
             >
               <TimeMachineTab projectId={project?.id as string} />
             </View>
           ) : activeTab === "tools" ? (
             <View
-              style={
-                Platform.OS === "web"
-                  ? ({
-                      height: "calc(100vh - 280px)",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    } as any)
-                  : {
-                      flex: 1,
-                      minHeight: 520,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    }
-              }
+              style={{
+                flex: 1,
+                borderRadius: 12,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#2A2A2A",
+                backgroundColor: "#0A0A0A",
+              }}
             >
               <ToolsTab projectId={project?.id as string} />
             </View>
@@ -1286,102 +1246,97 @@ export default function ProjectDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
+      {/* Bottom Tab Navigation: Instagram-style with icons */}
       <View style={styles.bottomTabContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#111111" />
         <TouchableOpacity
-          style={[
-            styles.bottomTab,
-            activeTab === "overview" && styles.activeBottomTab,
-          ]}
+          style={styles.bottomTab}
           onPress={() => setActiveTab("overview")}
         >
+          <IconSymbol
+            name="house.fill"
+            size={24}
+            color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
+          />
           <Text
             style={[
-              styles.bottomTabText,
-              activeTab === "overview" && styles.activeBottomTabText,
+              styles.bottomTabLabel,
+              activeTab === "overview" && styles.activeBottomTabLabel,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
             Overview
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.bottomTab, activeTab === "notes" && styles.activeBottomTab]}
+          style={styles.bottomTab}
           onPress={() => setActiveTab("notes")}
         >
+          <IconSymbol
+            name="note.text"
+            size={24}
+            color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
+          />
           <Text
             style={[
-              styles.bottomTabText,
-              activeTab === "notes" && styles.activeBottomTabText,
+              styles.bottomTabLabel,
+              activeTab === "notes" && styles.activeBottomTabLabel,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
             Notes
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[
-            styles.bottomTab,
-            activeTab === "artefacts" && styles.activeBottomTab,
-          ]}
+          style={styles.bottomTab}
           onPress={() => setActiveTab("artefacts")}
         >
+          <IconSymbol
+            name="cube.fill"
+            size={24}
+            color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
+          />
           <Text
             style={[
-              styles.bottomTabText,
-              activeTab === "artefacts" && styles.activeBottomTabText,
+              styles.bottomTabLabel,
+              activeTab === "artefacts" && styles.activeBottomTabLabel,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
             Artefacts
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[
-            styles.bottomTab,
-            activeTab === "matrix" && styles.activeBottomTab,
-          ]}
+          style={styles.bottomTab}
           onPress={() => setActiveTab("matrix")}
         >
+          <IconSymbol
+            name="chart.bar.fill"
+            size={24}
+            color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
+          />
           <Text
             style={[
-              styles.bottomTabText,
-              activeTab === "matrix" && styles.activeBottomTabText,
+              styles.bottomTabLabel,
+              activeTab === "matrix" && styles.activeBottomTabLabel,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
             Matrix
           </Text>
         </TouchableOpacity>
-        {/* More dropdown button */}
         <TouchableOpacity
-          style={[
-            styles.bottomTab,
-            styles.moreTab,
-            ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-              styles.activeBottomTab,
-          ]}
+          style={styles.bottomTab}
           onPress={() => setShowMoreMenu(!showMoreMenu)}
         >
+          <IconSymbol
+            name="ellipsis.circle.fill"
+            size={24}
+            color={["gallery", "gps", "history", "tools"].includes(activeTab) ? "#FF2A2A" : "#9A9A9A"}
+          />
           <Text
             style={[
-              styles.bottomTabText,
-              ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                styles.activeBottomTabText,
+              styles.bottomTabLabel,
+              ["gallery", "gps", "history", "tools"].includes(activeTab) && styles.activeBottomTabLabel,
             ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
-            More ▾
+            More
           </Text>
         </TouchableOpacity>
       </View>
@@ -1915,11 +1870,17 @@ export default function ProjectDetailScreen() {
           setCurrentConflict(null);
         }}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#111111",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
   container: {
     flex: 1,
     backgroundColor: "#111111",
@@ -2025,29 +1986,38 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderTopWidth: 1,
     borderTopColor: "#2A2A2A",
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === "android" ? 12 : 8,
     paddingHorizontal: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 12,
+      },
+    }),
   },
   bottomTab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 8,
+    paddingVertical: 4,
+    gap: 4,
   },
-  activeBottomTab: {
-    backgroundColor: "#FF2A2A",
-  },
-  bottomTabText: {
-    fontSize: 12,
+  bottomTabLabel: {
+    fontSize: 10,
     color: "#9A9A9A",
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    textAlign: "center",
+    fontWeight: "500",
+    letterSpacing: 0.2,
+    marginTop: 2,
   },
-  activeBottomTabText: {
-    color: "#F5F5F5",
+  activeBottomTabLabel: {
+    color: "#FF2A2A",
+    fontWeight: "600",
   },
   overviewContainer: {
     padding: 16,
@@ -2697,10 +2667,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   // More dropdown menu styles
-  moreTab: {
-    borderLeftWidth: 1,
-    borderLeftColor: "#2A2A2A",
-  },
   moreMenuOverlay: {
     position: "absolute",
     bottom: 60,
