@@ -1,5 +1,5 @@
 """
-Docstring for backend.app.routes.invites
+I
 """
 
 import secrets
