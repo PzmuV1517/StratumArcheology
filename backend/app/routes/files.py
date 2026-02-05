@@ -94,6 +94,7 @@ class FileWithVersionsResponse(BaseModel):
     type: str
     mime_type: str | None
     size: str | None
+    deleted: bool = False
     current_version: int
     created_at: datetime
     updated_at: datetime

@@ -572,6 +572,16 @@ async def update_harris_matrix(
     project.harris_matrix_data = payload.get("data", {})
     db.commit()
 
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type="HARRIS_MATRIX_UPDATED",
+        description=f"Harris Matrix updated by {current_user.email}",
+        user_id=str(current_user.id),
+        metadata={"updated_by": current_user.email},
+    )
+
     return {
         "message": "Harris Matrix data updated successfully",
         "project_id": project_id,

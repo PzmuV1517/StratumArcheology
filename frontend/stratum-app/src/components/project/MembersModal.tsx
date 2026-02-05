@@ -11,6 +11,7 @@ import {
   Alert,
   Clipboard,
 } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { projectService } from "../../services/projectService";
 
 interface Member {
@@ -301,6 +302,23 @@ export default function MembersModal({
     }
   };
 
+  // GlassCard wrapper for iOS 26+ Liquid Glass effect
+  const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+    // Use native Liquid Glass on iOS 26+ if available
+    if (isLiquidGlassAvailable()) {
+      return (
+        <GlassView
+          style={[styles.modalCard, styles.glassCard, style]}
+          glassStyle="regular"
+        >
+          {children}
+        </GlassView>
+      );
+    }
+    // Fallback to regular View on other platforms
+    return <View style={[styles.modalCard, style]}>{children}</View>;
+  };
+
   return (
     <Modal
       visible={visible}
@@ -309,7 +327,7 @@ export default function MembersModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalBackdrop}>
-        <View style={[styles.modalCard, { maxHeight: "85%" }]}>
+        <GlassCard style={{ maxHeight: "85%" }}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <Text style={styles.sectionTitle}>Team Members</Text>
             {canManage && (
@@ -731,7 +749,7 @@ export default function MembersModal({
               <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </GlassCard>
       </View>
     </Modal>
   );
@@ -753,6 +771,11 @@ const styles = StyleSheet.create({
     borderColor: "#333",
     width: "100%",
     maxWidth: 600,
+  },
+  glassCard: {
+    backgroundColor: "rgba(26, 26, 24, 0.75)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
   },
   sectionHeader: {
     flexDirection: "row",

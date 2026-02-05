@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { BlurView } from "expo-blur";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -11,7 +12,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
  * Tab order: Overview (landing), Projects, Profile, Settings
  * Auth is handled by AuthRedirector at the root level
  *
- * Uses iOS-style liquid glass aesthetic with blur effects
+ * Uses iOS 26+ Liquid Glass effect when available, falls back to blur
  */
 export default function TabLayout() {
   return (
@@ -22,7 +23,12 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: () =>
-          Platform.OS === "ios" ? (
+          isLiquidGlassAvailable() ? (
+            <GlassView
+              style={StyleSheet.absoluteFill}
+              glassStyle="regular"
+            />
+          ) : Platform.OS === "ios" ? (
             <BlurView
               intensity={50}
               tint="systemChromeMaterialDark"

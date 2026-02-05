@@ -4,6 +4,7 @@ export * from "./noteService.core";
 
 /**
  * Define the expected service methods for TypeScript
+ * Note: uploadAudio signature differs between web (Blob) and native (URI string)
  */
 export interface NoteServiceMethods {
   getNotes: (projectId: string) => Promise<any[]>;
@@ -11,6 +12,10 @@ export interface NoteServiceMethods {
   createNote: (data: any) => Promise<any>;
   updateNote: (noteId: string, data: any) => Promise<any>;
   deleteNote: (noteId: string) => Promise<void>;
+  uploadAudio: (noteId: string, audioData: any, filename?: string) => Promise<any>;
+  uploadAudioBlob?: (noteId: string, blob: Blob, filename?: string) => Promise<any>;
+  uploadPhoto: (noteId: string, photoData: any) => Promise<any>;
+  uploadAttachment: (noteId: string, ...args: any[]) => Promise<any>;
 }
 
 /**
@@ -43,14 +48,14 @@ async function getService(): Promise<NoteServiceMethods> {
  * Proxy that intercepts calls and delegates to the correct service
  */
 export const noteService: NoteServiceMethods = new Proxy({} as NoteServiceMethods, {
-  get(_, prop: keyof NoteServiceMethods) {
+  get(_, prop: string) {
     return async (...args: any[]) => {
       const service = await getService();
-      const fn = service[prop];
+      const fn = (service as any)[prop];
       if (typeof fn !== "function") {
         throw new Error(`Property ${String(prop)} is not a function on noteService`);
       }
-      return (fn as (...args: any[]) => any).apply(service, args);
+      return fn.apply(service, args);
     };
   },
 });

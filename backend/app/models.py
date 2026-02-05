@@ -74,6 +74,9 @@ class ActivityType(str, enum.Enum):
     # GPS activities
     GPS_UPDATED = "gps_updated"
 
+    # Harris Matrix activities
+    HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
+
 
 # Association table for project members
 project_members = Table(

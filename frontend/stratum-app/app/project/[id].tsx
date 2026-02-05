@@ -11,6 +11,7 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import {
   useLocalSearchParams,
   useRouter,
@@ -1299,6 +1300,9 @@ export default function ProjectDetailScreen() {
               styles.bottomTabText,
               activeTab === "overview" && styles.activeBottomTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             Overview
           </Text>
@@ -1312,6 +1316,9 @@ export default function ProjectDetailScreen() {
               styles.bottomTabText,
               activeTab === "notes" && styles.activeBottomTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             Notes
           </Text>
@@ -1328,6 +1335,9 @@ export default function ProjectDetailScreen() {
               styles.bottomTabText,
               activeTab === "artefacts" && styles.activeBottomTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             Artefacts
           </Text>
@@ -1344,6 +1354,9 @@ export default function ProjectDetailScreen() {
               styles.bottomTabText,
               activeTab === "matrix" && styles.activeBottomTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             Matrix
           </Text>
@@ -1364,6 +1377,9 @@ export default function ProjectDetailScreen() {
               ["gallery", "gps", "history", "tools"].includes(activeTab) &&
                 styles.activeBottomTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
           >
             More ▾
           </Text>
@@ -1378,65 +1394,68 @@ export default function ProjectDetailScreen() {
             onPress={() => setShowMoreMenu(false)}
             activeOpacity={1}
           />
-          <View style={styles.moreMenu}>
-            <TouchableOpacity
-              style={[
-                styles.moreMenuItem,
-                activeTab === "gallery" && styles.moreMenuItemActive,
-              ]}
-              onPress={() => {
-                setActiveTab("gallery");
-                setShowMoreMenu(false);
-              }}
+          {isLiquidGlassAvailable() ? (
+            <GlassView
+              style={[styles.moreMenu, styles.moreMenuGlass]}
+              glassStyle="regular"
             >
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.moreMenuText,
-                  activeTab === "gallery" && styles.moreMenuTextActive,
+                  styles.moreMenuItem,
+                  activeTab === "gallery" && styles.moreMenuItemActive,
                 ]}
+                onPress={() => {
+                  setActiveTab("gallery");
+                  setShowMoreMenu(false);
+                }}
               >
-                Gallery
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.moreMenuItem,
-                activeTab === "gps" && styles.moreMenuItemActive,
-              ]}
-              onPress={() => {
-                setActiveTab("gps");
-                setShowMoreMenu(false);
-              }}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "gallery" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Gallery
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.moreMenuText,
-                  activeTab === "gps" && styles.moreMenuTextActive,
+                  styles.moreMenuItem,
+                  activeTab === "gps" && styles.moreMenuItemActive,
                 ]}
+                onPress={() => {
+                  setActiveTab("gps");
+                  setShowMoreMenu(false);
+                }}
               >
-                Map
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.moreMenuItem,
-                activeTab === "history" && styles.moreMenuItemActive,
-              ]}
-              onPress={() => {
-                setActiveTab("history");
-                setShowMoreMenu(false);
-              }}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "gps" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Map
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.moreMenuText,
-                  activeTab === "history" && styles.moreMenuTextActive,
+                  styles.moreMenuItem,
+                  activeTab === "history" && styles.moreMenuItemActive,
                 ]}
+                onPress={() => {
+                  setActiveTab("history");
+                  setShowMoreMenu(false);
+                }}
               >
-                Time Machine
-              </Text>
-            </TouchableOpacity>
-            {Platform.OS !== "web" && (
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "history" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Time Machine
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.moreMenuItem,
@@ -1456,8 +1475,89 @@ export default function ProjectDetailScreen() {
                   Tools
                 </Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </GlassView>
+          ) : (
+            <View style={styles.moreMenu}>
+              <TouchableOpacity
+                style={[
+                  styles.moreMenuItem,
+                  activeTab === "gallery" && styles.moreMenuItemActive,
+                ]}
+                onPress={() => {
+                  setActiveTab("gallery");
+                  setShowMoreMenu(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "gallery" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Gallery
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.moreMenuItem,
+                  activeTab === "gps" && styles.moreMenuItemActive,
+                ]}
+                onPress={() => {
+                  setActiveTab("gps");
+                  setShowMoreMenu(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "gps" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Map
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.moreMenuItem,
+                  activeTab === "history" && styles.moreMenuItemActive,
+                ]}
+                onPress={() => {
+                  setActiveTab("history");
+                  setShowMoreMenu(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.moreMenuText,
+                    activeTab === "history" && styles.moreMenuTextActive,
+                  ]}
+                >
+                  Time Machine
+                </Text>
+              </TouchableOpacity>
+              {Platform.OS !== "web" && (
+                <TouchableOpacity
+                  style={[
+                    styles.moreMenuItem,
+                    activeTab === "tools" && styles.moreMenuItemActive,
+                  ]}
+                  onPress={() => {
+                    setActiveTab("tools");
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "tools" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Tools
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       )}
 
@@ -2640,6 +2740,11 @@ const styles = StyleSheet.create({
         boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
       },
     }),
+  },
+  moreMenuGlass: {
+    backgroundColor: "rgba(30, 30, 26, 0.6)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
   },
   moreMenuItem: {
     flexDirection: "row",

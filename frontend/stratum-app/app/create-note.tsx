@@ -35,6 +35,8 @@ export default function CreateNoteScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
+  const [meterLevel, setMeterLevel] = useState(-160);
+  const meterIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [showDraftModal, setShowDraftModal] = useState(false);
 
   // Auto-save hook for draft recovery
@@ -123,11 +125,26 @@ export default function CreateNoteScreen() {
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
         });
-        const result = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        );
+        // Create recording with metering enabled
+        const recordingOptions = {
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true,
+        };
+        const result = await Audio.Recording.createAsync(recordingOptions);
         setRecording(result.recording);
         setIsRecording(true);
+
+        // Start polling for metering levels
+        meterIntervalRef.current = setInterval(async () => {
+          try {
+            const status = await result.recording.getStatusAsync();
+            if (status.isRecording && status.metering !== undefined) {
+              setMeterLevel(status.metering);
+            }
+          } catch (err) {
+            // Recording may have stopped
+          }
+        }, 100);
       }
     } catch (e: any) {
       console.error("Start recording failed", e);
@@ -137,6 +154,13 @@ export default function CreateNoteScreen() {
 
   const stopRecording = async () => {
     try {
+      // Clear metering interval first
+      if (meterIntervalRef.current) {
+        clearInterval(meterIntervalRef.current);
+        meterIntervalRef.current = null;
+      }
+      setMeterLevel(-160);
+
       if (!recording) return;
       if (Platform.OS === "web") {
         const mr: MediaRecorder = recording;
@@ -166,6 +190,13 @@ export default function CreateNoteScreen() {
   };
 
   const resetRecording = () => {
+    // Clear metering interval
+    if (meterIntervalRef.current) {
+      clearInterval(meterIntervalRef.current);
+      meterIntervalRef.current = null;
+    }
+    setMeterLevel(-160);
+
     if (Platform.OS === "web" && recordedUri) {
       try {
         URL.revokeObjectURL(recordedUri);
@@ -378,7 +409,9 @@ export default function CreateNoteScreen() {
               {Platform.OS === "web" && (
                 <LiveWaveform stream={liveStream} isRecording={isRecording} />
               )}
-              {Platform.OS !== "web" && <NativeLevelBar active={isRecording} />}
+              {Platform.OS !== "web" && (
+                <NativeLevelBar active={isRecording} meterLevel={meterLevel} />
+              )}
               {recording ? (
                 <TouchableOpacity
                   style={[styles.recButton, styles.stop]}
@@ -516,25 +549,50 @@ function LiveWaveform({
 }
 
 // Native simple level bar placeholder
-function NativeLevelBar({ active }: { active: boolean }) {
+function NativeLevelBar({
+  active,
+  meterLevel,
+}: {
+  active: boolean;
+  meterLevel: number;
+}) {
+  // meterLevel is typically in dBFS, range roughly -160 (silence) to 0 (max)
+  // Convert to a percentage (0-100) for display
+  const normalizedLevel = active
+    ? Math.max(0, Math.min(100, ((meterLevel + 60) / 60) * 100))
+    : 0;
+
   return (
     <View style={{ height: 40, marginBottom: 12, justifyContent: "center" }}>
       <View
         style={{
-          height: 8,
+          height: 12,
           backgroundColor: "#2A2A2A",
-          borderRadius: 4,
+          borderRadius: 6,
           overflow: "hidden",
         }}
       >
         <View
           style={{
-            width: active ? "80%" : "5%",
-            height: 8,
-            backgroundColor: "#FF2A2A",
+            width: `${normalizedLevel}%`,
+            height: 12,
+            backgroundColor: normalizedLevel > 80 ? "#FF4444" : "#FF2A2A",
+            borderRadius: 6,
           }}
         />
       </View>
+      {active && (
+        <Text
+          style={{
+            color: "#9A9A9A",
+            fontSize: 11,
+            marginTop: 4,
+            textAlign: "center",
+          }}
+        >
+          Listening... speak now
+        </Text>
+      )}
     </View>
   );
 }
