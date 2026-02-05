@@ -381,10 +381,13 @@ async def add_note_attachment(
         "audio/aac",
         "audio/ogg",
         "audio/m4a",
+        "audio/x-m4a",
+        "audio/mp4a-latm",
     }
-    if (file.content_type or "") not in allowed:
+    content_type = (file.content_type or "").lower()
+    if content_type not in allowed:
         raise HTTPException(
-            status_code=400, detail=f"File type {file.content_type} not allowed"
+            status_code=400, detail=f"File type {file.content_type} not allowed. Allowed: {', '.join(sorted(allowed))}"
         )
 
     # Upload to MinIO
@@ -545,3 +548,58 @@ async def delete_note_attachment(
     await emit_content_update(project_id, "notes")
 
     return None
+
+
+@router.get("/{note_id}/attachments/{attachment_id}/stream")
+async def stream_note_attachment(
+    note_id: str,
+    attachment_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Stream an attachment through the backend.
+    This proxies the file from MinIO so mobile devices can access it without
+    needing direct MinIO connectivity.
+    """
+    from fastapi.responses import StreamingResponse
+    from io import BytesIO
+
+    note = db.query(Note).filter(Note.id == note_id).first()
+
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
+
+    check_project_permission(note.project_id, current_user, db)
+
+    attachment = (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.id == attachment_id, NoteAttachment.note_id == note_id
+        )
+        .first()
+    )
+
+    if not attachment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
+        )
+
+    # Get file from MinIO
+    file_data = await minio_client.get_file(attachment.file_path)
+    if not file_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found in storage"
+        )
+
+    # Stream the file back
+    return StreamingResponse(
+        BytesIO(file_data),
+        media_type=attachment.file_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'inline; filename="{attachment.filename}"',
+            "Content-Length": str(len(file_data)),
+        },
+    )

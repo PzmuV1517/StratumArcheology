@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Modal,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { projectService } from "../../src/services/projectService";
+import { activityService } from "../../src/services/activityService";
 import { useAuth } from "../../src/contexts/AuthContext";
 import type { Project } from "../../src/services/projectService.types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "../../src/config/config";
 
 interface Activity {
   id: string;
@@ -23,6 +24,26 @@ interface Activity {
   user_id?: string;
   project_id: string;
 }
+
+// All available quick actions
+interface QuickAction {
+  id: string;
+  icon: string;
+  label: string;
+  route: string;
+}
+
+const ALL_QUICK_ACTIONS: QuickAction[] = [
+  { id: "new-project", icon: "➕", label: "New Project", route: "/modal" },
+  { id: "join-project", icon: "🔗", label: "Join Project", route: "/join-project" },
+  { id: "settings", icon: "⚙️", label: "Settings", route: "/settings" },
+  { id: "projects", icon: "📁", label: "All Projects", route: "/(tabs)/projects" },
+  { id: "voice-note", icon: "🎙️", label: "Voice Note", route: "/create-note?voice=true" },
+  { id: "new-note", icon: "📝", label: "New Note", route: "/create-note" },
+];
+
+const DEFAULT_ACTIONS = ["new-project", "join-project", "settings"];
+const QUICK_ACTIONS_KEY = "overview_quick_actions";
 
 /**
  * Overview Tab - Main landing page showing:
@@ -39,6 +60,58 @@ export default function OverviewScreen() {
   >({});
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  
+  // Quick actions customization
+  const [selectedActionIds, setSelectedActionIds] = useState<string[]>(DEFAULT_ACTIONS);
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
+
+  // Load saved quick actions on mount
+  useEffect(() => {
+    AsyncStorage.getItem(QUICK_ACTIONS_KEY).then((saved) => {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSelectedActionIds(parsed);
+          }
+        } catch {
+          // Use default
+        }
+      }
+    });
+  }, []);
+
+  const openModifyModal = () => {
+    setTempSelectedIds([...selectedActionIds]);
+    setShowModifyModal(true);
+  };
+
+  const toggleAction = (actionId: string) => {
+    setTempSelectedIds((prev) => {
+      if (prev.includes(actionId)) {
+        // Don't allow less than 1 action
+        if (prev.length <= 1) return prev;
+        return prev.filter((id) => id !== actionId);
+      } else {
+        // Max 4 actions
+        if (prev.length >= 4) return prev;
+        return [...prev, actionId];
+      }
+    });
+  };
+
+  const saveQuickActions = async () => {
+    setSelectedActionIds(tempSelectedIds);
+    await AsyncStorage.setItem(QUICK_ACTIONS_KEY, JSON.stringify(tempSelectedIds));
+    setShowModifyModal(false);
+  };
+
+  const getSelectedActions = (): QuickAction[] => {
+    return selectedActionIds
+      .map((id) => ALL_QUICK_ACTIONS.find((a) => a.id === id))
+      .filter(Boolean) as QuickAction[];
+  };
 
   const loadRecentProjects = useCallback(async () => {
     try {
@@ -78,30 +151,18 @@ export default function OverviewScreen() {
     const activitiesMap: Record<string, Activity[]> = {};
 
     try {
-      const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
-      for (const project of projects) {
-        try {
-          const response = await fetch(
-            `${apiBaseUrl}/api/activities/project/${project.id}?limit=5`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          );
-
-          if (response.ok) {
-            const activities = await response.json();
-            activitiesMap[project.id] = activities;
+      // Load activities in parallel using activityService
+      await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const activities = await activityService.getActivities(project.id, 5, 0);
+            activitiesMap[project.id] = activities as Activity[];
+          } catch (err) {
+            console.error(`Failed to load activities for project ${project.id}:`, err);
+            activitiesMap[project.id] = [];
           }
-        } catch (err) {
-          console.error(`Failed to load activities for project ${project.id}:`, err);
-          activitiesMap[project.id] = [];
-        }
-      }
+        })
+      );
 
       setProjectActivities(activitiesMap);
     } finally {

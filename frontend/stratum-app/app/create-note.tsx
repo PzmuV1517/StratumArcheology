@@ -16,9 +16,12 @@ import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
+let Sound: any = null;
 if (Platform.OS !== "web") {
   try {
-    Audio = require("expo-av").Audio;
+    const av = require("expo-av");
+    Audio = av.Audio;
+    Sound = av.Audio?.Sound;
   } catch {}
 }
 
@@ -263,7 +266,7 @@ export default function CreateNoteScreen() {
             const blob = await response.blob();
             await noteService.uploadAudioBlob(note.id, blob, `${safeBase}.webm`);
           } else {
-            await noteService.uploadAudio(note.id, recordedUri, `${safeBase}.mp3`);
+            await noteService.uploadAudio(note.id, recordedUri, `${safeBase}.m4a`);
           }
         } catch (e) {
           console.error("Audio upload failed", e);
@@ -443,7 +446,9 @@ export default function CreateNoteScreen() {
                       controls
                       style={{ width: "100%", marginBottom: 8 }}
                     />
-                  ) : null}
+                  ) : (
+                    <NativeAudioPreview uri={recordedUri} />
+                  )}
                   <TouchableOpacity
                     style={styles.clearAudio}
                     onPress={resetRecording}
@@ -596,6 +601,143 @@ function NativeLevelBar({
     </View>
   );
 }
+
+// Native audio preview player for recorded audio
+function NativeAudioPreview({ uri }: { uri: string }) {
+  const soundRef = useRef<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+
+  const formatTime = (ms: number) => {
+    const secs = Math.floor(ms / 1000);
+    const mins = Math.floor(secs / 60);
+    const remainingSecs = secs % 60;
+    return `${mins}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
+
+  const playAudio = useCallback(async () => {
+    if (!uri || !Audio) return;
+    try {
+      setIsLoading(true);
+      // Unload previous sound if exists
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+      // Create and play new sound from local file URI
+      const { sound, status } = await Audio.Sound.createAsync(
+        { uri },
+        { shouldPlay: true },
+        (playbackStatus: any) => {
+          if (playbackStatus.isLoaded) {
+            setPosition(playbackStatus.positionMillis);
+            setDuration(playbackStatus.durationMillis || 0);
+            setIsPlaying(playbackStatus.isPlaying);
+            if (playbackStatus.didJustFinish) {
+              setIsPlaying(false);
+              setPosition(0);
+            }
+          }
+        }
+      );
+      soundRef.current = sound;
+      setIsLoading(false);
+    } catch (e) {
+      console.error("Failed to play preview audio:", e);
+      setIsLoading(false);
+      Alert.alert("Error", "Failed to play recording preview");
+    }
+  }, [uri]);
+
+  const stopAudio = useCallback(async () => {
+    if (soundRef.current) {
+      await soundRef.current.stopAsync();
+      setIsPlaying(false);
+      setPosition(0);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync();
+      }
+    };
+  }, []);
+
+  return (
+    <View style={previewStyles.container}>
+      <TouchableOpacity
+        style={previewStyles.playBtn}
+        onPress={isPlaying ? stopAudio : playAudio}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FF2A2A" />
+        ) : (
+          <Text style={previewStyles.playIcon}>{isPlaying ? "⏹" : "▶"}</Text>
+        )}
+      </TouchableOpacity>
+      <View style={previewStyles.progress}>
+        <View
+          style={[
+            previewStyles.progressBar,
+            { width: duration > 0 ? `${(position / duration) * 100}%` : "0%" },
+          ]}
+        />
+      </View>
+      <Text style={previewStyles.time}>
+        {formatTime(position)} / {formatTime(duration)}
+      </Text>
+    </View>
+  );
+}
+
+const previewStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  playBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FF2A2A",
+  },
+  playIcon: {
+    color: "#FF2A2A",
+    fontSize: 18,
+  },
+  progress: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "#333",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#FF2A2A",
+  },
+  time: {
+    color: "#9A9A9A",
+    fontSize: 12,
+    minWidth: 80,
+    textAlign: "right",
+  },
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1207,7 +1207,8 @@ export default function ProjectDetailScreen() {
                       backgroundColor: "#0A0A0A",
                     } as any)
                   : {
-                      height: 520,
+                      flex: 1,
+                      minHeight: 520,
                       borderRadius: 12,
                       overflow: "hidden",
                       borderWidth: 1,

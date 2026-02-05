@@ -86,12 +86,12 @@ export const noteService = {
   },
 
   // Upload audio to a note
-  uploadAudio: async (noteId, audioUri, filename = "voice-note.mp3") => {
+  uploadAudio: async (noteId, audioUri, filename = "voice-note.m4a") => {
     try {
       const formData = new FormData();
       formData.append("file", {
         uri: audioUri,
-        type: "audio/mpeg",
+        type: "audio/mp4",
         name: filename,
       });
       const response = await api.post(`/notes/${noteId}/attachments`, formData, {
