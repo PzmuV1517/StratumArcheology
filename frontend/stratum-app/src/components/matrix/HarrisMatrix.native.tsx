@@ -196,6 +196,31 @@ export default function HarrisMatrix({
             );
             break;
 
+          case "CONFIRM_CLEAR":
+            Alert.alert(
+              "Clear All?",
+              "This will permanently delete all Harris Matrix data. This action cannot be undone.",
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                },
+                {
+                  text: "Clear All",
+                  style: "destructive",
+                  onPress: () => {
+                    if (webViewRef.current) {
+                      webViewRef.current.injectJavaScript(`
+                        window.executeClear();
+                        true;
+                      `);
+                    }
+                  },
+                },
+              ],
+            );
+            break;
+
           case "REQUEST_SYNC":
             // Manual sync request from WebView
             if (isOnline) {

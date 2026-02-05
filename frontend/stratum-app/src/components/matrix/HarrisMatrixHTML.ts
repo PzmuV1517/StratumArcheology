@@ -976,8 +976,13 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         
         function confirmClear() {
             if (!CAN_EDIT) return;
-            sendToRN({ type: 'ALERT', payload: { title: 'Clear All?', message: 'This will delete all data.' } });
-            // For now, just clear directly
+            // Send confirmation request to native - it will call executeClear() if confirmed
+            sendToRN({ type: 'CONFIRM_CLEAR' });
+        }
+        
+        // Called from native after user confirms clear
+        window.executeClear = function() {
+            if (!CAN_EDIT) return;
             contexts = new Map();
             relationships = [];
             groups = new Map();
@@ -985,7 +990,9 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             phases = new Map();
             temporalConflicts = [];
             updateUI();
-        }
+            // Save the cleared state to trigger version history
+            sendToRN({ type: 'SAVE_DATA', payload: exportData() });
+        };
         
         function analyzeTemporalConflicts() {
             temporalConflicts = [];

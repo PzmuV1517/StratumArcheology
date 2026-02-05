@@ -35,38 +35,6 @@ export function useActivity(
   const [error, setError] = useState<string | null>(null);
   const currentOffset = useRef(0);
 
-  // Subscribe to real-time activity updates
-  useEffect(() => {
-    if (!projectId) return;
-
-    // Listen for new activities via WebSocket
-    const unsubscribeActivity = socketService.on("activity", (data) => {
-      if (data.activity) {
-        setActivities((prev) => [data.activity, ...prev]);
-      }
-    });
-
-    // Also listen for timeline_updated events to refresh silently
-    const unsubscribeTimeline = socketService.on("timeline_updated", (data) => {
-      if (data.project_id === projectId) {
-        // Silently refresh the timeline
-        loadActivities();
-      }
-    });
-
-    return () => {
-      unsubscribeActivity();
-      unsubscribeTimeline();
-    };
-  }, [projectId, loadActivities]);
-
-  // Load initial activities when projectId or personalOnly changes
-  useEffect(() => {
-    if (projectId) {
-      loadActivities();
-    }
-  }, [projectId, personalOnly]);
-
   const loadActivities = useCallback(
     async (append: boolean = false): Promise<void> => {
       if (!projectId) return;
@@ -108,6 +76,38 @@ export function useActivity(
     },
     [projectId, personalOnly],
   );
+
+  // Subscribe to real-time activity updates
+  useEffect(() => {
+    if (!projectId) return;
+
+    // Listen for new activities via WebSocket
+    const unsubscribeActivity = socketService.on("activity", (data) => {
+      if (data.activity) {
+        setActivities((prev) => [data.activity, ...prev]);
+      }
+    });
+
+    // Also listen for timeline_updated events to refresh silently
+    const unsubscribeTimeline = socketService.on("timeline_updated", (data) => {
+      if (data.project_id === projectId) {
+        // Silently refresh the timeline
+        loadActivities();
+      }
+    });
+
+    return () => {
+      unsubscribeActivity();
+      unsubscribeTimeline();
+    };
+  }, [projectId, loadActivities]);
+
+  // Load initial activities when projectId or personalOnly changes
+  useEffect(() => {
+    if (projectId) {
+      loadActivities();
+    }
+  }, [projectId, personalOnly, loadActivities]);
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (!hasMore || isLoading) return;
