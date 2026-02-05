@@ -26,7 +26,7 @@ export default function TabLayout() {
           isLiquidGlassAvailable() ? (
             <GlassView
               style={StyleSheet.absoluteFill}
-              glassStyle="regular"
+              glassEffectStyle="regular"
             />
           ) : Platform.OS === "ios" ? (
             <BlurView

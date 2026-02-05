@@ -6,7 +6,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
+  Platform,
 } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 export default function NewFolderModal({
   visible,
@@ -29,6 +31,30 @@ export default function NewFolderModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
+        {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+          <GlassView style={styles.modalCardGlass} glassEffectStyle="regular">
+            <Text style={styles.modalTitle}>New Folder</Text>
+            <Text style={styles.modalText}>Enter a name for the new folder</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Folder name"
+              placeholderTextColor="#666"
+              value={name}
+              onChangeText={setName}
+            />
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.button} onPress={onCancel}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.primary]}
+                onPress={() => onCreate(name.trim())}
+              >
+                <Text style={styles.buttonText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </GlassView>
+        ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>New Folder</Text>
           <Text style={styles.modalText}>Enter a name for the new folder</Text>
@@ -51,6 +77,7 @@ export default function NewFolderModal({
             </TouchableOpacity>
           </View>
         </View>
+        )}
       </View>
     </Modal>
   );
@@ -70,6 +97,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#333",
+    width: "100%",
+  },
+  modalCardGlass: {
+    borderRadius: 20,
+    padding: 20,
     width: "100%",
   },
   modalTitle: { color: "#F5F5F5", fontWeight: "700", fontSize: 18, marginBottom: 6 },

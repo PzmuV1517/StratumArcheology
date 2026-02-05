@@ -10,6 +10,7 @@ import {
   Alert,
   TextInput,
 } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fileService } from "../../services/fileService";
 import { offlineFilesStorage } from "../../services/offlineService";
@@ -644,12 +645,15 @@ export default function FilesOverlay({
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
 
+  const HeaderWrapper = Platform.OS === "ios" && isLiquidGlassAvailable() ? GlassView : View;
+  const headerStyle = Platform.OS === "ios" && isLiquidGlassAvailable() ? styles.headerGlass : styles.header;
+
   return (
     <View
       ref={rootRef}
       style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
     >
-      <View style={styles.header}>
+      <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassAvailable() ? { glassEffectStyle: "regular" } : {})}>
         <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
           <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
         </TouchableOpacity>
@@ -659,7 +663,7 @@ export default function FilesOverlay({
         >
           {title}
         </Text>
-      </View>
+      </HeaderWrapper>
       {/* Bulk actions bar - separate row when selections exist */}
       {multiSelect && selectedIds.size > 0 && (
         <ScrollView
@@ -1308,6 +1312,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#2A2A2A",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerGlass: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
     flexDirection: "row",
     alignItems: "center",
   },

@@ -15,7 +15,7 @@
 
 .harris-matrix {
   width: 100% !important;
-  height: 92% !important; /* override inline styles to fill parent container */
+  height: 100% !important; /* fill parent container completely */
   color: var(--text-color);
   display: flex;
   flex-direction: column;
