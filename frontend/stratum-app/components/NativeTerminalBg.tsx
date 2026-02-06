@@ -12,7 +12,6 @@ import {
   Easing,
   Dimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 
 const CHARS = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω⟁⏃⏅☥⊿∑∏≡⌬⏣";
 const COL_WIDTH = 18;
@@ -102,6 +101,41 @@ const Scanlines = React.memo(() => (
   </View>
 ));
 
+// Pure-View gradient fade (no native module needed)
+const FADE_STEPS = 8;
+const FADE_HEIGHT = 120;
+const FadeOverlay = React.memo(({ position }: { position: "top" | "bottom" }) => {
+  const strips = useMemo(() => {
+    const stripH = FADE_HEIGHT / FADE_STEPS;
+    return Array.from({ length: FADE_STEPS }).map((_, i) => {
+      // top: fully opaque at i=0, transparent at i=FADE_STEPS-1
+      // bottom: transparent at i=0, fully opaque at i=FADE_STEPS-1
+      const alpha = position === "top"
+        ? 1 - i / (FADE_STEPS - 1)
+        : i / (FADE_STEPS - 1);
+      return (
+        <View
+          key={i}
+          style={{
+            height: stripH,
+            backgroundColor: `rgba(5,5,5,${alpha})`,
+          }}
+        />
+      );
+    });
+  }, [position]);
+  return (
+    <View
+      style={[
+        position === "top" ? styles.fadeTop : styles.fadeBottom,
+      ]}
+      pointerEvents="none"
+    >
+      {strips}
+    </View>
+  );
+});
+
 export default function NativeTerminalBg() {
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
   const numCols = Math.ceil(screenWidth / COL_WIDTH);
@@ -135,16 +169,8 @@ export default function NativeTerminalBg() {
       ))}
       <Scanlines />
       {/* Fade-out edges so columns dissolve instead of clipping */}
-      <LinearGradient
-        colors={["#050505", "transparent"]}
-        style={styles.fadeTop}
-        pointerEvents="none"
-      />
-      <LinearGradient
-        colors={["transparent", "#050505"]}
-        style={styles.fadeBottom}
-        pointerEvents="none"
-      />
+      <FadeOverlay position="top" />
+      <FadeOverlay position="bottom" />
       {/* Dark vignette overlay */}
       <View style={[StyleSheet.absoluteFill, styles.vignette]} pointerEvents="none" />
     </View>
