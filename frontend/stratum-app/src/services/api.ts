@@ -94,18 +94,26 @@ api.interceptors.request.use(
     // Debug logging
     console.log("[API] Request to:", base + axiosConfig.url);
 
-    // Attach auth token if available
-    try {
-      const token = await AsyncStorage.getItem("authToken");
-      if (token) {
-        axiosConfig.headers = axiosConfig.headers || {};
-        axiosConfig.headers.Authorization = `Bearer ${token}`;
-        console.log("[API] Auth token attached");
-      } else {
-        console.log("[API] No auth token available");
+    // Attach auth token if available (skip for auth routes that don't need it)
+    const url = axiosConfig.url || "";
+    const isAuthRoute =
+      url.includes("/auth/login") || url.includes("/auth/register");
+
+    if (!isAuthRoute) {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (token) {
+          axiosConfig.headers = axiosConfig.headers || {};
+          axiosConfig.headers.Authorization = `Bearer ${token}`;
+          console.log("[API] Auth token attached");
+        } else {
+          console.log("[API] No auth token available");
+        }
+      } catch (tokenError) {
+        console.error("[API] Failed to get auth token:", tokenError);
       }
-    } catch (tokenError) {
-      console.error("[API] Failed to get auth token:", tokenError);
+    } else {
+      console.log("[API] Skipping auth token for auth route");
     }
 
     // Only set JSON Content-Type when body is NOT FormData
@@ -227,11 +235,22 @@ api.interceptors.response.use(
         requestUrl.includes("/auth/register");
 
       if (!isAuthRoute) {
-        // Token expired, clear storage
-        await AsyncStorage.removeItem("authToken");
-        await AsyncStorage.removeItem("userData");
-        // Emit session expired event so AuthContext can handle redirect
-        authEvents.emit(AUTH_SESSION_EXPIRED);
+        // Guard against race condition: if a login just succeeded and stored a
+        // new token, the stale /auth/me request from checkAuthStatus will come
+        // back 401 — but we should NOT wipe the brand-new token.
+        // Only clear if the failed request's token matches what's currently stored.
+        const failedToken = error.config?.headers?.Authorization?.replace("Bearer ", "");
+        const currentToken = await AsyncStorage.getItem("authToken");
+
+        if (!currentToken || currentToken === failedToken) {
+          // Token expired and nothing newer has replaced it—clear session
+          await AsyncStorage.removeItem("authToken");
+          await AsyncStorage.removeItem("userData");
+          authEvents.emit(AUTH_SESSION_EXPIRED);
+        } else {
+          // A newer token exists (login just completed)—ignore this stale 401
+          console.log("[API] Ignoring stale 401 — a newer token is already stored");
+        }
       }
     }
     return Promise.reject(error);
