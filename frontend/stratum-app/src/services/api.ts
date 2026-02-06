@@ -218,11 +218,21 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      // Token expired, clear storage
-      await AsyncStorage.removeItem("authToken");
-      await AsyncStorage.removeItem("userData");
-      // Emit session expired event so AuthContext can handle redirect
-      authEvents.emit(AUTH_SESSION_EXPIRED);
+      // Only treat as session expiry for authenticated endpoints.
+      // Auth routes (login/register) naturally return 401 for bad credentials
+      // — that's NOT a session expiry.
+      const requestUrl = error.config?.url || "";
+      const isAuthRoute =
+        requestUrl.includes("/auth/login") ||
+        requestUrl.includes("/auth/register");
+
+      if (!isAuthRoute) {
+        // Token expired, clear storage
+        await AsyncStorage.removeItem("authToken");
+        await AsyncStorage.removeItem("userData");
+        // Emit session expired event so AuthContext can handle redirect
+        authEvents.emit(AUTH_SESSION_EXPIRED);
+      }
     }
     return Promise.reject(error);
   },

@@ -1,12 +1,16 @@
 /**
- * Android Alert Override
+ * Custom Alert Override
  *
- * Self-contained component that monkey-patches Alert.alert on Android
- * to show a styled in-app modal instead of the native dialog.
+ * Self-contained component that shows styled in-app modals instead of
+ * the native/browser alert dialog.
  *
- * Usage: Just render <AndroidAlertOverride /> anywhere in your app tree.
- * No Provider wrapper needed. No changes to existing Alert.alert calls.
- * On iOS/web this component renders nothing and does nothing.
+ * - Android: monkey-patches Alert.alert so all callers get the custom modal.
+ * - Web:     listens for "stratum-alert" DOM events dispatched by showAlert().
+ *            This avoids React Native Web's Alert.alert → window.alert() fallback.
+ * - iOS:     renders nothing (keeps native alerts).
+ *
+ * Usage: Just render <CustomAlertOverride /> anywhere in your app tree.
+ * No Provider wrapper needed.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -40,6 +44,8 @@ const originalAlertFn = Alert.alert.bind(Alert);
 let showCustomAlert: ((a: QueuedAlert) => void) | null = null;
 const pendingQueue: QueuedAlert[] = [];
 
+// Monkey-patch Alert.alert on ANDROID only.
+// Web is handled via DOM events (see useEffect below).
 if (Platform.OS === "android") {
   Alert.alert = (
     title: string,
@@ -63,7 +69,7 @@ if (Platform.OS === "android") {
 }
 
 // ── Component ──────────────────────────────────────────────────────────
-export default function AndroidAlertOverride() {
+export default function CustomAlertOverride() {
   const [current, setCurrent] = useState<QueuedAlert | null>(null);
   const queue = useRef<QueuedAlert[]>([]);
 
@@ -76,18 +82,23 @@ export default function AndroidAlertOverride() {
     }
   }, []);
 
-  // Register the callback so the monkey-patch can reach us
-  useEffect(() => {
-    if (Platform.OS !== "android") return;
-
-    showCustomAlert = (entry: QueuedAlert) => {
+  // Shared handler for both monkey-patch (Android) and DOM events (web)
+  const handleIncoming = useCallback(
+    (entry: QueuedAlert) => {
       if (current) {
-        // Already showing an alert — queue this one
         queue.current.push(entry);
       } else {
         setCurrent(entry);
       }
-    };
+    },
+    [current],
+  );
+
+  // Register the callback so the monkey-patch can reach us (Android)
+  useEffect(() => {
+    if (Platform.OS === "ios") return;
+
+    showCustomAlert = (entry: QueuedAlert) => handleIncoming(entry);
 
     // Drain anything that arrived before we mounted
     if (pendingQueue.length > 0) {
@@ -98,7 +109,20 @@ export default function AndroidAlertOverride() {
     return () => {
       showCustomAlert = null;
     };
-  }, [current, showNext]);
+  }, [handleIncoming, showNext]);
+
+  // Listen for "stratum-alert" DOM events on web
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+
+    const onStratumAlert = (e: Event) => {
+      const { title, message, buttons } = (e as CustomEvent).detail;
+      handleIncoming({ title, message, buttons });
+    };
+
+    window.addEventListener("stratum-alert", onStratumAlert);
+    return () => window.removeEventListener("stratum-alert", onStratumAlert);
+  }, [handleIncoming]);
 
   // Handle button press
   const handleButtonPress = useCallback(
@@ -120,8 +144,8 @@ export default function AndroidAlertOverride() {
     setTimeout(() => showNext(), 150);
   }, [current, showNext]);
 
-  // On iOS / web this component renders nothing
-  if (Platform.OS !== "android" || !current) return null;
+  // On iOS this component renders nothing (keeps native alerts)
+  if (Platform.OS === "ios" || !current) return null;
 
   const { title, message, buttons } = current;
 
