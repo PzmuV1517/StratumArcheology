@@ -988,19 +988,19 @@ export default function ProjectDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <Stack.Screen options={{ title: "Loading..." }} />
+          <Stack.Screen options={{ title: "Loading...", headerShown: true, headerStyle: { backgroundColor: "#111111" }, headerTintColor: "#FF2A2A" }} />
           <ActivityIndicator size="large" color="#FF2A2A" />
           <Text style={styles.loadingText}>Loading project details...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!project) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <Stack.Screen
             options={{
@@ -1026,12 +1026,12 @@ export default function ProjectDetailScreen() {
           <Text style={styles.backButtonText}>Go to Projects</Text>
         </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.container}>
         <Stack.Screen
           options={{
@@ -1982,7 +1982,7 @@ export default function ProjectDetailScreen() {
         }}
       />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1990,7 +1990,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#111111",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
