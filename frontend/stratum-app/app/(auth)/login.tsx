@@ -31,6 +31,7 @@ import RAnimated, {
 const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
 // Prevent unnecessary re-renders of the heavy background
 const MemoFaultyTerminal = React.memo(FaultyTerminal);
+import NativeTerminalBg from "../../components/NativeTerminalBg";
 // Load component CSS only on web
 if (Platform.OS === "web") {
   // @ts-ignore - CSS handled by web bundler
@@ -429,7 +430,9 @@ export default function LoginScreen() {
             {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <NativeTerminalBg />
+      )}
 
       {/* Card stack with fade-up entrance */}
       <Animated.View
