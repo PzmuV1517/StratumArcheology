@@ -590,7 +590,9 @@ export default function SettingsScreen() {
                 />
               ) : (
                 <View style={{ paddingVertical: 16, alignItems: "center" }}>
-                  <Text style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center" }}>
+                  <Text
+                    style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center" }}
+                  >
                     Storage info unavailable in this environment.{"\n"}
                     Build a development build for accurate data.
                   </Text>

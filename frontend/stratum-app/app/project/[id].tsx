@@ -997,7 +997,14 @@ export default function ProjectDetailScreen() {
     return (
       <View style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <Stack.Screen options={{ title: "Loading...", headerShown: true, headerStyle: { backgroundColor: "#111111" }, headerTintColor: "#FF2A2A" }} />
+          <Stack.Screen
+            options={{
+              title: "Loading...",
+              headerShown: true,
+              headerStyle: { backgroundColor: "#111111" },
+              headerTintColor: "#FF2A2A",
+            }}
+          />
           <ActivityIndicator size="large" color="#FF2A2A" />
           <Text style={styles.loadingText}>Loading project details...</Text>
         </View>
