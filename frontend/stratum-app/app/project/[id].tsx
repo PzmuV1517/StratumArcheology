@@ -1360,20 +1360,19 @@ export default function ProjectDetailScreen() {
       ) : (
         <View style={styles.bottomTabContainer}>
           <TouchableOpacity
-            style={[
-              styles.bottomTab,
-              activeTab === "overview" && styles.activeBottomTab,
-            ]}
+            style={styles.bottomTab}
             onPress={() => setActiveTab("overview")}
           >
+            <IconSymbol
+              name="house.fill"
+              size={24}
+              color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
+            />
             <Text
               style={[
-                styles.bottomTabText,
-                activeTab === "overview" && styles.activeBottomTabText,
+                styles.bottomTabLabel,
+                activeTab === "overview" && styles.activeBottomTabLabel,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
             >
               Overview
             </Text>
@@ -2137,6 +2136,23 @@ const styles = StyleSheet.create({
   activeBottomTabLabel: {
     color: "#FF2A2A",
     fontWeight: "600",
+  },
+  bottomTabText: {
+    fontSize: 13,
+    color: "#9A9A9A",
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  activeBottomTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#FF2A2A",
+  },
+  activeBottomTabText: {
+    color: "#FF2A2A",
+    fontWeight: "700",
+  },
+  moreTab: {
+    // no extra styling needed
   },
   overviewContainer: {
     padding: 16,
