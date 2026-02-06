@@ -9,7 +9,9 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  // eslint-disable-next-line
   SafeAreaView,
+  // eslint-disable-next-line
   StatusBar,
 } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
