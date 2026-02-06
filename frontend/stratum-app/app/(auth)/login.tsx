@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { FaEyeSlash, FaEye } from "react-icons/fa";
 import {
   View,
   Text,
@@ -28,15 +27,26 @@ import RAnimated, {
   interpolate,
 } from "react-native-reanimated";
 
-const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
-// Prevent unnecessary re-renders of the heavy background
-const MemoFaultyTerminal = React.memo(FaultyTerminal);
-import NativeTerminalBg from "../../components/NativeTerminalBg";
-// Load component CSS only on web
+// Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
+let FaEyeSlash: any = null;
+let FaEye: any = null;
+let MemoFaultyTerminal: any = null;
+
 if (Platform.OS === "web") {
-  // @ts-ignore - CSS handled by web bundler
-  require("../../components/FaultyTerminal.css");
+  try {
+    const fa = require("react-icons/fa");
+    FaEyeSlash = fa.FaEyeSlash;
+    FaEye = fa.FaEye;
+  } catch {}
+  try {
+    const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
+    MemoFaultyTerminal = React.memo(FaultyTerminal);
+    // @ts-ignore - CSS handled by web bundler
+    require("../../components/FaultyTerminal.css");
+  } catch {}
 }
+
+import NativeTerminalBg from "../../components/NativeTerminalBg";
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
@@ -427,15 +437,15 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {Platform.OS === "web" ? (
+      {Platform.OS === "web" && MemoFaultyTerminal ? (
         <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
           <div style={{ position: "absolute", inset: 0 }}>
             {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
         </div>
-      ) : (
+      ) : Platform.OS !== "web" ? (
         <NativeTerminalBg />
-      )}
+      ) : null}
 
       {/* Card stack with fade-up entrance */}
       <Animated.View
