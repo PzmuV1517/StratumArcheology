@@ -403,10 +403,11 @@ export default function MembersModal({
                       onPress={() => {
                         if (isManaging && canManageThis) {
                           toggleMemberExpand(m.id);
+                        } else if (!isManaging) {
+                          viewProfile(m);
                         }
                       }}
                       activeOpacity={0.7}
-                      disabled={!isManaging || !canManageThis}
                     >
                       <View style={styles.memberInfo}>{renderMember(m)}</View>
                       <View
@@ -588,6 +589,58 @@ export default function MembersModal({
                     <Text style={styles.confirmBtnText}>Confirm</Text>
                   </TouchableOpacity>
                 </View>
+              </View>
+            </View>
+          )}
+
+          {/* Profile view modal */}
+          {viewingProfile && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.profileCard}>
+                <TouchableOpacity
+                  style={styles.profileCloseBtn}
+                  onPress={() => setViewingProfile(null)}
+                >
+                  <Text style={styles.profileCloseBtnText}>✕</Text>
+                </TouchableOpacity>
+                
+                {loadingProfile ? (
+                  <ActivityIndicator size="large" color="#FF2A2A" style={{ marginVertical: 40 }} />
+                ) : (
+                  <>
+                    {/* Profile picture */}
+                    <View style={styles.profileImageContainer}>
+                      {viewingProfile.photo_url ? (
+                        <Image
+                          source={{ uri: viewingProfile.photo_url }}
+                          style={styles.profileImage}
+                        />
+                      ) : (
+                        <View style={styles.profilePlaceholder}>
+                          <Text style={styles.profilePlaceholderText}>
+                            {viewingProfile.display_name?.charAt(0).toUpperCase() || "U"}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Name and role */}
+                    <Text style={styles.profileName}>{viewingProfile.display_name}</Text>
+                    <View style={[styles.profileRoleBadge, getRoleBadgeStyle(viewingProfile.role)]}>
+                      <Text style={styles.profileRoleBadgeText}>{viewingProfile.role}</Text>
+                    </View>
+
+                    {/* Bio */}
+                    {viewingProfile.bio ? (
+                      <Text style={styles.profileBio}>{viewingProfile.bio}</Text>
+                    ) : (
+                      <Text style={styles.profileBioEmpty}>No bio added</Text>
+                    )}
+
+                    {/* Email */}
+                    <Text style={styles.profileEmail}>{viewingProfile.email}</Text>
+                  </>
+                )}
               </View>
             </View>
           )}
@@ -1160,5 +1213,96 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     fontSize: 14,
     fontWeight: "600",
+  },
+  // Profile view styles
+  profileCard: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    minWidth: 280,
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "#333",
+    position: "relative",
+  },
+  profileCloseBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#333",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileCloseBtnText: {
+    color: "#F5F5F5",
+    fontSize: 16,
+  },
+  profileImageContainer: {
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#FF2A2A",
+  },
+  profilePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#FF2A2A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#FF2A2A",
+  },
+  profilePlaceholderText: {
+    color: "#FFF",
+    fontSize: 40,
+    fontWeight: "700",
+  },
+  profileName: {
+    color: "#F5F5F5",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  profileRoleBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  profileRoleBadgeText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  profileBio: {
+    color: "#CCC",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  profileBioEmpty: {
+    color: "#666",
+    fontSize: 13,
+    fontStyle: "italic",
+    marginBottom: 16,
+  },
+  profileEmail: {
+    color: "#888",
+    fontSize: 12,
+    textAlign: "center",
   },
 });

@@ -73,6 +73,7 @@ class ProjectMemberResponse(BaseModel):
     email: str
     display_name: str | None = None
     photo_url: str | None = None
+    bio: str | None = None
     role: UserRole
 
     class Config:

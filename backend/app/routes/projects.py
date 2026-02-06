@@ -139,6 +139,7 @@ async def get_project(
                 "email": user.email,
                 "display_name": user.display_name,
                 "photo_url": user.photo_url,
+                "bio": user.bio,
                 "role": member_role,
             }
         )

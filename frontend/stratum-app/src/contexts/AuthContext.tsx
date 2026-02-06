@@ -15,6 +15,7 @@ interface User {
   email: string;
   display_name: string;
   photo_url?: string;
+  bio?: string;
 }
 
 interface AuthContextType {
