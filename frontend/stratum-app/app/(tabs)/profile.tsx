@@ -139,7 +139,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View style={styles.profileSection}>
           {user?.photo_url ? (

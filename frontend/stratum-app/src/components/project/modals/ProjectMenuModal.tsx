@@ -8,7 +8,7 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
 
 interface Props {
   visible: boolean;
@@ -70,8 +70,8 @@ export default function ProjectMenuModal({
         <View style={styles.menuBackdrop}>
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-            <GlassView style={styles.menuCardGlass} glassEffectStyle="regular">
+          {Platform.OS === "ios" && isLiquidGlassSupported ? (
+            <LiquidGlassView style={styles.menuCardGlass} effect="regular">
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
@@ -118,7 +118,7 @@ export default function ProjectMenuModal({
               >
                 <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
               </TouchableOpacity>
-            </GlassView>
+            </LiquidGlassView>
           ) : (
           <View style={styles.menuCard}>
             <TouchableOpacity

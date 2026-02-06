@@ -278,11 +278,21 @@ async def remove_project_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Remove a member from the project (leader can remove anyone, researcher can remove guests only)"""
+    """Remove a member from the project (leader can remove anyone, researcher can remove guests only, anyone can remove self)"""
     # First check basic project access
     check_project_permission(project_id, current_user, db)
 
     project = db.query(Project).filter(Project.id == project_id).first()
+
+    # Check if user is trying to remove themselves (leave project)
+    is_self_removal = str(user_id) == str(current_user.id)
+
+    # Owners cannot leave - they must transfer ownership or delete the project
+    if is_self_removal and project.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Project owner cannot leave. Transfer leadership or delete the project instead.",
+        )
 
     # Get current user's role
     if project.owner_id == current_user.id:
@@ -310,16 +320,17 @@ async def remove_project_member(
 
     target_role = target_result.role.value
 
-    # Role hierarchy check: can only remove members with lower roles
-    role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
+    # Role hierarchy check: can only remove members with lower roles (skip for self-removal)
+    if not is_self_removal:
+        role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
 
-    if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(
-        target_role, 0
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only remove members with lower roles than yours",
-        )
+        if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(
+            target_role, 0
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only remove members with lower roles than yours",
+            )
 
     stmt = project_members.delete().where(
         project_members.c.project_id == project_id,

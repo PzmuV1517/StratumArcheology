@@ -127,6 +127,7 @@ export default function SettingsScreen() {
   const [otherUsed, setOtherUsed] = useState(0);
   const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
   const [loadingStorage, setLoadingStorage] = useState(true);
+  const [storageAvailable, setStorageAvailable] = useState(false);
   const [offlineStorageStats, setOfflineStorageStats] =
     useState<OfflineStorageStats | null>(null);
 
@@ -235,17 +236,20 @@ export default function SettingsScreen() {
               totalDiskSpace = await FileSystem.getTotalDiskCapacityAsync();
               setTotalStorage(totalDiskSpace);
               setOtherUsed(totalDiskSpace - freeSpace - stratumSize);
+              setStorageAvailable(true);
             } catch {
               // Fallback: estimate total based on free space
               const estimatedTotal = freeSpace + stratumSize + 20 * 1e9; // Rough estimate
               setTotalStorage(estimatedTotal);
               setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+              setStorageAvailable(true);
             }
           } else {
             // Fallback: estimate total based on free space
             const estimatedTotal = freeSpace + stratumSize + 20 * 1e9;
             setTotalStorage(estimatedTotal);
             setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+            setStorageAvailable(true);
           }
         } else {
           // Fallback for Expo Go where this API may not be available
@@ -470,7 +474,8 @@ export default function SettingsScreen() {
         }
       }
 
-      const updates: { display_name?: string; photo_url?: string; bio?: string } = {};
+      const updates: { display_name?: string; photo_url?: string; bio?: string } =
+        {};
       if (newDisplayName !== user?.display_name) {
         updates.display_name = newDisplayName;
       }
@@ -543,10 +548,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={openProfileModal}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={openProfileModal}>
             <View style={styles.profilePreview}>
               {user?.photo_url ? (
                 <Image
@@ -580,12 +582,19 @@ export default function SettingsScreen() {
               <Text style={styles.cardTitle}>Device Storage</Text>
               {loadingStorage ? (
                 <ActivityIndicator color="#FF2A2A" style={{ marginVertical: 20 }} />
-              ) : (
+              ) : storageAvailable ? (
                 <StorageBar
                   stratumUsed={stratumUsed}
                   otherUsed={otherUsed}
                   totalStorage={totalStorage}
                 />
+              ) : (
+                <View style={{ paddingVertical: 16, alignItems: "center" }}>
+                  <Text style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center" }}>
+                    Storage info unavailable in this environment.{"\n"}
+                    Build a development build for accurate data.
+                  </Text>
+                </View>
               )}
             </View>
 

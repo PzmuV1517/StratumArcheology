@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,

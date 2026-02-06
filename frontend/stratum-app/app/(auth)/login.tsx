@@ -232,7 +232,10 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
-    const result = await login(email, password);
+    const normalizedEmail = email.trim().toLowerCase();
+    console.log("[Login] Calling login...");
+    const result = await login(normalizedEmail, password);
+    console.log("[Login] Result:", result);
     setLoading(false);
     if (!result.success) {
       showAlert("Login Failed", result.error || "Unknown error");

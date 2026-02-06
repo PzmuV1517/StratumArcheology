@@ -9,7 +9,7 @@ import {
   Platform,
   TextInput,
 } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LiquidGlassView, isLiquidGlassSupported } from "../../utils/liquidGlass";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
@@ -645,15 +645,15 @@ export default function FilesOverlay({
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
 
-  const HeaderWrapper = Platform.OS === "ios" && isLiquidGlassAvailable() ? GlassView : View;
-  const headerStyle = Platform.OS === "ios" && isLiquidGlassAvailable() ? styles.headerGlass : styles.header;
+  const HeaderWrapper = Platform.OS === "ios" && isLiquidGlassSupported ? LiquidGlassView : View;
+  const headerStyle = Platform.OS === "ios" && isLiquidGlassSupported ? styles.headerGlass : styles.header;
 
   return (
     <View
       ref={rootRef}
       style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
     >
-      <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassAvailable() ? { glassEffectStyle: "regular" } : {})}>
+      <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassSupported ? { effect: "regular" } : {})}>
         <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
           <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
         </TouchableOpacity>

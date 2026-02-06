@@ -1,6 +1,5 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 export default function DeleteConfirmModal({
   visible,

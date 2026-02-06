@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface AudioPanelProps {
   audioUrl: string;
@@ -40,9 +41,12 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
           staysActiveInBackground: false,
         });
 
-        // Load new sound
+        // Get auth token for streaming
+        const token = await AsyncStorage.getItem("authToken");
+
+        // Load new sound with auth headers
         const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
+          { uri: audioUrl, headers: token ? { Authorization: `Bearer ${token}` } : undefined },
           { shouldPlay: false },
           (newStatus) => {
             if (mounted) setStatus(newStatus);

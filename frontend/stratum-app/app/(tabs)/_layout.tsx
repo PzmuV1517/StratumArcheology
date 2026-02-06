@@ -1,7 +1,10 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import {
+  LiquidGlassView,
+  isLiquidGlassSupported,
+} from "@/src/utils/liquidGlass";
 import { BlurView } from "expo-blur";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -12,7 +15,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
  * Tab order: Overview (landing), Projects, Profile, Settings
  * Auth is handled by AuthRedirector at the root level
  *
- * Uses iOS 26+ Liquid Glass effect when available, falls back to blur
+ * Uses iOS 26+ Liquid Glass effect (Callstack) when available, falls back to blur
  */
 export default function TabLayout() {
   return (
@@ -23,10 +26,10 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: () =>
-          isLiquidGlassAvailable() ? (
-            <GlassView
+          Platform.OS === "ios" && isLiquidGlassSupported ? (
+            <LiquidGlassView
               style={StyleSheet.absoluteFill}
-              glassEffectStyle="regular"
+              effect="regular"
             />
           ) : Platform.OS === "ios" ? (
             <BlurView
@@ -38,7 +41,7 @@ export default function TabLayout() {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: "rgba(26, 26, 26, 0.95)" },
+                { backgroundColor: "#1A1A1A" },
               ]}
             />
           ),
@@ -46,12 +49,12 @@ export default function TabLayout() {
           ios: {
             position: "absolute",
             backgroundColor: "transparent",
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
+            borderTopColor: "rgba(255, 255, 255, 0.08)",
             borderTopWidth: StyleSheet.hairlineWidth,
           },
           default: {
             backgroundColor: "#1A1A1A",
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
+            borderTopColor: "rgba(255, 255, 255, 0.08)",
             borderTopWidth: StyleSheet.hairlineWidth,
           },
         }),

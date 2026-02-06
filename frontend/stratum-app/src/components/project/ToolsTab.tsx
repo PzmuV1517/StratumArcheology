@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
@@ -368,7 +369,11 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Compass Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Compass</Text>
@@ -547,7 +552,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -555,7 +560,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0A0A0A",
+  },
+  scrollContent: {
     padding: 16,
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,

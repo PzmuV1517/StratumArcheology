@@ -8,7 +8,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
 
 export default function RenameModal({
   visible,
@@ -35,8 +35,8 @@ export default function RenameModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-          <GlassView style={styles.modalCardGlass} glassEffectStyle="regular">
+        {Platform.OS === "ios" && isLiquidGlassSupported ? (
+          <LiquidGlassView style={styles.modalCardGlass} effect="regular">
             <Text style={styles.modalTitle}>Rename</Text>
             <Text style={styles.modalText}>Enter a new name for "{currentName}"</Text>
             <TextInput
@@ -57,7 +57,7 @@ export default function RenameModal({
                 <Text style={styles.buttonText}>Rename</Text>
               </TouchableOpacity>
             </View>
-          </GlassView>
+          </LiquidGlassView>
         ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>Rename</Text>

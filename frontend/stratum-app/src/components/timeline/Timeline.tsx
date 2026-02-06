@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
   Platform,
 } from "react-native";
 import { useActivity } from "../../hooks";
@@ -13,6 +14,7 @@ import { activityService, ProjectActivity, authService } from "../../services";
 import { Loading, Card } from "../common";
 
 type TimelineMode = "project" | "personal";
+type ActivityFilter = "all" | "files" | "notes" | "members" | "forms" | "gps";
 
 interface TimelineProps {
   projectId: string;
@@ -31,10 +33,75 @@ export default function Timeline({
 }: TimelineProps) {
   const [mode, setMode] = useState<TimelineMode>("project");
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<ActivityFilter>("all");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const { activities, isLoading, hasMore, loadMore, refresh, error } = useActivity(
     projectId,
     mode === "personal",
   );
+
+  // Filter activities by search query and category filter
+  const filteredActivities = useMemo(() => {
+    let filtered = activities;
+
+    // Apply category filter
+    if (activeFilter !== "all") {
+      const filterMap: Record<ActivityFilter, string[]> = {
+        all: [],
+        files: [
+          "file_uploaded",
+          "file_updated",
+          "file_deleted",
+          "file_moved",
+          "file_renamed",
+          "folder_created",
+          "folder_deleted",
+        ],
+        notes: [
+          "note_created",
+          "note_updated",
+          "note_deleted",
+          "note_attachment_added",
+          "note_attachment_deleted",
+        ],
+        members: [
+          "member_joined",
+          "member_left",
+          "member_role_changed",
+          "ownership_transferred",
+        ],
+        forms: [
+          "context_feature_created",
+          "context_feature_added",
+          "stratigraphic_unit_created",
+          "stratigraphic_unit_added",
+          "artefact_created",
+          "artefact_added",
+        ],
+        gps: ["gps_enabled", "gps_disabled", "gps_updated"],
+      };
+      const allowed = filterMap[activeFilter];
+      if (allowed.length > 0) {
+        filtered = filtered.filter((a) => allowed.includes(a.activity_type));
+      }
+    }
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((a) => {
+        const desc = activityService
+          .getActivityDescription(a, currentUserId)
+          .toLowerCase();
+        const userName = (a.user_name || "").toLowerCase();
+        const extra = JSON.stringify(a.extra_data || {}).toLowerCase();
+        return desc.includes(q) || userName.includes(q) || extra.includes(q);
+      });
+    }
+
+    return filtered;
+  }, [activities, activeFilter, searchQuery, currentUserId]);
 
   // Get current user ID for "You" display
   useEffect(() => {
@@ -61,14 +128,18 @@ export default function Timeline({
     const description = activityService.getActivityDescription(item, currentUserId);
     const timestamp = activityService.formatTimestamp(item.created_at);
     const color = activityService.getActivityColor(item.activity_type);
-    const isLast = index === activities.length - 1;
+    const isLast = index === filteredActivities.length - 1;
+    const isExpanded = expandedId === item.id;
+    const extra = item.extra_data || {};
 
     return (
       <TouchableOpacity
-        style={styles.activityItem}
-        onPress={() => onActivityPress?.(item)}
-        activeOpacity={onActivityPress ? 0.7 : 1}
-        disabled={!onActivityPress}
+        style={[styles.activityItem, isExpanded && styles.activityItemExpanded]}
+        onPress={() => {
+          setExpandedId(isExpanded ? null : item.id);
+          onActivityPress?.(item);
+        }}
+        activeOpacity={0.7}
       >
         {/* Timeline connector */}
         <View style={styles.timelineConnector}>
@@ -84,10 +155,62 @@ export default function Timeline({
 
         {/* Activity content */}
         <View style={styles.content}>
-          <Text style={styles.description} numberOfLines={2}>
+          <Text
+            style={styles.description}
+            numberOfLines={isExpanded ? undefined : 2}
+          >
             {description}
           </Text>
           <Text style={[styles.timestamp, { color }]}>{timestamp}</Text>
+
+          {/* Expanded details */}
+          {isExpanded && (
+            <View style={styles.detailsContainer}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Type</Text>
+                <Text style={styles.detailValue}>
+                  {item.activity_type.replace(/_/g, " ")}
+                </Text>
+              </View>
+              {item.user_name && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>By</Text>
+                  <Text style={styles.detailValue}>{item.user_name}</Text>
+                </View>
+              )}
+              {extra.file_name && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>File</Text>
+                  <Text style={[styles.detailValue, styles.detailLink]}>
+                    {extra.file_name}
+                  </Text>
+                </View>
+              )}
+              {extra.folder_name && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Folder</Text>
+                  <Text style={styles.detailValue}>{extra.folder_name}</Text>
+                </View>
+              )}
+              {extra.note_title && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Note</Text>
+                  <Text style={styles.detailValue}>{extra.note_title}</Text>
+                </View>
+              )}
+              {extra.old_name && extra.new_name && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Renamed</Text>
+                  <Text style={styles.detailValue}>
+                    {extra.old_name} → {extra.new_name}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.detailTimestamp}>
+                {new Date(item.created_at).toLocaleString()}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -128,6 +251,15 @@ export default function Timeline({
     );
   }
 
+  const FILTER_OPTIONS: { key: ActivityFilter; label: string; icon: string }[] = [
+    { key: "all", label: "All", icon: "📋" },
+    { key: "files", label: "Files", icon: "📄" },
+    { key: "notes", label: "Notes", icon: "📝" },
+    { key: "members", label: "Members", icon: "👤" },
+    { key: "forms", label: "Forms", icon: "🏺" },
+    { key: "gps", label: "GPS", icon: "📍" },
+  ];
+
   return (
     <View style={[styles.container, maxHeight ? { maxHeight } : undefined]}>
       {/* Toggle between Project and Personal timeline */}
@@ -166,27 +298,78 @@ export default function Timeline({
         </TouchableOpacity>
       </View>
 
+      {/* Search bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search activity..."
+          placeholderTextColor="#666"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            style={styles.searchClear}
+            onPress={() => setSearchQuery("")}
+          >
+            <Text style={styles.searchClearText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterBar}
+        contentContainerStyle={styles.filterBarContent}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        {FILTER_OPTIONS.map((f) => (
+          <TouchableOpacity
+            key={f.key}
+            activeOpacity={0.7}
+            style={[
+              styles.filterChip,
+              activeFilter === f.key && styles.filterChipActive,
+            ]}
+            onPress={() => setActiveFilter(f.key === activeFilter ? "all" : f.key)}
+          >
+            <Text style={styles.filterChipIcon}>{f.icon}</Text>
+            <Text
+              style={[
+                styles.filterChipText,
+                activeFilter === f.key && styles.filterChipTextActive,
+              ]}
+            >
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <ScrollView
         showsVerticalScrollIndicator={Platform.OS === "web"}
         refreshControl={
           <RefreshControl
             refreshing={isLoading && activities.length > 0}
             onRefresh={refresh}
-            tintColor="#007AFF"
-            colors={["#007AFF"]}
+            tintColor="#FF2A2A"
+            colors={["#FF2A2A"]}
           />
         }
         contentContainerStyle={
-          activities.length === 0 ? styles.emptyList : undefined
+          filteredActivities.length === 0 ? styles.emptyList : undefined
         }
       >
         {isLoading && activities.length === 0 ? (
           <Loading message="Loading activity..." />
-        ) : activities.length === 0 ? (
+        ) : filteredActivities.length === 0 ? (
           renderEmpty()
         ) : (
           <>
-            {activities.map((item, index) => (
+            {filteredActivities.map((item, index) => (
               <View key={item.id.toString()}>{renderActivity({ item, index })}</View>
             ))}
             {renderFooter()}
@@ -201,6 +384,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0C0C0E",
+    borderRadius: 16,
+    overflow: "hidden",
   },
   toggleContainer: {
     flexDirection: "row",
@@ -237,7 +422,17 @@ const styles = StyleSheet.create({
   activityItem: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginVertical: 4,
+    backgroundColor: "#1C1C1E",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  activityItemExpanded: {
+    borderColor: "#3A3A3A",
+    backgroundColor: "#222224",
   },
   timelineConnector: {
     width: 40,
@@ -258,10 +453,11 @@ const styles = StyleSheet.create({
   line: {
     position: "absolute",
     top: 32,
-    bottom: -8,
+    bottom: -16,
     width: 2,
-    backgroundColor: "#3C3C3E",
+    backgroundColor: "#2C2C2E",
     left: 19,
+    display: "none",
   },
   content: {
     flex: 1,
@@ -321,5 +517,101 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     color: "#007AFF",
+  },
+  // Search styles
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginVertical: 6,
+    backgroundColor: "#1C1C1E",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#F5F5F5",
+  },
+  searchClear: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchClearText: {
+    color: "#666",
+    fontSize: 14,
+  },
+  // Filter bar styles
+  filterBar: {
+    maxHeight: 48,
+    marginBottom: 8,
+  },
+  filterBarContent: {
+    paddingHorizontal: 16,
+    gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1C1C1E",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    height: 36,
+  },
+  filterChipActive: {
+    backgroundColor: "#FF2A2A",
+    borderColor: "#FF2A2A",
+  },
+  filterChipIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: "#9A9A9A",
+    fontWeight: "500",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
+  // Expanded detail styles
+  detailsContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#3A3A3A",
+  },
+  detailRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "600",
+    width: 70,
+  },
+  detailValue: {
+    fontSize: 12,
+    color: "#CFCFCF",
+    flex: 1,
+  },
+  detailLink: {
+    color: "#FF2A2A",
+  },
+  detailTimestamp: {
+    fontSize: 11,
+    color: "#555",
+    marginTop: 4,
+    fontStyle: "italic",
   },
 });

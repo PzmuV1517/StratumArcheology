@@ -8,7 +8,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
 
 export default function NewFolderModal({
   visible,
@@ -31,8 +31,8 @@ export default function NewFolderModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-          <GlassView style={styles.modalCardGlass} glassEffectStyle="regular">
+        {Platform.OS === "ios" && isLiquidGlassSupported ? (
+          <LiquidGlassView style={styles.modalCardGlass} effect="regular">
             <Text style={styles.modalTitle}>New Folder</Text>
             <Text style={styles.modalText}>Enter a name for the new folder</Text>
             <TextInput
@@ -53,7 +53,7 @@ export default function NewFolderModal({
                 <Text style={styles.buttonText}>Create</Text>
               </TouchableOpacity>
             </View>
-          </GlassView>
+          </LiquidGlassView>
         ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>New Folder</Text>

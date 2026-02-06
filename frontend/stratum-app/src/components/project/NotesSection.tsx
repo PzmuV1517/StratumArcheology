@@ -93,7 +93,7 @@ export default function NotesSection({
         }
         
         // Get auth token for the streaming request
-        const token = await AsyncStorage.getItem("auth_token");
+        const token = await AsyncStorage.getItem("authToken");
         
         // Create and play new sound
         const { sound, status } = await Audio.Sound.createAsync(

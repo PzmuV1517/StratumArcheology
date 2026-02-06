@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import {
   useLocalSearchParams,
   useRouter,
@@ -119,6 +119,8 @@ export default function ProjectDetailScreen() {
   const { socket, isConnected, joinProject, leaveProject } = useWebSocket();
   const reopenFilesOnReturnRef = useRef(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isSaving, setIsSaving] = useState(false);
 
   // Conflict resolution state
   const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
@@ -189,10 +191,15 @@ export default function ProjectDetailScreen() {
       if (data.user_id === currentUser.id && data.project_id === id) {
         // Silently refresh project data to get updated role
         // Only show alert if role was changed to a lower permission level
-        const roleHierarchy: Record<string, number> = { leader: 3, researcher: 2, guest: 1 };
+        const roleHierarchy: Record<string, number> = {
+          leader: 3,
+          researcher: 2,
+          guest: 1,
+        };
         const newRoleLevel = roleHierarchy[data.new_role?.toLowerCase()] || 0;
-        const currentRoleLevel = roleHierarchy[currentRole?.toLowerCase() || ""] || 0;
-        
+        const currentRoleLevel =
+          roleHierarchy[currentRole?.toLowerCase() || ""] || 0;
+
         (async () => {
           try {
             const [projectData, notesData] = await Promise.all([
@@ -206,7 +213,7 @@ export default function ProjectDetailScreen() {
             console.warn("[Project] Silent role update refresh failed:", e);
           }
         })();
-        
+
         // Only alert if permissions were reduced (might affect what they can do)
         if (newRoleLevel < currentRoleLevel) {
           showAlert(
@@ -1004,27 +1011,27 @@ export default function ProjectDetailScreen() {
         <View style={styles.centerContainer}>
           <Stack.Screen
             options={{
-            title: "Project Not Found",
-            headerStyle: { backgroundColor: "#111111" },
-            headerTintColor: "#FF2A2A",
-            headerTitleStyle: {
-              color: "#F5F5F5",
-              fontSize: 18,
-              fontWeight: "600",
-            },
-            headerShown: true,
-          }}
-        />
-        <Text style={styles.errorText}>Project not found</Text>
-        <Text style={styles.errorSubtext}>
-          You may have been removed from this project or it no longer exists.
-        </Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.replace("/(tabs)")}
-        >
-          <Text style={styles.backButtonText}>Go to Projects</Text>
-        </TouchableOpacity>
+              title: "Project Not Found",
+              headerStyle: { backgroundColor: "#111111" },
+              headerTintColor: "#FF2A2A",
+              headerTitleStyle: {
+                color: "#F5F5F5",
+                fontSize: 18,
+                fontWeight: "600",
+              },
+              headerShown: true,
+            }}
+          />
+          <Text style={styles.errorText}>Project not found</Text>
+          <Text style={styles.errorSubtext}>
+            You may have been removed from this project or it no longer exists.
+          </Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.replace("/(tabs)")}
+          >
+            <Text style={styles.backButtonText}>Go to Projects</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -1035,573 +1042,511 @@ export default function ProjectDetailScreen() {
       <View style={styles.container}>
         <Stack.Screen
           options={{
-          // Remove visible title next to back while keeping header spacing
-          headerTitle: " ",
-          headerStyle: { backgroundColor: "#111111" },
-          headerTintColor: "#FF2A2A",
-          headerTitleStyle: {
-            color: "transparent",
-            fontSize: 18,
-            fontWeight: "600",
-          },
-          headerBackTitle: "Projects",
-          headerShown: true,
-          headerBackVisible: true,
-          presentation: "card",
-          // Right side: Files icon (left) + Burger (right)
-          headerRight: () => (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <TouchableOpacity
-                onPress={() => setShowFilesOverlay(true)}
-                style={styles.iconButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                {Platform.OS === "web" && LuFilesIcon ? (
-                  <LuFilesIcon color="#FF2A2A" size={18} />
-                ) : (
-                  <Text style={styles.iconText}>📁</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowMenu((p) => !p)}
-                style={styles.iconButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                {Platform.OS === "web" && GiHamburger ? (
-                  <GiHamburger color="#FF2A2A" size={18} />
-                ) : (
-                  <Text style={styles.iconText}>☰</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
+            // Remove visible title next to back while keeping header spacing
+            headerTitle: " ",
+            headerStyle: { backgroundColor: "#111111" },
+            headerTintColor: "#FF2A2A",
+            headerTitleStyle: {
+              color: "transparent",
+              fontSize: 18,
+              fontWeight: "600",
+            },
+            headerBackTitle: "Projects",
+            headerShown: true,
+            headerBackVisible: true,
+            presentation: "card",
+            // Right side: Files icon (left) + Burger (right)
+            headerRight: () => (
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <TouchableOpacity
+                  onPress={() => setShowFilesOverlay(true)}
+                  style={styles.iconButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  {Platform.OS === "web" && LuFilesIcon ? (
+                    <LuFilesIcon color="#FF2A2A" size={18} />
+                  ) : (
+                    <Text style={styles.iconText}>📁</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowMenu((p) => !p)}
+                  style={styles.iconButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  {Platform.OS === "web" && GiHamburger ? (
+                    <GiHamburger color="#FF2A2A" size={18} />
+                  ) : (
+                    <Text style={styles.iconText}>☰</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ),
+          }}
+        />
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={
-          ["matrix", "gps", "history", "tools"].includes(activeTab)
-            ? { flex: 1 }
-            : undefined
-        }
-        scrollEnabled={!["matrix", "gps", "history", "tools"].includes(activeTab)}
-        refreshControl={
-          Platform.OS !== "web" ? (
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              tintColor="#C41E3A"
-              colors={["#C41E3A"]}
-              progressBackgroundColor="#1C1C1E"
-            />
-          ) : undefined
-        }
-      >
-        {/* Tab Content */}
-        <View
-          style={[
-            ["matrix", "gps", "history", "tools"].includes(activeTab) && { flex: 1 },
-          ]}
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={
+            ["matrix", "gps", "history"].includes(activeTab)
+              ? { flex: 1 }
+              : { paddingBottom: 24 }
+          }
+          scrollEnabled={!["matrix", "gps", "history"].includes(activeTab)}
+          refreshControl={
+            Platform.OS !== "web" ? (
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor="#C41E3A"
+                colors={["#C41E3A"]}
+                progressBackgroundColor="#1C1C1E"
+              />
+            ) : undefined
+          }
         >
-          {activeTab === "overview" ? (
-            <View style={styles.overviewContainer}>
-              {/* Hero Section */}
-              <View style={styles.overviewHero}>
-                <Text style={styles.overviewTitle}>{project.name}</Text>
-                {!!project.ran_lmi_id && (
-                  <View style={styles.overviewBadge}>
-                    <Text style={styles.overviewBadgeText}>
-                      RAN/LMI: {project.ran_lmi_id}
+          {/* Tab Content */}
+          <View
+            style={[
+              ["matrix", "gps", "history"].includes(activeTab) && {
+                flex: 1,
+              },
+              !["overview", "matrix", "gps", "history"].includes(activeTab) && {
+                paddingHorizontal: 16,
+                paddingTop: 16,
+              },
+            ]}
+          >
+            {activeTab === "overview" ? (
+              <View style={styles.overviewContainer}>
+                {/* Hero Section */}
+                <View style={styles.overviewHero}>
+                  <Text style={styles.overviewTitle}>{project.name}</Text>
+                  {!!project.ran_lmi_id && (
+                    <View style={styles.overviewBadge}>
+                      <Text style={styles.overviewBadgeText}>
+                        RAN/LMI: {project.ran_lmi_id}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Stats Grid */}
+                <View style={styles.overviewStatsGrid}>
+                  <View style={styles.overviewStatCard}>
+                    <Text style={styles.overviewStatValue}>{members.length}</Text>
+                    <Text style={styles.overviewStatLabel}>Team Members</Text>
+                  </View>
+                  <View style={styles.overviewStatCard}>
+                    <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                    <Text style={styles.overviewStatLabel}>Notes</Text>
+                  </View>
+                </View>
+
+                {/* Description */}
+                {!!project.description && (
+                  <View style={styles.overviewCard}>
+                    <View style={styles.overviewCardHeader}>
+                      <View style={styles.overviewIconCircle}>
+                        <Text style={styles.overviewIcon}>📝</Text>
+                      </View>
+                      <Text style={styles.overviewCardTitle}>About</Text>
+                    </View>
+                    <Text style={styles.overviewDescription}>
+                      {project.description}
                     </Text>
                   </View>
                 )}
-              </View>
 
-              {/* Stats Grid */}
-              <View style={styles.overviewStatsGrid}>
-                <View style={styles.overviewStatCard}>
-                  <Text style={styles.overviewStatValue}>{members.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Team Members</Text>
-                </View>
-                <View style={styles.overviewStatCard}>
-                  <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Notes</Text>
-                </View>
-              </View>
-
-              {/* Description */}
-              {!!project.description && (
+                {/* Interactive Timeline */}
                 <View style={styles.overviewCard}>
                   <View style={styles.overviewCardHeader}>
                     <View style={styles.overviewIconCircle}>
-                      <Text style={styles.overviewIcon}>📝</Text>
+                      <Text style={styles.overviewIcon}>📅</Text>
                     </View>
-                    <Text style={styles.overviewCardTitle}>About</Text>
+                    <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
                   </View>
-                  <Text style={styles.overviewDescription}>
-                    {project.description}
-                  </Text>
-                </View>
-              )}
-
-              {/* Interactive Timeline */}
-              <View style={styles.overviewCard}>
-                <View style={styles.overviewCardHeader}>
-                  <View style={styles.overviewIconCircle}>
-                    <Text style={styles.overviewIcon}>📅</Text>
+                  <View style={{ height: 400, marginTop: 12 }}>
+                    <Timeline projectId={project.id} maxHeight={400} />
                   </View>
-                  <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
-                </View>
-                <View style={{ height: 400, marginTop: 12 }}>
-                  <Timeline projectId={project.id} maxHeight={400} />
                 </View>
               </View>
-            </View>
-          ) : activeTab === "gallery" ? (
-            <FileGallery
-              projectId={project?.id as string}
-              onOpenItem={openGalleryItem}
-            />
-          ) : activeTab === "artefacts" ? (
-            <ArtefactsTab projectId={project?.id as string} canEdit={canEditFiles} />
-          ) : activeTab === "notes" ? (
-            <NotesSection
-              notes={notes as any}
-              onCreateNote={handleCreateNote}
-              onNotePress={handleNotePress}
-              onDeleteNote={handleDeleteNote}
-              canEdit={!isGuest}
-            />
-          ) : activeTab === "gps" ? (
-            <View
-              style={{
-                flex: 1,
-                borderRadius: 12,
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: "#2A2A2A",
-              }}
-            >
-              <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
-            </View>
-          ) : activeTab === "matrix" ? (
-            <View
-              style={
-                Platform.OS === "web"
-                  ? ({
-                      height: "calc(100vh - 280px)",
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    } as any)
-                  : {
-                      flex: 1,
-                      minHeight: 520,
-                      borderRadius: 12,
-                      overflow: "hidden",
-                      borderWidth: 1,
-                      borderColor: "#2A2A2A",
-                      backgroundColor: "#0A0A0A",
-                    }
-              }
-            >
-              {Platform.OS === "web" ? (
-                <div style={{ height: "100%", width: "100%" }}>
-                  {HarrisMatrixComponent &&
-                    React.createElement(HarrisMatrixComponent, {
-                      projectId: project?.id as string,
-                      canEdit: canEditMatrix,
-                    })}
-                </div>
-              ) : (
-                <View style={{ flex: 1, width: "100%" }}>
-                  {HarrisMatrixComponent &&
-                    React.createElement(HarrisMatrixComponent, {
-                      projectId: project?.id as string,
-                      canEdit: canEditMatrix,
-                    })}
-                </View>
-              )}
-            </View>
-          ) : activeTab === "history" ? (
-            <View
-              style={{
-                flex: 1,
-                borderRadius: 12,
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: "#2A2A2A",
-                backgroundColor: "#0A0A0A",
-              }}
-            >
-              <TimeMachineTab projectId={project?.id as string} />
-            </View>
-          ) : activeTab === "tools" ? (
-            <View
-              style={{
-                flex: 1,
-                borderRadius: 12,
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: "#2A2A2A",
-                backgroundColor: "#0A0A0A",
-              }}
-            >
-              <ToolsTab projectId={project?.id as string} />
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
+            ) : activeTab === "gallery" ? (
+              <FileGallery
+                projectId={project?.id as string}
+                onOpenItem={openGalleryItem}
+              />
+            ) : activeTab === "artefacts" ? (
+              <ArtefactsTab
+                projectId={project?.id as string}
+                canEdit={canEditFiles}
+              />
+            ) : activeTab === "notes" ? (
+              <NotesSection
+                notes={notes as any}
+                onCreateNote={handleCreateNote}
+                onNotePress={handleNotePress}
+                onDeleteNote={handleDeleteNote}
+                canEdit={!isGuest}
+              />
+            ) : activeTab === "gps" ? (
+              <View
+                style={{
+                  flex: 1,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                }}
+              >
+                <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
+              </View>
+            ) : activeTab === "matrix" ? (
+              <View
+                style={
+                  Platform.OS === "web"
+                    ? ({
+                        height: "calc(100vh - 280px)",
+                        borderRadius: 12,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: "#2A2A2A",
+                        backgroundColor: "#0A0A0A",
+                      } as any)
+                    : {
+                        flex: 1,
+                        minHeight: 520,
+                        borderRadius: 12,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: "#2A2A2A",
+                        backgroundColor: "#0A0A0A",
+                      }
+                }
+              >
+                {Platform.OS === "web" ? (
+                  <div style={{ height: "100%", width: "100%" }}>
+                    {HarrisMatrixComponent &&
+                      React.createElement(HarrisMatrixComponent, {
+                        projectId: project?.id as string,
+                        canEdit: canEditMatrix,
+                      })}
+                  </div>
+                ) : (
+                  <View style={{ flex: 1, width: "100%" }}>
+                    {HarrisMatrixComponent &&
+                      React.createElement(HarrisMatrixComponent, {
+                        projectId: project?.id as string,
+                        canEdit: canEditMatrix,
+                      })}
+                  </View>
+                )}
+              </View>
+            ) : activeTab === "history" ? (
+              <View
+                style={{
+                  flex: 1,
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                  backgroundColor: "#0A0A0A",
+                  margin: 16,
+                }}
+              >
+                <TimeMachineTab projectId={project?.id as string} />
+              </View>
+            ) : activeTab === "tools" ? (
+              <View
+                style={{
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                  backgroundColor: "#0A0A0A",
+                  minHeight: 500,
+                }}
+              >
+                <ToolsTab projectId={project?.id as string} />
+              </View>
+            ) : null}
+          </View>
+        </ScrollView>
 
-      {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
-      {isLiquidGlassAvailable() ? (
-        <GlassView style={styles.bottomTabContainerGlass} glassEffectStyle="regular">
-          <TouchableOpacity
-            style={[
-              styles.bottomTab,
-              activeTab === "overview" && styles.activeBottomTab,
-            ]}
-            onPress={() => setActiveTab("overview")}
-          >
-            <Text
+        {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
+        {Platform.OS === "ios" && isLiquidGlassSupported ? (
+          <LiquidGlassView style={styles.bottomTabContainerGlass} effect="regular">
+            <TouchableOpacity
               style={[
-                styles.bottomTabText,
-                activeTab === "overview" && styles.activeBottomTabText,
+                styles.bottomTab,
+                activeTab === "overview" && styles.activeBottomTab,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              onPress={() => setActiveTab("overview")}
             >
-              Overview
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.bottomTab, activeTab === "notes" && styles.activeBottomTab]}
-            onPress={() => setActiveTab("notes")}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  activeTab === "overview" && styles.activeBottomTabText,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                Overview
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.bottomTabText,
-                activeTab === "notes" && styles.activeBottomTabText,
+                styles.bottomTab,
+                activeTab === "notes" && styles.activeBottomTab,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              onPress={() => setActiveTab("notes")}
             >
-              Notes
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bottomTab,
-              activeTab === "artefacts" && styles.activeBottomTab,
-            ]}
-            onPress={() => setActiveTab("artefacts")}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  activeTab === "notes" && styles.activeBottomTabText,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                Notes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.bottomTabText,
-                activeTab === "artefacts" && styles.activeBottomTabText,
+                styles.bottomTab,
+                activeTab === "artefacts" && styles.activeBottomTab,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              onPress={() => setActiveTab("artefacts")}
             >
-              Artefacts
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bottomTab,
-              activeTab === "matrix" && styles.activeBottomTab,
-            ]}
-            onPress={() => setActiveTab("matrix")}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  activeTab === "artefacts" && styles.activeBottomTabText,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                Artefacts
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.bottomTabText,
-                activeTab === "matrix" && styles.activeBottomTabText,
+                styles.bottomTab,
+                activeTab === "matrix" && styles.activeBottomTab,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              onPress={() => setActiveTab("matrix")}
             >
-              Matrix
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.bottomTab,
-              styles.moreTab,
-              ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                styles.activeBottomTab,
-            ]}
-            onPress={() => setShowMoreMenu(!showMoreMenu)}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  activeTab === "matrix" && styles.activeBottomTabText,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                Matrix
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.bottomTabText,
+                styles.bottomTab,
+                styles.moreTab,
                 ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                  styles.activeBottomTabText,
+                  styles.activeBottomTab,
               ]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              onPress={() => setShowMoreMenu(!showMoreMenu)}
             >
-              More ▾
-            </Text>
-          </TouchableOpacity>
-        </GlassView>
-      ) : (
-        <View style={styles.bottomTabContainer}>
-          <TouchableOpacity
-            style={styles.bottomTab}
-            onPress={() => setActiveTab("overview")}
-          >
-            <IconSymbol
-              name="house.fill"
-              size={24}
-              color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
-            />
-            <Text
-              style={[
-                styles.bottomTabLabel,
-                activeTab === "overview" && styles.activeBottomTabLabel,
-              ]}
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  ["gallery", "gps", "history", "tools"].includes(activeTab) &&
+                    styles.activeBottomTabText,
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                More ▾
+              </Text>
+            </TouchableOpacity>
+          </LiquidGlassView>
+        ) : (
+          <View style={styles.bottomTabContainer}>
+            <TouchableOpacity
+              style={styles.bottomTab}
+              onPress={() => setActiveTab("overview")}
             >
-              Overview
-            </Text>
-          </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => setActiveTab("notes")}
-        >
-          <IconSymbol
-            name="note.text"
-            size={24}
-            color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
-          />
-          <Text
-            style={[
-              styles.bottomTabLabel,
-              activeTab === "notes" && styles.activeBottomTabLabel,
-            ]}
-          >
-            Notes
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => setActiveTab("artefacts")}
-        >
-          <IconSymbol
-            name="cube.fill"
-            size={24}
-            color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
-          />
-          <Text
-            style={[
-              styles.bottomTabLabel,
-              activeTab === "artefacts" && styles.activeBottomTabLabel,
-            ]}
-          >
-            Artefacts
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => setActiveTab("matrix")}
-        >
-          <IconSymbol
-            name="chart.bar.fill"
-            size={24}
-            color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
-          />
-          <Text
-            style={[
-              styles.bottomTabLabel,
-              activeTab === "matrix" && styles.activeBottomTabLabel,
-            ]}
-          >
-            Matrix
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.bottomTab}
-          onPress={() => setShowMoreMenu(!showMoreMenu)}
-        >
-          <IconSymbol
-            name="ellipsis.circle.fill"
-            size={24}
-            color={["gallery", "gps", "history", "tools"].includes(activeTab) ? "#FF2A2A" : "#9A9A9A"}
-          />
-          <Text
-            style={[
-              styles.bottomTabLabel,
-              ["gallery", "gps", "history", "tools"].includes(activeTab) && styles.activeBottomTabLabel,
-            ]}
-          >
-            More
-          </Text>
-        </TouchableOpacity>
-        </View>
-      )}
+              <IconSymbol
+                name="house.fill"
+                size={24}
+                color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
+              />
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  activeTab === "overview" && styles.activeBottomTabLabel,
+                ]}
+              >
+                Overview
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bottomTab}
+              onPress={() => setActiveTab("notes")}
+            >
+              <IconSymbol
+                name="note.text"
+                size={24}
+                color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
+              />
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  activeTab === "notes" && styles.activeBottomTabLabel,
+                ]}
+              >
+                Notes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bottomTab}
+              onPress={() => setActiveTab("artefacts")}
+            >
+              <IconSymbol
+                name="cube.fill"
+                size={24}
+                color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
+              />
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  activeTab === "artefacts" && styles.activeBottomTabLabel,
+                ]}
+              >
+                Artefacts
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bottomTab}
+              onPress={() => setActiveTab("matrix")}
+            >
+              <IconSymbol
+                name="chart.bar.fill"
+                size={24}
+                color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
+              />
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  activeTab === "matrix" && styles.activeBottomTabLabel,
+                ]}
+              >
+                Matrix
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bottomTab}
+              onPress={() => setShowMoreMenu(!showMoreMenu)}
+            >
+              <IconSymbol
+                name="ellipsis.circle.fill"
+                size={24}
+                color={
+                  ["gallery", "gps", "history", "tools"].includes(activeTab)
+                    ? "#FF2A2A"
+                    : "#9A9A9A"
+                }
+              />
+              <Text
+                style={[
+                  styles.bottomTabLabel,
+                  ["gallery", "gps", "history", "tools"].includes(activeTab) &&
+                    styles.activeBottomTabLabel,
+                ]}
+              >
+                More
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {/* More menu dropdown */}
-      {showMoreMenu && (
-        <View style={styles.moreMenuOverlay}>
-          <TouchableOpacity
-            style={styles.moreMenuBackdrop}
-            onPress={() => setShowMoreMenu(false)}
-            activeOpacity={1}
-          />
-          {isLiquidGlassAvailable() ? (
-            <GlassView
-              style={[styles.moreMenu, styles.moreMenuGlass]}
-              glassEffectStyle="regular"
-            >
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "gallery" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("gallery");
-                  setShowMoreMenu(false);
-                }}
+        {/* More menu dropdown */}
+        {showMoreMenu && (
+          <View style={styles.moreMenuOverlay}>
+            <TouchableOpacity
+              style={styles.moreMenuBackdrop}
+              onPress={() => setShowMoreMenu(false)}
+              activeOpacity={1}
+            />
+            {Platform.OS === "ios" && isLiquidGlassSupported ? (
+              <LiquidGlassView
+                style={[styles.moreMenu, styles.moreMenuGlass]}
+                effect="regular"
               >
-                <Text
+                <TouchableOpacity
                   style={[
-                    styles.moreMenuText,
-                    activeTab === "gallery" && styles.moreMenuTextActive,
+                    styles.moreMenuItem,
+                    activeTab === "gallery" && styles.moreMenuItemActive,
                   ]}
+                  onPress={() => {
+                    setActiveTab("gallery");
+                    setShowMoreMenu(false);
+                  }}
                 >
-                  Gallery
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "gps" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("gps");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "gallery" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Gallery
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[
-                    styles.moreMenuText,
-                    activeTab === "gps" && styles.moreMenuTextActive,
+                    styles.moreMenuItem,
+                    activeTab === "gps" && styles.moreMenuItemActive,
                   ]}
+                  onPress={() => {
+                    setActiveTab("gps");
+                    setShowMoreMenu(false);
+                  }}
                 >
-                  Map
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "history" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("history");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "gps" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Map
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[
-                    styles.moreMenuText,
-                    activeTab === "history" && styles.moreMenuTextActive,
+                    styles.moreMenuItem,
+                    activeTab === "history" && styles.moreMenuItemActive,
                   ]}
+                  onPress={() => {
+                    setActiveTab("history");
+                    setShowMoreMenu(false);
+                  }}
                 >
-                  Time Machine
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "tools" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("tools");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.moreMenuText,
-                    activeTab === "tools" && styles.moreMenuTextActive,
-                  ]}
-                >
-                  Tools
-                </Text>
-              </TouchableOpacity>
-            </GlassView>
-          ) : (
-            <View style={styles.moreMenu}>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "gallery" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("gallery");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.moreMenuText,
-                    activeTab === "gallery" && styles.moreMenuTextActive,
-                  ]}
-                >
-                  Gallery
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "gps" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("gps");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.moreMenuText,
-                    activeTab === "gps" && styles.moreMenuTextActive,
-                  ]}
-                >
-                  Map
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.moreMenuItem,
-                  activeTab === "history" && styles.moreMenuItemActive,
-                ]}
-                onPress={() => {
-                  setActiveTab("history");
-                  setShowMoreMenu(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.moreMenuText,
-                    activeTab === "history" && styles.moreMenuTextActive,
-                  ]}
-                >
-                  Time Machine
-                </Text>
-              </TouchableOpacity>
-              {Platform.OS !== "web" && (
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "history" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Time Machine
+                  </Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
@@ -1621,366 +1566,464 @@ export default function ProjectDetailScreen() {
                     Tools
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-      )}
+              </LiquidGlassView>
+            ) : (
+              <View style={styles.moreMenu}>
+                <TouchableOpacity
+                  style={[
+                    styles.moreMenuItem,
+                    activeTab === "gallery" && styles.moreMenuItemActive,
+                  ]}
+                  onPress={() => {
+                    setActiveTab("gallery");
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "gallery" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Gallery
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.moreMenuItem,
+                    activeTab === "gps" && styles.moreMenuItemActive,
+                  ]}
+                  onPress={() => {
+                    setActiveTab("gps");
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "gps" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Map
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.moreMenuItem,
+                    activeTab === "history" && styles.moreMenuItemActive,
+                  ]}
+                  onPress={() => {
+                    setActiveTab("history");
+                    setShowMoreMenu(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.moreMenuText,
+                      activeTab === "history" && styles.moreMenuTextActive,
+                    ]}
+                  >
+                    Time Machine
+                  </Text>
+                </TouchableOpacity>
+                {Platform.OS !== "web" && (
+                  <TouchableOpacity
+                    style={[
+                      styles.moreMenuItem,
+                      activeTab === "tools" && styles.moreMenuItemActive,
+                    ]}
+                    onPress={() => {
+                      setActiveTab("tools");
+                      setShowMoreMenu(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.moreMenuText,
+                        activeTab === "tools" && styles.moreMenuTextActive,
+                      ]}
+                    >
+                      Tools
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
-      {/* Burger menu modal */}
-      <ProjectMenuModal
-        visible={showMenu}
-        membersCount={members.length}
-        onClose={() => setShowMenu(false)}
-        onOpenMembers={() => setShowMembersModal(true)}
-        onOpenSettings={handleProjectSettings}
-        onExitProject={async () => {
-          // Leave the project by removing self from members
-          if (currentUser?.id && id) {
-            try {
-              await projectService.removeMember(id as string, currentUser.id);
-              router.replace("/(tabs)");
-            } catch (e) {
-              console.error("Failed to leave project:", e);
-              showAlert("Error", "Failed to leave the project");
-            }
-          }
-        }}
-        onDeleteProject={async () => {
-          // Delete the project entirely
-          if (id) {
-            try {
-              await projectService.deleteProject(id as string);
-              router.replace("/(tabs)");
-            } catch (e) {
-              console.error("Failed to delete project:", e);
-              showAlert("Error", "Failed to delete the project");
-            }
-          }
-        }}
-        onTransferLeadership={() => {
-          // Open members modal for leadership transfer
-          setShowMenu(false);
-          setShowMembersModal(true);
-          // Could add specific transfer UI in future
-        }}
-        isOwner={isOwner}
-        canChangeSettings={canChangeSettings}
-      />
-
-      {/* Members modal (component) */}
-      <MembersModal
-        visible={showMembersModal}
-        members={members.map((m) => ({
-          id: m.id || m.user_id || "",
-          display_name: m.display_name,
-          email: m.email,
-          role: (m.role || "").toUpperCase() as "LEADER" | "RESEARCHER" | "GUEST",
-        }))}
-        onClose={() => setShowMembersModal(false)}
-        onManage={handleManageMembers}
-        renderMember={(m) =>
-          renderMember({
-            item: {
-              ...m,
-              role: (m.role || "").toUpperCase() as
-                | "LEADER"
-                | "RESEARCHER"
-                | "GUEST",
-            },
-          })
-        }
-        projectId={id as string}
-        currentUserId={currentUser?.id || project?.owner_id}
-        projectOwnerId={project?.owner_id}
-        onKicked={async () => {
-          // User was kicked from the project - redirect to home immediately
-          setShowMembersModal(false);
-          router.replace("/(tabs)");
-        }}
-      />
-
-      {/* Files overlay full-screen (component) */}
-      <Modal
-        visible={showFilesOverlay}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setShowFilesOverlay(false)}
-      >
-        <FilesOverlay
-          visible={true}
-          currentFolder={currentFolder}
-          breadcrumbs={breadcrumbs}
-          fileNodes={fileNodes}
-          fileLoading={fileLoading}
-          onClose={() => setShowFilesOverlay(false)}
-          onLoadRoot={loadRootFiles}
-          onOpenFolder={openFolder as any}
-          onNavigateBreadcrumb={navigateBreadcrumb}
-          onUpload={uploadIntoCurrent}
-          onCreateFolder={() => {
-            setNewFolderName("");
-            setShowNewFolderModal(true);
-          }}
-          onDownload={handleDownloadFile}
-          onRename={(node: any) => {
-            setRenameNode(node);
-            setRenameText(node.name);
-          }}
-          onMove={(node: any) => setMoveMode({ node })}
-          onDelete={(node: any) => setDeleteNodeTarget(node)}
-          onOpenFile={async (node: any) => {
-            if (node.type === "folder") return;
-            const lower = (node.name || "").toLowerCase();
-            const isAudio =
-              node.mime_type?.startsWith("audio/") ||
-              /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
-            if (isAudio) {
-              if (node.note_id) {
-                router.push({
-                  pathname: "/voice-note/[id]",
-                  params: { id: node.note_id },
-                });
-              } else {
-                router.push({
-                  pathname: "/data-preview",
-                  params: { nodeId: node.id, name: node.name, kind: "audio" },
-                });
+        {/* Burger menu modal */}
+        <ProjectMenuModal
+          visible={showMenu}
+          membersCount={members.length}
+          onClose={() => setShowMenu(false)}
+          onOpenMembers={() => setShowMembersModal(true)}
+          onOpenSettings={handleProjectSettings}
+          onExitProject={async () => {
+            // Leave the project by removing self from members
+            if (currentUser?.id && id) {
+              try {
+                await projectService.removeMember(id as string, currentUser.id);
+                router.replace("/(tabs)");
+              } catch (e: any) {
+                console.error("Failed to leave project:", e);
+                const msg = e?.detail || e?.message || "Failed to leave the project";
+                showAlert("Error", msg);
               }
-              return;
+            } else {
+              showAlert(
+                "Error",
+                "Could not determine your user ID. Try logging out and back in.",
+              );
             }
-            const isImage =
-              (node.mime_type && node.mime_type.startsWith("image/")) ||
-              /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || "");
-            if (isImage) {
-              reopenFilesOnReturnRef.current = true;
-              setShowFilesOverlay(false);
-              router.push({
-                pathname: "/image-preview",
-                params: { nodeId: node.id, name: node.name },
-              });
-              return;
-            }
-            const lower2 = (node.name || "").toLowerCase();
-            const isCsv = node.mime_type === "text/csv" || lower2.endsWith(".csv");
-            const isExcel =
-              node.mime_type ===
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-              node.mime_type === "application/vnd.ms-excel" ||
-              lower2.endsWith(".xlsx") ||
-              lower2.endsWith(".xls");
-            const isText =
-              node.mime_type === "text/plain" ||
-              lower2.endsWith(".txt") ||
-              lower2.endsWith(".md") ||
-              lower2.endsWith(".json") ||
-              node.mime_type === "application/json";
-            const isPdf =
-              node.mime_type === "application/pdf" || lower2.endsWith(".pdf");
-            const isVideo =
-              node.mime_type?.startsWith("video/") ||
-              /\.(mp4|webm|ogg|mov)$/i.test(lower2);
-            const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
-            const isMesh = /\.(glb|gltf)$/i.test(lower2);
-
-            if (
-              isCsv ||
-              isExcel ||
-              isText ||
-              isPdf ||
-              isVideo ||
-              isPoint ||
-              isMesh ||
-              isAudio
-            ) {
-              let kind: string = "csv";
-              if (isExcel) kind = "excel";
-              else if (isText) kind = lower2.endsWith(".md") ? "markdown" : "text";
-              else if (isPdf) kind = "pdf";
-              else if (isVideo) kind = "video";
-              else if (isPoint) kind = "pointcloud";
-              else if (isMesh) kind = "mesh";
-              else if (isAudio) kind = "audio";
-              reopenFilesOnReturnRef.current = true;
-              setShowFilesOverlay(false);
-              router.push({
-                pathname: "/data-preview",
-                params: { nodeId: node.id, name: node.name, kind },
-              });
-              return;
-            }
-            showAlert("Preview", "This file type is not yet supported.");
           }}
-          projectId={id as string}
-          onRefreshAfterUpload={async () => {
-            try {
-              if (currentFolder?.id) {
-                const children = await fileService.listChildren(currentFolder.id);
-                setFileNodes(children);
-              } else {
-                await loadRootFiles();
+          onDeleteProject={async () => {
+            // Delete the project entirely
+            if (id) {
+              try {
+                await projectService.deleteProject(id as string);
+                router.replace("/(tabs)");
+              } catch (e) {
+                console.error("Failed to delete project:", e);
+                showAlert("Error", "Failed to delete the project");
               }
-            } catch (e) {
-              console.error("Refresh after upload failed:", e);
             }
           }}
-          canEdit={canEditFiles}
-          projectMembers={members.map((m) => ({
+          onTransferLeadership={() => {
+            // Open members modal for leadership transfer
+            setShowMenu(false);
+            setShowMembersModal(true);
+            // Could add specific transfer UI in future
+          }}
+          isOwner={isOwner}
+          canChangeSettings={canChangeSettings}
+        />
+
+        {/* Members modal (component) */}
+        <MembersModal
+          visible={showMembersModal}
+          members={members.map((m) => ({
             id: m.id || m.user_id || "",
             display_name: m.display_name,
             email: m.email,
-            role: m.role,
+            role: (m.role || "").toUpperCase() as "LEADER" | "RESEARCHER" | "GUEST",
           }))}
-          currentUserId={currentUser?.id}
-        />
-        {/* New Folder Modal - rendered inside FilesOverlay Modal for proper z-stacking */}
-        <NewFolderModal
-          visible={showNewFolderModal}
-          onCancel={() => setShowNewFolderModal(false)}
-          onCreate={async (name) => {
-            if (!canEditFiles) {
-              showAlert(
-                "Permission Denied",
-                "Guests can only view files. Creating folders is not permitted.",
-              );
-              setShowNewFolderModal(false);
-              return;
-            }
-
-            if (!name) return;
-            try {
-              const parentId =
-                currentFolder && currentFolder.id ? currentFolder.id : undefined;
-              await fileService.createFolder(id as string, name, parentId as any);
-              setShowNewFolderModal(false);
-              if (currentFolder?.id)
-                await openFolder({ id: currentFolder.id, name: currentFolder.name });
-              else await loadRootFiles();
-            } catch {
-              showAlert("Error", "Failed to create folder");
-            }
+          onClose={() => setShowMembersModal(false)}
+          onManage={handleManageMembers}
+          renderMember={(m) =>
+            renderMember({
+              item: {
+                ...m,
+                role: (m.role || "").toUpperCase() as
+                  | "LEADER"
+                  | "RESEARCHER"
+                  | "GUEST",
+              },
+            })
+          }
+          projectId={id as string}
+          currentUserId={currentUser?.id || project?.owner_id}
+          projectOwnerId={project?.owner_id}
+          onKicked={async () => {
+            // User was kicked from the project - redirect to home immediately
+            setShowMembersModal(false);
+            router.replace("/(tabs)");
           }}
         />
 
-        {/* Delete Confirmation Modal - inside FilesOverlay Modal for proper z-stacking */}
-        <DeleteConfirmModal
-          visible={!!deleteNodeTarget}
-          name={deleteNodeTarget?.name || ""}
-          isFolder={deleteNodeTarget?.type === "folder"}
-          isDeleting={isDeleting}
-          onCancel={() => setDeleteNodeTarget(null)}
-          onConfirm={async () => {
-            if (!canEditFiles) {
-              showAlert(
-                "Permission Denied",
-                "Guests can only view files. Deleting is not permitted.",
-              );
-              setDeleteNodeTarget(null);
-              return;
-            }
-
-            if (!deleteNodeTarget) return;
-            try {
-              setIsDeleting(true);
-              await fileService.deleteNode(deleteNodeTarget.id);
-              setDeleteNodeTarget(null);
-              if (currentFolder?.id)
-                await openFolder({ id: currentFolder.id, name: currentFolder.name });
-              else await loadRootFiles();
-            } catch {
-              showAlert("Error", "Failed to delete");
-            } finally {
-              setIsDeleting(false);
-            }
-          }}
-        />
-
-        {/* Rename Modal - inside FilesOverlay Modal for proper z-stacking */}
-        <RenameModal
-          visible={!!renameNode}
-          currentName={renameNode?.name || ""}
-          isFile={renameNode?.type === "file"}
-          onCancel={() => setRenameNode(null)}
-          onRename={async (newBaseName) => {
-            if (!canEditFiles) {
-              showAlert(
-                "Permission Denied",
-                "Guests can only view files. Renaming is not permitted.",
-              );
-              setRenameNode(null);
-              return;
-            }
-
-            if (!renameNode) return;
-            try {
-              let finalName = newBaseName.trim();
-              if (
-                renameNode.type === "file" &&
-                renameNode.name &&
-                renameNode.name.includes(".") &&
-                !renameNode.name.startsWith(".")
-              ) {
-                const ext = renameNode.name.substring(
-                  renameNode.name.lastIndexOf(".") + 1,
-                );
-                finalName = `${finalName}.${ext}`;
+        {/* Files overlay full-screen (component) */}
+        <Modal
+          visible={showFilesOverlay}
+          transparent={false}
+          animationType="slide"
+          onRequestClose={() => setShowFilesOverlay(false)}
+        >
+          <FilesOverlay
+            visible={true}
+            currentFolder={currentFolder}
+            breadcrumbs={breadcrumbs}
+            fileNodes={fileNodes}
+            fileLoading={fileLoading}
+            onClose={() => setShowFilesOverlay(false)}
+            onLoadRoot={loadRootFiles}
+            onOpenFolder={openFolder as any}
+            onNavigateBreadcrumb={navigateBreadcrumb}
+            onUpload={uploadIntoCurrent}
+            onCreateFolder={() => {
+              setNewFolderName("");
+              setShowNewFolderModal(true);
+            }}
+            onDownload={handleDownloadFile}
+            onRename={(node: any) => {
+              setRenameNode(node);
+              setRenameText(node.name);
+            }}
+            onMove={(node: any) => setMoveMode({ node })}
+            onDelete={(node: any) => setDeleteNodeTarget(node)}
+            onOpenFile={async (node: any) => {
+              if (node.type === "folder") return;
+              const lower = (node.name || "").toLowerCase();
+              const isAudio =
+                node.mime_type?.startsWith("audio/") ||
+                /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+              if (isAudio) {
+                if (node.note_id) {
+                  router.push({
+                    pathname: "/voice-note/[id]",
+                    params: { id: node.note_id },
+                  });
+                } else {
+                  router.push({
+                    pathname: "/data-preview",
+                    params: { nodeId: node.id, name: node.name, kind: "audio" },
+                  });
+                }
+                return;
               }
-              await fileService.renameNode(renameNode.id, finalName);
-              setRenameNode(null);
-              if (currentFolder?.id)
-                await openFolder({ id: currentFolder.id, name: currentFolder.name });
-              else await loadRootFiles();
-            } catch {
-              showAlert("Error", "Failed to rename");
-            }
+              const isImage =
+                (node.mime_type && node.mime_type.startsWith("image/")) ||
+                /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(node.name || "");
+              if (isImage) {
+                reopenFilesOnReturnRef.current = true;
+                setShowFilesOverlay(false);
+                router.push({
+                  pathname: "/image-preview",
+                  params: { nodeId: node.id, name: node.name },
+                });
+                return;
+              }
+              const lower2 = (node.name || "").toLowerCase();
+              const isCsv = node.mime_type === "text/csv" || lower2.endsWith(".csv");
+              const isExcel =
+                node.mime_type ===
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+                node.mime_type === "application/vnd.ms-excel" ||
+                lower2.endsWith(".xlsx") ||
+                lower2.endsWith(".xls");
+              const isText =
+                node.mime_type === "text/plain" ||
+                lower2.endsWith(".txt") ||
+                lower2.endsWith(".md") ||
+                lower2.endsWith(".json") ||
+                node.mime_type === "application/json";
+              const isPdf =
+                node.mime_type === "application/pdf" || lower2.endsWith(".pdf");
+              const isVideo =
+                node.mime_type?.startsWith("video/") ||
+                /\.(mp4|webm|ogg|mov)$/i.test(lower2);
+              const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
+              const isMesh = /\.(glb|gltf)$/i.test(lower2);
+
+              if (
+                isCsv ||
+                isExcel ||
+                isText ||
+                isPdf ||
+                isVideo ||
+                isPoint ||
+                isMesh ||
+                isAudio
+              ) {
+                let kind: string = "csv";
+                if (isExcel) kind = "excel";
+                else if (isText) kind = lower2.endsWith(".md") ? "markdown" : "text";
+                else if (isPdf) kind = "pdf";
+                else if (isVideo) kind = "video";
+                else if (isPoint) kind = "pointcloud";
+                else if (isMesh) kind = "mesh";
+                else if (isAudio) kind = "audio";
+                reopenFilesOnReturnRef.current = true;
+                setShowFilesOverlay(false);
+                router.push({
+                  pathname: "/data-preview",
+                  params: { nodeId: node.id, name: node.name, kind },
+                });
+                return;
+              }
+              showAlert("Preview", "This file type is not yet supported.");
+            }}
+            projectId={id as string}
+            onRefreshAfterUpload={async () => {
+              try {
+                if (currentFolder?.id) {
+                  const children = await fileService.listChildren(currentFolder.id);
+                  setFileNodes(children);
+                } else {
+                  await loadRootFiles();
+                }
+              } catch (e) {
+                console.error("Refresh after upload failed:", e);
+              }
+            }}
+            canEdit={canEditFiles}
+            projectMembers={members.map((m) => ({
+              id: m.id || m.user_id || "",
+              display_name: m.display_name,
+              email: m.email,
+              role: m.role,
+            }))}
+            currentUserId={currentUser?.id}
+          />
+          {/* New Folder Modal - rendered inside FilesOverlay Modal for proper z-stacking */}
+          <NewFolderModal
+            visible={showNewFolderModal}
+            onCancel={() => setShowNewFolderModal(false)}
+            onCreate={async (name) => {
+              if (!canEditFiles) {
+                showAlert(
+                  "Permission Denied",
+                  "Guests can only view files. Creating folders is not permitted.",
+                );
+                setShowNewFolderModal(false);
+                return;
+              }
+
+              if (!name) return;
+              try {
+                const parentId =
+                  currentFolder && currentFolder.id ? currentFolder.id : undefined;
+                await fileService.createFolder(id as string, name, parentId as any);
+                setShowNewFolderModal(false);
+                if (currentFolder?.id)
+                  await openFolder({
+                    id: currentFolder.id,
+                    name: currentFolder.name,
+                  });
+                else await loadRootFiles();
+              } catch {
+                showAlert("Error", "Failed to create folder");
+              }
+            }}
+          />
+
+          {/* Delete Confirmation Modal - inside FilesOverlay Modal for proper z-stacking */}
+          <DeleteConfirmModal
+            visible={!!deleteNodeTarget}
+            name={deleteNodeTarget?.name || ""}
+            isFolder={deleteNodeTarget?.type === "folder"}
+            isDeleting={isDeleting}
+            onCancel={() => setDeleteNodeTarget(null)}
+            onConfirm={async () => {
+              if (!canEditFiles) {
+                showAlert(
+                  "Permission Denied",
+                  "Guests can only view files. Deleting is not permitted.",
+                );
+                setDeleteNodeTarget(null);
+                return;
+              }
+
+              if (!deleteNodeTarget) return;
+              try {
+                setIsDeleting(true);
+                await fileService.deleteNode(deleteNodeTarget.id);
+                setDeleteNodeTarget(null);
+                if (currentFolder?.id)
+                  await openFolder({
+                    id: currentFolder.id,
+                    name: currentFolder.name,
+                  });
+                else await loadRootFiles();
+              } catch {
+                showAlert("Error", "Failed to delete");
+              } finally {
+                setIsDeleting(false);
+              }
+            }}
+          />
+
+          {/* Rename Modal - inside FilesOverlay Modal for proper z-stacking */}
+          <RenameModal
+            visible={!!renameNode}
+            currentName={renameNode?.name || ""}
+            isFile={renameNode?.type === "file"}
+            onCancel={() => setRenameNode(null)}
+            onRename={async (newBaseName) => {
+              if (!canEditFiles) {
+                showAlert(
+                  "Permission Denied",
+                  "Guests can only view files. Renaming is not permitted.",
+                );
+                setRenameNode(null);
+                return;
+              }
+
+              if (!renameNode) return;
+              try {
+                let finalName = newBaseName.trim();
+                if (
+                  renameNode.type === "file" &&
+                  renameNode.name &&
+                  renameNode.name.includes(".") &&
+                  !renameNode.name.startsWith(".")
+                ) {
+                  const ext = renameNode.name.substring(
+                    renameNode.name.lastIndexOf(".") + 1,
+                  );
+                  finalName = `${finalName}.${ext}`;
+                }
+                await fileService.renameNode(renameNode.id, finalName);
+                setRenameNode(null);
+                if (currentFolder?.id)
+                  await openFolder({
+                    id: currentFolder.id,
+                    name: currentFolder.name,
+                  });
+                else await loadRootFiles();
+              } catch {
+                showAlert("Error", "Failed to rename");
+              }
+            }}
+          />
+
+          {/* Move Mode Banner - inside FilesOverlay Modal for proper z-stacking */}
+          <MoveBanner
+            visible={!!moveMode?.node}
+            itemName={moveMode?.node?.name || ""}
+            onMoveHere={async () => {
+              if (!canEditFiles) {
+                showAlert(
+                  "Permission Denied",
+                  "Guests can only view files. Moving is not permitted.",
+                );
+                setMoveMode(null);
+                return;
+              }
+
+              if (!moveMode?.node) return;
+              try {
+                const destParentId = currentFolder?.id || null;
+                await fileService.moveNode(
+                  moveMode.node.id,
+                  (destParentId || undefined) as any,
+                );
+                setMoveMode(null);
+                if (currentFolder?.id)
+                  await openFolder({
+                    id: currentFolder.id,
+                    name: currentFolder.name,
+                  });
+                else await loadRootFiles();
+              } catch {
+                showAlert("Error", "Failed to move");
+              }
+            }}
+            onCancel={() => setMoveMode(null)}
+          />
+        </Modal>
+
+        {/* Image preview handled by dedicated screen now */}
+
+        {/* Conflict Resolution Modal */}
+        <ConflictResolutionModal
+          visible={showConflictModal}
+          conflict={currentConflict}
+          onResolve={handleResolveConflict}
+          onCancel={() => {
+            setShowConflictModal(false);
+            setCurrentConflict(null);
           }}
         />
-
-        {/* Move Mode Banner - inside FilesOverlay Modal for proper z-stacking */}
-        <MoveBanner
-          visible={!!moveMode?.node}
-          itemName={moveMode?.node?.name || ""}
-          onMoveHere={async () => {
-            if (!canEditFiles) {
-              showAlert(
-                "Permission Denied",
-                "Guests can only view files. Moving is not permitted.",
-              );
-              setMoveMode(null);
-              return;
-            }
-
-            if (!moveMode?.node) return;
-            try {
-              const destParentId = currentFolder?.id || null;
-              await fileService.moveNode(
-                moveMode.node.id,
-                (destParentId || undefined) as any,
-              );
-              setMoveMode(null);
-              if (currentFolder?.id)
-                await openFolder({ id: currentFolder.id, name: currentFolder.name });
-              else await loadRootFiles();
-            } catch {
-              showAlert("Error", "Failed to move");
-            }
-          }}
-          onCancel={() => setMoveMode(null)}
-        />
-      </Modal>
-
-      {/* Image preview handled by dedicated screen now */}
-
-      {/* Conflict Resolution Modal */}
-      <ConflictResolutionModal
-        visible={showConflictModal}
-        conflict={currentConflict}
-        onResolve={handleResolveConflict}
-        onCancel={() => {
-          setShowConflictModal(false);
-          setCurrentConflict(null);
-        }}
-      />
       </View>
     </View>
   );
@@ -2098,7 +2141,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#2A2A2A",
     paddingTop: 8,
     paddingBottom: Platform.OS === "android" ? 12 : 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -2116,7 +2159,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(255, 255, 255, 0.1)",
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
   },
   bottomTab: {
     flex: 1,
