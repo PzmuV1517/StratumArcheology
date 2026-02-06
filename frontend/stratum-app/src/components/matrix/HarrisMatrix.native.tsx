@@ -16,13 +16,13 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
-  Alert,
   TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { getHarrisMatrixHTML } from "./HarrisMatrixHTML";
+import { showAlert } from "../../utils/alert";
 import api from "../../services/api";
 
 interface HarrisMatrixProps {
@@ -190,14 +190,14 @@ export default function HarrisMatrix({
             break;
 
           case "ALERT":
-            Alert.alert(
+            showAlert(
               message.payload.title || "Harris Matrix",
               message.payload.message,
             );
             break;
 
           case "CONFIRM_CLEAR":
-            Alert.alert(
+            showAlert(
               "Clear All?",
               "This will permanently delete all Harris Matrix data. This action cannot be undone.",
               [

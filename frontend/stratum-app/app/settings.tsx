@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -18,6 +17,7 @@ import { useAuth } from "../src/contexts/AuthContext";
 import api from "../src/services/api";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import { showAlert } from "../src/utils/alert";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import {
   offlineFilesStorage,
@@ -285,7 +285,7 @@ export default function SettingsScreen() {
 
       if (!netState.isConnected) {
         setConnectionStatus("disconnected");
-        Alert.alert(
+        showAlert(
           "No Network",
           "Your device is not connected to a network. Check your Wi-Fi or cellular data.",
         );
@@ -295,7 +295,7 @@ export default function SettingsScreen() {
 
       if (!netState.isInternetReachable) {
         setConnectionStatus("disconnected");
-        Alert.alert(
+        showAlert(
           "No Internet",
           "Network connected but internet is not reachable. Try again later.",
         );
@@ -311,17 +311,17 @@ export default function SettingsScreen() {
           pendingQueueCount > 0
             ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
             : "";
-        Alert.alert(
+        showAlert(
           "Connected ✓",
           `Successfully connected to STRATUM backend.${pendingMessage}`,
         );
       } else {
         setConnectionStatus("disconnected");
-        Alert.alert("Connection Failed", "Could not reach STRATUM backend.");
+        showAlert("Connection Failed", "Could not reach STRATUM backend.");
       }
     } catch {
       setConnectionStatus("disconnected");
-      Alert.alert(
+      showAlert(
         "Connection Failed",
         "Could not reach STRATUM backend. The server may be temporarily unavailable.",
       );
@@ -337,7 +337,7 @@ export default function SettingsScreen() {
   };
 
   const clearAllOfflineFiles = async () => {
-    Alert.alert(
+    showAlert(
       "Clear All Offline Files",
       "This will remove all files saved for offline access. You will need an internet connection to view them again.",
       [
@@ -356,7 +356,7 @@ export default function SettingsScreen() {
   };
 
   const removeDownloadedProject = async (projectId: string) => {
-    Alert.alert(
+    showAlert(
       "Remove Downloaded Project",
       "This will remove the cached project data. You will need internet to view it again.",
       [
@@ -371,7 +371,7 @@ export default function SettingsScreen() {
               await loadStorageInfo();
             } catch (error) {
               console.error("Failed to remove downloaded project:", error);
-              Alert.alert("Error", "Failed to remove downloaded project");
+              showAlert("Error", "Failed to remove downloaded project");
             }
           },
         },
@@ -385,7 +385,7 @@ export default function SettingsScreen() {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
+        showAlert(
           "Permission Required",
           "Please allow access to your photo library to upload a profile picture.",
         );
@@ -403,14 +403,14 @@ export default function SettingsScreen() {
         const asset = result.assets[0];
         // Check file size (50MB max) - fileSize may not always be available
         if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
-          Alert.alert("Image Too Large", "Please select an image under 50MB.");
+          showAlert("Image Too Large", "Please select an image under 50MB.");
           return;
         }
         setSelectedImage(asset.uri);
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image.");
+      showAlert("Error", "Failed to pick image.");
     }
   };
 
@@ -486,13 +486,13 @@ export default function SettingsScreen() {
         if (refreshUser) {
           await refreshUser();
         }
-        Alert.alert("Success", "Profile updated successfully.");
+        showAlert("Success", "Profile updated successfully.");
       }
 
       setShowProfileModal(false);
       setSelectedImage(null);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to update profile.");
+      showAlert("Error", error.message || "Failed to update profile.");
     } finally {
       setSavingProfile(false);
     }

@@ -7,12 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  Alert,
   TextInput,
 } from "react-native";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fileService } from "../../services/fileService";
+import { showAlert } from "../../utils/alert";
 import { offlineFilesStorage } from "../../services/offlineService";
 import { useWebSocket } from "../../contexts/WebSocketContext";
 import FileUploadMenu, { SelectedFile } from "../files/FileUploadMenu";
@@ -227,7 +227,7 @@ export default function FilesOverlay({
   // Navigate to user's personal folder (creates if doesn't exist)
   const handleGoToMyFolder = useCallback(async () => {
     if (!projectId) {
-      Alert.alert("Error", "Project context missing");
+      showAlert("Error", "Project context missing");
       return;
     }
 
@@ -253,7 +253,7 @@ export default function FilesOverlay({
             myFolder = await fileService.getMyFolder(projectId);
             if (!myFolder) {
               // Still can't find it - there might be a naming mismatch
-              Alert.alert(
+              showAlert(
                 "Error",
                 "Your personal folder exists but could not be found. Please check the file list.",
               );
@@ -261,7 +261,7 @@ export default function FilesOverlay({
             }
           } else {
             console.error("Failed to create My Folder:", createError);
-            Alert.alert(
+            showAlert(
               "Error",
               createError.response?.data?.detail ||
                 createError.message ||
@@ -284,7 +284,7 @@ export default function FilesOverlay({
       }
     } catch (error: any) {
       console.error("Failed to access My Folder:", error);
-      Alert.alert(
+      showAlert(
         "Error",
         error.response?.data?.detail ||
           error.message ||
@@ -309,7 +309,7 @@ export default function FilesOverlay({
       if (!projectId) return;
       try {
         await fileService.updateMyFolderPermissions(projectId, settings);
-        Alert.alert("Success", "Privacy settings updated");
+        showAlert("Success", "Privacy settings updated");
       } catch (error: any) {
         console.error("Failed to update My Folder settings:", error);
         throw error; // Let the modal handle the error display
@@ -335,7 +335,7 @@ export default function FilesOverlay({
 
       // Otherwise, directly upload using fileService
       if (!projectId) {
-        Alert.alert("Error", "Cannot upload - project context missing");
+        showAlert("Error", "Cannot upload - project context missing");
         return;
       }
 
@@ -400,11 +400,11 @@ export default function FilesOverlay({
           files.length === 1
             ? `${files[0].name || "File"} uploaded successfully`
             : `${files.length} files uploaded successfully`;
-        Alert.alert("Success", msg);
+        showAlert("Success", msg);
         onRefreshAfterUpload?.();
       } catch (error: any) {
         console.error("File upload failed:", error);
-        Alert.alert("Upload Failed", error.message || "Failed to upload file");
+        showAlert("Upload Failed", error.message || "Failed to upload file");
       } finally {
         setIsUploading(false);
         setUploadCount(0);
@@ -481,7 +481,7 @@ export default function FilesOverlay({
           console.warn(
             "FilesOverlay: missing projectId prop, cannot auto-upload dropped files",
           );
-          Alert.alert("Cannot upload", "Project context missing.");
+          showAlert("Cannot upload", "Project context missing.");
           warnedMissingProject.current = true;
         }
         return;
@@ -494,7 +494,7 @@ export default function FilesOverlay({
         if (currentFolder?.id) fd.append("parent_id", currentFolder.id);
         return fileService.uploadFile(projectId, fd).catch((err: any) => {
           console.error("Upload failed for", f.name, err);
-          Alert.alert("Upload failed", f.name);
+          showAlert("Upload failed", f.name);
         });
       });
       await Promise.all(tasks);
@@ -677,7 +677,7 @@ export default function FilesOverlay({
             onPress={async () => {
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkMove) return void onBulkMove(nodes);
-              Alert.alert(
+              showAlert(
                 "Bulk move",
                 "Parent needs to implement bulk move destination chooser.",
               );
@@ -691,7 +691,7 @@ export default function FilesOverlay({
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkDelete) return void onBulkDelete(nodes);
               // default: confirm once, then delete sequentially
-              Alert.alert("Delete selected", `Delete ${nodes.length} item(s)?`, [
+              showAlert("Delete selected", `Delete ${nodes.length} item(s)?`, [
                 { text: "Cancel", style: "cancel" },
                 {
                   text: "Delete",
@@ -731,13 +731,13 @@ export default function FilesOverlay({
                   (n) => selectedIds.has(n.id) && n.type === "file",
                 );
                 if (nodes.length === 0) {
-                  Alert.alert(
+                  showAlert(
                     "No files selected",
                     "Please select files to save for offline access.",
                   );
                   return;
                 }
-                Alert.alert(
+                showAlert(
                   "Save for Offline",
                   `This will save ${nodes.length} file(s) for offline access. You can view them without an internet connection.`,
                   [
@@ -780,12 +780,12 @@ export default function FilesOverlay({
                           });
 
                           if (result.failed > 0) {
-                            Alert.alert(
+                            showAlert(
                               "Partially Saved",
                               `${result.success} file(s) saved, ${result.failed} failed.\n${result.errors.slice(0, 3).join("\n")}`,
                             );
                           } else {
-                            Alert.alert(
+                            showAlert(
                               "Saved for Offline",
                               `${result.success} file(s) are now available offline.`,
                             );
@@ -793,7 +793,7 @@ export default function FilesOverlay({
                           setSelectedIds(new Set());
                           setMultiSelect(false);
                         } catch (error: any) {
-                          Alert.alert(
+                          showAlert(
                             "Error",
                             error.message || "Failed to save files for offline.",
                           );

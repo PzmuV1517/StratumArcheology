@@ -8,13 +8,13 @@ import {
   StyleSheet,
   Platform,
   Image,
-  Alert,
   Clipboard,
   ActivityIndicator,
 } from "react-native";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { projectService } from "../../services/projectService";
 import api from "../../services/api";
+import { showAlert } from "../../utils/alert";
 
 interface Member {
   id: string;
@@ -259,7 +259,7 @@ export default function MembersModal({
       if (Platform.OS === "web") {
         alert("Ownership transferred successfully. You are now a researcher.");
       } else {
-        Alert.alert(
+        showAlert(
           "Success",
           "Ownership transferred successfully. You are now a researcher.",
         );

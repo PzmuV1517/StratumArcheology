@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Modal,
   Platform,
@@ -18,6 +17,7 @@ import { Link, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../src/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../src/services/api";
+import { showAlert } from "../../src/utils/alert";
 import { config } from "../../src/config/config";
 
 const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
@@ -102,7 +102,7 @@ export default function LoginScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert(
+      showAlert(
         "Invalid URL",
         "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api",
       );
@@ -113,9 +113,9 @@ export default function LoginScreen() {
       await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
       api.defaults.baseURL = apiInput;
       setShowDevModal(false);
-      Alert.alert("Applied", "Backend API base URL updated for this app.");
+      showAlert("Applied", "Backend API base URL updated for this app.");
     } catch (e) {
-      Alert.alert("Error", "Failed to save API URL override");
+      showAlert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -128,9 +128,9 @@ export default function LoginScreen() {
       api.defaults.baseURL = config.apiBaseUrl;
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
-      Alert.alert("Reset", "Reverted to default backend API URL.");
+      showAlert("Reset", "Reverted to default backend API URL.");
     } catch (e) {
-      Alert.alert("Error", "Failed to reset API URL override");
+      showAlert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -148,7 +148,7 @@ export default function LoginScreen() {
       if (Platform.OS === "web") {
         window.alert("Please fill in all fields");
       } else {
-        Alert.alert("Error", "Please fill in all fields");
+        showAlert("Error", "Please fill in all fields");
       }
       return;
     }
@@ -157,7 +157,7 @@ export default function LoginScreen() {
       if (Platform.OS === "web") {
         window.alert("Please enter a valid email address (e.g., user@example.com)");
       } else {
-        Alert.alert(
+        showAlert(
           "Invalid Email",
           "Please enter a valid email address (e.g., user@example.com)",
         );
@@ -176,7 +176,7 @@ export default function LoginScreen() {
       if (Platform.OS === "web") {
         window.alert("Login Failed: " + (result.error || "Unknown error"));
       } else {
-        Alert.alert("Login Failed", result.error);
+        showAlert("Login Failed", result.error);
       }
     } else {
       console.log("[Login] Login successful, user should be set in context");

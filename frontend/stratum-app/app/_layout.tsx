@@ -9,6 +9,7 @@ import AuthRedirector from "./AuthRedirector";
 import { AuthProvider } from "../src/contexts/AuthContext";
 import { WebSocketProvider } from "../src/contexts/WebSocketContext";
 import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
+import { AlertProvider } from "../src/providers/AlertProvider";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -89,7 +90,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <WebSocketProvider>
-        <RootLayoutNav />
+        <AlertProvider>
+          <RootLayoutNav />
+        </AlertProvider>
       </WebSocketProvider>
     </AuthProvider>
   );

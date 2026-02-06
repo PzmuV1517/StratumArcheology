@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
@@ -13,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { projectService } from "../src/services/projectService";
 import { authService } from "../src/services/authService";
+import { showAlert } from "../src/utils/alert";
 
 interface Member {
   id: string;
@@ -66,7 +66,7 @@ export default function EditProjectScreen() {
       setIsOwner(userId === projectData.owner_id);
     } catch (error) {
       console.error("Error loading project:", error);
-      Alert.alert("Error", "Failed to load project", [
+      showAlert("Error", "Failed to load project", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } finally {
@@ -76,13 +76,13 @@ export default function EditProjectScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a project name");
+      showAlert("Error", "Please enter a project name");
       return;
     }
 
     // Only the owner can update project settings
     if (!isOwner) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Only the project leader can modify project settings.",
       );
@@ -96,7 +96,7 @@ export default function EditProjectScreen() {
         description: description.trim() || null,
         ran_lmi_id: ranLmiId.trim() || null,
       });
-      Alert.alert("Success", "Project updated successfully", [
+      showAlert("Success", "Project updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error: any) {
@@ -105,7 +105,7 @@ export default function EditProjectScreen() {
         error?.detail ||
         error?.message ||
         "Failed to save changes. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setSaving(false);
     }
@@ -129,7 +129,7 @@ export default function EditProjectScreen() {
         error?.detail ||
         error?.message ||
         "Failed to delete project. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setDeleting(false);
     }

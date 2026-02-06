@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
@@ -13,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
+import { showAlert } from "../src/utils/alert";
 
 interface Note {
   id: string;
@@ -100,7 +100,7 @@ export default function EditNoteScreen() {
         error?.detail ||
         error?.message ||
         "Failed to load note. It may have been deleted.";
-      Alert.alert("Error", message, [{ text: "OK", onPress: () => router.back() }]);
+      showAlert("Error", message, [{ text: "OK", onPress: () => router.back() }]);
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function EditNoteScreen() {
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
-      Alert.alert(
+      showAlert(
         "Missing Fields",
         "Please enter both a title and content for the note.",
       );
@@ -122,7 +122,7 @@ export default function EditNoteScreen() {
         content: content.trim(),
       });
       markSubmitted(); // Clear draft on successful save
-      Alert.alert("Saved", "Your changes have been saved.", [
+      showAlert("Saved", "Your changes have been saved.", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error: any) {
@@ -131,7 +131,7 @@ export default function EditNoteScreen() {
         error?.detail ||
         error?.message ||
         "Failed to save changes. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setSaving(false);
     }

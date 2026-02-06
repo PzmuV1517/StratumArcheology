@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   ScrollView,
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { projectService } from "../src/services/projectService";
+import { showAlert } from "../src/utils/alert";
 
 export default function CreateProjectModal() {
   const [name, setName] = useState("");
@@ -21,12 +21,12 @@ export default function CreateProjectModal() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a project name");
+      showAlert("Error", "Please enter a project name");
       return;
     }
 
     if (!ranLmiId.trim()) {
-      Alert.alert("Error", "Please enter a RAN/LMI ID");
+      showAlert("Error", "Please enter a RAN/LMI ID");
       return;
     }
 
@@ -43,7 +43,7 @@ export default function CreateProjectModal() {
         router.replace(`/project/${newProject.id}`);
       } else {
         // Fallback if no project ID returned
-        Alert.alert("Success", "Project created successfully!", [
+        showAlert("Success", "Project created successfully!", [
           { text: "OK", onPress: () => router.back() },
         ]);
       }
@@ -52,7 +52,7 @@ export default function CreateProjectModal() {
         error?.detail ||
         error?.message ||
         "Failed to create project. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setLoading(false);
     }

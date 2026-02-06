@@ -5,7 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
-import { Platform, ActionSheetIOS, Alert } from "react-native";
+import { Platform, ActionSheetIOS } from "react-native";
+import { showAlert } from "../utils/alert";
 
 // Note: expo-sharing must be installed separately: npx expo install expo-sharing
 // Using lazy load to avoid bundling issues
@@ -148,7 +149,7 @@ export const fileService = {
                   const { status } =
                     await ImagePicker.requestCameraPermissionsAsync();
                   if (status !== "granted") {
-                    Alert.alert(
+                    showAlert(
                       "Permission Required",
                       "Camera access is needed to take photos.",
                     );
@@ -189,7 +190,7 @@ export const fileService = {
                   const { status } =
                     await ImagePicker.requestMediaLibraryPermissionsAsync();
                   if (status !== "granted") {
-                    Alert.alert(
+                    showAlert(
                       "Permission Required",
                       "Photo library access is needed to select photos.",
                     );
@@ -253,7 +254,7 @@ export const fileService = {
       } else {
         // Android - show Alert with options
         return new Promise((resolve) => {
-          Alert.alert(
+          showAlert(
             "Add File",
             "Choose an option",
             [
@@ -265,7 +266,7 @@ export const fileService = {
                     const { status } =
                       await ImagePicker.requestCameraPermissionsAsync();
                     if (status !== "granted") {
-                      Alert.alert(
+                      showAlert(
                         "Permission Required",
                         "Camera access is needed to take photos.",
                       );
@@ -300,7 +301,7 @@ export const fileService = {
                     const { status } =
                       await ImagePicker.requestMediaLibraryPermissionsAsync();
                     if (status !== "granted") {
-                      Alert.alert(
+                      showAlert(
                         "Permission Required",
                         "Photo library access is needed.",
                       );

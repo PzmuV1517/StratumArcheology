@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
   Image,
-  Alert,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
@@ -18,6 +17,7 @@ import { fileService } from "../../services/fileService";
 import QRCodeView from "../common/QRCodeView";
 import { useAuth } from "../../contexts/AuthContext";
 import { buildManifestFromChildren } from "../../utils/artefactManifest";
+import { showAlert } from "../../utils/alert";
 
 interface FileNode {
   id: string;
@@ -126,7 +126,7 @@ export default function ArtefactsTab({
 
   const pickImages = async () => {
     if (!canEdit) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view artefacts. Creating artefacts is not permitted.",
       );
@@ -151,7 +151,7 @@ export default function ArtefactsTab({
 
   const createArtefact = async () => {
     if (!canEdit) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view artefacts. Creating artefacts is not permitted.",
       );
@@ -254,13 +254,13 @@ export default function ArtefactsTab({
       setPickedImages([]);
       setNotes([""]);
       setPreviewIndex(0);
-      Alert.alert("Success", "Artefact created successfully!");
+      showAlert("Success", "Artefact created successfully!");
       await load();
     } catch (e: any) {
       console.error("Failed to create artefact", e);
       const message =
         e?.detail || e?.message || "Failed to create artefact. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setCreating(false);
     }

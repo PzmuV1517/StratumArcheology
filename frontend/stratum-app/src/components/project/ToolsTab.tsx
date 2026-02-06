@@ -6,10 +6,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
-  Alert,
   Animated,
   Easing,
 } from "react-native";
+import { showAlert } from "../../utils/alert";
 
 // Types for expo-location (dynamically imported)
 type LocationSubscription = { remove: () => void };
@@ -260,7 +260,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       cachedLocation = locationData;
     } catch (error) {
       console.error("Error refreshing location:", error);
-      Alert.alert("Error", "Failed to refresh location. Make sure GPS is enabled.");
+      showAlert("Error", "Failed to refresh location. Make sure GPS is enabled.");
     } finally {
       setAcquiringGPS(false);
     }

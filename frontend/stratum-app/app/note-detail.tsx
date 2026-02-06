@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   TouchableOpacity,
   Modal,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-router";
 import { noteService } from "../src/services/noteService";
+import { showAlert } from "../src/utils/alert";
 
 interface Note {
   id: string;
@@ -59,7 +59,7 @@ export default function NoteDetailScreen() {
       setNote(noteData);
     } catch (error) {
       console.error("Error loading note:", error);
-      Alert.alert("Error", "Failed to load note details", [
+      showAlert("Error", "Failed to load note details", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } finally {
@@ -83,7 +83,7 @@ export default function NoteDetailScreen() {
       setIsDeleting(true);
       await noteService.deleteNote(noteId as string);
       setShowDeleteModal(false);
-      Alert.alert("Deleted", "Note has been deleted.", [
+      showAlert("Deleted", "Note has been deleted.", [
         {
           text: "OK",
           onPress: () => {
@@ -105,7 +105,7 @@ export default function NoteDetailScreen() {
         error?.detail ||
         error?.message ||
         "Failed to delete note. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setIsDeleting(false);
     }

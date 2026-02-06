@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
   Platform,
 } from "react-native";
+import { showAlert } from "../src/utils/alert";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
@@ -231,19 +231,19 @@ export default function CreateNoteScreen() {
 
   const handleCreate = async () => {
     if (!title.trim()) {
-      Alert.alert("Error", "Title required");
+      showAlert("Error", "Title required");
       return;
     }
     if (!isVoiceNote && !content.trim()) {
-      Alert.alert("Error", "Content required");
+      showAlert("Error", "Content required");
       return;
     }
     if (isVoiceNote && isRecording) {
-      Alert.alert("Finish recording", "Finish creating audio before saving");
+      showAlert("Finish recording", "Finish creating audio before saving");
       return;
     }
     if (isVoiceNote && !recordedUri) {
-      Alert.alert("Error", "Record audio before saving");
+      showAlert("Error", "Record audio before saving");
       return;
     }
 
@@ -270,7 +270,7 @@ export default function CreateNoteScreen() {
           }
         } catch (e) {
           console.error("Audio upload failed", e);
-          Alert.alert("Warning", "Note saved but audio upload failed");
+          showAlert("Warning", "Note saved but audio upload failed");
         }
       }
       // Clear the draft after successful creation
@@ -281,7 +281,7 @@ export default function CreateNoteScreen() {
       // Small delay before showing success alert so navigation happens first
       setTimeout(
         () => {
-          Alert.alert("Success", "Note created successfully!");
+          showAlert("Success", "Note created successfully!");
         },
         Platform.OS === "web" ? 300 : 100,
       );
@@ -291,7 +291,7 @@ export default function CreateNoteScreen() {
         error?.detail ||
         error?.message ||
         "Failed to create note. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setLoading(false);
     }
@@ -647,7 +647,7 @@ function NativeAudioPreview({ uri }: { uri: string }) {
     } catch (e) {
       console.error("Failed to play preview audio:", e);
       setIsLoading(false);
-      Alert.alert("Error", "Failed to play recording preview");
+      showAlert("Error", "Failed to play recording preview");
     }
   }, [uri]);
 

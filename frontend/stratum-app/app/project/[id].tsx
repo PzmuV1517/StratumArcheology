@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   RefreshControl,
@@ -23,6 +22,7 @@ import {
 } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { noteService } from "../../src/services/noteService";
+import { showAlert } from "../../src/utils/alert";
 import { fileService } from "../../src/services/fileService";
 import * as DocumentPicker from "expo-document-picker";
 import MembersModal from "../../src/components/project/MembersModal";
@@ -175,7 +175,7 @@ export default function ProjectDetailScreen() {
       console.log("[Project] Received member_kicked event:", data);
       if (data.user_id === currentUser.id && data.project_id === id) {
         // Only show alert when user is kicked - this is critical
-        Alert.alert(
+        showAlert(
           "Removed from Project",
           "You have been removed from this project.",
           [{ text: "OK", onPress: () => router.replace("/(tabs)") }],
@@ -209,7 +209,7 @@ export default function ProjectDetailScreen() {
         
         // Only alert if permissions were reduced (might affect what they can do)
         if (newRoleLevel < currentRoleLevel) {
-          Alert.alert(
+          showAlert(
             "Permissions Updated",
             `Your role has been changed to ${data.new_role}. Some actions may now be restricted.`,
             [{ text: "OK" }],
@@ -398,14 +398,14 @@ export default function ProjectDetailScreen() {
           setMembers(cached.members);
           // Silent load from cache - user can see offline icon if they're offline
         } else {
-          Alert.alert(
+          showAlert(
             "Error",
             "Failed to load project details and no offline cache available.",
           );
         }
       } catch (cacheError) {
         console.error("Error loading from cache:", cacheError);
-        Alert.alert("Error", "Failed to load project details");
+        showAlert("Error", "Failed to load project details");
       }
     } finally {
       setLoading(false);
@@ -465,12 +465,12 @@ export default function ProjectDetailScreen() {
       } else {
         setCurrentConflict(null);
         setShowConflictModal(false);
-        Alert.alert("Conflicts Resolved", "All file conflicts have been resolved.");
+        showAlert("Conflicts Resolved", "All file conflicts have been resolved.");
         // Refresh files
         loadRootFiles();
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to resolve conflict");
+      showAlert("Error", error.message || "Failed to resolve conflict");
     }
   };
 
@@ -536,7 +536,7 @@ export default function ProjectDetailScreen() {
     // Permission check: guests cannot upload files
     if (isGuest) {
       console.log("Upload blocked: user is guest, isGuest=", isGuest);
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view files. Upload is not permitted.",
       );
@@ -696,7 +696,7 @@ export default function ProjectDetailScreen() {
         e?.detail ||
         e?.message ||
         "Could not upload file. Please check your connection and try again.";
-      Alert.alert("Upload Failed", message);
+      showAlert("Upload Failed", message);
     }
   };
 
@@ -772,7 +772,7 @@ export default function ProjectDetailScreen() {
     const isUnsupported3D = /\.(obj|fbx|dae|3ds|stl)$/i.test(lower2);
 
     if (isUnsupported3D) {
-      Alert.alert(
+      showAlert(
         "Unsupported Format",
         `${lower2.split(".").pop()?.toUpperCase()} files cannot be previewed yet. Only GLB and GLTF 3D formats are currently supported.\n\nYou can still download this file.`,
         [{ text: "OK" }],
@@ -838,7 +838,7 @@ export default function ProjectDetailScreen() {
   const handleCreateNote = () => {
     // Permission check: guests cannot create notes
     if (isGuest) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view notes. Creating notes is not permitted.",
       );
@@ -885,7 +885,7 @@ export default function ProjectDetailScreen() {
   const handleDeleteNote = async (noteId: string) => {
     // Permission check: guests cannot delete notes
     if (isGuest) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view notes. Deleting notes is not permitted.",
       );
@@ -894,19 +894,19 @@ export default function ProjectDetailScreen() {
 
     try {
       await noteService.deleteNote(noteId);
-      Alert.alert("Deleted", "Note has been removed.");
+      showAlert("Deleted", "Note has been removed.");
       await loadNotes();
     } catch (e: any) {
       const message =
         e?.detail || e?.message || "Failed to delete note. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     }
   };
 
   // Handle file download
   const handleDownloadFile = async (node: any) => {
     if (!node || node.type !== "file") {
-      Alert.alert("Error", "Cannot download - not a valid file");
+      showAlert("Error", "Cannot download - not a valid file");
       return;
     }
 
@@ -917,7 +917,7 @@ export default function ProjectDetailScreen() {
         window.open(downloadUrl, "_blank");
       } else {
         // Native: download and share
-        Alert.alert("Download", `Download "${node.name}"?`, [
+        showAlert("Download", `Download "${node.name}"?`, [
           { text: "Cancel", style: "cancel" },
           {
             text: "Download",
@@ -930,11 +930,11 @@ export default function ProjectDetailScreen() {
                     await fileService.shareFile(result.uri);
                   } catch {
                     // If sharing fails, at least tell user where file is
-                    Alert.alert("Downloaded", `File saved to: ${result.uri}`);
+                    showAlert("Downloaded", `File saved to: ${result.uri}`);
                   }
                 }
               } catch (downloadError: any) {
-                Alert.alert(
+                showAlert(
                   "Download Failed",
                   downloadError.message || "Failed to download file",
                 );
@@ -944,7 +944,7 @@ export default function ProjectDetailScreen() {
         ]);
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to prepare download");
+      showAlert("Error", error.message || "Failed to prepare download");
     }
   };
 
@@ -952,7 +952,7 @@ export default function ProjectDetailScreen() {
     // Permission check: only owners can change project settings
     if (!canChangeSettings) {
       const role = getCurrentUserRole() || "GUEST";
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         `${role}s cannot modify project settings. Only the project owner can change settings.`,
       );
@@ -966,7 +966,7 @@ export default function ProjectDetailScreen() {
         params: { projectId: project.id },
       });
     } else {
-      Alert.alert("Please wait", "Project is still loading.");
+      showAlert("Please wait", "Project is still loading.");
     }
   };
 
@@ -1643,7 +1643,7 @@ export default function ProjectDetailScreen() {
               router.replace("/(tabs)");
             } catch (e) {
               console.error("Failed to leave project:", e);
-              Alert.alert("Error", "Failed to leave the project");
+              showAlert("Error", "Failed to leave the project");
             }
           }
         }}
@@ -1655,7 +1655,7 @@ export default function ProjectDetailScreen() {
               router.replace("/(tabs)");
             } catch (e) {
               console.error("Failed to delete project:", e);
-              Alert.alert("Error", "Failed to delete the project");
+              showAlert("Error", "Failed to delete the project");
             }
           }
         }}
@@ -1810,7 +1810,7 @@ export default function ProjectDetailScreen() {
               });
               return;
             }
-            Alert.alert("Preview", "This file type is not yet supported.");
+            showAlert("Preview", "This file type is not yet supported.");
           }}
           projectId={id as string}
           onRefreshAfterUpload={async () => {
@@ -1840,7 +1840,7 @@ export default function ProjectDetailScreen() {
           onCancel={() => setShowNewFolderModal(false)}
           onCreate={async (name) => {
             if (!canEditFiles) {
-              Alert.alert(
+              showAlert(
                 "Permission Denied",
                 "Guests can only view files. Creating folders is not permitted.",
               );
@@ -1858,7 +1858,7 @@ export default function ProjectDetailScreen() {
                 await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
-              Alert.alert("Error", "Failed to create folder");
+              showAlert("Error", "Failed to create folder");
             }
           }}
         />
@@ -1872,7 +1872,7 @@ export default function ProjectDetailScreen() {
           onCancel={() => setDeleteNodeTarget(null)}
           onConfirm={async () => {
             if (!canEditFiles) {
-              Alert.alert(
+              showAlert(
                 "Permission Denied",
                 "Guests can only view files. Deleting is not permitted.",
               );
@@ -1889,7 +1889,7 @@ export default function ProjectDetailScreen() {
                 await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
-              Alert.alert("Error", "Failed to delete");
+              showAlert("Error", "Failed to delete");
             } finally {
               setIsDeleting(false);
             }
@@ -1904,7 +1904,7 @@ export default function ProjectDetailScreen() {
           onCancel={() => setRenameNode(null)}
           onRename={async (newBaseName) => {
             if (!canEditFiles) {
-              Alert.alert(
+              showAlert(
                 "Permission Denied",
                 "Guests can only view files. Renaming is not permitted.",
               );
@@ -1932,7 +1932,7 @@ export default function ProjectDetailScreen() {
                 await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
-              Alert.alert("Error", "Failed to rename");
+              showAlert("Error", "Failed to rename");
             }
           }}
         />
@@ -1943,7 +1943,7 @@ export default function ProjectDetailScreen() {
           itemName={moveMode?.node?.name || ""}
           onMoveHere={async () => {
             if (!canEditFiles) {
-              Alert.alert(
+              showAlert(
                 "Permission Denied",
                 "Guests can only view files. Moving is not permitted.",
               );
@@ -1963,7 +1963,7 @@ export default function ProjectDetailScreen() {
                 await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
-              Alert.alert("Error", "Failed to move");
+              showAlert("Error", "Failed to move");
             }
           }}
           onCancel={() => setMoveMode(null)}

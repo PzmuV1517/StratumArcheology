@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Platform,
 } from "react-native";
 import api from "../../services/api";
+import { showAlert } from "../../utils/alert";
 
 interface FileVersion {
   id: string;
@@ -80,7 +80,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       setData(response.data);
     } catch (error) {
       console.error("Error loading time machine data:", error);
-      Alert.alert("Error", "Failed to load version history");
+      showAlert("Error", "Failed to load version history");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -171,7 +171,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       if (Platform.OS === "web") {
         window.open(url, "_blank");
       } else {
-        Alert.alert("Download Version", `Download ${fileName} version ${version}?`, [
+        showAlert("Download Version", `Download ${fileName} version ${version}?`, [
           { text: "Cancel", style: "cancel" },
           {
             text: "Download",
@@ -186,7 +186,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       }
     } catch (error) {
       console.error("Error downloading version:", error);
-      Alert.alert("Error", "Failed to download version");
+      showAlert("Error", "Failed to download version");
     }
   };
 
@@ -195,7 +195,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
     version: number,
     fileName: string,
   ) => {
-    Alert.alert(
+    showAlert(
       "Restore Version",
       `Restore ${fileName} to version ${version}? This will create a new version with the old content.`,
       [
@@ -223,11 +223,11 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                 throw new Error("Failed to restore version");
               }
 
-              Alert.alert("Success", `Restored ${fileName} to version ${version}`);
+              showAlert("Success", `Restored ${fileName} to version ${version}`);
               loadTimeMachineData();
             } catch (error) {
               console.error("Error restoring version:", error);
-              Alert.alert("Error", "Failed to restore version");
+              showAlert("Error", "Failed to restore version");
             }
           },
         },

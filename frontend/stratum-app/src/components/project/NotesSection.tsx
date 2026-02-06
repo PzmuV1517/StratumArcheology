@@ -6,12 +6,12 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
+import { showAlert } from "../../utils/alert";
 
 // Get API base URL for streaming endpoint (uses the same logic as api.ts)
 const getApiBaseUrl = async (): Promise<string> => {
@@ -119,7 +119,7 @@ export default function NotesSection({
       } catch (e) {
         console.error("Failed to play audio:", e);
         setIsLoading(false);
-        Alert.alert("Error", "Failed to play audio");
+        showAlert("Error", "Failed to play audio");
       }
     }, [url, streamUrl]);
 
@@ -314,7 +314,7 @@ export default function NotesSection({
                     // Inline confirmation for web
                     setPendingDeleteId(item.id);
                   } else {
-                    Alert.alert(
+                    showAlert(
                       "Delete voice note?",
                       "This will permanently delete the note and its audio attachment.",
                       [

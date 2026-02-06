@@ -6,13 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
+import { showAlert } from "../../src/utils/alert";
 import { useAuth } from "../../src/contexts/AuthContext";
 
 export default function RegisterScreen() {
@@ -33,12 +33,12 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!email || !password || !displayName) {
-      Alert.alert("Error", "Please fill in all fields");
+      showAlert("Error", "Please fill in all fields");
       return;
     }
 
     if (!isValidEmail(email)) {
-      Alert.alert(
+      showAlert(
         "Invalid Email",
         "Please enter a valid email address (e.g., user@example.com)",
       );
@@ -46,12 +46,12 @@ export default function RegisterScreen() {
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      showAlert("Error", "Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
+      showAlert("Error", "Password must be at least 6 characters");
       return;
     }
 
@@ -60,7 +60,7 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert("Registration Failed", result.error);
+      showAlert("Registration Failed", result.error);
     }
   };
 

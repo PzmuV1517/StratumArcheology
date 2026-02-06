@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { fileService } from "../src/services/fileService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import PhotoPanel from "../src/components/data/PhotoPanel";
+import { showAlert } from "../src/utils/alert";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();
@@ -81,7 +81,7 @@ export default function ImagePreviewScreen() {
       a.click();
       a.remove();
     } else {
-      Alert.alert("Download", "Mobile download not implemented yet.");
+      showAlert("Download", "Mobile download not implemented yet.");
     }
   };
 

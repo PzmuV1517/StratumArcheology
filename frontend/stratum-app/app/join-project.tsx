@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Keyboard,
@@ -13,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../src/services/projectService";
+import { showAlert } from "../src/utils/alert";
 
 type JoinMethod = "link" | "code";
 
@@ -51,13 +51,13 @@ export default function JoinProjectScreen() {
 
   const handleJoinByLink = async () => {
     if (!linkInput.trim()) {
-      Alert.alert("Error", "Please enter an invite link");
+      showAlert("Error", "Please enter an invite link");
       return;
     }
 
     const token = extractTokenFromLink(linkInput);
     if (!token) {
-      Alert.alert(
+      showAlert(
         "Invalid Link",
         "Could not find a valid invite token in the link. Please check and try again.",
       );
@@ -76,7 +76,7 @@ export default function JoinProjectScreen() {
         router.replace(`/project/${projectId}`);
       } else {
         // Fallback if no project ID returned
-        Alert.alert("Welcome!", "You have successfully joined the project.", [
+        showAlert("Welcome!", "You have successfully joined the project.", [
           { text: "View Projects", onPress: () => router.replace("/(tabs)") },
         ]);
       }
@@ -95,7 +95,7 @@ export default function JoinProjectScreen() {
       } else if (message.includes("not found")) {
         message = "Invalid invite link. Please check the link and try again.";
       }
-      Alert.alert("Cannot Join Project", message);
+      showAlert("Cannot Join Project", message);
     } finally {
       setLoading(false);
     }
@@ -103,7 +103,7 @@ export default function JoinProjectScreen() {
 
   const handleJoinByCode = async () => {
     if (!codeInput.trim()) {
-      Alert.alert("Error", "Please enter an invite code");
+      showAlert("Error", "Please enter an invite code");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function JoinProjectScreen() {
         router.replace(`/project/${projectId}`);
       } else {
         // Fallback if no project ID returned
-        Alert.alert("Welcome!", "You have successfully joined the project.", [
+        showAlert("Welcome!", "You have successfully joined the project.", [
           { text: "View Projects", onPress: () => router.replace("/(tabs)") },
         ]);
       }
@@ -145,7 +145,7 @@ export default function JoinProjectScreen() {
       } else if (message.includes("Invalid") || message.includes("not found")) {
         message = "Invalid invite code. Please check the code and try again.";
       }
-      Alert.alert("Cannot Join Project", message);
+      showAlert("Cannot Join Project", message);
     } finally {
       setLoading(false);
     }

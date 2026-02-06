@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Image,
   Platform,
-  Alert,
   Modal,
   TextInput,
 } from "react-native";
@@ -17,6 +16,7 @@ import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
 import { fileService } from "../../src/services/fileService";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { showAlert } from "../../src/utils/alert";
 import {
   buildManifestFromChildren,
   ArtefactManifest,
@@ -374,7 +374,7 @@ export default function ArtefactDetail() {
                     router.back();
                   } catch (e) {
                     console.error("Failed to delete artefact", e);
-                    Alert.alert("Error", "Failed to delete artefact");
+                    showAlert("Error", "Failed to delete artefact");
                   } finally {
                     setDeleting(false);
                   }
