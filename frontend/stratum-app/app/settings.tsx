@@ -270,7 +270,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const loadOffFiles = async () => {
+  const loadOfflineFiles = async () => {
     const files = await offlineFilesStorage.getOfflineFiles();
     setOfflineFiles(files);
   };

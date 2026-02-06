@@ -39,7 +39,7 @@ interface Props {
   onNavigateBreadcrumb?: (index: number) => void;
   onClose: () => void;
   onLoadRoot: () => void;
-  onOpenFolder: (node: FileNode) => void;
+  onOpenFolder: (node: FileNode, customBreadcrumbs?: { id: string | null; name: string }[]) => void;
   onUpload: () => void;
   onFileSelected?: (file: SelectedFile) => void; // New: callback for file selection from menu
   onCreateFolder: () => void;
@@ -192,13 +192,18 @@ export default function FilesOverlay({
           /^[a-zA-Z0-9]{20,}$/.test(node.name); // Firebase UID
 
         if (isLikelyUserId) {
+          // If this is the current user's folder, show "My Folder"
+          if (currentUserId && node.name === currentUserId) {
+            return "My Folder";
+          }
+          // Otherwise show other user's display name
           const username = getUsernameForId(node.name);
           if (username) return username;
         }
       }
       return node.name;
     },
-    [isInsideUsersFolder, getUsernameForId],
+    [isInsideUsersFolder, getUsernameForId, currentUserId],
   );
 
   // Get display name for a breadcrumb (handles user ID -> username transformation)
@@ -215,13 +220,18 @@ export default function FilesOverlay({
           /^[a-zA-Z0-9]{20,}$/.test(crumbName); // Firebase UID
 
         if (isLikelyUserId) {
+          // If this is the current user's folder, show "My Folder"
+          if (currentUserId && crumbName === currentUserId) {
+            return "My Folder";
+          }
+          // Otherwise show other user's display name
           const username = getUsernameForId(crumbName);
           if (username) return username;
         }
       }
       return crumbName;
     },
-    [breadcrumbs, getUsernameForId],
+    [breadcrumbs, getUsernameForId, currentUserId],
   );
 
   // Navigate to user's personal folder (creates if doesn't exist)
@@ -275,12 +285,25 @@ export default function FilesOverlay({
       if (myFolder) {
         // Store the folder ID so we can detect if we're already there
         setMyFolderId(myFolder.id);
-        // Navigate to the folder
-        onOpenFolder({
-          id: myFolder.id,
-          name: myFolder.name,
-          type: "folder",
-        });
+        
+        // Build correct breadcrumb path: Root > users > {user's folder}
+        // The myFolder.parent_id is the "users" folder
+        const usersFolderId = myFolder.parent_id;
+        const customBreadcrumbs: { id: string | null; name: string }[] = [
+          { id: null, name: "Root" },
+          { id: usersFolderId, name: "users" },
+          { id: myFolder.id, name: myFolder.name },
+        ];
+        
+        // Navigate to the folder with correct breadcrumb path
+        onOpenFolder(
+          {
+            id: myFolder.id,
+            name: myFolder.name,
+            type: "folder",
+          },
+          customBreadcrumbs
+        );
       }
     } catch (error: any) {
       console.error("Failed to access My Folder:", error);

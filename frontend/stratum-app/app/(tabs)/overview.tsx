@@ -39,11 +39,45 @@ const ALL_QUICK_ACTIONS: QuickAction[] = [
   { id: "new-project", icon: "➕", label: "New Project", route: "/modal" },
   { id: "join-project", icon: "🔗", label: "Join", route: "/join-project" },
   { id: "settings", icon: "⚙️", label: "Settings", route: "/settings" },
-  { id: "open-project", icon: "📂", label: "Open Project", route: "", needsProject: true },
-  { id: "project-notes", icon: "📝", label: "Notes", route: "", needsProject: true, projectTab: "notes" },
-  { id: "project-files", icon: "🗂️", label: "Files", route: "", needsProject: true, projectTab: "artefacts" },
-  { id: "project-gps", icon: "📍", label: "GPS Map", route: "", needsProject: true, projectTab: "gps" },
-  { id: "project-gallery", icon: "🖼️", label: "Gallery", route: "", needsProject: true, projectTab: "gallery" },
+  {
+    id: "open-project",
+    icon: "📂",
+    label: "Open Project",
+    route: "",
+    needsProject: true,
+  },
+  {
+    id: "project-notes",
+    icon: "📝",
+    label: "Notes",
+    route: "",
+    needsProject: true,
+    projectTab: "notes",
+  },
+  {
+    id: "project-files",
+    icon: "🗂️",
+    label: "Files",
+    route: "",
+    needsProject: true,
+    projectTab: "artefacts",
+  },
+  {
+    id: "project-gps",
+    icon: "📍",
+    label: "GPS Map",
+    route: "",
+    needsProject: true,
+    projectTab: "gps",
+  },
+  {
+    id: "project-gallery",
+    icon: "🖼️",
+    label: "Gallery",
+    route: "",
+    needsProject: true,
+    projectTab: "gallery",
+  },
   { id: "explore", icon: "🔍", label: "Explore", route: "/(tabs)/explore" },
   { id: "profile", icon: "👤", label: "Profile", route: "/(tabs)/profile" },
 ];
@@ -66,12 +100,13 @@ export default function OverviewScreen() {
   >({});
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
-  
+
   // Quick actions customization
-  const [selectedActionIds, setSelectedActionIds] = useState<string[]>(DEFAULT_ACTIONS);
+  const [selectedActionIds, setSelectedActionIds] =
+    useState<string[]>(DEFAULT_ACTIONS);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
-  
+
   // Project picker for project-specific quick actions
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [pendingAction, setPendingAction] = useState<QuickAction | null>(null);
@@ -197,12 +232,15 @@ export default function OverviewScreen() {
         projects.map(async (project) => {
           try {
             const activities = await activityService.getActivities(project.id, 5, 0);
-            activitiesMap[project.id] = activities as Activity[];
+            activitiesMap[project.id] = activities as unknown as Activity[];
           } catch (err) {
-            console.error(`Failed to load activities for project ${project.id}:`, err);
+            console.error(
+              `Failed to load activities for project ${project.id}:`,
+              err,
+            );
             activitiesMap[project.id] = [];
           }
-        })
+        }),
       );
 
       setProjectActivities(activitiesMap);
@@ -376,10 +414,7 @@ export default function OverviewScreen() {
           <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
             Quick Actions
           </Text>
-          <TouchableOpacity
-            style={styles.modifyButton}
-            onPress={openModifyModal}
-          >
+          <TouchableOpacity style={styles.modifyButton} onPress={openModifyModal}>
             <Text style={styles.modifyButtonText}>Modify</Text>
           </TouchableOpacity>
         </View>
@@ -407,7 +442,7 @@ export default function OverviewScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Customize Quick Actions</Text>
-            
+
             {/* Selection counter */}
             <View style={styles.selectionCounter}>
               <Text style={styles.selectionCounterText}>
@@ -417,8 +452,11 @@ export default function OverviewScreen() {
                 <Text style={styles.maxReachedText}>Maximum reached</Text>
               )}
             </View>
-            
-            <ScrollView style={styles.actionsScrollView} showsVerticalScrollIndicator={false}>
+
+            <ScrollView
+              style={styles.actionsScrollView}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.actionsList}>
                 {ALL_QUICK_ACTIONS.map((action) => {
                   const isSelected = tempSelectedIds.includes(action.id);
@@ -434,19 +472,30 @@ export default function OverviewScreen() {
                       onPress={() => toggleAction(action.id)}
                       disabled={isDisabled}
                     >
-                      <Text style={[styles.actionItemIcon, isDisabled && styles.actionItemIconDisabled]}>{action.icon}</Text>
-                      <Text style={[
-                        styles.actionItemLabel,
-                        isSelected && styles.actionItemLabelSelected,
-                        isDisabled && styles.actionItemLabelDisabled,
-                      ]}>
+                      <Text
+                        style={[
+                          styles.actionItemIcon,
+                          isDisabled && styles.actionItemIconDisabled,
+                        ]}
+                      >
+                        {action.icon}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.actionItemLabel,
+                          isSelected && styles.actionItemLabelSelected,
+                          isDisabled && styles.actionItemLabelDisabled,
+                        ]}
+                      >
                         {action.label}
                       </Text>
-                      <View style={[
-                        styles.checkbox,
-                        isSelected && styles.checkboxSelected,
-                        isDisabled && styles.checkboxDisabled,
-                      ]}>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && styles.checkboxSelected,
+                          isDisabled && styles.checkboxDisabled,
+                        ]}
+                      >
                         {isSelected && <Text style={styles.checkmark}>✓</Text>}
                       </View>
                     </TouchableOpacity>
@@ -462,10 +511,7 @@ export default function OverviewScreen() {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={saveQuickActions}
-              >
+              <TouchableOpacity style={styles.saveButton} onPress={saveQuickActions}>
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -486,9 +532,14 @@ export default function OverviewScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {pendingAction?.label ? `${pendingAction.label} — Choose Project` : "Choose Project"}
+              {pendingAction?.label
+                ? `${pendingAction.label} — Choose Project`
+                : "Choose Project"}
             </Text>
-            <ScrollView style={styles.actionsScrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.actionsScrollView}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.actionsList}>
                 {recentProjects.map((project) => (
                   <TouchableOpacity
@@ -502,7 +553,10 @@ export default function OverviewScreen() {
                         {project.name}
                       </Text>
                       {project.description ? (
-                        <Text style={{ color: "#9A9A9A", fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                        <Text
+                          style={{ color: "#9A9A9A", fontSize: 12, marginTop: 2 }}
+                          numberOfLines={1}
+                        >
                           {project.description}
                         </Text>
                       ) : null}

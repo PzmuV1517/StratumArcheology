@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   },
   // Filter bar styles
   filterBar: {
-    maxHeight: 48,
+    minHeight: 52,
     marginBottom: 8,
   },
   filterBarContent: {
@@ -554,18 +554,19 @@ const styles = StyleSheet.create({
     gap: 10,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#1C1C1E",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#2A2A2A",
     height: 36,
+    minWidth: 60,
   },
   filterChipActive: {
     backgroundColor: "#FF2A2A",

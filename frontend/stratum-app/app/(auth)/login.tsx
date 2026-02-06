@@ -136,6 +136,12 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Refs for iOS AutoFill focus chaining
+  const loginPasswordRef = useRef<TextInput>(null);
+  const regEmailRef = useRef<TextInput>(null);
+  const regPasswordRef = useRef<TextInput>(null);
+  const regConfirmRef = useRef<TextInput>(null);
+
   // Register form state
   const [regDisplayName, setRegDisplayName] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -305,10 +311,12 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          autoComplete="username"
+          autoComplete="email"
           textContentType="username"
           importantForAutofill="yes"
           returnKeyType="next"
+          onSubmitEditing={() => loginPasswordRef.current?.focus()}
+          blurOnSubmit={false}
         />
       </View>
 
@@ -316,13 +324,14 @@ export default function LoginScreen() {
         <Text style={styles.label}>PASSWORD</Text>
         <View style={styles.inputWrapper}>
           <TextInput
+            ref={loginPasswordRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="Enter your password"
             placeholderTextColor="#4A4A4A"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
-            autoComplete="password"
+            autoComplete="current-password"
             textContentType="password"
             importantForAutofill="yes"
             returnKeyType="go"
@@ -366,11 +375,14 @@ export default function LoginScreen() {
           autoComplete="name"
           textContentType="name"
           returnKeyType="next"
+          onSubmitEditing={() => regEmailRef.current?.focus()}
+          blurOnSubmit={false}
         />
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>EMAIL</Text>
         <TextInput
+          ref={regEmailRef}
           style={styles.input}
           placeholder="Enter your email"
           placeholderTextColor="#4A4A4A"
@@ -381,12 +393,15 @@ export default function LoginScreen() {
           autoComplete="email"
           textContentType="emailAddress"
           returnKeyType="next"
+          onSubmitEditing={() => regPasswordRef.current?.focus()}
+          blurOnSubmit={false}
         />
       </View>
       <View style={styles.inputGroup}>
         <Text style={styles.label}>PASSWORD</Text>
         <View style={styles.inputWrapper}>
           <TextInput
+            ref={regPasswordRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="At least 6 characters"
             placeholderTextColor="#4A4A4A"
@@ -396,6 +411,8 @@ export default function LoginScreen() {
             autoComplete="new-password"
             textContentType="newPassword"
             returnKeyType="next"
+            onSubmitEditing={() => regConfirmRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <EyeToggle visible={showRegPassword} onPress={() => setShowRegPassword((v) => !v)} />
         </View>
@@ -404,6 +421,7 @@ export default function LoginScreen() {
         <Text style={styles.label}>CONFIRM PASSWORD</Text>
         <View style={styles.inputWrapper}>
           <TextInput
+            ref={regConfirmRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="Re-enter password"
             placeholderTextColor="#4A4A4A"
@@ -465,7 +483,7 @@ export default function LoginScreen() {
             <View style={styles.header}>
               <Text style={styles.logo}>STRATUM</Text>
             </View>
-            {wrapForm(renderForm(), handleLogin, loading)}
+            {activeCard === "login" ? wrapForm(renderForm(), handleLogin, loading) : null}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
               <TouchableOpacity onPress={switchToRegister}>
@@ -485,7 +503,7 @@ export default function LoginScreen() {
             <View style={styles.header}>
               <Text style={styles.logo}>STRATUM</Text>
             </View>
-            {wrapForm(renderRegisterForm(), handleRegister, regLoading)}
+            {activeCard === "register" ? wrapForm(renderRegisterForm(), handleRegister, regLoading) : null}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
               <TouchableOpacity onPress={switchToLogin}>

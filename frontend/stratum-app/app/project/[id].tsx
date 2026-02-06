@@ -504,13 +504,21 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  const openFolder = async (node: any) => {
+  const openFolder = async (
+    node: any,
+    customBreadcrumbs?: { id: string | null; name: string }[],
+  ) => {
     try {
       setFileLoading(true);
       const children = await fileService.listChildren(node.id);
       setFileNodes(children);
       setCurrentFolder({ id: node.id, name: node.name });
-      setBreadcrumbs((prev) => [...prev, { id: node.id, name: node.name }]);
+      // If custom breadcrumbs provided (e.g. for My Folder), use them
+      if (customBreadcrumbs) {
+        setBreadcrumbs(customBreadcrumbs);
+      } else {
+        setBreadcrumbs((prev) => [...prev, { id: node.id, name: node.name }]);
+      }
     } catch (e) {
       console.error("Failed to open folder:", e);
     } finally {
