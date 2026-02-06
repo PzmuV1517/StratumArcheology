@@ -64,6 +64,129 @@ export default function RegisterScreen() {
     }
   };
 
+  const renderForm = () => (
+    <View style={styles.form}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>DISPLAY NAME</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your full name"
+          placeholderTextColor="#4A4A4A"
+          value={displayName}
+          onChangeText={setDisplayName}
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="next"
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>EMAIL</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#4A4A4A"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="At least 6 characters"
+            placeholderTextColor="#4A4A4A"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="next"
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowPassword((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          >
+            {Platform.OS === "web" ? (
+              showPassword ? (
+                <FaEyeSlash size={18} color="#FF2A2A" />
+              ) : (
+                <FaEye size={18} color="#FF2A2A" />
+              )
+            ) : (
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={20}
+                color="#FF2A2A"
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>CONFIRM PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Re-enter password"
+            placeholderTextColor="#4A4A4A"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            returnKeyType="go"
+            onSubmitEditing={handleRegister}
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowConfirmPassword((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              showConfirmPassword ? "Hide password" : "Show password"
+            }
+          >
+            {Platform.OS === "web" ? (
+              showConfirmPassword ? (
+                <FaEyeSlash size={18} color="#FF2A2A" />
+              ) : (
+                <FaEye size={18} color="#FF2A2A" />
+              )
+            ) : (
+              <Ionicons
+                name={showConfirmPassword ? "eye-off" : "eye"}
+                size={20}
+                color="#FF2A2A"
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#F5F5F5" />
+        ) : (
+          <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -71,121 +194,19 @@ export default function RegisterScreen() {
         <Text style={styles.subtitle}>Join the STRATUM team</Text>
       </View>
 
-      <View style={styles.form}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>DISPLAY NAME</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your full name"
-            placeholderTextColor="#4A4A4A"
-            value={displayName}
-            onChangeText={setDisplayName}
-            autoComplete="name"
-            textContentType="name"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>EMAIL</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#4A4A4A"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>PASSWORD</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="At least 6 characters"
-              placeholderTextColor="#4A4A4A"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoComplete="new-password"
-              textContentType="newPassword"
-            />
-            <TouchableOpacity
-              style={styles.passwordToggle}
-              onPress={() => setShowPassword((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-            >
-              {Platform.OS === "web" ? (
-                showPassword ? (
-                  <FaEyeSlash size={18} color="#FF2A2A" />
-                ) : (
-                  <FaEye size={18} color="#FF2A2A" />
-                )
-              ) : (
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#FF2A2A"
-                />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>CONFIRM PASSWORD</Text>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={[styles.input, styles.passwordInput]}
-              placeholder="Re-enter password"
-              placeholderTextColor="#4A4A4A"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showConfirmPassword}
-              autoComplete="new-password"
-              textContentType="newPassword"
-            />
-            <TouchableOpacity
-              style={styles.passwordToggle}
-              onPress={() => setShowConfirmPassword((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel={
-                showConfirmPassword ? "Hide password" : "Show password"
-              }
-            >
-              {Platform.OS === "web" ? (
-                showConfirmPassword ? (
-                  <FaEyeSlash size={18} color="#FF2A2A" />
-                ) : (
-                  <FaEye size={18} color="#FF2A2A" />
-                )
-              ) : (
-                <Ionicons
-                  name={showConfirmPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#FF2A2A"
-                />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
+      {Platform.OS === "web" ? (
+        <form
+          onSubmit={(e: any) => {
+            e.preventDefault();
+            if (!loading) handleRegister();
+          }}
+          style={{ display: "contents" }}
         >
-          {loading ? (
-            <ActivityIndicator color="#F5F5F5" />
-          ) : (
-            <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {renderForm()}
+        </form>
+      ) : (
+        renderForm()
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Already have an account?</Text>

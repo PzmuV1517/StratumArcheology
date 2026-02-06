@@ -145,23 +145,15 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     console.log("[Login] handleLogin called, email:", email);
     if (!email || !password) {
-      if (Platform.OS === "web") {
-        window.alert("Please fill in all fields");
-      } else {
-        showAlert("Error", "Please fill in all fields");
-      }
+      showAlert("Error", "Please fill in all fields");
       return;
     }
 
     if (!isValidEmail(email)) {
-      if (Platform.OS === "web") {
-        window.alert("Please enter a valid email address (e.g., user@example.com)");
-      } else {
-        showAlert(
-          "Invalid Email",
-          "Please enter a valid email address (e.g., user@example.com)",
-        );
-      }
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address (e.g., user@example.com)",
+      );
       return;
     }
 
@@ -173,15 +165,91 @@ export default function LoginScreen() {
 
     if (!result.success) {
       console.log("[Login] Login failed:", result.error);
-      if (Platform.OS === "web") {
-        window.alert("Login Failed: " + (result.error || "Unknown error"));
-      } else {
-        showAlert("Login Failed", result.error);
-      }
+      showAlert("Login Failed", result.error || "Unknown error");
     } else {
       console.log("[Login] Login successful, user should be set in context");
     }
   };
+
+  const renderForm = () => (
+    <View style={styles.form}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>EMAIL</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#4A4A4A"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="username"
+          textContentType="username"
+          importantForAutofill="yes"
+          returnKeyType="next"
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Enter your password"
+            placeholderTextColor="#4A4A4A"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoComplete="password"
+            textContentType="password"
+            importantForAutofill="yes"
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setShowPassword((v) => !v)}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+          >
+            {Platform.OS === "web" ? (
+              showPassword ? (
+                <FaEyeSlash size={18} color="#FF2A2A" />
+              ) : (
+                <FaEye size={18} color="#FF2A2A" />
+              )
+            ) : (
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={20}
+                color="#FF2A2A"
+              />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#F5F5F5" />
+        ) : (
+          <Text style={styles.buttonText}>LOGIN</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.devButton}
+        onPress={() => setShowDevModal(true)}
+      >
+        <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -205,80 +273,19 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <Text style={styles.logo}>STRATUM</Text>
         </View>
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>EMAIL</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor="#4A4A4A"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="username"
-              textContentType="username"
-              importantForAutofill="yes"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>PASSWORD</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Enter your password"
-                placeholderTextColor="#4A4A4A"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="password"
-                importantForAutofill="yes"
-              />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword((v) => !v)}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-              >
-                {Platform.OS === "web" ? (
-                  showPassword ? (
-                    <FaEyeSlash size={18} color="#FF2A2A" />
-                  ) : (
-                    <FaEye size={18} color="#FF2A2A" />
-                  )
-                ) : (
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color="#FF2A2A"
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={loading}
+        {Platform.OS === "web" ? (
+          <form
+            onSubmit={(e: any) => {
+              e.preventDefault();
+              if (!loading) handleLogin();
+            }}
+            style={{ display: "contents" }}
           >
-            {loading ? (
-              <ActivityIndicator color="#F5F5F5" />
-            ) : (
-              <Text style={styles.buttonText}>LOGIN</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={() => setShowDevModal(true)}
-          >
-            <Text style={styles.devButtonText}>Dev: API Base URL</Text>
-          </TouchableOpacity>
-        </View>
+            {renderForm()}
+          </form>
+        ) : (
+          renderForm()
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
