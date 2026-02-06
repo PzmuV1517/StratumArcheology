@@ -31,21 +31,21 @@ interface QuickAction {
   icon: string;
   label: string;
   route: string;
+  needsProject?: boolean; // If true, shows project picker first
+  projectTab?: string; // Tab index to navigate to within a project
 }
 
 const ALL_QUICK_ACTIONS: QuickAction[] = [
   { id: "new-project", icon: "➕", label: "New Project", route: "/modal" },
   { id: "join-project", icon: "🔗", label: "Join", route: "/join-project" },
   { id: "settings", icon: "⚙️", label: "Settings", route: "/settings" },
-  { id: "projects", icon: "📁", label: "Projects", route: "/(tabs)/projects" },
-  { id: "voice-note", icon: "🎙️", label: "Voice Note", route: "/voice-note" },
-  { id: "overview", icon: "🏠", label: "Overview", route: "/(tabs)/overview" },
-  { id: "matrix", icon: "📊", label: "Matrix", route: "/(tabs)/projects" },
-  { id: "timeline", icon: "📅", label: "Timeline", route: "/(tabs)/projects" },
-  { id: "camera", icon: "📷", label: "Camera", route: "/settings" },
-  { id: "files", icon: "📂", label: "Files", route: "/(tabs)/projects" },
-  { id: "members", icon: "👥", label: "Team", route: "/(tabs)/projects" },
-  { id: "export", icon: "📤", label: "Export", route: "/settings" },
+  { id: "open-project", icon: "📂", label: "Open Project", route: "", needsProject: true },
+  { id: "project-notes", icon: "📝", label: "Notes", route: "", needsProject: true, projectTab: "notes" },
+  { id: "project-files", icon: "🗂️", label: "Files", route: "", needsProject: true, projectTab: "artefacts" },
+  { id: "project-gps", icon: "📍", label: "GPS Map", route: "", needsProject: true, projectTab: "gps" },
+  { id: "project-gallery", icon: "🖼️", label: "Gallery", route: "", needsProject: true, projectTab: "gallery" },
+  { id: "explore", icon: "🔍", label: "Explore", route: "/(tabs)/explore" },
+  { id: "profile", icon: "👤", label: "Profile", route: "/(tabs)/profile" },
 ];
 
 const DEFAULT_ACTIONS = ["new-project", "join-project", "settings"];
@@ -71,6 +71,10 @@ export default function OverviewScreen() {
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>(DEFAULT_ACTIONS);
   const [showModifyModal, setShowModifyModal] = useState(false);
   const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
+  
+  // Project picker for project-specific quick actions
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [pendingAction, setPendingAction] = useState<QuickAction | null>(null);
 
   // Load saved quick actions on mount
   useEffect(() => {
@@ -117,6 +121,37 @@ export default function OverviewScreen() {
     return selectedActionIds
       .map((id) => ALL_QUICK_ACTIONS.find((a) => a.id === id))
       .filter(Boolean) as QuickAction[];
+  };
+
+  const handleQuickAction = (action: QuickAction) => {
+    if (action.needsProject) {
+      if (recentProjects.length === 0) {
+        // No projects — just go to Projects tab
+        router.push("/(tabs)/projects" as any);
+        return;
+      }
+      if (recentProjects.length === 1) {
+        // Only one project — go directly
+        navigateToProject(recentProjects[0].id, action);
+        return;
+      }
+      // Multiple projects — show picker
+      setPendingAction(action);
+      setShowProjectPicker(true);
+    } else {
+      router.push(action.route as any);
+    }
+  };
+
+  const navigateToProject = (projectId: string, action: QuickAction) => {
+    const tab = action.projectTab;
+    if (tab) {
+      router.push(`/project/${projectId}?tab=${tab}` as any);
+    } else {
+      router.push(`/project/${projectId}` as any);
+    }
+    setShowProjectPicker(false);
+    setPendingAction(null);
   };
 
   const loadRecentProjects = useCallback(async () => {
@@ -353,7 +388,7 @@ export default function OverviewScreen() {
             <TouchableOpacity
               key={action.id}
               style={styles.quickActionButton}
-              onPress={() => router.push(action.route as any)}
+              onPress={() => handleQuickAction(action)}
             >
               <Text style={styles.quickActionIcon}>{action.icon}</Text>
               <Text style={styles.quickActionText}>{action.label}</Text>
@@ -432,6 +467,60 @@ export default function OverviewScreen() {
                 onPress={saveQuickActions}
               >
                 <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Project Picker Modal */}
+      <Modal
+        visible={showProjectPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowProjectPicker(false);
+          setPendingAction(null);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {pendingAction?.label ? `${pendingAction.label} — Choose Project` : "Choose Project"}
+            </Text>
+            <ScrollView style={styles.actionsScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.actionsList}>
+                {recentProjects.map((project) => (
+                  <TouchableOpacity
+                    key={project.id}
+                    style={styles.actionItem}
+                    onPress={() => navigateToProject(project.id, pendingAction!)}
+                  >
+                    <Text style={styles.actionItemIcon}>📋</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.actionItemLabel} numberOfLines={1}>
+                        {project.name}
+                      </Text>
+                      {project.description ? (
+                        <Text style={{ color: "#9A9A9A", fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                          {project.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={{ color: "#9A9A9A", fontSize: 16 }}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowProjectPicker(false);
+                  setPendingAction(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
