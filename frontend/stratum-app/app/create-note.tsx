@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { showAlert } from "../src/utils/alert";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
@@ -27,6 +29,12 @@ if (Platform.OS !== "web") {
 
 export default function CreateNoteScreen() {
   const { projectId } = useLocalSearchParams();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const iosHeaderPad =
+    Platform.OS === "ios"
+      ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
+      : 0;
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -39,7 +47,7 @@ export default function CreateNoteScreen() {
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
   const [meterLevel, setMeterLevel] = useState(-160);
-  const meterIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const meterIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showDraftModal, setShowDraftModal] = useState(false);
 
   // Auto-save hook for draft recovery
@@ -264,7 +272,11 @@ export default function CreateNoteScreen() {
           if (Platform.OS === "web") {
             const response = await fetch(recordedUri);
             const blob = await response.blob();
-            await noteService.uploadAudioBlob(note.id, blob, `${safeBase}.webm`);
+            const uploadAudioBlob = noteService.uploadAudioBlob;
+            if (!uploadAudioBlob) {
+              throw new Error("Audio upload is unavailable on web");
+            }
+            await uploadAudioBlob(note.id, blob, `${safeBase}.webm`);
           } else {
             await noteService.uploadAudio(note.id, recordedUri, `${safeBase}.m4a`);
           }
@@ -350,7 +362,14 @@ export default function CreateNoteScreen() {
 
       {/* Auto-save status indicator */}
       {saveStatus !== "idle" && (
-        <View style={styles.saveStatusBar}>
+        <View
+          style={[
+            styles.saveStatusBar,
+            Platform.OS === "ios"
+              ? { top: Math.max(headerHeight || 0, (insets.top || 0) + 44) }
+              : null,
+          ]}
+        >
           <Text style={styles.saveStatusText}>
             {saveStatus === "saving"
               ? "💾 Saving draft..."
@@ -365,8 +384,10 @@ export default function CreateNoteScreen() {
 
       <ScrollView
         style={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ paddingTop: Platform.OS === "ios" ? 8 : 0 }}
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{
+          paddingTop: iosHeaderPad,
+        }}
       >
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Create New Note</Text>

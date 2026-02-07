@@ -677,7 +677,7 @@ export default function HarrisMatrix({
   return (
     <SafeAreaView
       style={styles.root}
-      edges={Platform.OS === "ios" ? ["top"] : []}
+      edges={Platform.OS === "ios" ? ["bottom"] : []}
     >
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>

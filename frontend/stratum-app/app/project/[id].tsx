@@ -17,6 +17,8 @@ import {
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   useLocalSearchParams,
   useRouter,
@@ -71,6 +73,12 @@ interface Member {
 }
 
 export default function ProjectDetailScreen() {
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const iosHeaderPad =
+    Platform.OS === "ios"
+      ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
+      : 0;
   const { id } = useLocalSearchParams<{ id: string }>();
   const globalParams = useGlobalSearchParams<{ tab?: string; openFiles?: string }>();
   const router = useRouter();
@@ -88,11 +96,12 @@ export default function ProjectDetailScreen() {
     | "history"
     | "tools"
   >("overview");
+
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{
     id: string | null;
     name: string;
-  } | null>(null);
+  }>({ id: null, name: "Root" });
   const [breadcrumbs, setBreadcrumbs] = useState<
     { id: string | null; name: string }[]
   >([{ id: null, name: "Root" }]);
@@ -503,7 +512,7 @@ export default function ProjectDetailScreen() {
           : n,
       );
       setFileNodes(decorated);
-      setCurrentFolder({ id: null as any, name: "Root" });
+      setCurrentFolder({ id: null, name: "Root" });
       setBreadcrumbs([{ id: null, name: "Root" }]);
     } catch (e) {
       console.error("Failed to load files:", e);
@@ -1197,18 +1206,18 @@ export default function ProjectDetailScreen() {
             ["matrix", "gps", "history"].includes(activeTab)
               ? {
                   flex: 1,
-                  paddingTop:
-                    Platform.OS === "ios" &&
-                    (activeTab === "matrix" || activeTab === "history")
-                      ? 8
-                      : 0,
+                  paddingTop: iosHeaderPad,
                 }
               : {
                   paddingBottom: Platform.OS === "android" ? 100 : 100,
                   paddingTop: Platform.OS === "ios" ? 0 : 0,
                 }
           }
-          contentInsetAdjustmentBehavior="automatic"
+          contentInsetAdjustmentBehavior={
+            ["matrix", "gps", "history"].includes(activeTab)
+              ? "never"
+              : "automatic"
+          }
           scrollEnabled={!["matrix", "gps", "history"].includes(activeTab)}
           refreshControl={
             Platform.OS !== "web" ? (
