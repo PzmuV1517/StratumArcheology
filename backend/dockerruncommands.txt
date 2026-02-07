@@ -9,3 +9,5 @@ npx -y eas-cli build -p android --profile production --non-interactive --no-wait
 npx expo start
 
 expo export --platform web
+
+npx expo run:ios --device

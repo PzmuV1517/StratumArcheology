@@ -1,0 +1,7 @@
+{
+  "name": "liquid-react",
+  "platforms": ["ios"],
+  "ios": {
+    "modules": ["LiquidReactModule"]
+  }
+}

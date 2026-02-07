@@ -11,7 +11,7 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/contexts/AuthContext";
 import api from "../src/services/api";
@@ -119,6 +119,8 @@ const storageStyles = StyleSheet.create({
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const segments = useSegments();
+  const isTabRoute = segments[0] === "(tabs)";
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
 
@@ -534,9 +536,11 @@ export default function SettingsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Back</Text>
-        </TouchableOpacity>
+        {!isTabRoute && (
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backText}>‹ Back</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 

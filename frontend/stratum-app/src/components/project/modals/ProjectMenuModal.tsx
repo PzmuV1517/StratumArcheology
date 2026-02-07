@@ -16,6 +16,11 @@ interface Props {
   onClose: () => void;
   onOpenMembers: () => void;
   onOpenSettings: () => void;
+  onOpenGallery?: () => void;
+  onOpenMap?: () => void;
+  onOpenTimeMachine?: () => void;
+  onOpenTools?: () => void;
+  currentTabName?: string;
   onExitProject?: () => void;
   onDeleteProject?: () => void;
   onTransferLeadership?: () => void;
@@ -29,6 +34,11 @@ export default function ProjectMenuModal({
   onClose,
   onOpenMembers,
   onOpenSettings,
+  onOpenGallery,
+  onOpenMap,
+  onOpenTimeMachine,
+  onOpenTools,
+  currentTabName,
   onExitProject,
   onDeleteProject,
   onTransferLeadership,
@@ -101,6 +111,40 @@ export default function ProjectMenuModal({
                   </Text>
                 </View>
               )}
+              {/* Navigation items */}
+              <View style={styles.sectionDivider} />
+              {onOpenGallery && (
+                <TouchableOpacity
+                  style={[styles.menuItem, currentTabName === "gallery" && styles.activeNavItem]}
+                  onPress={() => { onClose(); onOpenGallery(); }}
+                >
+                  <Text style={[styles.menuItemText, currentTabName === "gallery" && styles.activeNavText]}>Gallery</Text>
+                </TouchableOpacity>
+              )}
+              {onOpenMap && (
+                <TouchableOpacity
+                  style={[styles.menuItem, currentTabName === "gps" && styles.activeNavItem]}
+                  onPress={() => { onClose(); onOpenMap(); }}
+                >
+                  <Text style={[styles.menuItemText, currentTabName === "gps" && styles.activeNavText]}>Map</Text>
+                </TouchableOpacity>
+              )}
+              {onOpenTimeMachine && (
+                <TouchableOpacity
+                  style={[styles.menuItem, currentTabName === "history" && styles.activeNavItem]}
+                  onPress={() => { onClose(); onOpenTimeMachine(); }}
+                >
+                  <Text style={[styles.menuItemText, currentTabName === "history" && styles.activeNavText]}>Time Machine</Text>
+                </TouchableOpacity>
+              )}
+              {onOpenTools && Platform.OS !== "web" && (
+                <TouchableOpacity
+                  style={[styles.menuItem, currentTabName === "tools" && styles.activeNavItem]}
+                  onPress={() => { onClose(); onOpenTools(); }}
+                >
+                  <Text style={[styles.menuItemText, currentTabName === "tools" && styles.activeNavText]}>Tools</Text>
+                </TouchableOpacity>
+              )}
               {onExitProject && (
                 <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
                   <Text style={[styles.menuItemText, styles.exitButtonText]}>
@@ -149,6 +193,40 @@ export default function ProjectMenuModal({
                   Only the leader can change settings
                 </Text>
               </View>
+            )}
+            {/* Navigation items */}
+            <View style={styles.sectionDivider} />
+            {onOpenGallery && (
+              <TouchableOpacity
+                style={[styles.menuItem, currentTabName === "gallery" && styles.activeNavItem]}
+                onPress={() => { onClose(); onOpenGallery(); }}
+              >
+                <Text style={[styles.menuItemText, currentTabName === "gallery" && styles.activeNavText]}>Gallery</Text>
+              </TouchableOpacity>
+            )}
+            {onOpenMap && (
+              <TouchableOpacity
+                style={[styles.menuItem, currentTabName === "gps" && styles.activeNavItem]}
+                onPress={() => { onClose(); onOpenMap(); }}
+              >
+                <Text style={[styles.menuItemText, currentTabName === "gps" && styles.activeNavText]}>Map</Text>
+              </TouchableOpacity>
+            )}
+            {onOpenTimeMachine && (
+              <TouchableOpacity
+                style={[styles.menuItem, currentTabName === "history" && styles.activeNavItem]}
+                onPress={() => { onClose(); onOpenTimeMachine(); }}
+              >
+                <Text style={[styles.menuItemText, currentTabName === "history" && styles.activeNavText]}>Time Machine</Text>
+              </TouchableOpacity>
+            )}
+            {onOpenTools && Platform.OS !== "web" && (
+              <TouchableOpacity
+                style={[styles.menuItem, currentTabName === "tools" && styles.activeNavItem]}
+                onPress={() => { onClose(); onOpenTools(); }}
+              >
+                <Text style={[styles.menuItemText, currentTabName === "tools" && styles.activeNavText]}>Tools</Text>
+              </TouchableOpacity>
             )}
             {onExitProject && (
               <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
@@ -270,6 +348,18 @@ const styles = StyleSheet.create({
     borderTopColor: "#333",
     marginTop: 8,
     paddingTop: 16,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "#333",
+    marginVertical: 8,
+  },
+  activeNavItem: {
+    backgroundColor: "rgba(255, 42, 42, 0.12)",
+    borderRadius: 10,
+  },
+  activeNavText: {
+    color: "#FF2A2A",
   },
   permissionHint: {
     color: "#FF6B6B",
