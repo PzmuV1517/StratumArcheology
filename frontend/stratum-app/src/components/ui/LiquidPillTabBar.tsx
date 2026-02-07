@@ -42,6 +42,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export interface LiquidPillTabBarProps extends BottomTabBarProps {
   /** Route names that should be hidden from the tab bar */
   hiddenRouteNames?: string[];
+  /**
+   * Map certain active route names to a visible route name.
+   * Useful when you navigate to hidden routes but want a visible tab (e.g. "more")
+   * to appear focused and keep the indicator stable.
+   */
+  activeRouteNameMap?: Record<string, string>;
   /** Active tab tint colour */
   activeColor?: string;
   /** Inactive tab tint colour */
@@ -65,6 +71,7 @@ export function LiquidPillTabBar({
   descriptors,
   navigation,
   hiddenRouteNames = [],
+  activeRouteNameMap = {},
   activeColor = "#FF2A2A",
   inactiveColor = "#9A9A9A",
   pillHeight = 64,
@@ -88,11 +95,15 @@ export function LiquidPillTabBar({
   const visibleCount = visibleRoutes.length;
   const tabWidth = pillWidth / visibleCount;
 
+  const activeRouteName = state.routes[state.index]?.name;
+  const effectiveActiveRouteName =
+    (activeRouteName && activeRouteNameMap[activeRouteName]) || activeRouteName;
+
   // ---- Swipe gesture on the pill bar ----
   const navigateBySwipe = useCallback(
     (direction: "left" | "right") => {
       const currentIdx = visibleRoutes.findIndex(
-        (r) => r.key === state.routes[state.index]?.key,
+        (r) => r.name === effectiveActiveRouteName,
       );
       const newIdx =
         direction === "left"
@@ -106,7 +117,7 @@ export function LiquidPillTabBar({
         navigation.navigate(targetRoute.name, targetRoute.params);
       }
     },
-    [visibleRoutes, state, navigation, visibleCount],
+    [visibleRoutes, navigation, visibleCount, effectiveActiveRouteName],
   );
 
   const pillSwipeGesture = Gesture.Pan()
@@ -123,18 +134,19 @@ export function LiquidPillTabBar({
 
   // ---- Animated indicator position ----
   const visibleIndex = visibleRoutes.findIndex(
-    (r) => r.key === state.routes[state.index]?.key,
+    (r) => r.name === effectiveActiveRouteName,
   );
-  const indicatorAnim = useRef(new Animated.Value(visibleIndex)).current;
+  const clampedVisibleIndex = Math.max(0, visibleIndex);
+  const indicatorAnim = useRef(new Animated.Value(clampedVisibleIndex)).current;
 
   useEffect(() => {
     Animated.spring(indicatorAnim, {
-      toValue: visibleIndex,
+      toValue: clampedVisibleIndex,
       useNativeDriver: true,
       tension: 300,
       friction: 30,
     }).start();
-  }, [indicatorAnim, visibleIndex]);
+  }, [indicatorAnim, clampedVisibleIndex]);
 
   const indicatorTranslateX = indicatorAnim.interpolate({
     inputRange: visibleRoutes.map((_, i) => i),
@@ -211,8 +223,7 @@ export function LiquidPillTabBar({
           {/* Tab buttons */}
           {visibleRoutes.map((route) => {
             const options = descriptors[route.key]?.options;
-            const routeIndex = state.routes.indexOf(route);
-            const isFocused = state.index === routeIndex;
+            const isFocused = route.name === effectiveActiveRouteName;
             const color = isFocused ? activeColor : inactiveColor;
 
             const onPress = () => {

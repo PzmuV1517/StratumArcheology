@@ -15,10 +15,12 @@ import {
   // eslint-disable-next-line
   StatusBar,
 } from "react-native";
+import { BottomTabBar, createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
-import { BlurView } from "expo-blur";
+import { LiquidPillTabBar } from "@/src/components/ui/LiquidPillTabBar";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -74,6 +76,8 @@ interface Member {
   role: string;
 }
 
+const ProjectTabs = createBottomTabNavigator();
+
 export default function ProjectDetailScreen() {
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -92,13 +96,14 @@ export default function ProjectDetailScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<
+  const [currentTabName, setCurrentTabName] = useState<
     | "overview"
-    | "gallery"
-    | "artefacts"
     | "notes"
-    | "gps"
+    | "artefacts"
     | "matrix"
+    | "more"
+    | "gallery"
+    | "gps"
     | "history"
     | "tools"
   >("overview");
@@ -139,6 +144,8 @@ export default function ProjectDetailScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isSaving, setIsSaving] = useState(false);
+
+  const tabNavigationRef = useRef<any>(null);
 
   // Conflict resolution state
   const [projectConflicts, setProjectConflicts] = useState<FileConflict[]>([]);
@@ -363,16 +370,27 @@ export default function ProjectDetailScreen() {
   // Sync UI with route param when available
   useEffect(() => {
     const tabParam = (globalParams?.tab as string) || "";
-    if (tabParam === "overview") setActiveTab("overview");
-    else if (tabParam === "notes") setActiveTab("notes");
-    else if (tabParam === "artefacts") setActiveTab("artefacts");
-    else if (tabParam === "gallery") setActiveTab("gallery");
-    else if (tabParam === "matrix") setActiveTab("matrix");
-    else if (tabParam === "gps") setActiveTab("gps");
-    else if (tabParam === "history") setActiveTab("history");
-    else if (tabParam === "tools") setActiveTab("tools");
-    else if (tabParam === "files") setShowFilesOverlay(true);
-    else if (tabParam === "members") setShowMembersModal(true);
+    if (tabParam === "files") {
+      setShowFilesOverlay(true);
+      return;
+    }
+    if (tabParam === "members") {
+      setShowMembersModal(true);
+      return;
+    }
+    const knownTabs = [
+      "overview",
+      "notes",
+      "artefacts",
+      "matrix",
+      "gallery",
+      "gps",
+      "history",
+      "tools",
+    ] as const;
+    if ((knownTabs as readonly string[]).includes(tabParam)) {
+      tabNavigationRef.current?.navigate(tabParam);
+    }
   }, [globalParams?.tab]);
 
   // Handle openFiles param - especially for opening My Folder directly
@@ -1089,6 +1107,63 @@ export default function ProjectDetailScreen() {
     );
   }
 
+  const HIDDEN_MORE_ROUTES = ["gallery", "gps", "history", "tools"];
+  const MORE_ACTIVE_ROUTE_MAP: Record<string, string> = {
+    gallery: "more",
+    gps: "more",
+    history: "more",
+    tools: "more",
+  };
+
+  const bottomContentPad = Platform.OS === "ios" ? iosMoreMenuBottom + 12 : 120;
+
+  const maybeRefreshControl =
+    Platform.OS !== "web" ? (
+      <RefreshControl
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
+        tintColor="#C41E3A"
+        colors={["#C41E3A"]}
+        progressBackgroundColor="#1C1C1E"
+      />
+    ) : undefined;
+
+  function ProjectTabBar(props: BottomTabBarProps) {
+    tabNavigationRef.current = props.navigation;
+    const routeName = props.state?.routes?.[props.state.index]?.name;
+    useEffect(() => {
+      if (!routeName) return;
+      const known = [
+        "overview",
+        "notes",
+        "artefacts",
+        "matrix",
+        "more",
+        "gallery",
+        "gps",
+        "history",
+        "tools",
+      ] as const;
+      if ((known as readonly string[]).includes(routeName)) {
+        setCurrentTabName(routeName as (typeof known)[number]);
+      }
+    }, [routeName]);
+
+    if (Platform.OS === "ios") {
+      return (
+        <LiquidPillTabBar
+          {...props}
+          hiddenRouteNames={HIDDEN_MORE_ROUTES}
+          activeRouteNameMap={MORE_ACTIVE_ROUTE_MAP}
+        />
+      );
+    }
+
+    return <BottomTabBar {...props} />;
+  }
+
+  const MorePlaceholderScreen = () => <View style={{ flex: 1 }} />;
+
   return (
     <View style={styles.safeArea}>
       <View style={styles.container}>
@@ -1114,38 +1189,8 @@ export default function ProjectDetailScreen() {
             headerShown: true,
             headerBackVisible: true,
             presentation: "card",
-            // Right side: Files icon (left) + Burger (right)
             headerRight: () => {
               const useIOSGlassButtons = Platform.OS === "ios";
-
-              const filesBtn = (
-                <TouchableOpacity
-                  onPress={() => setShowFilesOverlay(true)}
-                  style={styles.iconButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  {Platform.OS === "web" && LuFilesIcon ? (
-                    <LuFilesIcon color="#FF2A2A" size={18} />
-                  ) : (
-                    <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
-                  )}
-                </TouchableOpacity>
-              );
-              const menuBtn = (
-                <TouchableOpacity
-                  onPress={() => setShowMenu((p) => !p)}
-                  style={styles.iconButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  {Platform.OS === "web" && GiHamburger ? (
-                    <GiHamburger color="#FF2A2A" size={18} />
-                  ) : (
-                    <IconSymbol name="line.3.horizontal" size={20} color="#FF2A2A" />
-                  )}
-                </TouchableOpacity>
-              );
 
               if (useIOSGlassButtons) {
                 return (
@@ -1155,7 +1200,9 @@ export default function ProjectDetailScreen() {
                       onPress={() => setShowFilesOverlay(true)}
                       variant="ghost"
                       size="sm"
-                      icon={<IconSymbol name="folder.fill" size={20} color="#FF2A2A" />}
+                      icon={
+                        <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
+                      }
                       style={styles.headerGlassBubbleButtonSpaced}
                       textStyle={{ fontSize: 0 }}
                     />
@@ -1180,520 +1227,438 @@ export default function ProjectDetailScreen() {
 
               return (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  {filesBtn}
-                  {menuBtn}
+                  <TouchableOpacity
+                    onPress={() => setShowFilesOverlay(true)}
+                    style={styles.iconButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowMenu((p) => !p)}
+                    style={styles.iconButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol
+                      name="line.3.horizontal"
+                      size={20}
+                      color="#FF2A2A"
+                    />
+                  </TouchableOpacity>
                 </View>
               );
             },
           }}
         />
 
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={
-            ["matrix", "gps", "history"].includes(activeTab)
-              ? {
-                  flex: 1,
-                  paddingTop: iosHeaderPad,
-                }
-              : {
-                  paddingBottom: Platform.OS === "android" ? 100 : 100,
-                  paddingTop: Platform.OS === "ios" ? 0 : 0,
-                }
-          }
-          contentInsetAdjustmentBehavior={
-            ["matrix", "gps", "history"].includes(activeTab)
-              ? "never"
-              : "automatic"
-          }
-          scrollEnabled={!["matrix", "gps", "history"].includes(activeTab)}
-          refreshControl={
-            Platform.OS !== "web" ? (
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                tintColor="#C41E3A"
-                colors={["#C41E3A"]}
-                progressBackgroundColor="#1C1C1E"
-              />
-            ) : undefined
-          }
-        >
-          {/* Tab Content */}
-          <View
-            style={[
-              ["matrix", "gps", "history"].includes(activeTab) && {
-                flex: 1,
-              },
-              !["overview", "matrix", "gps", "history"].includes(activeTab) && {
-                paddingHorizontal: 16,
-                paddingTop: 16,
-              },
-            ]}
+        <ProjectTabs.Navigator
+          tabBar={(props) => <ProjectTabBar {...props} />}
+            screenOptions={{
+              headerShown: false,
+              tabBarActiveTintColor: "#FF2A2A",
+              tabBarInactiveTintColor: "#9A9A9A",
+              ...(Platform.OS !== "ios" && {
+                tabBarStyle: {
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "#1A1A1A",
+                  borderTopColor: "rgba(255, 255, 255, 0.1)",
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  height: 84,
+                  paddingBottom: 24,
+                  paddingTop: 8,
+                  elevation: 8,
+                },
+                tabBarLabelStyle: {
+                  fontSize: 11,
+                  fontWeight: "600",
+                  letterSpacing: 0.3,
+                },
+              }),
+            }}
+            initialRouteName="overview"
           >
-            {activeTab === "overview" ? (
-              <View style={styles.overviewContainer}>
-                {/* Hero Section */}
-                <View style={styles.overviewHero}>
-                  <Text style={styles.overviewTitle}>{project.name}</Text>
-                  {!!project.ran_lmi_id &&
-                    (Platform.OS === "ios" && isLiquidGlassSupported ? (
+            <ProjectTabs.Screen
+              name="overview"
+              options={{
+                title: "Overview",
+                tabBarIcon: ({ color }: any) => (
+                  <IconSymbol size={26} name="house.fill" color={color} />
+                ),
+              }}
+            >
+              {() => (
+                <ScrollView
+                  style={styles.content}
+                  contentContainerStyle={{ paddingBottom: bottomContentPad }}
+                  contentInsetAdjustmentBehavior="automatic"
+                  refreshControl={maybeRefreshControl}
+                >
+                  <View style={styles.overviewContainer}>
+                    <View style={styles.overviewHero}>
+                      <Text style={styles.overviewTitle}>{project.name}</Text>
+                      {!!project.ran_lmi_id &&
+                        (Platform.OS === "ios" && isLiquidGlassSupported ? (
+                          <LiquidGlassView
+                            style={styles.overviewBadgeGlass}
+                            effect="regular"
+                          >
+                            <Text style={styles.overviewBadgeText}>
+                              RAN/LMI: {project.ran_lmi_id}
+                            </Text>
+                          </LiquidGlassView>
+                        ) : (
+                          <View style={styles.overviewBadge}>
+                            <Text style={styles.overviewBadgeText}>
+                              RAN/LMI: {project.ran_lmi_id}
+                            </Text>
+                          </View>
+                        ))}
+                    </View>
+
+                    <View style={styles.overviewStatsGrid}>
+                      {Platform.OS === "ios" && isLiquidGlassSupported ? (
+                        <>
+                          <LiquidGlassView
+                            style={styles.overviewStatCardGlass}
+                            effect="regular"
+                          >
+                            <Text style={styles.overviewStatValue}>
+                              {members.length}
+                            </Text>
+                            <Text style={styles.overviewStatLabel}>Team Members</Text>
+                          </LiquidGlassView>
+                          <LiquidGlassView
+                            style={styles.overviewStatCardGlass}
+                            effect="regular"
+                          >
+                            <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                            <Text style={styles.overviewStatLabel}>Notes</Text>
+                          </LiquidGlassView>
+                        </>
+                      ) : (
+                        <>
+                          <View style={styles.overviewStatCard}>
+                            <Text style={styles.overviewStatValue}>
+                              {members.length}
+                            </Text>
+                            <Text style={styles.overviewStatLabel}>Team Members</Text>
+                          </View>
+                          <View style={styles.overviewStatCard}>
+                            <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                            <Text style={styles.overviewStatLabel}>Notes</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+
+                    {!!project.description &&
+                      (Platform.OS === "ios" && isLiquidGlassSupported ? (
+                        <LiquidGlassView
+                          style={styles.overviewCardGlass}
+                          effect="regular"
+                        >
+                          <View style={styles.overviewCardHeader}>
+                            <View style={styles.overviewIconCircle}>
+                              <Text style={styles.overviewIcon}>📝</Text>
+                            </View>
+                            <Text style={styles.overviewCardTitle}>About</Text>
+                          </View>
+                          <Text style={styles.overviewDescription}>
+                            {project.description}
+                          </Text>
+                        </LiquidGlassView>
+                      ) : (
+                        <View style={styles.overviewCard}>
+                          <View style={styles.overviewCardHeader}>
+                            <View style={styles.overviewIconCircle}>
+                              <Text style={styles.overviewIcon}>📝</Text>
+                            </View>
+                            <Text style={styles.overviewCardTitle}>About</Text>
+                          </View>
+                          <Text style={styles.overviewDescription}>
+                            {project.description}
+                          </Text>
+                        </View>
+                      ))}
+
+                    {Platform.OS === "ios" && isLiquidGlassSupported ? (
                       <LiquidGlassView
-                        style={styles.overviewBadgeGlass}
+                        style={styles.overviewCardGlass}
                         effect="regular"
                       >
-                        <Text style={styles.overviewBadgeText}>
-                          RAN/LMI: {project.ran_lmi_id}
-                        </Text>
+                        <View style={styles.overviewCardHeader}>
+                          <View style={styles.overviewIconCircle}>
+                            <Text style={styles.overviewIcon}>📅</Text>
+                          </View>
+                          <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
+                        </View>
+                        <View style={{ height: 400, marginTop: 12 }}>
+                          <Timeline projectId={project.id} maxHeight={400} />
+                        </View>
                       </LiquidGlassView>
                     ) : (
-                      <View style={styles.overviewBadge}>
-                        <Text style={styles.overviewBadgeText}>
-                          RAN/LMI: {project.ran_lmi_id}
-                        </Text>
+                      <View style={styles.overviewCard}>
+                        <View style={styles.overviewCardHeader}>
+                          <View style={styles.overviewIconCircle}>
+                            <Text style={styles.overviewIcon}>📅</Text>
+                          </View>
+                          <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
+                        </View>
+                        <View style={{ height: 400, marginTop: 12 }}>
+                          <Timeline projectId={project.id} maxHeight={400} />
+                        </View>
                       </View>
-                    ))}
-                </View>
+                    )}
+                  </View>
+                </ScrollView>
+              )}
+            </ProjectTabs.Screen>
 
-                {/* Stats Grid */}
-                <View style={styles.overviewStatsGrid}>
-                  {Platform.OS === "ios" && isLiquidGlassSupported ? (
-                    <>
-                      <LiquidGlassView
-                        style={styles.overviewStatCardGlass}
-                        effect="regular"
-                      >
-                        <Text style={styles.overviewStatValue}>
-                          {members.length}
-                        </Text>
-                        <Text style={styles.overviewStatLabel}>Team Members</Text>
-                      </LiquidGlassView>
-                      <LiquidGlassView
-                        style={styles.overviewStatCardGlass}
-                        effect="regular"
-                      >
-                        <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                        <Text style={styles.overviewStatLabel}>Notes</Text>
-                      </LiquidGlassView>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.overviewStatCard}>
-                        <Text style={styles.overviewStatValue}>
-                          {members.length}
-                        </Text>
-                        <Text style={styles.overviewStatLabel}>Team Members</Text>
-                      </View>
-                      <View style={styles.overviewStatCard}>
-                        <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                        <Text style={styles.overviewStatLabel}>Notes</Text>
-                      </View>
-                    </>
-                  )}
-                </View>
+            <ProjectTabs.Screen
+              name="notes"
+              options={{
+                title: "Notes",
+                tabBarIcon: ({ color }: any) => (
+                  <IconSymbol size={26} name="note.text" color={color} />
+                ),
+              }}
+            >
+              {() => (
+                <ScrollView
+                  style={styles.content}
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomContentPad }}
+                  contentInsetAdjustmentBehavior="automatic"
+                  refreshControl={maybeRefreshControl}
+                >
+                  <NotesSection
+                    notes={notes as any}
+                    onCreateNote={handleCreateNote}
+                    onNotePress={handleNotePress}
+                    onDeleteNote={handleDeleteNote}
+                    canEdit={!isGuest}
+                  />
+                </ScrollView>
+              )}
+            </ProjectTabs.Screen>
 
-                {/* Description */}
-                {!!project.description &&
-                  (Platform.OS === "ios" && isLiquidGlassSupported ? (
+            <ProjectTabs.Screen
+              name="artefacts"
+              options={{
+                title: "Artefacts",
+                tabBarIcon: ({ color }: any) => (
+                  <IconSymbol size={26} name="cube.fill" color={color} />
+                ),
+              }}
+            >
+              {() => (
+                <ScrollView
+                  style={styles.content}
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomContentPad }}
+                  contentInsetAdjustmentBehavior="automatic"
+                  refreshControl={maybeRefreshControl}
+                >
+                  <ArtefactsTab projectId={project?.id as string} canEdit={canEditFiles} />
+                </ScrollView>
+              )}
+            </ProjectTabs.Screen>
+
+            <ProjectTabs.Screen
+              name="matrix"
+              options={{
+                title: "Matrix",
+                tabBarIcon: ({ color }: any) => (
+                  <IconSymbol size={26} name="chart.bar.fill" color={color} />
+                ),
+              }}
+            >
+              {() => (
+                <View style={{ flex: 1, paddingTop: iosHeaderPad, paddingBottom: Platform.OS === "android" ? 84 : 0 }}>
+                  <View
+                    style={
+                      Platform.OS === "web"
+                        ? ({
+                            height: "calc(100vh - 340px)",
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            borderWidth: 1,
+                            borderColor: "#2A2A2A",
+                            backgroundColor: "#0A0A0A",
+                          } as any)
+                        : {
+                            flex: 1,
+                            backgroundColor: "#0A0A0A",
+                          }
+                    }
+                  >
+                    {Platform.OS === "web" ? (
+                      <div style={{ height: "100%", width: "100%" }}>
+                        {HarrisMatrixComponent &&
+                          React.createElement(HarrisMatrixComponent, {
+                            projectId: project?.id as string,
+                            canEdit: canEditMatrix,
+                          })}
+                      </div>
+                    ) : (
+                      <View style={{ flex: 1, width: "100%" }}>
+                        {HarrisMatrixComponent &&
+                          React.createElement(HarrisMatrixComponent, {
+                            projectId: project?.id as string,
+                            canEdit: canEditMatrix,
+                          })}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+            </ProjectTabs.Screen>
+
+            <ProjectTabs.Screen
+              name="more"
+              options={{
+                title: "More",
+                tabBarIcon: ({ color }: any) => (
+                  <IconSymbol size={26} name="ellipsis.circle.fill" color={color} />
+                ),
+              }}
+              listeners={{
+                tabPress: (e: any) => {
+                  e.preventDefault();
+                  setShowMoreMenu((p) => !p);
+                },
+              }}
+              component={MorePlaceholderScreen}
+            />
+
+            <ProjectTabs.Screen
+              name="gallery"
+              options={{ title: "Gallery", tabBarButton: () => null }}
+            >
+              {() => (
+                <ScrollView
+                  style={styles.content}
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomContentPad }}
+                  contentInsetAdjustmentBehavior="automatic"
+                  refreshControl={maybeRefreshControl}
+                >
+                  <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
+                </ScrollView>
+              )}
+            </ProjectTabs.Screen>
+
+            <ProjectTabs.Screen
+              name="gps"
+              options={{ title: "Map", tabBarButton: () => null }}
+            >
+              {() => (
+                <View style={{ flex: 1, paddingTop: iosHeaderPad, paddingBottom: Platform.OS === "android" ? 84 : 0 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      borderWidth: 1,
+                      borderColor: "#2A2A2A",
+                    }}
+                  >
+                    <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
+                  </View>
+                </View>
+              )}
+            </ProjectTabs.Screen>
+
+            <ProjectTabs.Screen
+              name="history"
+              options={{ title: "Time Machine", tabBarButton: () => null }}
+            >
+              {() =>
+                Platform.OS === "ios" && isLiquidGlassSupported ? (
+                  <View style={{ flex: 1, paddingTop: iosHeaderPad, paddingBottom: 0 }}>
                     <LiquidGlassView
-                      style={styles.overviewCardGlass}
+                      style={{
+                        flex: 1,
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        margin: 16,
+                      }}
                       effect="regular"
                     >
-                      <View style={styles.overviewCardHeader}>
-                        <View style={styles.overviewIconCircle}>
-                          <Text style={styles.overviewIcon}>📝</Text>
-                        </View>
-                        <Text style={styles.overviewCardTitle}>About</Text>
-                      </View>
-                      <Text style={styles.overviewDescription}>
-                        {project.description}
-                      </Text>
+                      <TimeMachineTab projectId={project?.id as string} />
                     </LiquidGlassView>
-                  ) : (
-                    <View style={styles.overviewCard}>
-                      <View style={styles.overviewCardHeader}>
-                        <View style={styles.overviewIconCircle}>
-                          <Text style={styles.overviewIcon}>📝</Text>
-                        </View>
-                        <Text style={styles.overviewCardTitle}>About</Text>
-                      </View>
-                      <Text style={styles.overviewDescription}>
-                        {project.description}
-                      </Text>
-                    </View>
-                  ))}
-
-                {/* Interactive Timeline */}
-                {Platform.OS === "ios" && isLiquidGlassSupported ? (
-                  <LiquidGlassView style={styles.overviewCardGlass} effect="regular">
-                    <View style={styles.overviewCardHeader}>
-                      <View style={styles.overviewIconCircle}>
-                        <Text style={styles.overviewIcon}>📅</Text>
-                      </View>
-                      <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
-                    </View>
-                    <View style={{ height: 400, marginTop: 12 }}>
-                      <Timeline projectId={project.id} maxHeight={400} />
-                    </View>
-                  </LiquidGlassView>
-                ) : (
-                  <View style={styles.overviewCard}>
-                    <View style={styles.overviewCardHeader}>
-                      <View style={styles.overviewIconCircle}>
-                        <Text style={styles.overviewIcon}>📅</Text>
-                      </View>
-                      <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
-                    </View>
-                    <View style={{ height: 400, marginTop: 12 }}>
-                      <Timeline projectId={project.id} maxHeight={400} />
-                    </View>
                   </View>
-                )}
-              </View>
-            ) : activeTab === "gallery" ? (
-              <FileGallery
-                projectId={project?.id as string}
-                onOpenItem={openGalleryItem}
-              />
-            ) : activeTab === "artefacts" ? (
-              <ArtefactsTab
-                projectId={project?.id as string}
-                canEdit={canEditFiles}
-              />
-            ) : activeTab === "notes" ? (
-              <NotesSection
-                notes={notes as any}
-                onCreateNote={handleCreateNote}
-                onNotePress={handleNotePress}
-                onDeleteNote={handleDeleteNote}
-                canEdit={!isGuest}
-              />
-            ) : activeTab === "gps" ? (
-              <View
-                style={{
-                  flex: 1,
-                  borderRadius: 12,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                }}
-              >
-                <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
-              </View>
-            ) : activeTab === "matrix" ? (
-              <View
-                style={
-                  Platform.OS === "web"
-                    ? ({
-                        height: "calc(100vh - 340px)",
-                        borderRadius: 12,
+                ) : (
+                  <View style={{ flex: 1, paddingTop: iosHeaderPad, paddingBottom: Platform.OS === "android" ? 84 : 0 }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        borderRadius: 16,
                         overflow: "hidden",
                         borderWidth: 1,
                         borderColor: "#2A2A2A",
                         backgroundColor: "#0A0A0A",
-                      } as any)
-                    : {
-                        flex: 1,
-                        marginBottom: Platform.OS === "android" ? 84 : 0,
-                        backgroundColor: "#0A0A0A",
-                      }
-                }
-              >
-                {Platform.OS === "web" ? (
-                  <div style={{ height: "100%", width: "100%" }}>
-                    {HarrisMatrixComponent &&
-                      React.createElement(HarrisMatrixComponent, {
-                        projectId: project?.id as string,
-                        canEdit: canEditMatrix,
-                      })}
-                  </div>
-                ) : (
-                  <View style={{ flex: 1, width: "100%" }}>
-                    {HarrisMatrixComponent &&
-                      React.createElement(HarrisMatrixComponent, {
-                        projectId: project?.id as string,
-                        canEdit: canEditMatrix,
-                      })}
+                        marginHorizontal: 16,
+                        marginTop: 16,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <TimeMachineTab projectId={project?.id as string} />
+                    </View>
                   </View>
-                )}
-              </View>
-            ) : activeTab === "history" ? (
-              Platform.OS === "ios" && isLiquidGlassSupported ? (
-                <LiquidGlassView
-                  style={{
-                    flex: 1,
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    margin: 16,
-                  }}
-                  effect="regular"
-                >
-                  <TimeMachineTab projectId={project?.id as string} />
-                </LiquidGlassView>
-              ) : (
-                <View
-                  style={{
-                    flex: 1,
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: "#2A2A2A",
-                    backgroundColor: "#0A0A0A",
-                    marginHorizontal: 16,
-                    marginTop: 16,
-                    marginBottom: Platform.OS === "android" ? 100 : 16,
-                  }}
-                >
-                  <TimeMachineTab projectId={project?.id as string} />
-                </View>
-              )
-            ) : activeTab === "tools" ? (
-              Platform.OS === "ios" && isLiquidGlassSupported ? (
-                <LiquidGlassView
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    minHeight: 500,
-                  }}
-                  effect="regular"
-                >
-                  <ToolsTab projectId={project?.id as string} />
-                </LiquidGlassView>
-              ) : (
-                <View
-                  style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                    borderWidth: 1,
-                    borderColor: "#2A2A2A",
-                    backgroundColor: "#0A0A0A",
-                    minHeight: 500,
-                  }}
-                >
-                  <ToolsTab projectId={project?.id as string} />
-                </View>
-              )
-            ) : null}
-          </View>
-        </ScrollView>
+                )
+              }
+            </ProjectTabs.Screen>
 
-        {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
-        {Platform.OS === "ios" ? (
-          <View
-            style={[styles.projectPillWrapper, { paddingBottom: iosPillBottomPadding }]}
-            pointerEvents="box-none"
-          >
-            <View
-              style={[styles.projectPill, { height: iosPillHeight, borderRadius: 32 }]}
+            <ProjectTabs.Screen
+              name="tools"
+              options={{ title: "Tools", tabBarButton: () => null }}
             >
-              {isLiquidGlassSupported ? (
-                <LiquidGlassView
-                  style={[StyleSheet.absoluteFill, { borderRadius: 32 }]}
-                  effect="regular"
-                />
-              ) : (
-                <BlurView
-                  intensity={60}
-                  tint="systemChromeMaterialDark"
-                  style={[StyleSheet.absoluteFill, { borderRadius: 32 }]}
-                />
-              )}
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("overview")}
-            >
-              <IconSymbol
-                name="house.fill"
-                size={24}
-                color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "overview" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Overview
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("notes")}
-            >
-              <IconSymbol
-                name="note.text"
-                size={24}
-                color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "notes" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Notes
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("artefacts")}
-            >
-              <IconSymbol
-                name="cube.fill"
-                size={24}
-                color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "artefacts" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Artefacts
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("matrix")}
-            >
-              <IconSymbol
-                name="chart.bar.fill"
-                size={24}
-                color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "matrix" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Matrix
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setShowMoreMenu(!showMoreMenu)}
-            >
-              <IconSymbol
-                name="ellipsis.circle.fill"
-                size={24}
-                color={
-                  ["gallery", "gps", "history", "tools"].includes(activeTab)
-                    ? "#FF2A2A"
-                    : "#9A9A9A"
-                }
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                    styles.activeBottomTabLabel,
-                ]}
-              >
-                More
-              </Text>
-            </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.bottomTabContainer}>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("overview")}
-            >
-              <IconSymbol
-                name="house.fill"
-                size={24}
-                color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "overview" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Overview
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("notes")}
-            >
-              <IconSymbol
-                name="note.text"
-                size={24}
-                color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "notes" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Notes
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("artefacts")}
-            >
-              <IconSymbol
-                name="cube.fill"
-                size={24}
-                color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "artefacts" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Artefacts
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setActiveTab("matrix")}
-            >
-              <IconSymbol
-                name="chart.bar.fill"
-                size={24}
-                color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  activeTab === "matrix" && styles.activeBottomTabLabel,
-                ]}
-              >
-                Matrix
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bottomTab}
-              onPress={() => setShowMoreMenu(!showMoreMenu)}
-            >
-              <IconSymbol
-                name="ellipsis.circle.fill"
-                size={24}
-                color={
-                  ["gallery", "gps", "history", "tools"].includes(activeTab)
-                    ? "#FF2A2A"
-                    : "#9A9A9A"
-                }
-              />
-              <Text
-                style={[
-                  styles.bottomTabLabel,
-                  ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                    styles.activeBottomTabLabel,
-                ]}
-              >
-                More
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              {() =>
+                Platform.OS === "ios" && isLiquidGlassSupported ? (
+                  <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomContentPad }}
+                    contentInsetAdjustmentBehavior="automatic"
+                    refreshControl={maybeRefreshControl}
+                  >
+                    <LiquidGlassView
+                      style={{
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        minHeight: 500,
+                      }}
+                      effect="regular"
+                    >
+                      <ToolsTab projectId={project?.id as string} />
+                    </LiquidGlassView>
+                  </ScrollView>
+                ) : (
+                  <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: bottomContentPad }}
+                    contentInsetAdjustmentBehavior="automatic"
+                    refreshControl={maybeRefreshControl}
+                  >
+                    <View
+                      style={{
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: "#2A2A2A",
+                        backgroundColor: "#0A0A0A",
+                        minHeight: 500,
+                      }}
+                    >
+                      <ToolsTab projectId={project?.id as string} />
+                    </View>
+                  </ScrollView>
+                )
+              }
+            </ProjectTabs.Screen>
+          </ProjectTabs.Navigator>
 
         {/* More menu dropdown */}
         {showMoreMenu && (
@@ -1716,17 +1681,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "gallery" && styles.moreMenuItemActive,
+                    currentTabName === "gallery" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("gallery");
+                    tabNavigationRef.current?.navigate("gallery");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "gallery" && styles.moreMenuTextActive,
+                      currentTabName === "gallery" && styles.moreMenuTextActive,
                     ]}
                   >
                     Gallery
@@ -1735,17 +1700,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "gps" && styles.moreMenuItemActive,
+                    currentTabName === "gps" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("gps");
+                    tabNavigationRef.current?.navigate("gps");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "gps" && styles.moreMenuTextActive,
+                      currentTabName === "gps" && styles.moreMenuTextActive,
                     ]}
                   >
                     Map
@@ -1754,17 +1719,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "history" && styles.moreMenuItemActive,
+                    currentTabName === "history" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("history");
+                    tabNavigationRef.current?.navigate("history");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "history" && styles.moreMenuTextActive,
+                      currentTabName === "history" && styles.moreMenuTextActive,
                     ]}
                   >
                     Time Machine
@@ -1773,17 +1738,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "tools" && styles.moreMenuItemActive,
+                    currentTabName === "tools" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("tools");
+                    tabNavigationRef.current?.navigate("tools");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "tools" && styles.moreMenuTextActive,
+                      currentTabName === "tools" && styles.moreMenuTextActive,
                     ]}
                   >
                     Tools
@@ -1795,17 +1760,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "gallery" && styles.moreMenuItemActive,
+                    currentTabName === "gallery" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("gallery");
+                    tabNavigationRef.current?.navigate("gallery");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "gallery" && styles.moreMenuTextActive,
+                      currentTabName === "gallery" && styles.moreMenuTextActive,
                     ]}
                   >
                     Gallery
@@ -1814,17 +1779,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "gps" && styles.moreMenuItemActive,
+                    currentTabName === "gps" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("gps");
+                    tabNavigationRef.current?.navigate("gps");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "gps" && styles.moreMenuTextActive,
+                      currentTabName === "gps" && styles.moreMenuTextActive,
                     ]}
                   >
                     Map
@@ -1833,17 +1798,17 @@ export default function ProjectDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.moreMenuItem,
-                    activeTab === "history" && styles.moreMenuItemActive,
+                    currentTabName === "history" && styles.moreMenuItemActive,
                   ]}
                   onPress={() => {
-                    setActiveTab("history");
+                    tabNavigationRef.current?.navigate("history");
                     setShowMoreMenu(false);
                   }}
                 >
                   <Text
                     style={[
                       styles.moreMenuText,
-                      activeTab === "history" && styles.moreMenuTextActive,
+                      currentTabName === "history" && styles.moreMenuTextActive,
                     ]}
                   >
                     Time Machine
@@ -1853,17 +1818,17 @@ export default function ProjectDetailScreen() {
                   <TouchableOpacity
                     style={[
                       styles.moreMenuItem,
-                      activeTab === "tools" && styles.moreMenuItemActive,
+                      currentTabName === "tools" && styles.moreMenuItemActive,
                     ]}
                     onPress={() => {
-                      setActiveTab("tools");
+                      tabNavigationRef.current?.navigate("tools");
                       setShowMoreMenu(false);
                     }}
                   >
                     <Text
                       style={[
                         styles.moreMenuText,
-                        activeTab === "tools" && styles.moreMenuTextActive,
+                        currentTabName === "tools" && styles.moreMenuTextActive,
                       ]}
                     >
                       Tools
