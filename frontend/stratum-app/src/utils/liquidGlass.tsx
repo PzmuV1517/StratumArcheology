@@ -10,12 +10,16 @@ import React from "react";
 import { View, type ViewProps } from "react-native";
 
 let _LiquidGlassView: React.ComponentType<any> = View;
+let _LiquidGlassContainerView: React.ComponentType<any> = View;
 let _isLiquidGlassSupported = false;
 
 try {
   const mod = require("@callstack/liquid-glass");
   if (mod?.LiquidGlassView) {
     _LiquidGlassView = mod.LiquidGlassView;
+  }
+  if (mod?.LiquidGlassContainerView) {
+    _LiquidGlassContainerView = mod.LiquidGlassContainerView;
   }
   if (mod?.isLiquidGlassSupported) {
     _isLiquidGlassSupported = true;
@@ -25,4 +29,5 @@ try {
 }
 
 export const LiquidGlassView = _LiquidGlassView;
+export const LiquidGlassContainerView = _LiquidGlassContainerView;
 export const isLiquidGlassSupported = _isLiquidGlassSupported;

@@ -1,8 +1,15 @@
 /**
  * LiquidGlassButton
  *
- * A button component with iOS 26 Liquid Glass styling on supported devices.
- * Falls back to a standard styled button on unsupported platforms.
+ * Maps to UIButton on iOS — on iOS 26+ UIKit buttons inside navigation bars
+ * (like the back button) automatically adopt Liquid Glass. For standalone
+ * buttons, we use BlurView to approximate the UIButton.glass /
+ * UIButton.glassProminent appearance since React Native doesn't expose
+ * native UIButton configurations directly.
+ *
+ * No @callstack/liquid-glass dependency — uses native UIKit rendering.
+ *
+ * Apple reference: UIButton, PrimitiveButtonStyle/glass, glassProminent
  */
 import React from "react";
 import {
@@ -17,9 +24,16 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
+const isIOS = Platform.OS === "ios";
+
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "destructive"
+  | "glass"
+  | "glassProminent";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface LiquidGlassButtonProps {
@@ -48,19 +62,15 @@ export function LiquidGlassButton({
   haptic = true,
 }: LiquidGlassButtonProps) {
   const handlePress = () => {
-    if (haptic && Platform.OS === "ios") {
+    if (haptic && isIOS) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onPress();
   };
 
   const sizeStyles = SIZE_STYLES[size];
-  const variantStyles = VARIANT_STYLES[variant];
+  const variantConfig = VARIANT_STYLES[variant];
   const showText = title.trim().length > 0;
-
-  // Use real Liquid Glass on iOS 26+, BlurView on older iOS, solid on Android
-  const useNativeLiquidGlass = Platform.OS === "ios" && isLiquidGlassSupported;
-  const useBlurFallback = Platform.OS === "ios" && !isLiquidGlassSupported;
 
   const content = (
     <>
@@ -72,7 +82,7 @@ export function LiquidGlassButton({
           style={[
             styles.text,
             sizeStyles.text,
-            variantStyles.text,
+            variantConfig.text,
             disabled && styles.textDisabled,
             textStyle,
           ]}
@@ -86,56 +96,20 @@ export function LiquidGlassButton({
     </>
   );
 
-  if (useNativeLiquidGlass && variant !== "destructive") {
+  // iOS: BlurView gives native glass-like backdrop (maps to UIVisualEffectView)
+  // Destructive always uses solid background regardless of platform
+  if (isIOS && variant !== "destructive") {
     return (
       <TouchableOpacity
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.7}
-        style={[
-          styles.touchable,
-          sizeStyles.container,
-          disabled && styles.disabled,
-          style,
-        ]}
-      >
-        <LiquidGlassView
-          style={[
-            styles.glassContainer,
-            sizeStyles.container,
-            variantStyles.container,
-            style,
-          ]}
-          effect="regular"
-        >
-          {content}
-        </LiquidGlassView>
-      </TouchableOpacity>
-    );
-  }
-
-  if (useBlurFallback && variant !== "destructive") {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled}
-        activeOpacity={0.7}
-        style={[
-          styles.touchable,
-          sizeStyles.container,
-          disabled && styles.disabled,
-          style,
-        ]}
+        style={[styles.touchable, sizeStyles.container, disabled && styles.disabled, style]}
       >
         <BlurView
-          intensity={40}
-          tint="dark"
-          style={[
-            styles.blurContainer,
-            sizeStyles.container,
-            variantStyles.blurContainer,
-            style,
-          ]}
+          intensity={variantConfig.blurIntensity}
+          tint={variantConfig.blurTint}
+          style={[styles.blurContainer, sizeStyles.container, variantConfig.blurStyle, style]}
         >
           {content}
         </BlurView>
@@ -143,122 +117,91 @@ export function LiquidGlassButton({
     );
   }
 
-  // Android / destructive fallback
+  // Android / destructive
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
-      style={[
-        styles.solidContainer,
-        sizeStyles.container,
-        variantStyles.solidContainer,
-        disabled && styles.disabled,
-        style,
-      ]}
+      style={[styles.solidContainer, sizeStyles.container, variantConfig.solidContainer, disabled && styles.disabled, style]}
     >
       {content}
     </TouchableOpacity>
   );
 }
 
+/* ------------------------------------------------------------------ */
+
 const SIZE_STYLES: Record<ButtonSize, { container: ViewStyle; text: TextStyle }> = {
   sm: {
-    container: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 10,
-    },
-    text: {
-      fontSize: 13,
-    },
+    container: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
+    text: { fontSize: 13 },
   },
   md: {
-    container: {
-      paddingVertical: 12,
-      paddingHorizontal: 20,
-      borderRadius: 14,
-    },
-    text: {
-      fontSize: 15,
-    },
+    container: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14 },
+    text: { fontSize: 15 },
   },
   lg: {
-    container: {
-      paddingVertical: 16,
-      paddingHorizontal: 28,
-      borderRadius: 18,
-    },
-    text: {
-      fontSize: 17,
-    },
+    container: { paddingVertical: 16, paddingHorizontal: 28, borderRadius: 18 },
+    text: { fontSize: 17 },
   },
 };
 
 const VARIANT_STYLES: Record<
   ButtonVariant,
   {
-    container?: ViewStyle;
-    blurContainer?: ViewStyle;
+    blurIntensity: number;
+    blurTint: "dark" | "light" | "default";
+    blurStyle?: ViewStyle;
     solidContainer: ViewStyle;
     text: TextStyle;
   }
 > = {
   primary: {
-    container: {},
-    blurContainer: {
-      backgroundColor: "rgba(255, 42, 42, 0.3)",
-    },
-    solidContainer: {
-      backgroundColor: "#FF2A2A",
-    },
-    text: {
-      color: "#FFFFFF",
-    },
+    blurIntensity: 50,
+    blurTint: "dark",
+    blurStyle: { backgroundColor: "rgba(255, 42, 42, 0.3)" },
+    solidContainer: { backgroundColor: "#FF2A2A" },
+    text: { color: "#FFFFFF" },
   },
   secondary: {
-    container: {},
-    blurContainer: {
-      backgroundColor: "rgba(255, 255, 255, 0.15)",
-    },
-    solidContainer: {
-      backgroundColor: "rgba(255, 255, 255, 0.12)",
-    },
-    text: {
-      color: "#F5F5F5",
-    },
+    blurIntensity: 40,
+    blurTint: "dark",
+    blurStyle: { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+    solidContainer: { backgroundColor: "rgba(255, 255, 255, 0.12)" },
+    text: { color: "#F5F5F5" },
   },
   ghost: {
-    container: {},
-    blurContainer: {
-      backgroundColor: "transparent",
-    },
-    solidContainer: {
-      backgroundColor: "transparent",
-    },
-    text: {
-      color: "#FF2A2A",
-    },
+    blurIntensity: 0,
+    blurTint: "dark",
+    blurStyle: { backgroundColor: "transparent" },
+    solidContainer: { backgroundColor: "transparent" },
+    text: { color: "#FF2A2A" },
   },
   destructive: {
-    solidContainer: {
-      backgroundColor: "#FF4444",
-    },
-    text: {
-      color: "#FFFFFF",
-    },
+    blurIntensity: 0,
+    blurTint: "dark",
+    solidContainer: { backgroundColor: "#FF4444" },
+    text: { color: "#FFFFFF" },
+  },
+  glass: {
+    blurIntensity: 30,
+    blurTint: "light",
+    blurStyle: { backgroundColor: "rgba(255, 255, 255, 0.08)" },
+    solidContainer: { backgroundColor: "rgba(255, 255, 255, 0.1)" },
+    text: { color: "#F5F5F5" },
+  },
+  glassProminent: {
+    blurIntensity: 50,
+    blurTint: "light",
+    blurStyle: { backgroundColor: "rgba(255, 255, 255, 0.15)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255, 255, 255, 0.25)" },
+    solidContainer: { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+    text: { color: "#FFFFFF" },
   },
 };
 
 const styles = StyleSheet.create({
-  touchable: {
-    overflow: "hidden",
-  },
-  glassContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  touchable: { overflow: "hidden" },
   blurContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -267,25 +210,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  solidContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  text: {
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-  textDisabled: {
-    opacity: 0.5,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  iconLeft: {
-    marginRight: 8,
-  },
-  iconRight: {
-    marginLeft: 8,
-  },
+  solidContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  text: { fontWeight: "600", letterSpacing: 0.3 },
+  textDisabled: { opacity: 0.5 },
+  disabled: { opacity: 0.5 },
+  iconLeft: { marginRight: 8 },
+  iconRight: { marginLeft: 8 },
 });
