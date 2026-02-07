@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
+import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
 import {
   useLocalSearchParams,
   useRouter,
@@ -1061,12 +1062,12 @@ export default function ProjectDetailScreen() {
           <Text style={styles.errorSubtext}>
             You may have been removed from this project or it no longer exists.
           </Text>
-          <TouchableOpacity
-            style={styles.backButton}
+          <LiquidGlassButton
+            title="Go to Projects"
             onPress={() => router.replace("/(tabs)")}
-          >
-            <Text style={styles.backButtonText}>Go to Projects</Text>
-          </TouchableOpacity>
+            variant="primary"
+            size="md"
+          />
         </View>
       </View>
     );
@@ -1098,8 +1099,8 @@ export default function ProjectDetailScreen() {
             headerBackVisible: true,
             presentation: "card",
             // Right side: Files icon (left) + Burger (right)
-            headerRight: () => (
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
+            headerRight: () => {
+              const filesBtn = (
                 <TouchableOpacity
                   onPress={() => setShowFilesOverlay(true)}
                   style={styles.iconButton}
@@ -1109,9 +1110,11 @@ export default function ProjectDetailScreen() {
                   {Platform.OS === "web" && LuFilesIcon ? (
                     <LuFilesIcon color="#FF2A2A" size={18} />
                   ) : (
-                    <Text style={styles.iconText}>📁</Text>
+                    <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
                   )}
                 </TouchableOpacity>
+              );
+              const menuBtn = (
                 <TouchableOpacity
                   onPress={() => setShowMenu((p) => !p)}
                   style={styles.iconButton}
@@ -1121,11 +1124,33 @@ export default function ProjectDetailScreen() {
                   {Platform.OS === "web" && GiHamburger ? (
                     <GiHamburger color="#FF2A2A" size={18} />
                   ) : (
-                    <Text style={styles.iconText}>☰</Text>
+                    <IconSymbol name="line.3.horizontal" size={20} color="#FF2A2A" />
                   )}
                 </TouchableOpacity>
-              </View>
-            ),
+              );
+
+              if (Platform.OS === "ios" && isLiquidGlassSupported) {
+                return (
+                  <View
+                    style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                  >
+                    <LiquidGlassView style={styles.headerIconGlass} effect="regular">
+                      {filesBtn}
+                    </LiquidGlassView>
+                    <LiquidGlassView style={styles.headerIconGlass} effect="regular">
+                      {menuBtn}
+                    </LiquidGlassView>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {filesBtn}
+                  {menuBtn}
+                </View>
+              );
+            },
           }}
         />
 
@@ -1170,54 +1195,119 @@ export default function ProjectDetailScreen() {
                 {/* Hero Section */}
                 <View style={styles.overviewHero}>
                   <Text style={styles.overviewTitle}>{project.name}</Text>
-                  {!!project.ran_lmi_id && (
-                    <View style={styles.overviewBadge}>
-                      <Text style={styles.overviewBadgeText}>
-                        RAN/LMI: {project.ran_lmi_id}
-                      </Text>
-                    </View>
-                  )}
+                  {!!project.ran_lmi_id &&
+                    (Platform.OS === "ios" && isLiquidGlassSupported ? (
+                      <LiquidGlassView
+                        style={styles.overviewBadgeGlass}
+                        effect="regular"
+                      >
+                        <Text style={styles.overviewBadgeText}>
+                          RAN/LMI: {project.ran_lmi_id}
+                        </Text>
+                      </LiquidGlassView>
+                    ) : (
+                      <View style={styles.overviewBadge}>
+                        <Text style={styles.overviewBadgeText}>
+                          RAN/LMI: {project.ran_lmi_id}
+                        </Text>
+                      </View>
+                    ))}
                 </View>
 
                 {/* Stats Grid */}
                 <View style={styles.overviewStatsGrid}>
-                  <View style={styles.overviewStatCard}>
-                    <Text style={styles.overviewStatValue}>{members.length}</Text>
-                    <Text style={styles.overviewStatLabel}>Team Members</Text>
-                  </View>
-                  <View style={styles.overviewStatCard}>
-                    <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                    <Text style={styles.overviewStatLabel}>Notes</Text>
-                  </View>
+                  {Platform.OS === "ios" && isLiquidGlassSupported ? (
+                    <>
+                      <LiquidGlassView
+                        style={styles.overviewStatCardGlass}
+                        effect="regular"
+                      >
+                        <Text style={styles.overviewStatValue}>
+                          {members.length}
+                        </Text>
+                        <Text style={styles.overviewStatLabel}>Team Members</Text>
+                      </LiquidGlassView>
+                      <LiquidGlassView
+                        style={styles.overviewStatCardGlass}
+                        effect="regular"
+                      >
+                        <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                        <Text style={styles.overviewStatLabel}>Notes</Text>
+                      </LiquidGlassView>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.overviewStatCard}>
+                        <Text style={styles.overviewStatValue}>
+                          {members.length}
+                        </Text>
+                        <Text style={styles.overviewStatLabel}>Team Members</Text>
+                      </View>
+                      <View style={styles.overviewStatCard}>
+                        <Text style={styles.overviewStatValue}>{notes.length}</Text>
+                        <Text style={styles.overviewStatLabel}>Notes</Text>
+                      </View>
+                    </>
+                  )}
                 </View>
 
                 {/* Description */}
-                {!!project.description && (
+                {!!project.description &&
+                  (Platform.OS === "ios" && isLiquidGlassSupported ? (
+                    <LiquidGlassView
+                      style={styles.overviewCardGlass}
+                      effect="regular"
+                    >
+                      <View style={styles.overviewCardHeader}>
+                        <View style={styles.overviewIconCircle}>
+                          <Text style={styles.overviewIcon}>📝</Text>
+                        </View>
+                        <Text style={styles.overviewCardTitle}>About</Text>
+                      </View>
+                      <Text style={styles.overviewDescription}>
+                        {project.description}
+                      </Text>
+                    </LiquidGlassView>
+                  ) : (
+                    <View style={styles.overviewCard}>
+                      <View style={styles.overviewCardHeader}>
+                        <View style={styles.overviewIconCircle}>
+                          <Text style={styles.overviewIcon}>📝</Text>
+                        </View>
+                        <Text style={styles.overviewCardTitle}>About</Text>
+                      </View>
+                      <Text style={styles.overviewDescription}>
+                        {project.description}
+                      </Text>
+                    </View>
+                  ))}
+
+                {/* Interactive Timeline */}
+                {Platform.OS === "ios" && isLiquidGlassSupported ? (
+                  <LiquidGlassView style={styles.overviewCardGlass} effect="regular">
+                    <View style={styles.overviewCardHeader}>
+                      <View style={styles.overviewIconCircle}>
+                        <Text style={styles.overviewIcon}>📅</Text>
+                      </View>
+                      <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
+                    </View>
+                    <View style={{ height: 400, marginTop: 12 }}>
+                      <Timeline projectId={project.id} maxHeight={400} />
+                    </View>
+                  </LiquidGlassView>
+                ) : (
                   <View style={styles.overviewCard}>
                     <View style={styles.overviewCardHeader}>
                       <View style={styles.overviewIconCircle}>
-                        <Text style={styles.overviewIcon}>📝</Text>
+                        <Text style={styles.overviewIcon}>📅</Text>
                       </View>
-                      <Text style={styles.overviewCardTitle}>About</Text>
+                      <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
                     </View>
-                    <Text style={styles.overviewDescription}>
-                      {project.description}
-                    </Text>
+                    <View style={{ height: 400, marginTop: 12 }}>
+                      <Timeline projectId={project.id} maxHeight={400} />
+                    </View>
                   </View>
                 )}
-
-                {/* Interactive Timeline */}
-                <View style={styles.overviewCard}>
-                  <View style={styles.overviewCardHeader}>
-                    <View style={styles.overviewIconCircle}>
-                      <Text style={styles.overviewIcon}>📅</Text>
-                    </View>
-                    <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
-                  </View>
-                  <View style={{ height: 400, marginTop: 12 }}>
-                    <Timeline projectId={project.id} maxHeight={400} />
-                  </View>
-                </View>
               </View>
             ) : activeTab === "gallery" ? (
               <FileGallery
@@ -1287,32 +1377,59 @@ export default function ProjectDetailScreen() {
                 )}
               </View>
             ) : activeTab === "history" ? (
-              <View
-                style={{
-                  flex: 1,
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                  backgroundColor: "#0A0A0A",
-                  margin: 16,
-                }}
-              >
-                <TimeMachineTab projectId={project?.id as string} />
-              </View>
+              Platform.OS === "ios" && isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={{
+                    flex: 1,
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    margin: 16,
+                  }}
+                  effect="regular"
+                >
+                  <TimeMachineTab projectId={project?.id as string} />
+                </LiquidGlassView>
+              ) : (
+                <View
+                  style={{
+                    flex: 1,
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "#2A2A2A",
+                    backgroundColor: "#0A0A0A",
+                    margin: 16,
+                  }}
+                >
+                  <TimeMachineTab projectId={project?.id as string} />
+                </View>
+              )
             ) : activeTab === "tools" ? (
-              <View
-                style={{
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                  backgroundColor: "#0A0A0A",
-                  minHeight: 500,
-                }}
-              >
-                <ToolsTab projectId={project?.id as string} />
-              </View>
+              Platform.OS === "ios" && isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={{
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    minHeight: 500,
+                  }}
+                  effect="regular"
+                >
+                  <ToolsTab projectId={project?.id as string} />
+                </LiquidGlassView>
+              ) : (
+                <View
+                  style={{
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "#2A2A2A",
+                    backgroundColor: "#0A0A0A",
+                    minHeight: 500,
+                  }}
+                >
+                  <ToolsTab projectId={project?.id as string} />
+                </View>
+              )
             ) : null}
           </View>
         </ScrollView>
@@ -1321,101 +1438,98 @@ export default function ProjectDetailScreen() {
         {Platform.OS === "ios" && isLiquidGlassSupported ? (
           <LiquidGlassView style={styles.bottomTabContainerGlass} effect="regular">
             <TouchableOpacity
-              style={[
-                styles.bottomTab,
-                activeTab === "overview" && styles.activeBottomTab,
-              ]}
+              style={styles.bottomTab}
               onPress={() => setActiveTab("overview")}
             >
+              <IconSymbol
+                name="house.fill"
+                size={24}
+                color={activeTab === "overview" ? "#FF2A2A" : "#9A9A9A"}
+              />
               <Text
                 style={[
-                  styles.bottomTabText,
-                  activeTab === "overview" && styles.activeBottomTabText,
+                  styles.bottomTabLabel,
+                  activeTab === "overview" && styles.activeBottomTabLabel,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
                 Overview
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.bottomTab,
-                activeTab === "notes" && styles.activeBottomTab,
-              ]}
+              style={styles.bottomTab}
               onPress={() => setActiveTab("notes")}
             >
+              <IconSymbol
+                name="note.text"
+                size={24}
+                color={activeTab === "notes" ? "#FF2A2A" : "#9A9A9A"}
+              />
               <Text
                 style={[
-                  styles.bottomTabText,
-                  activeTab === "notes" && styles.activeBottomTabText,
+                  styles.bottomTabLabel,
+                  activeTab === "notes" && styles.activeBottomTabLabel,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
                 Notes
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.bottomTab,
-                activeTab === "artefacts" && styles.activeBottomTab,
-              ]}
+              style={styles.bottomTab}
               onPress={() => setActiveTab("artefacts")}
             >
+              <IconSymbol
+                name="cube.fill"
+                size={24}
+                color={activeTab === "artefacts" ? "#FF2A2A" : "#9A9A9A"}
+              />
               <Text
                 style={[
-                  styles.bottomTabText,
-                  activeTab === "artefacts" && styles.activeBottomTabText,
+                  styles.bottomTabLabel,
+                  activeTab === "artefacts" && styles.activeBottomTabLabel,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
                 Artefacts
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.bottomTab,
-                activeTab === "matrix" && styles.activeBottomTab,
-              ]}
+              style={styles.bottomTab}
               onPress={() => setActiveTab("matrix")}
             >
+              <IconSymbol
+                name="chart.bar.fill"
+                size={24}
+                color={activeTab === "matrix" ? "#FF2A2A" : "#9A9A9A"}
+              />
               <Text
                 style={[
-                  styles.bottomTabText,
-                  activeTab === "matrix" && styles.activeBottomTabText,
+                  styles.bottomTabLabel,
+                  activeTab === "matrix" && styles.activeBottomTabLabel,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
                 Matrix
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.bottomTab,
-                styles.moreTab,
-                ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                  styles.activeBottomTab,
-              ]}
+              style={styles.bottomTab}
               onPress={() => setShowMoreMenu(!showMoreMenu)}
             >
+              <IconSymbol
+                name="ellipsis.circle.fill"
+                size={24}
+                color={
+                  ["gallery", "gps", "history", "tools"].includes(activeTab)
+                    ? "#FF2A2A"
+                    : "#9A9A9A"
+                }
+              />
               <Text
                 style={[
-                  styles.bottomTabText,
+                  styles.bottomTabLabel,
                   ["gallery", "gps", "history", "tools"].includes(activeTab) &&
-                    styles.activeBottomTabText,
+                    styles.activeBottomTabLabel,
                 ]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
               >
-                More ▾
+                More
               </Text>
             </TouchableOpacity>
           </LiquidGlassView>
@@ -2205,9 +2319,8 @@ const styles = StyleSheet.create({
   },
   bottomTabContainerGlass: {
     flexDirection: "row",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
     paddingHorizontal: 12,
   },
   bottomTab: {
@@ -2269,6 +2382,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FF2A2A",
   },
+  overviewBadgeGlass: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    overflow: "hidden",
+  },
   overviewBadgeText: {
     color: "#FF2A2A",
     fontSize: 13,
@@ -2288,6 +2408,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#2A2A2A",
+  },
+  overviewStatCardGlass: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    overflow: "hidden",
   },
   overviewStatValue: {
     fontSize: 36,
@@ -2310,6 +2437,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
+  },
+  overviewCardGlass: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    overflow: "hidden",
   },
   overviewCardHeader: {
     flexDirection: "row",
@@ -2795,6 +2928,10 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     marginHorizontal: 4,
+  },
+  headerIconGlass: {
+    borderRadius: 22,
+    overflow: "hidden",
   },
   iconText: {
     color: "#FF2A2A",

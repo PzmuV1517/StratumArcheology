@@ -6,6 +6,7 @@
  */
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { DynamicColorIOS } from "react-native";
+import { isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 
 // Active color for tab items
 const ACTIVE_COLOR = "#FF2A2A";
@@ -18,12 +19,17 @@ export default function TabLayout() {
       labelStyle={{
         color: DynamicColorIOS({ dark: "#9A9A9A", light: "#666666" }),
       }}
-      barStyle={{
-        backgroundColor: DynamicColorIOS({
-          dark: "rgba(17, 17, 17, 0.85)",
-          light: "rgba(255, 255, 255, 0.85)",
-        }),
-      }}
+      // On iOS 26+ with Liquid Glass, let the system handle the bar appearance
+      // (no explicit background → native glass effect, no white flash on swipe).
+      // Older iOS gets a semi-transparent dark background.
+      {...(!isLiquidGlassSupported && {
+        barStyle: {
+          backgroundColor: DynamicColorIOS({
+            dark: "rgba(17, 17, 17, 0.85)",
+            light: "rgba(255, 255, 255, 0.85)",
+          }),
+        },
+      })}
     >
         {/* Overview - Landing tab (default) */}
         <NativeTabs.Trigger name="overview">
