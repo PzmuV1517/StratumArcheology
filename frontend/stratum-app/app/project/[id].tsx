@@ -1145,7 +1145,11 @@ export default function ProjectDetailScreen() {
               if (useHeaderGlass) {
                 return (
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <LiquidGlassView style={styles.headerGlassButton} effect="regular">
+                    <View style={styles.headerGlassClip}>
+                      <LiquidGlassView
+                        style={StyleSheet.absoluteFillObject}
+                        effect="regular"
+                      />
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="Files"
@@ -1166,9 +1170,13 @@ export default function ProjectDetailScreen() {
                           />
                         )}
                       </Pressable>
-                    </LiquidGlassView>
+                    </View>
                     <View style={{ width: 6 }} />
-                    <LiquidGlassView style={styles.headerGlassButton} effect="regular">
+                    <View style={styles.headerGlassClip}>
+                      <LiquidGlassView
+                        style={StyleSheet.absoluteFillObject}
+                        effect="regular"
+                      />
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="Menu"
@@ -1189,7 +1197,7 @@ export default function ProjectDetailScreen() {
                           />
                         )}
                       </Pressable>
-                    </LiquidGlassView>
+                    </View>
                   </View>
                 );
               }
@@ -3004,6 +3012,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   headerGlassButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerGlassClip: {
     width: 44,
     height: 44,
     borderRadius: 22,

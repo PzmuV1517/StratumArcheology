@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
@@ -14,19 +15,15 @@ import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { Project } from "../../src/services/projectService.types";
+import type { ProjectActivity } from "../../src/services/activityService.types";
 
-interface Activity {
-  id: string;
-  description: string;
-  created_at: string;
-  project_id: string;
+type MyActivity = ProjectActivity & {
   project_name?: string;
-  user_name?: string;
-}
+};
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<MyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
@@ -90,7 +87,12 @@ export default function ProjectsScreen() {
   const renderProject = ({ item }: any) => (
     <TouchableOpacity
       style={styles.projectCard}
-      onPress={() => router.push(`/project/${item.id}`)}
+      onPress={() =>
+        router.push({
+          pathname: "/project/[id]",
+          params: { id: String(item.id) },
+        })
+      }
     >
       <Text style={styles.projectName}>{item.name}</Text>
       <Text style={styles.projectDescription}>
@@ -104,23 +106,27 @@ export default function ProjectsScreen() {
     </TouchableOpacity>
   );
 
-  const renderActivity = ({ item }: { item: Activity }) => (
+  const renderActivity = ({ item }: { item: MyActivity }) => (
     <TouchableOpacity
       style={styles.activityCard}
-      onPress={() => router.push(`/project/${item.project_id}`)}
+      onPress={() =>
+        router.push({
+          pathname: "/project/[id]",
+          params: { id: String(item.project_id) },
+        })
+      }
     >
       <View style={styles.activityHeader}>
-        <Text style={styles.activityProjectName}>{item.project_name}</Text>
+        <Text style={styles.activityProjectName}>
+          {item.project_name || "Project"}
+        </Text>
         <Text style={styles.activityDate}>
-          {new Date(item.created_at).toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {activityService.formatTimestamp(item.created_at)}
         </Text>
       </View>
-      <Text style={styles.activityDescription}>{item.description}</Text>
+      <Text style={styles.activityDescription}>
+        {activityService.getActivityDescription(item)}
+      </Text>
       {item.user_name && (
         <Text style={styles.activityUser}>by {item.user_name}</Text>
       )}
@@ -216,8 +222,8 @@ export default function ProjectsScreen() {
                   style={styles.myFolderButton}
                   onPress={() =>
                     router.push({
-                      pathname: `/project/${project.id}`,
-                      params: { openFiles: "myFolder" },
+                      pathname: "/project/[id]",
+                      params: { id: String(project.id), openFiles: "myFolder" },
                     })
                   }
                 >
@@ -248,7 +254,7 @@ export default function ProjectsScreen() {
               <FlatList
                 data={activities}
                 renderItem={renderActivity}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => String(item.id)}
                 scrollEnabled={false}
               />
             )}
