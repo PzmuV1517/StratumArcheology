@@ -17,6 +17,7 @@ import {
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
+import { useHeaderHeight } from "@react-navigation/elements";
 import {
   useLocalSearchParams,
   useRouter,
@@ -74,6 +75,7 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const globalParams = useGlobalSearchParams<{ tab?: string; openFiles?: string }>();
   const router = useRouter();
+  const headerHeight = useHeaderHeight();
   const [project, setProject] = useState<Project | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -1158,7 +1160,14 @@ export default function ProjectDetailScreen() {
           style={styles.content}
           contentContainerStyle={
             ["matrix", "gps", "history"].includes(activeTab)
-              ? { flex: 1, paddingTop: Platform.OS === "ios" ? 0 : 0 }
+              ? {
+                  flex: 1,
+                  paddingTop:
+                    Platform.OS === "ios" &&
+                    (activeTab === "matrix" || activeTab === "history")
+                      ? headerHeight || 44
+                      : 0,
+                }
               : {
                   paddingBottom: Platform.OS === "android" ? 100 : 100,
                   paddingTop: Platform.OS === "ios" ? 0 : 0,
