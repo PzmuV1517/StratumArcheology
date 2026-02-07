@@ -20,7 +20,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
-import { LiquidPillTabBar } from "@/src/components/ui/LiquidPillTabBar";
+import { SplitPillTabBar } from "@/src/components/ui/SplitPillTabBar";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -86,7 +86,7 @@ export default function ProjectDetailScreen() {
       ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
       : 0;
 
-  const iosPillHeight = 64;
+  const iosPillHeight = 56;
   const iosPillBottomPadding = Math.max(insets.bottom || 0, 24);
   const iosMoreMenuBottom = iosPillBottomPadding + iosPillHeight + 8;
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -1151,7 +1151,7 @@ export default function ProjectDetailScreen() {
 
     if (Platform.OS === "ios") {
       return (
-        <LiquidPillTabBar
+        <SplitPillTabBar
           {...props}
           hiddenRouteNames={HIDDEN_MORE_ROUTES}
           activeRouteNameMap={MORE_ACTIVE_ROUTE_MAP}
