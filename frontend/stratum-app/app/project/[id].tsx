@@ -18,6 +18,7 @@ import {
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
+import { BlurView } from "expo-blur";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -80,6 +81,10 @@ export default function ProjectDetailScreen() {
     Platform.OS === "ios"
       ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
       : 0;
+
+  const iosPillHeight = 64;
+  const iosPillBottomPadding = Math.max(insets.bottom || 0, 24);
+  const iosMoreMenuBottom = iosPillBottomPadding + iosPillHeight + 8;
   const { id } = useLocalSearchParams<{ id: string }>();
   const globalParams = useGlobalSearchParams<{ tab?: string; openFiles?: string }>();
   const router = useRouter();
@@ -1144,17 +1149,16 @@ export default function ProjectDetailScreen() {
 
               if (useIOSGlassButtons) {
                 return (
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <>
                     <LiquidGlassButton
                       title=""
                       onPress={() => setShowFilesOverlay(true)}
                       variant="ghost"
                       size="sm"
                       icon={<IconSymbol name="folder.fill" size={20} color="#FF2A2A" />}
-                      style={styles.headerGlassBubbleButton}
+                      style={styles.headerGlassBubbleButtonSpaced}
                       textStyle={{ fontSize: 0 }}
                     />
-                    <View style={{ width: 6 }} />
                     <LiquidGlassButton
                       title=""
                       onPress={() => setShowMenu((p) => !p)}
@@ -1170,7 +1174,7 @@ export default function ProjectDetailScreen() {
                       style={styles.headerGlassBubbleButton}
                       textStyle={{ fontSize: 0 }}
                     />
-                  </View>
+                  </>
                 );
               }
 
@@ -1474,14 +1478,26 @@ export default function ProjectDetailScreen() {
         </ScrollView>
 
         {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
-        {Platform.OS === "ios" && isLiquidGlassSupported ? (
-          <LiquidGlassView
-            style={[
-              styles.bottomTabContainerGlass,
-              { paddingBottom: Math.max(insets.bottom || 0, 8) },
-            ]}
-            effect="regular"
+        {Platform.OS === "ios" ? (
+          <View
+            style={[styles.projectPillWrapper, { paddingBottom: iosPillBottomPadding }]}
+            pointerEvents="box-none"
           >
+            <View
+              style={[styles.projectPill, { height: iosPillHeight, borderRadius: 32 }]}
+            >
+              {isLiquidGlassSupported ? (
+                <LiquidGlassView
+                  style={[StyleSheet.absoluteFill, { borderRadius: 32 }]}
+                  effect="regular"
+                />
+              ) : (
+                <BlurView
+                  intensity={60}
+                  tint="systemChromeMaterialDark"
+                  style={[StyleSheet.absoluteFill, { borderRadius: 32 }]}
+                />
+              )}
             <TouchableOpacity
               style={styles.bottomTab}
               onPress={() => setActiveTab("overview")}
@@ -1577,7 +1593,8 @@ export default function ProjectDetailScreen() {
                 More
               </Text>
             </TouchableOpacity>
-          </LiquidGlassView>
+            </View>
+          </View>
         ) : (
           <View style={styles.bottomTabContainer}>
             <TouchableOpacity
@@ -1683,7 +1700,7 @@ export default function ProjectDetailScreen() {
           <View
             style={[
               styles.moreMenuOverlay,
-              Platform.OS === "ios" ? { bottom: 60 + (insets.bottom || 0) } : null,
+              Platform.OS === "ios" ? { bottom: iosMoreMenuBottom } : null,
             ]}
           >
             <TouchableOpacity
@@ -2377,6 +2394,34 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     paddingHorizontal: 12,
   },
+  projectPillWrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "box-none",
+  },
+  projectPill: {
+    flexDirection: "row",
+    overflow: "hidden",
+    alignSelf: "stretch",
+    marginHorizontal: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+      default: {},
+    }),
+  },
   bottomTab: {
     flex: 1,
     alignItems: "center",
@@ -3000,6 +3045,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+  },
+  headerGlassBubbleButtonSpaced: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginRight: 6,
   },
   headerGlassClip: {
     width: 44,

@@ -10,6 +10,7 @@ import {
   Text,
   StyleSheet,
   Platform,
+  StyleProp,
   ViewStyle,
   TextStyle,
   View,
@@ -29,8 +30,8 @@ interface LiquidGlassButtonProps {
   disabled?: boolean;
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   haptic?: boolean;
 }
 
