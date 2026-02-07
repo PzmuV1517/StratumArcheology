@@ -44,6 +44,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  runOnJS,
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
@@ -521,7 +522,59 @@ export default function HarrisMatrix({
 
   /* ───────────── Gestures ───────────── */
 
+  /* ── hit-test: convert touch point to SVG coords ── */
+  const hitTestNode = useCallback(
+    (absX: number, absY: number): string | null => {
+      // Convert screen coords → SVG space by reversing pan + scale
+      const svgX = (absX - translateX.value) / scale.value;
+      const svgY = (absY - translateY.value) / scale.value;
+      for (const [id, pos] of positions) {
+        if (
+          svgX >= pos.x - NODE_W / 2 &&
+          svgX <= pos.x + NODE_W / 2 &&
+          svgY >= pos.y - NODE_H / 2 &&
+          svgY <= pos.y + NODE_H / 2
+        ) {
+          return id;
+        }
+      }
+      return null;
+    },
+    [positions, translateX, translateY, scale],
+  );
+
+  const handleTap = useCallback(
+    (x: number, y: number) => {
+      const id = hitTestNode(x, y);
+      if (id) onNodePress(id);
+    },
+    [hitTestNode, onNodePress],
+  );
+
+  const handleLongPress = useCallback(
+    (x: number, y: number) => {
+      const id = hitTestNode(x, y);
+      if (id) onNodeLongPress(id);
+    },
+    [hitTestNode, onNodeLongPress],
+  );
+
+  const tapGesture = Gesture.Tap()
+    .maxDuration(250)
+    .onEnd((e) => {
+      runOnJS(handleTap)(e.x, e.y);
+    });
+
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(400)
+    .onEnd((e, success) => {
+      if (success) {
+        runOnJS(handleLongPress)(e.x, e.y);
+      }
+    });
+
   const panGesture = Gesture.Pan()
+    .minDistance(10)
     .onStart(() => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
@@ -539,7 +592,13 @@ export default function HarrisMatrix({
       scale.value = Math.min(Math.max(savedScale.value * e.scale, 0.3), 4);
     });
 
-  const composed = Gesture.Simultaneous(panGesture, pinchGesture);
+  const composed = Gesture.Race(
+    longPressGesture,
+    Gesture.Exclusive(
+      Gesture.Simultaneous(panGesture, pinchGesture),
+      tapGesture,
+    ),
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [
@@ -759,8 +818,6 @@ export default function HarrisMatrix({
                       fill={nodeColor(id)}
                       stroke={nodeColor(id)}
                       strokeWidth={2}
-                      onPress={() => onNodePress(id)}
-                      onLongPress={() => onNodeLongPress(id)}
                     />
                     <SvgText
                       x={pos.x}
@@ -769,8 +826,6 @@ export default function HarrisMatrix({
                       fill="#FFFFFF"
                       fontSize={14}
                       fontWeight="600"
-                      onPress={() => onNodePress(id)}
-                      onLongPress={() => onNodeLongPress(id)}
                     >
                       {id}
                     </SvgText>

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { useEffect } from "react";
 import { View, Platform, StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AuthRedirector from "./AuthRedirector";
 
 import { AuthProvider } from "../src/contexts/AuthContext";
@@ -88,11 +89,13 @@ const styles = StyleSheet.create({
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <RootLayoutNav />
-        <CustomAlertOverride />
-      </WebSocketProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <WebSocketProvider>
+          <RootLayoutNav />
+          <CustomAlertOverride />
+        </WebSocketProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
