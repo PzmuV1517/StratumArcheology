@@ -1011,7 +1011,11 @@ export default function ProjectDetailScreen() {
             options={{
               title: "Loading...",
               headerShown: true,
-              headerStyle: { backgroundColor: "#111111" },
+              headerTransparent: Platform.OS === "ios",
+              headerBlurEffect:
+                Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+              headerStyle:
+                Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
               headerTintColor: "#FF2A2A",
             }}
           />
@@ -1029,7 +1033,11 @@ export default function ProjectDetailScreen() {
           <Stack.Screen
             options={{
               title: "Project Not Found",
-              headerStyle: { backgroundColor: "#111111" },
+              headerTransparent: Platform.OS === "ios",
+              headerBlurEffect:
+                Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+              headerStyle:
+                Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
               headerTintColor: "#FF2A2A",
               headerTitleStyle: {
                 color: "#F5F5F5",
@@ -1061,7 +1069,11 @@ export default function ProjectDetailScreen() {
           options={{
             // Remove visible title next to back while keeping header spacing
             headerTitle: " ",
-            headerStyle: { backgroundColor: "#111111" },
+            // iOS: transparent for Liquid Glass, Android/web: solid background
+            headerTransparent: Platform.OS === "ios",
+            headerBlurEffect:
+              Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+            headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
             headerTintColor: "#FF2A2A",
             headerTitleStyle: {
               color: "transparent",

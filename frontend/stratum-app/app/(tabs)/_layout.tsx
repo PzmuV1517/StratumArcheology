@@ -1,84 +1,96 @@
 /**
- * Native Tab Layout for iOS and Android
- * Uses NativeTabs from expo-router for real native tab bars:
- * - iOS 26+: Real Liquid Glass UITabBarController
- * - iOS <26: Standard UITabBarController
- * - Android: Material Bottom Navigation
+ * Fallback Tab Layout
+ * Used when no platform-specific layout matches (e.g., _layout.ios.tsx, _layout.android.tsx)
+ * This is required by expo-router when using platform extensions
  */
-import {
-  NativeTabs,
-  Icon,
-  Label,
-  VectorIcon,
-} from "expo-router/unstable-native-tabs";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { DynamicColorIOS, Platform } from "react-native";
-import { ThemeProvider, DarkTheme } from "@react-navigation/native";
+import { Tabs } from "expo-router";
+import React from "react";
+import { StyleSheet } from "react-native";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
-// Active color for tab items
 const ACTIVE_COLOR = "#FF2A2A";
+const INACTIVE_COLOR = "#9A9A9A";
 
 export default function TabLayout() {
   return (
-    <ThemeProvider value={DarkTheme}>
-      <NativeTabs
-        minimizeBehavior="onScrollDown"
-        tintColor={
-          Platform.OS === "ios"
-            ? DynamicColorIOS({ dark: ACTIVE_COLOR, light: ACTIVE_COLOR })
-            : ACTIVE_COLOR
-        }
-        labelStyle={{
-          color:
-            Platform.OS === "ios"
-              ? DynamicColorIOS({ dark: "#9A9A9A", light: "#666666" })
-              : "#9A9A9A",
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: ACTIVE_COLOR,
+        tabBarInactiveTintColor: INACTIVE_COLOR,
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#1A1A1A",
+          borderTopColor: "rgba(255, 255, 255, 0.1)",
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          letterSpacing: 0.3,
+        },
+      }}
+      initialRouteName="overview"
+    >
+      {/* Overview - Landing tab */}
+      <Tabs.Screen
+        name="overview"
+        options={{
+          title: "Overview",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="house.fill" color={color} />
+          ),
         }}
-      >
-        {/* Overview - Landing tab */}
-        <NativeTabs.Trigger name="overview">
-          <Label>Overview</Label>
-          <Icon
-            sf={{ default: "house", selected: "house.fill" }}
-            androidSrc={<VectorIcon family={MaterialIcons} name="home" />}
-          />
-        </NativeTabs.Trigger>
+      />
 
-        {/* Projects - All projects list */}
-        <NativeTabs.Trigger name="index">
-          <Label>Projects</Label>
-          <Icon
-            sf={{ default: "folder", selected: "folder.fill" }}
-            androidSrc={<VectorIcon family={MaterialIcons} name="folder" />}
-          />
-        </NativeTabs.Trigger>
+      {/* Projects - All projects list */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Projects",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="folder.fill" color={color} />
+          ),
+        }}
+      />
 
-        {/* Profile - User profile */}
-        <NativeTabs.Trigger name="profile">
-          <Label>Profile</Label>
-          <Icon
-            sf={{ default: "person", selected: "person.fill" }}
-            androidSrc={<VectorIcon family={MaterialIcons} name="person" />}
-          />
-        </NativeTabs.Trigger>
+      {/* Profile - User profile */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="person.fill" color={color} />
+          ),
+        }}
+      />
 
-        {/* Settings - App settings */}
-        <NativeTabs.Trigger name="settings">
-          <Label>Settings</Label>
-          <Icon
-            sf={{ default: "gearshape", selected: "gearshape.fill" }}
-            androidSrc={<VectorIcon family={MaterialIcons} name="settings" />}
-          />
-        </NativeTabs.Trigger>
+      {/* Settings - App settings */}
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Settings",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="gearshape.fill" color={color} />
+          ),
+        }}
+      />
 
-        {/* Hidden tabs - not shown in tab bar */}
-        <NativeTabs.Trigger name="gps" hidden>
-          <Label>GPS</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="explore" hidden>
-          <Label>Explore</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
-    </ThemeProvider>
+      {/* Hide GPS and Explore tabs from navigation */}
+      <Tabs.Screen
+        name="gps"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
+    </Tabs>
   );
 }

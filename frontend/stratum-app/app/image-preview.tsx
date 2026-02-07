@@ -90,7 +90,9 @@ export default function ImagePreviewScreen() {
       <Stack.Screen
         options={{
           title: (name as string) || "Image",
-          headerStyle: { backgroundColor: "#111111" },
+          headerTransparent: Platform.OS === "ios",
+          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5" },
         }}

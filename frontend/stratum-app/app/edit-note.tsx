@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { noteService } from "../src/services/noteService";
@@ -143,7 +144,9 @@ export default function EditNoteScreen() {
         <Stack.Screen
           options={{
             title: "Edit Note",
-            headerStyle: { backgroundColor: "#111111" },
+            headerTransparent: Platform.OS === "ios",
+            headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+            headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
             headerTintColor: "#FF2A2A",
             headerTitleStyle: {
               color: "#F5F5F5",
@@ -197,7 +200,9 @@ export default function EditNoteScreen() {
       <Stack.Screen
         options={{
           title: "Edit Note",
-          headerStyle: { backgroundColor: "#111111" },
+          headerTransparent: Platform.OS === "ios",
+          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: {
             color: "#F5F5F5",
