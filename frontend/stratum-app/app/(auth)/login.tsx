@@ -310,10 +310,14 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="username"
-          importantForAutofill="yes"
+          {...(Platform.OS === "android" && {
+            importantForAutofill: "yes",
+          })}
           returnKeyType="next"
           onSubmitEditing={() => loginPasswordRef.current?.focus()}
           blurOnSubmit={false}
@@ -333,7 +337,9 @@ export default function LoginScreen() {
             secureTextEntry={!showPassword}
             autoComplete="current-password"
             textContentType="password"
-            importantForAutofill="yes"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
             returnKeyType="go"
             onSubmitEditing={handleLogin}
           />
@@ -389,6 +395,8 @@ export default function LoginScreen() {
           value={regEmail}
           onChangeText={setRegEmail}
           autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
           keyboardType="email-address"
           autoComplete="email"
           textContentType="emailAddress"
@@ -410,8 +418,11 @@ export default function LoginScreen() {
             secureTextEntry={!showRegPassword}
             autoComplete="new-password"
             textContentType="newPassword"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
             returnKeyType="next"
-            onSubmitEditing={() => regConfirmRef.current?.focus()}
+            onSubmitEditing={() => regPasswordRef.current?.focus()}
             blurOnSubmit={false}
           />
           <EyeToggle visible={showRegPassword} onPress={() => setShowRegPassword((v) => !v)} />
@@ -430,6 +441,9 @@ export default function LoginScreen() {
             secureTextEntry={!showRegConfirmPassword}
             autoComplete="new-password"
             textContentType="newPassword"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
             returnKeyType="go"
             onSubmitEditing={handleRegister}
           />

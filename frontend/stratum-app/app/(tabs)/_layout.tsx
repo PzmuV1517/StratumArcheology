@@ -28,7 +28,7 @@ const INACTIVE_COLOR = "#9A9A9A";
 const PILL_MARGIN_H = 20;
 const PILL_HEIGHT = 64;
 const PILL_RADIUS = 32;
-const BOTTOM_OFFSET = 24; // Moved higher
+const BOTTOM_OFFSET = 24;
 
 /**
  * Pill-shaped custom tab bar with Liquid Glass / Blur / Solid background
@@ -307,12 +307,17 @@ export default function TabLayout() {
             // Android/web-only styles (ignored when using custom tabBar)
             ...(Platform.OS !== "ios" && {
               tabBarStyle: {
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
                 backgroundColor: "#1A1A1A",
                 borderTopColor: "rgba(255, 255, 255, 0.1)",
                 borderTopWidth: StyleSheet.hairlineWidth,
-                height: 60,
-                paddingBottom: 8,
+                height: 84,
+                paddingBottom: 24,
                 paddingTop: 8,
+                elevation: 8,
               },
               tabBarLabelStyle: {
                 fontSize: 11,

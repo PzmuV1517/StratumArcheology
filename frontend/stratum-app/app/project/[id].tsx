@@ -1109,7 +1109,7 @@ export default function ProjectDetailScreen() {
           contentContainerStyle={
             ["matrix", "gps", "history"].includes(activeTab)
               ? { flex: 1 }
-              : { paddingBottom: 24 }
+              : { paddingBottom: Platform.OS === "android" ? 100 : 24 }
           }
           scrollEnabled={!["matrix", "gps", "history"].includes(activeTab)}
           refreshControl={
@@ -2152,12 +2152,19 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
   },
   bottomTabContainer: {
+    ...(Platform.OS === "android" && {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 84,
+    }),
     flexDirection: "row",
     backgroundColor: "#1A1A1A",
     borderTopWidth: 1,
     borderTopColor: "#2A2A2A",
     paddingTop: 8,
-    paddingBottom: Platform.OS === "android" ? 12 : 8,
+    paddingBottom: Platform.OS === "android" ? 24 : 8,
     paddingHorizontal: 12,
     ...Platform.select({
       ios: {
@@ -2182,7 +2189,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
+    paddingVertical: Platform.OS === "android" ? 12 : 4,
     gap: 4,
   },
   bottomTabLabel: {
