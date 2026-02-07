@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
 
@@ -61,6 +62,7 @@ const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string
   };
 
 export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState<TimeMachineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -436,6 +438,11 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const categories = Object.entries(data.categories);
 
+  // Project screen uses an absolute bottom tab bar on Android (height 84).
+  // Add enough padding so the last items don't end up behind it.
+  const bottomPadding =
+    (Platform.OS === "android" ? 84 : 0) + (insets.bottom || 0) + 16;
+
   return (
     <View style={styles.container}>
       {/* Header Stats */}
@@ -462,7 +469,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       {/* Content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -554,9 +561,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderBottomWidth: 1,
     borderBottomColor: "#2A2A2A",
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 56,
   },
   filterContent: {
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     gap: 10,
     flexDirection: "row",
     alignItems: "center",

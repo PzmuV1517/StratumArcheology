@@ -1398,7 +1398,9 @@ export default function ProjectDetailScreen() {
                     borderWidth: 1,
                     borderColor: "#2A2A2A",
                     backgroundColor: "#0A0A0A",
-                    margin: 16,
+                    marginHorizontal: 16,
+                    marginTop: 16,
+                    marginBottom: Platform.OS === "android" ? 100 : 16,
                   }}
                 >
                   <TimeMachineTab projectId={project?.id as string} />

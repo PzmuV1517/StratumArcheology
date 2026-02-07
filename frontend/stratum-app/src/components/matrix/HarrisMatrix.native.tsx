@@ -675,7 +675,10 @@ export default function HarrisMatrix({
   const contextList = Array.from(contexts.keys());
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
+    <SafeAreaView
+      style={styles.root}
+      edges={Platform.OS === "ios" ? ["top"] : []}
+    >
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
@@ -720,7 +723,7 @@ export default function HarrisMatrix({
             onPress={openNewCtx}
           >
             <Text style={[styles.toolBtnText, { color: "#FFF" }]}>
-              + Add Context
+              Add Context
             </Text>
           </Pressable>
         )}

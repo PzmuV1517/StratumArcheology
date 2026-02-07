@@ -22,6 +22,7 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "folder.fill": "folder",
+  "line.3.horizontal": "menu",
   "person.fill": "person",
   "gearshape.fill": "settings",
   "plus": "add",
