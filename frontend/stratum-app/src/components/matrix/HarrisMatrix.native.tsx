@@ -14,6 +14,7 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
   View,
@@ -29,9 +30,6 @@ import {
   Platform,
 } from "react-native";
 import Svg, {
-  G,
-  Rect,
-  Text as SvgText,
   Path,
   Defs,
   Marker,
@@ -44,7 +42,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  runOnJS,
 } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
@@ -259,10 +256,9 @@ export default function HarrisMatrix({
   const savedScale = useSharedValue(1);
 
   /* ── canvas dimensions ── */
-  const { height: SCREEN_H } = Dimensions.get('window');
   const [canvasDimensions, setCanvasDimensions] = useState({
     width: SCREEN_W,
-    height: SCREEN_H - 200,
+    height: 400,
   });
 
   /* ── storage keys ── */
@@ -378,6 +374,19 @@ export default function HarrisMatrix({
     };
   }, [positions]);
 
+  // Shift all positions so the content coordinate system starts at (0, 0)
+  // This lets us render both the SVG edges and the overlay node Views in the same space.
+  const shiftedPositions = useMemo(() => {
+    const shifted = new Map<string, { x: number; y: number }>();
+    for (const [id, pos] of positions) {
+      shifted.set(id, {
+        x: pos.x - svgBounds.minX,
+        y: pos.y - svgBounds.minY,
+      });
+    }
+    return shifted;
+  }, [positions, svgBounds.minX, svgBounds.minY]);
+
   /* ── computed edges ── */
   const edges = useMemo(() => {
     const result: {
@@ -390,8 +399,8 @@ export default function HarrisMatrix({
       if (
         ["contemporary_with", "equivalent", "same_as"].includes(rel.type)
       ) {
-        const p1 = positions.get(rel.from);
-        const p2 = positions.get(rel.to);
+        const p1 = shiftedPositions.get(rel.from);
+        const p2 = shiftedPositions.get(rel.to);
         if (p1 && p2) {
           const x1 =
             p1.x < p2.x ? p1.x + NODE_W / 2 : p1.x - NODE_W / 2;
@@ -418,8 +427,8 @@ export default function HarrisMatrix({
         to = rel.to;
       }
       if (from && to) {
-        const p1 = positions.get(from);
-        const p2 = positions.get(to);
+        const p1 = shiftedPositions.get(from);
+        const p2 = shiftedPositions.get(to);
         if (p1 && p2) {
           result.push({
             path: edgePath(p1, p2),
@@ -430,7 +439,7 @@ export default function HarrisMatrix({
       }
     }
     return result;
-  }, [relationships, positions]);
+  }, [relationships, shiftedPositions]);
 
   /* ── suggest next ID ── */
   const suggestId = useCallback(() => {
@@ -529,117 +538,7 @@ export default function HarrisMatrix({
     );
   }, [persist]);
 
-  /* ───────────── Gestures ───────────── */
-
-
-  // Canvas offset for hit-test
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-
-  // Hit-test in JS thread
-  const hitTestNodeJS = useCallback(
-    (absX, absY, tx, ty, s) => {
-      // Adjust for canvas offset
-      const relX = absX - canvasOffset.x;
-      const relY = absY - canvasOffset.y;
-      const svgX = (relX - tx) / s;
-      const svgY = (relY - ty) / s;
-      for (const [id, pos] of positions) {
-        if (
-          svgX >= pos.x - NODE_W / 2 &&
-          svgX <= pos.x + NODE_W / 2 &&
-          svgY >= pos.y - NODE_H / 2 &&
-          svgY <= pos.y + NODE_H / 2
-        ) {
-          return id;
-        }
-      }
-      return null;
-    },
-    [positions, canvasOffset],
-  );
-
-  const handleTapJS = useCallback(
-    (x, y, tx, ty, s) => {
-      const id = hitTestNodeJS(x, y, tx, ty, s);
-      if (id) onNodePress(id);
-    },
-    [hitTestNodeJS, onNodePress],
-  );
-
-  const handleLongPressJS = useCallback(
-    (x, y, tx, ty, s) => {
-      const id = hitTestNodeJS(x, y, tx, ty, s);
-      if (id) onNodeLongPress(id);
-    },
-    [hitTestNodeJS, onNodeLongPress],
-  );
-
-  const tapGesture = Gesture.Tap()
-    .maxDuration(250)
-    .onEnd((e) => {
-      runOnJS(handleTapJS)(
-        e.x,
-        e.y,
-        translateX.value,
-        translateY.value,
-        scale.value,
-      );
-    });
-
-  const longPressGesture = Gesture.LongPress()
-    .minDuration(300)
-    .onStart((e) => {
-      runOnJS(handleLongPressJS)(
-        e.x,
-        e.y,
-        translateX.value,
-        translateY.value,
-        scale.value,
-      );
-    });
-
-  const panGesture = Gesture.Pan()
-    .minDistance(10)
-    .onStart(() => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    })
-    .onUpdate((e) => {
-      translateX.value = savedTranslateX.value + e.translationX;
-      translateY.value = savedTranslateY.value + e.translationY;
-    });
-
-  const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      savedScale.value = scale.value;
-    })
-    .onUpdate((e) => {
-      scale.value = Math.min(Math.max(savedScale.value * e.scale, 0.3), 4);
-    });
-
-  const composed = Gesture.Race(
-    longPressGesture,
-    Gesture.Exclusive(
-      Gesture.Simultaneous(panGesture, pinchGesture),
-      tapGesture,
-    ),
-  );
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
-
-  const resetView = useCallback(() => {
-    translateX.value = withTiming(0);
-    translateY.value = withTiming(0);
-    scale.value = withTiming(1);
-  }, []);
-
-  /* ── open modals ── */
+  /* ── open modals / node actions (must be defined before gestures) ── */
   const openNewCtx = useCallback(() => {
     if (!canEdit) return;
     setNewCtxId(suggestId());
@@ -677,6 +576,79 @@ export default function HarrisMatrix({
     [canEdit, contexts],
   );
 
+  /* ───────────── Gestures ───────────── */
+
+  const panGesture = Gesture.Pan()
+    .minDistance(8)
+    .onStart(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    })
+    .onUpdate((e) => {
+      translateX.value = savedTranslateX.value + e.translationX;
+      translateY.value = savedTranslateY.value + e.translationY;
+    });
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+    })
+    .onUpdate((e) => {
+      scale.value = Math.min(Math.max(savedScale.value * e.scale, 0.3), 4);
+    });
+
+  const composed = Gesture.Simultaneous(panGesture, pinchGesture);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  const defaultView = useMemo(() => {
+    const vpW = canvasDimensions.width || 0;
+    const vpH = canvasDimensions.height || 0;
+    const contentW = svgBounds.width || 0;
+    const contentH = svgBounds.height || 0;
+    return {
+      x: (vpW - contentW) / 2,
+      y: (vpH - contentH) / 2,
+    };
+  }, [canvasDimensions.width, canvasDimensions.height, svgBounds.width, svgBounds.height]);
+
+  const hasInitializedView = useRef(false);
+
+  useEffect(() => {
+    if (hasInitializedView.current) return;
+    if (canvasDimensions.width <= 0 || canvasDimensions.height <= 0) return;
+    translateX.value = defaultView.x;
+    translateY.value = defaultView.y;
+    savedTranslateX.value = defaultView.x;
+    savedTranslateY.value = defaultView.y;
+    scale.value = 1;
+    savedScale.value = 1;
+    hasInitializedView.current = true;
+  }, [canvasDimensions.width, canvasDimensions.height, defaultView.x, defaultView.y]);
+
+  useEffect(() => {
+    if (contexts.size !== 0) return;
+    hasInitializedView.current = false;
+    translateX.value = 0;
+    translateY.value = 0;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+    scale.value = 1;
+    savedScale.value = 1;
+  }, [contexts.size]);
+
+  const resetView = useCallback(() => {
+    translateX.value = withTiming(defaultView.x);
+    translateY.value = withTiming(defaultView.y);
+    scale.value = withTiming(1);
+  }, [defaultView.x, defaultView.y]);
+
   /* ── node colour ── */
   const nodeColor = useCallback(
     (id: string) => {
@@ -703,17 +675,6 @@ export default function HarrisMatrix({
 
   return (
     <View style={styles.root}>
-      {/* iOS Debug Banner - TOP */}
-      <View style={{ 
-        backgroundColor: 'red', 
-        padding: 10,
-        zIndex: 99999,
-      }}>
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>
-          iOS RENDERING TEST - Root View
-        </Text>
-      </View>
-
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
@@ -743,11 +704,6 @@ export default function HarrisMatrix({
 
       {/* ── Toolbar ── */}
       <View style={styles.toolbar}>
-        {/* iOS Debug in Toolbar */}
-        <View style={{ flex: 1, backgroundColor: 'cyan', padding: 10, minWidth: 200 }}>
-          <Text style={{ color: 'black', fontWeight: 'bold' }}>Toolbar Renders!</Text>
-        </View>
-        
         <Pressable style={styles.toolBtn} onPress={resetView}>
           <Text style={styles.toolBtnText}>Reset</Text>
         </Pressable>
@@ -781,154 +737,121 @@ export default function HarrisMatrix({
 
       {/* ── SVG Canvas ── */}
       <View
-        style={[styles.canvas, { borderWidth: 5, borderColor: 'red' }]}
-        collapsable={false}
+        style={styles.canvas}
         onLayout={e => {
-          const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(`[HarrisMatrix iOS] Canvas layout: ${width}x${height}`);
-          setCanvasOffset({ x, y });
-          if (width > 0 && height > 0) {
-            setCanvasDimensions({ width, height });
-          }
+          const { width, height } = e.nativeEvent.layout;
+          if (width > 0 && height > 0) setCanvasDimensions({ width, height });
         }}
       >
-        {/* ALWAYS VISIBLE DEBUG */}
-        <View style={{ 
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: 'yellow',
-          padding: 20,
-          zIndex: 999999,
-        }}>
-          <Text style={{ color: 'black', fontSize: 18, fontWeight: 'bold' }}>
-            ⚠️ CANVAS VIEW IS RENDERING
-          </Text>
-          <Text style={{ color: 'black', fontSize: 14 }}>
-            Dims: {canvasDimensions.width.toFixed(0)} x {canvasDimensions.height.toFixed(0)}
-          </Text>
-        </View>
-        {/* Debug overlay to verify container is rendering */}
-        <View style={styles.debugOverlay} pointerEvents="none">
-          <Text style={styles.debugText}>
-            Canvas: {canvasDimensions.width}x{canvasDimensions.height}
-          </Text>
-          <Text style={styles.debugText}>
-            Contexts: {contexts.size} | SVG: {svgBounds.width}x{svgBounds.height}
-          </Text>
-        </View>
+        <GestureDetector gesture={composed}>
+          <View style={styles.gestureLayer} collapsable={false}>
+            <Animated.View
+              style={[
+                styles.canvasInner,
+                {
+                  width: svgBounds.width,
+                  height: svgBounds.height,
+                },
+                animStyle,
+              ]}
+            >
+              <Svg
+                pointerEvents="none"
+                width={svgBounds.width}
+                height={svgBounds.height}
+                viewBox={`0 0 ${svgBounds.width} ${svgBounds.height}`}
+                preserveAspectRatio="none"
+              >
+                <Defs>
+                  <Marker
+                    id="arrow"
+                    viewBox="0 -5 10 10"
+                    refX="5"
+                    refY="0"
+                    markerWidth="5"
+                    markerHeight="5"
+                    orient="auto"
+                  >
+                    <Path d="M0,-5L10,0L0,5" fill="#495057" />
+                  </Marker>
+                  <Marker
+                    id="arrowCut"
+                    viewBox="0 -5 10 10"
+                    refX="5"
+                    refY="0"
+                    markerWidth="5"
+                    markerHeight="5"
+                    orient="auto"
+                  >
+                    <Path d="M0,-5L10,0L0,5" fill="#dc3545" />
+                  </Marker>
+                </Defs>
 
-        {canvasDimensions.width > 0 && canvasDimensions.height > 0 ? (
-          <Svg
-            width={canvasDimensions.width}
-            height={canvasDimensions.height}
-            viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
-            preserveAspectRatio="xMidYMid meet"
-          >
-            {/* Test rectangle to verify SVG is rendering */}
-            <Rect
-              x={svgBounds.minX + 20}
-              y={svgBounds.minY + 20}
-              width={100}
-              height={100}
-              fill="#FF0000"
-              opacity={0.8}
-            />
-              <Defs>
-                <Marker
-                  id="arrow"
-                  viewBox="0 -5 10 10"
-                  refX="5"
-                  refY="0"
-                  markerWidth="5"
-                  markerHeight="5"
-                  orient="auto"
-                >
-                  <Path d="M0,-5L10,0L0,5" fill="#495057" />
-                </Marker>
-                <Marker
-                  id="arrowCut"
-                  viewBox="0 -5 10 10"
-                  refX="5"
-                  refY="0"
-                  markerWidth="5"
-                  markerHeight="5"
-                  orient="auto"
-                >
-                  <Path d="M0,-5L10,0L0,5" fill="#dc3545" />
-                </Marker>
-              </Defs>
+                {/* Edges */}
+                {edges.map((e, i) => (
+                  <Path
+                    key={`edge-${i}`}
+                    d={e.path}
+                    fill="none"
+                    stroke={
+                      e.isContemporary
+                        ? "#495057"
+                        : e.isCut
+                          ? "#dc3545"
+                          : "#495057"
+                    }
+                    strokeWidth={e.isCut ? 2.5 : e.isContemporary ? 1.5 : 2}
+                    strokeDasharray={
+                      e.isCut
+                        ? [6, 4]
+                        : e.isContemporary
+                          ? [4, 4]
+                          : undefined
+                    }
+                    markerEnd={
+                      e.isContemporary
+                        ? undefined
+                        : e.isCut
+                          ? "url(#arrowCut)"
+                          : "url(#arrow)"
+                    }
+                  />
+                ))}
+              </Svg>
 
-              {/* Edges */}
-              {edges.map((e, i) => (
-                <Path
-                  key={`edge-${i}`}
-                  d={e.path}
-                  fill="none"
-                  stroke={
-                    e.isContemporary
-                      ? "#495057"
-                      : e.isCut
-                        ? "#dc3545"
-                        : "#495057"
-                  }
-                  strokeWidth={e.isCut ? 2.5 : e.isContemporary ? 1.5 : 2}
-                  strokeDasharray={
-                    e.isCut
-                      ? [6, 4]
-                      : e.isContemporary
-                        ? [4, 4]
-                        : undefined
-                  }
-                  markerEnd={
-                    e.isContemporary
-                      ? undefined
-                      : e.isCut
-                        ? "url(#arrowCut)"
-                        : "url(#arrow)"
-                  }
-                />
-              ))}
-
-              {/* Nodes */}
+              {/* Overlay Nodes as real RN Views */}
               {contextList.map((id) => {
-                const pos = positions.get(id);
+                const pos = shiftedPositions.get(id);
                 if (!pos) return null;
                 return (
-                  <G key={id}>
-                    <Rect
-                      x={pos.x - NODE_W / 2}
-                      y={pos.y - NODE_H / 2}
-                      width={NODE_W}
-                      height={NODE_H}
-                      rx={NODE_RX}
-                      fill={nodeColor(id)}
-                      stroke={nodeColor(id)}
-                      strokeWidth={2}
-                    />
-                    <SvgText
-                      x={pos.x}
-                      y={pos.y + 5}
-                      textAnchor="middle"
-                      fill="#FFFFFF"
-                      fontSize={14}
-                      fontWeight="600"
-                    >
-                      {id}
-                    </SvgText>
-                  </G>
+                  <Pressable
+                    key={id}
+                    style={[
+                      styles.node,
+                      {
+                        left: pos.x - NODE_W / 2,
+                        top: pos.y - NODE_H / 2,
+                        width: NODE_W,
+                        height: NODE_H,
+                        borderRadius: NODE_RX,
+                        backgroundColor: nodeColor(id),
+                        borderColor: nodeColor(id),
+                      },
+                    ]}
+                    onPress={() => onNodePress(id)}
+                    onLongPress={() => onNodeLongPress(id)}
+                    delayLongPress={300}
+                  >
+                    <Text style={styles.nodeText}>{id}</Text>
+                  </Pressable>
                 );
               })}
-          </Svg>
-        ) : (
-          <View style={styles.fallbackView}>
-            <Text style={styles.fallbackText}>Initializing canvas...</Text>
+            </Animated.View>
           </View>
-        )}
+        </GestureDetector>
 
         {/* Empty-state overlay */}
-        {contexts.size === 0 && canvasDimensions.width > 0 && (
+        {contexts.size === 0 && (
           <View style={styles.emptyOverlay} pointerEvents="box-none">
             <Text style={styles.emptyTitle}>No contexts yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -1316,21 +1239,32 @@ const styles = StyleSheet.create({
   /* canvas */
   canvas: { 
     flex: 1,
-    backgroundColor: '#1A1A1A',
-    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#0A0A0A',
+  },
+  gestureLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   canvasInner: { 
-    width: '100%',
-    height: '100%',
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        // Explicit layout for iOS SVG rendering
+        position: 'relative',
+      },
+    }),
   },
-  fallbackView: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  node: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
   },
-  fallbackText: {
-    color: '#9A9A9A',
+  nodeText: {
+    color: "#FFFFFF",
     fontSize: 14,
+    fontWeight: "600",
   },
 
   /* empty */
@@ -1489,20 +1423,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeModalBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
-
-  /* debug */
-  debugOverlay: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 1000,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 8,
-    borderRadius: 8,
-  },
-  debugText: {
-    color: '#00FF00',
-    fontSize: 10,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
 });
