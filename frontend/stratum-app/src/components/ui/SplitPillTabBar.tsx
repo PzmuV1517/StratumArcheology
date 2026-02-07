@@ -19,7 +19,6 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { runOnJS } from "react-native-reanimated";
-import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -153,40 +152,9 @@ export function SplitPillTabBar({
     outputRange: mainRoutes.map((_, i) => i * tabWidth),
   });
 
-  // ---- Glass background renderer (shared between pills) ----
-  const renderGlassBackground = (radius: number) => {
-    if (Platform.OS === "ios" && isLiquidGlassSupported) {
-      return (
-        <LiquidGlassView
-          style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-          effect="regular"
-        />
-      );
-    }
-    if (Platform.OS === "ios") {
-      return (
-        <BlurView
-          intensity={60}
-          tint="systemChromeMaterialDark"
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: radius, overflow: "hidden" },
-          ]}
-        />
-      );
-    }
-    return (
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            backgroundColor: "rgba(26, 26, 26, 0.95)",
-            borderRadius: radius,
-          },
-        ]}
-      />
-    );
-  };
+  // No renderGlassBackground — BlurView IS the container on iOS.
+  // On iOS 26+, UIVisualEffectView automatically renders with Liquid Glass.
+  const isIOS = Platform.OS === "ios";
 
   // ---- "More" button press ----
   const onMorePress = () => {
@@ -218,117 +186,230 @@ export function SplitPillTabBar({
         ]}
       >
         {/* ======== Main pill (Overview, Notes, Artefacts, Matrix) ======== */}
+        {/* BlurView IS the container on iOS — UIVisualEffectView gets native
+            Liquid Glass on iOS 26+. On Android/web a plain View is used. */}
         <GestureDetector gesture={pillSwipeGesture}>
-          <Reanimated.View
-            style={[
-              styles.mainPill,
-              {
-                height: pillHeight,
-                borderRadius: pillRadius,
-                flex: 1,
-              },
-            ]}
-          >
-            {renderGlassBackground(pillRadius)}
-
-            {/* Animated indicator */}
-            {visibleIndex >= 0 && (
-              <Animated.View
+          {isIOS ? (
+            <Reanimated.View style={{ flex: 1 }}>
+              <BlurView
+                intensity={80}
+                tint="systemChromeMaterialDark"
                 style={[
-                  styles.indicator,
+                  styles.mainPill,
                   {
-                    width: tabWidth - 16,
-                    backgroundColor: activeColor,
-                    transform: [
-                      { translateX: Animated.add(indicatorTranslateX, 8) },
-                    ],
+                    height: pillHeight,
+                    borderRadius: pillRadius,
                   },
                 ]}
-              />
-            )}
-
-            {/* Tab buttons */}
-            {mainRoutes.map((route) => {
-              const options = descriptors[route.key]?.options;
-              const isFocused = route.name === effectiveActiveRouteName;
-              const color = isFocused ? activeColor : inactiveColor;
-
-              const onPress = () => {
-                if (Platform.OS === "ios") {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-                const event = navigation.emit({
-                  type: "tabPress",
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-                if (!isFocused && !event.defaultPrevented) {
-                  navigation.navigate(route.name, route.params);
-                }
-              };
-
-              const onLongPress = () => {
-                navigation.emit({
-                  type: "tabLongPress",
-                  target: route.key,
-                });
-              };
-
-              return (
-                <TouchableOpacity
-                  key={route.key}
-                  accessibilityRole="button"
-                  accessibilityState={isFocused ? { selected: true } : {}}
-                  accessibilityLabel={options?.tabBarAccessibilityLabel}
-                  onPress={onPress}
-                  onLongPress={onLongPress}
-                  style={styles.tab}
-                  activeOpacity={0.7}
-                >
-                  {options?.tabBarIcon?.({
-                    focused: isFocused,
-                    color,
-                    size: 22,
-                  })}
-                  <Text
+              >
+                {/* Animated indicator */}
+                {visibleIndex >= 0 && (
+                  <Animated.View
                     style={[
-                      styles.label,
-                      { color },
-                      isFocused && styles.labelActive,
+                      styles.indicator,
+                      {
+                        width: tabWidth - 16,
+                        backgroundColor: activeColor,
+                        transform: [
+                          { translateX: Animated.add(indicatorTranslateX, 8) },
+                        ],
+                      },
                     ]}
-                    numberOfLines={1}
+                  />
+                )}
+
+                {/* Tab buttons */}
+                {mainRoutes.map((route) => {
+                  const options = descriptors[route.key]?.options;
+                  const isFocused = route.name === effectiveActiveRouteName;
+                  const color = isFocused ? activeColor : inactiveColor;
+
+                  const onPress = () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const event = navigation.emit({
+                      type: "tabPress",
+                      target: route.key,
+                      canPreventDefault: true,
+                    });
+                    if (!isFocused && !event.defaultPrevented) {
+                      navigation.navigate(route.name, route.params);
+                    }
+                  };
+
+                  const onLongPress = () => {
+                    navigation.emit({
+                      type: "tabLongPress",
+                      target: route.key,
+                    });
+                  };
+
+                  return (
+                    <TouchableOpacity
+                      key={route.key}
+                      accessibilityRole="button"
+                      accessibilityState={isFocused ? { selected: true } : {}}
+                      accessibilityLabel={options?.tabBarAccessibilityLabel}
+                      onPress={onPress}
+                      onLongPress={onLongPress}
+                      style={styles.tab}
+                      activeOpacity={0.7}
+                    >
+                      {options?.tabBarIcon?.({
+                        focused: isFocused,
+                        color,
+                        size: 22,
+                      })}
+                      <Text
+                        style={[
+                          styles.label,
+                          { color },
+                          isFocused && styles.labelActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {options?.title ?? route.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </BlurView>
+            </Reanimated.View>
+          ) : (
+            <Reanimated.View
+              style={[
+                styles.mainPill,
+                styles.mainPillAndroid,
+                {
+                  height: pillHeight,
+                  borderRadius: pillRadius,
+                  flex: 1,
+                },
+              ]}
+            >
+              {/* Animated indicator */}
+              {visibleIndex >= 0 && (
+                <Animated.View
+                  style={[
+                    styles.indicator,
+                    {
+                      width: tabWidth - 16,
+                      backgroundColor: activeColor,
+                      transform: [
+                        { translateX: Animated.add(indicatorTranslateX, 8) },
+                      ],
+                    },
+                  ]}
+                />
+              )}
+
+              {/* Tab buttons */}
+              {mainRoutes.map((route) => {
+                const options = descriptors[route.key]?.options;
+                const isFocused = route.name === effectiveActiveRouteName;
+                const color = isFocused ? activeColor : inactiveColor;
+
+                const onPress = () => {
+                  const event = navigation.emit({
+                    type: "tabPress",
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
+                  if (!isFocused && !event.defaultPrevented) {
+                    navigation.navigate(route.name, route.params);
+                  }
+                };
+
+                const onLongPress = () => {
+                  navigation.emit({
+                    type: "tabLongPress",
+                    target: route.key,
+                  });
+                };
+
+                return (
+                  <TouchableOpacity
+                    key={route.key}
+                    accessibilityRole="button"
+                    accessibilityState={isFocused ? { selected: true } : {}}
+                    accessibilityLabel={options?.tabBarAccessibilityLabel}
+                    onPress={onPress}
+                    onLongPress={onLongPress}
+                    style={styles.tab}
+                    activeOpacity={0.7}
                   >
-                    {options?.title ?? route.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </Reanimated.View>
+                    {options?.tabBarIcon?.({
+                      focused: isFocused,
+                      color,
+                      size: 22,
+                    })}
+                    <Text
+                      style={[
+                        styles.label,
+                        { color },
+                        isFocused && styles.labelActive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {options?.title ?? route.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </Reanimated.View>
+          )}
         </GestureDetector>
 
         {/* ======== Split gap ======== */}
         <View style={{ width: splitGap }} />
 
         {/* ======== More pill (separated circular button) ======== */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onMorePress}
-          style={[
-            styles.morePill,
-            {
-              width: moreButtonSize,
-              height: moreButtonSize,
-              borderRadius: moreButtonSize / 2,
-            },
-          ]}
-        >
-          {renderGlassBackground(moreButtonSize / 2)}
-          <IconSymbol
-            name="ellipsis.circle.fill"
-            size={24}
-            color={isMoreActive ? activeColor : inactiveColor}
-          />
-        </TouchableOpacity>
+        {/* On iOS the BlurView (UIVisualEffectView) IS the container */}
+        {isIOS ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onMorePress}
+            style={{ width: moreButtonSize, height: moreButtonSize }}
+          >
+            <BlurView
+              intensity={80}
+              tint="systemChromeMaterialDark"
+              style={[
+                styles.morePill,
+                {
+                  width: moreButtonSize,
+                  height: moreButtonSize,
+                  borderRadius: moreButtonSize / 2,
+                },
+              ]}
+            >
+              <IconSymbol
+                name="ellipsis.circle.fill"
+                size={24}
+                color={isMoreActive ? activeColor : inactiveColor}
+              />
+            </BlurView>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onMorePress}
+            style={[
+              styles.morePill,
+              styles.morePillAndroid,
+              {
+                width: moreButtonSize,
+                height: moreButtonSize,
+                borderRadius: moreButtonSize / 2,
+              },
+            ]}
+          >
+            <IconSymbol
+              name="ellipsis.circle.fill"
+              size={24}
+              color={isMoreActive ? activeColor : inactiveColor}
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -354,8 +435,6 @@ const styles = StyleSheet.create({
   mainPill: {
     flexDirection: "row",
     overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.1)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -363,18 +442,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 12,
       },
-      android: {
-        elevation: 8,
-      },
       default: {},
     }),
+  },
+  mainPillAndroid: {
+    backgroundColor: "rgba(26, 26, 26, 0.95)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 8,
   },
   morePill: {
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.1)",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
@@ -382,11 +462,14 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 12,
       },
-      android: {
-        elevation: 8,
-      },
       default: {},
     }),
+  },
+  morePillAndroid: {
+    backgroundColor: "rgba(26, 26, 26, 0.95)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    elevation: 8,
   },
   indicator: {
     position: "absolute",
