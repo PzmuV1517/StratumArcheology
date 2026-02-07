@@ -363,7 +363,11 @@ export default function CreateNoteScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ paddingTop: Platform.OS === "ios" ? 8 : 0 }}
+      >
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Create New Note</Text>
 

@@ -212,7 +212,11 @@ export default function ArtefactDetail() {
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 16 }}
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={{
+            paddingTop: Platform.OS === "ios" ? 8 : 0,
+            paddingBottom: 16,
+          }}
         >
           {/* Hero section with preview */}
           <View style={styles.hero}>

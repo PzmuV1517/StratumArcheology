@@ -17,7 +17,6 @@ import {
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
-import { useHeaderHeight } from "@react-navigation/elements";
 import {
   useLocalSearchParams,
   useRouter,
@@ -75,7 +74,6 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const globalParams = useGlobalSearchParams<{ tab?: string; openFiles?: string }>();
   const router = useRouter();
-  const headerHeight = useHeaderHeight();
   const [project, setProject] = useState<Project | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -90,7 +88,6 @@ export default function ProjectDetailScreen() {
     | "history"
     | "tools"
   >("overview");
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [fileNodes, setFileNodes] = useState<any[]>([]);
   const [currentFolder, setCurrentFolder] = useState<{
     id: string | null;
@@ -116,6 +113,7 @@ export default function ProjectDetailScreen() {
   // Removed inline preview (now separate screen)
   const [showFilesOverlay, setShowFilesOverlay] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [LuFilesIcon, setLuFilesIcon] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -378,6 +376,7 @@ export default function ProjectDetailScreen() {
   const loadProjectData = async () => {
     try {
       setLoading(true);
+      if (!id) return;
       const [projectData, notesData] = await Promise.all([
         projectService.getProject(id),
         noteService.getNotes(id),
@@ -1102,6 +1101,8 @@ export default function ProjectDetailScreen() {
             presentation: "card",
             // Right side: Files icon (left) + Burger (right)
             headerRight: () => {
+              const useHeaderGlass = Platform.OS === "ios" && isLiquidGlassSupported;
+
               const filesBtn = (
                 <TouchableOpacity
                   onPress={() => setShowFilesOverlay(true)}
@@ -1131,16 +1132,50 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
               );
 
-              if (Platform.OS === "ios" && isLiquidGlassSupported) {
+              const filesBtnInGlass = (
+                <View
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Files"
+                  onStartShouldSetResponder={() => true}
+                  onResponderRelease={() => setShowFilesOverlay(true)}
+                  style={styles.iconButtonInHeaderGlass}
+                >
+                  {Platform.OS === "web" && LuFilesIcon ? (
+                    <LuFilesIcon color="#FF2A2A" size={18} />
+                  ) : (
+                    <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
+                  )}
+                </View>
+              );
+
+              const menuBtnInGlass = (
+                <View
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="Menu"
+                  onStartShouldSetResponder={() => true}
+                  onResponderRelease={() => setShowMenu((p) => !p)}
+                  style={styles.iconButtonInHeaderGlass}
+                >
+                  {Platform.OS === "web" && GiHamburger ? (
+                    <GiHamburger color="#FF2A2A" size={18} />
+                  ) : (
+                    <IconSymbol name="line.3.horizontal" size={20} color="#FF2A2A" />
+                  )}
+                </View>
+              );
+
+              if (useHeaderGlass) {
                 return (
                   <View
                     style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                   >
                     <LiquidGlassView style={styles.headerIconGlass} effect="regular">
-                      {filesBtn}
+                      {filesBtnInGlass}
                     </LiquidGlassView>
                     <LiquidGlassView style={styles.headerIconGlass} effect="regular">
-                      {menuBtn}
+                      {menuBtnInGlass}
                     </LiquidGlassView>
                   </View>
                 );
@@ -1165,7 +1200,7 @@ export default function ProjectDetailScreen() {
                   paddingTop:
                     Platform.OS === "ios" &&
                     (activeTab === "matrix" || activeTab === "history")
-                      ? headerHeight || 44
+                      ? 8
                       : 0,
                 }
               : {
@@ -2926,7 +2961,7 @@ const styles = StyleSheet.create({
     color: "#FF2A2A",
     fontWeight: "600",
   },
-  headerBackButton: {
+  headewrBackButton: {
     padding: 8,
     marginLeft: 8,
   },
@@ -2939,6 +2974,12 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     marginHorizontal: 4,
+  },
+  iconButtonInHeaderGlass: {
+    padding: 10,
+    marginHorizontal: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerIconGlass: {
     borderRadius: 22,
