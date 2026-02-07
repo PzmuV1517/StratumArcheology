@@ -60,7 +60,7 @@ export function LiquidGlassSlider({
       const steppedValue = Math.round(rawValue / step) * step;
       return Math.max(minimumValue, Math.min(maximumValue, steppedValue));
     },
-    [trackWidth, range, minimumValue, maximumValue, step]
+    [trackWidth, range, minimumValue, maximumValue, step],
   );
 
   const panResponder = PanResponder.create({
@@ -76,8 +76,12 @@ export function LiquidGlassSlider({
         onValueChange(newValue);
       }
     },
-    onPanResponderMove: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-      const newX = gestureState.moveX - gestureState.x0 + normalizedValue * trackWidth;
+    onPanResponderMove: (
+      _: GestureResponderEvent,
+      gestureState: PanResponderGestureState,
+    ) => {
+      const newX =
+        gestureState.moveX - gestureState.x0 + normalizedValue * trackWidth;
       const newValue = calculateValue(newX);
       if (newValue !== value) {
         onValueChange(newValue);

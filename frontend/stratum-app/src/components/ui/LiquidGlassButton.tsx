@@ -62,7 +62,9 @@ export function LiquidGlassButton({
 
   const content = (
     <>
-      {icon && iconPosition === "left" && <View style={styles.iconLeft}>{icon}</View>}
+      {icon && iconPosition === "left" && (
+        <View style={styles.iconLeft}>{icon}</View>
+      )}
       <Text
         style={[
           styles.text,
@@ -74,7 +76,9 @@ export function LiquidGlassButton({
       >
         {title}
       </Text>
-      {icon && iconPosition === "right" && <View style={styles.iconRight}>{icon}</View>}
+      {icon && iconPosition === "right" && (
+        <View style={styles.iconRight}>{icon}</View>
+      )}
     </>
   );
 
@@ -84,10 +88,19 @@ export function LiquidGlassButton({
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.7}
-        style={[styles.touchable, sizeStyles.container, disabled && styles.disabled, style]}
+        style={[
+          styles.touchable,
+          sizeStyles.container,
+          disabled && styles.disabled,
+          style,
+        ]}
       >
         <LiquidGlassView
-          style={[styles.glassContainer, sizeStyles.container, variantStyles.container]}
+          style={[
+            styles.glassContainer,
+            sizeStyles.container,
+            variantStyles.container,
+          ]}
           effect="regular"
         >
           {content}
@@ -102,12 +115,21 @@ export function LiquidGlassButton({
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.7}
-        style={[styles.touchable, sizeStyles.container, disabled && styles.disabled, style]}
+        style={[
+          styles.touchable,
+          sizeStyles.container,
+          disabled && styles.disabled,
+          style,
+        ]}
       >
         <BlurView
           intensity={40}
           tint="dark"
-          style={[styles.blurContainer, sizeStyles.container, variantStyles.blurContainer]}
+          style={[
+            styles.blurContainer,
+            sizeStyles.container,
+            variantStyles.blurContainer,
+          ]}
         >
           {content}
         </BlurView>
@@ -169,7 +191,12 @@ const SIZE_STYLES: Record<ButtonSize, { container: ViewStyle; text: TextStyle }>
 
 const VARIANT_STYLES: Record<
   ButtonVariant,
-  { container?: ViewStyle; blurContainer?: ViewStyle; solidContainer: ViewStyle; text: TextStyle }
+  {
+    container?: ViewStyle;
+    blurContainer?: ViewStyle;
+    solidContainer: ViewStyle;
+    text: TextStyle;
+  }
 > = {
   primary: {
     container: {},

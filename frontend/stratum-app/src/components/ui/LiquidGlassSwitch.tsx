@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Platform,
   ViewStyle,
-  DynamicColorIOS,
+  ColorValue,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 
@@ -26,27 +26,14 @@ interface LiquidGlassSwitchProps {
   haptic?: boolean;
 }
 
-// iOS dynamic colors for proper light/dark mode support
-const trackColorOn = Platform.select({
-  ios: DynamicColorIOS({
-    light: "#FF2A2A",
-    dark: "#FF2A2A",
-  }),
-  default: "#FF2A2A",
-}) as string;
+// Track colors - iOS will get native Liquid Glass styling on iOS 26+
+const TRACK_COLOR_ON: ColorValue = "#FF2A2A";
+const TRACK_COLOR_OFF_IOS: ColorValue = "rgba(120, 120, 128, 0.32)";
+const TRACK_COLOR_OFF_ANDROID: ColorValue = "rgba(255, 255, 255, 0.15)";
 
-const trackColorOff = Platform.select({
-  ios: DynamicColorIOS({
-    light: "rgba(120, 120, 128, 0.32)",
-    dark: "rgba(120, 120, 128, 0.32)",
-  }),
-  default: "rgba(255, 255, 255, 0.15)",
-}) as string;
-
-const thumbColor = Platform.select({
-  ios: undefined, // Let iOS use its native thumb
-  android: "#F5F5F5",
-});
+const trackColorOff =
+  Platform.OS === "ios" ? TRACK_COLOR_OFF_IOS : TRACK_COLOR_OFF_ANDROID;
+const thumbColor = Platform.OS === "android" ? "#F5F5F5" : undefined;
 
 export function LiquidGlassSwitch({
   value,
@@ -66,15 +53,13 @@ export function LiquidGlassSwitch({
   return (
     <View style={[styles.container, style]}>
       {label && (
-        <Text style={[styles.label, disabled && styles.labelDisabled]}>
-          {label}
-        </Text>
+        <Text style={[styles.label, disabled && styles.labelDisabled]}>{label}</Text>
       )}
       <Switch
         value={value}
         onValueChange={handleValueChange}
         disabled={disabled}
-        trackColor={{ false: trackColorOff, true: trackColorOn }}
+        trackColor={{ false: trackColorOff, true: TRACK_COLOR_ON }}
         thumbColor={thumbColor}
         ios_backgroundColor={trackColorOff}
         style={disabled ? styles.switchDisabled : undefined}
