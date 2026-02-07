@@ -1145,49 +1145,29 @@ export default function ProjectDetailScreen() {
               if (useHeaderGlass) {
                 return (
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <View style={styles.headerGlassClip}>
-                      <LiquidGlassView
-                        style={StyleSheet.absoluteFillObject}
-                        effect="regular"
-                      />
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Files"
-                        onPress={() => setShowFilesOverlay(true)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={({ pressed }) => [
-                          styles.headerGlassPressable,
-                          pressed ? { opacity: 0.7 } : null,
-                        ]}
-                      >
-                        {Platform.OS === "web" && LuFilesIcon ? (
+                    <LiquidGlassButton
+                      title=""
+                      onPress={() => setShowFilesOverlay(true)}
+                      variant="ghost"
+                      size="sm"
+                      icon={
+                        Platform.OS === "web" && LuFilesIcon ? (
                           <LuFilesIcon color="#FF2A2A" size={18} />
                         ) : (
-                          <IconSymbol
-                            name="folder.fill"
-                            size={20}
-                            color="#FF2A2A"
-                          />
-                        )}
-                      </Pressable>
-                    </View>
+                          <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
+                        )
+                      }
+                      style={styles.headerGlassBubbleButton}
+                      textStyle={{ fontSize: 0 }}
+                    />
                     <View style={{ width: 6 }} />
-                    <View style={styles.headerGlassClip}>
-                      <LiquidGlassView
-                        style={StyleSheet.absoluteFillObject}
-                        effect="regular"
-                      />
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Menu"
-                        onPress={() => setShowMenu((p) => !p)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={({ pressed }) => [
-                          styles.headerGlassPressable,
-                          pressed ? { opacity: 0.7 } : null,
-                        ]}
-                      >
-                        {Platform.OS === "web" && GiHamburger ? (
+                    <LiquidGlassButton
+                      title=""
+                      onPress={() => setShowMenu((p) => !p)}
+                      variant="ghost"
+                      size="sm"
+                      icon={
+                        Platform.OS === "web" && GiHamburger ? (
                           <GiHamburger color="#FF2A2A" size={18} />
                         ) : (
                           <IconSymbol
@@ -1195,9 +1175,11 @@ export default function ProjectDetailScreen() {
                             size={20}
                             color="#FF2A2A"
                           />
-                        )}
-                      </Pressable>
-                    </View>
+                        )
+                      }
+                      style={styles.headerGlassBubbleButton}
+                      textStyle={{ fontSize: 0 }}
+                    />
                   </View>
                 );
               }
@@ -3018,6 +3000,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerGlassBubbleButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   headerGlassClip: {
     width: 44,

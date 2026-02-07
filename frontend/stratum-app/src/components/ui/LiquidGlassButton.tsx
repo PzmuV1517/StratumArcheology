@@ -22,7 +22,7 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface LiquidGlassButtonProps {
-  title: string;
+  title?: string;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -35,7 +35,7 @@ interface LiquidGlassButtonProps {
 }
 
 export function LiquidGlassButton({
-  title,
+  title = "",
   onPress,
   variant = "primary",
   size = "md",
@@ -55,6 +55,7 @@ export function LiquidGlassButton({
 
   const sizeStyles = SIZE_STYLES[size];
   const variantStyles = VARIANT_STYLES[variant];
+  const showText = title.trim().length > 0;
 
   // Use real Liquid Glass on iOS 26+, BlurView on older iOS, solid on Android
   const useNativeLiquidGlass = Platform.OS === "ios" && isLiquidGlassSupported;
@@ -63,21 +64,23 @@ export function LiquidGlassButton({
   const content = (
     <>
       {icon && iconPosition === "left" && (
-        <View style={styles.iconLeft}>{icon}</View>
+        <View style={showText ? styles.iconLeft : undefined}>{icon}</View>
       )}
-      <Text
-        style={[
-          styles.text,
-          sizeStyles.text,
-          variantStyles.text,
-          disabled && styles.textDisabled,
-          textStyle,
-        ]}
-      >
-        {title}
-      </Text>
+      {showText && (
+        <Text
+          style={[
+            styles.text,
+            sizeStyles.text,
+            variantStyles.text,
+            disabled && styles.textDisabled,
+            textStyle,
+          ]}
+        >
+          {title}
+        </Text>
+      )}
       {icon && iconPosition === "right" && (
-        <View style={styles.iconRight}>{icon}</View>
+        <View style={showText ? styles.iconRight : undefined}>{icon}</View>
       )}
     </>
   );
@@ -100,6 +103,7 @@ export function LiquidGlassButton({
             styles.glassContainer,
             sizeStyles.container,
             variantStyles.container,
+            style,
           ]}
           effect="regular"
         >
@@ -129,6 +133,7 @@ export function LiquidGlassButton({
             styles.blurContainer,
             sizeStyles.container,
             variantStyles.blurContainer,
+            style,
           ]}
         >
           {content}
