@@ -522,12 +522,18 @@ export default function HarrisMatrix({
 
   /* ───────────── Gestures ───────────── */
 
-  /* ── hit-test: convert touch point to SVG coords ── */
-  const hitTestNode = useCallback(
-    (absX: number, absY: number): string | null => {
-      // Convert screen coords → SVG space by reversing pan + scale
-      const svgX = (absX - translateX.value) / scale.value;
-      const svgY = (absY - translateY.value) / scale.value;
+
+  // Canvas offset for hit-test
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+
+  // Hit-test in JS thread
+  const hitTestNodeJS = useCallback(
+    (absX, absY, tx, ty, s) => {
+      // Adjust for canvas offset
+      const relX = absX - canvasOffset.x;
+      const relY = absY - canvasOffset.y;
+      const svgX = (relX - tx) / s;
+      const svgY = (relY - ty) / s;
       for (const [id, pos] of positions) {
         if (
           svgX >= pos.x - NODE_W / 2 &&
@@ -540,37 +546,47 @@ export default function HarrisMatrix({
       }
       return null;
     },
-    [positions, translateX, translateY, scale],
+    [positions, canvasOffset],
   );
 
-  const handleTap = useCallback(
-    (x: number, y: number) => {
-      const id = hitTestNode(x, y);
+  const handleTapJS = useCallback(
+    (x, y, tx, ty, s) => {
+      const id = hitTestNodeJS(x, y, tx, ty, s);
       if (id) onNodePress(id);
     },
-    [hitTestNode, onNodePress],
+    [hitTestNodeJS, onNodePress],
   );
 
-  const handleLongPress = useCallback(
-    (x: number, y: number) => {
-      const id = hitTestNode(x, y);
+  const handleLongPressJS = useCallback(
+    (x, y, tx, ty, s) => {
+      const id = hitTestNodeJS(x, y, tx, ty, s);
       if (id) onNodeLongPress(id);
     },
-    [hitTestNode, onNodeLongPress],
+    [hitTestNodeJS, onNodeLongPress],
   );
 
   const tapGesture = Gesture.Tap()
     .maxDuration(250)
     .onEnd((e) => {
-      runOnJS(handleTap)(e.x, e.y);
+      runOnJS(handleTapJS)(
+        e.x,
+        e.y,
+        translateX.value,
+        translateY.value,
+        scale.value,
+      );
     });
 
   const longPressGesture = Gesture.LongPress()
-    .minDuration(400)
-    .onEnd((e, success) => {
-      if (success) {
-        runOnJS(handleLongPress)(e.x, e.y);
-      }
+    .minDuration(300)
+    .onStart((e) => {
+      runOnJS(handleLongPressJS)(
+        e.x,
+        e.y,
+        translateX.value,
+        translateY.value,
+        scale.value,
+      );
     });
 
   const panGesture = Gesture.Pan()
@@ -739,7 +755,13 @@ export default function HarrisMatrix({
       </View>
 
       {/* ── SVG Canvas ── */}
-      <View style={styles.canvas}>
+      <View
+        style={styles.canvas}
+        onLayout={e => {
+          const { x, y } = e.nativeEvent.layout;
+          setCanvasOffset({ x, y });
+        }}
+      >
         <GestureDetector gesture={composed}>
           <Animated.View style={[styles.canvasInner, animStyle]}>
             <Svg
