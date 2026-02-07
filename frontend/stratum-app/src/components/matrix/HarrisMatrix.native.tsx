@@ -258,6 +258,12 @@ export default function HarrisMatrix({
   const savedTranslateY = useSharedValue(0);
   const savedScale = useSharedValue(1);
 
+  /* ── canvas dimensions ── */
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: SCREEN_W,
+    height: 400,
+  });
+
   /* ── storage keys ── */
   const storageKey = `harrisMatrixData:${projectId}`;
   const pendingKey = `harrisMatrixPending:${projectId}`;
@@ -361,11 +367,13 @@ export default function HarrisMatrix({
       if (y + NODE_H / 2 > maxY) maxY = y + NODE_H / 2;
     }
     const pad = 60;
+    const width = Math.max(maxX - minX + pad * 2, SCREEN_W);
+    const height = Math.max(maxY - minY + pad * 2, 400);
     return {
       minX: minX - pad,
       minY: minY - pad,
-      width: maxX - minX + pad * 2,
-      height: maxY - minY + pad * 2,
+      width,
+      height,
     };
   }, [positions]);
 
@@ -758,16 +766,18 @@ export default function HarrisMatrix({
       <View
         style={styles.canvas}
         onLayout={e => {
-          const { x, y } = e.nativeEvent.layout;
+          const { x, y, width, height } = e.nativeEvent.layout;
           setCanvasOffset({ x, y });
+          setCanvasDimensions({ width, height });
         }}
       >
         <GestureDetector gesture={composed}>
           <Animated.View style={[styles.canvasInner, animStyle]}>
             <Svg
-              width={Math.max(svgBounds.width, SCREEN_W)}
-              height={Math.max(svgBounds.height, 400)}
+              width={canvasDimensions.width}
+              height={canvasDimensions.height}
               viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
+              preserveAspectRatio="xMidYMid meet"
             >
               <Defs>
                 <Marker
@@ -1245,8 +1255,21 @@ const styles = StyleSheet.create({
   syncBtnText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
 
   /* canvas */
-  canvas: { flex: 1 },
-  canvasInner: { flex: 1 },
+  canvas: { 
+    flex: 1,
+    overflow: 'hidden',
+    backgroundColor: '#0A0A0A',
+  },
+  canvasInner: { 
+    width: '100%',
+    height: '100%',
+    ...Platform.select({
+      ios: {
+        // Explicit layout for iOS SVG rendering
+        position: 'relative',
+      },
+    }),
+  },
 
   /* empty */
   emptyOverlay: {
