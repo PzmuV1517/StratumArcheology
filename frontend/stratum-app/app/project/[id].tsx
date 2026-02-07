@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   ActivityIndicator,
   Modal,
@@ -1141,50 +1142,53 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
               );
 
-              const filesBtnInGlass = (
-                <View
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel="Files"
-                  onStartShouldSetResponder={() => true}
-                  onResponderRelease={() => setShowFilesOverlay(true)}
-                  style={styles.iconButtonInHeaderGlass}
-                >
-                  {Platform.OS === "web" && LuFilesIcon ? (
-                    <LuFilesIcon color="#FF2A2A" size={18} />
-                  ) : (
-                    <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
-                  )}
-                </View>
-              );
-
-              const menuBtnInGlass = (
-                <View
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel="Menu"
-                  onStartShouldSetResponder={() => true}
-                  onResponderRelease={() => setShowMenu((p) => !p)}
-                  style={styles.iconButtonInHeaderGlass}
-                >
-                  {Platform.OS === "web" && GiHamburger ? (
-                    <GiHamburger color="#FF2A2A" size={18} />
-                  ) : (
-                    <IconSymbol name="line.3.horizontal" size={20} color="#FF2A2A" />
-                  )}
-                </View>
-              );
-
               if (useHeaderGlass) {
                 return (
-                  <View
-                    style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                  >
-                    <LiquidGlassView style={styles.headerIconGlass} effect="regular">
-                      {filesBtnInGlass}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <LiquidGlassView style={styles.headerGlassButton} effect="regular">
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Files"
+                        onPress={() => setShowFilesOverlay(true)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={({ pressed }) => [
+                          styles.headerGlassPressable,
+                          pressed ? { opacity: 0.7 } : null,
+                        ]}
+                      >
+                        {Platform.OS === "web" && LuFilesIcon ? (
+                          <LuFilesIcon color="#FF2A2A" size={18} />
+                        ) : (
+                          <IconSymbol
+                            name="folder.fill"
+                            size={20}
+                            color="#FF2A2A"
+                          />
+                        )}
+                      </Pressable>
                     </LiquidGlassView>
-                    <LiquidGlassView style={styles.headerIconGlass} effect="regular">
-                      {menuBtnInGlass}
+                    <View style={{ width: 6 }} />
+                    <LiquidGlassView style={styles.headerGlassButton} effect="regular">
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Menu"
+                        onPress={() => setShowMenu((p) => !p)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={({ pressed }) => [
+                          styles.headerGlassPressable,
+                          pressed ? { opacity: 0.7 } : null,
+                        ]}
+                      >
+                        {Platform.OS === "web" && GiHamburger ? (
+                          <GiHamburger color="#FF2A2A" size={18} />
+                        ) : (
+                          <IconSymbol
+                            name="line.3.horizontal"
+                            size={20}
+                            color="#FF2A2A"
+                          />
+                        )}
+                      </Pressable>
                     </LiquidGlassView>
                   </View>
                 );
@@ -2984,15 +2988,19 @@ const styles = StyleSheet.create({
     padding: 8,
     marginHorizontal: 4,
   },
-  iconButtonInHeaderGlass: {
-    padding: 10,
-    marginHorizontal: 0,
+  headerGlassButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
-  headerIconGlass: {
-    borderRadius: 22,
-    overflow: "hidden",
+  headerGlassPressable: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconText: {
     color: "#FF2A2A",

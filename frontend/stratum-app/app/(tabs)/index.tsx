@@ -10,11 +10,8 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useFocusEffect, Stack } from "expo-router";
-import { BlurView } from "expo-blur";
-import {
-  LiquidGlassView,
-  isLiquidGlassSupported,
-} from "../../src/utils/liquidGlass";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
@@ -40,6 +37,13 @@ export default function ProjectsScreen() {
     "projects",
   );
   const router = useRouter();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+
+  const iosHeaderPad =
+    Platform.OS === "ios"
+      ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
+      : 0;
 
   const loadProjects = useCallback(async () => {
     try {
@@ -141,34 +145,25 @@ export default function ProjectsScreen() {
     );
   }
 
-  const isIOS = Platform.OS === "ios";
-  const useGlass = isIOS && isLiquidGlassSupported;
-
-  // Header component with glass effect on iOS
-  const HeaderWrapper = useGlass
-    ? LiquidGlassView
-    : isIOS
-      ? BlurView
-      : View;
-
-  const headerWrapperProps = useGlass
-    ? { effect: "regular" as const }
-    : isIOS
-      ? { intensity: 80, tint: "dark" as const }
-      : {};
-
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        Platform.OS === "ios" ? { paddingTop: iosHeaderPad } : null,
+      ]}
+    >
       <Stack.Screen
         options={{
-          headerShown: false,
+          title: "Projects",
+          headerShown: true,
+          headerTransparent: Platform.OS === "ios",
+          headerBlurEffect:
+            Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+          headerTintColor: "#FF2A2A",
+          headerTitleStyle: { color: "#F5F5F5" },
         }}
       />
-
-      {/* Custom Header with Liquid Glass */}
-      <HeaderWrapper style={styles.header} {...headerWrapperProps}>
-        <Text style={styles.headerTitle}>Projects</Text>
-      </HeaderWrapper>
 
       {/* Sub-tab selector */}
       <View style={styles.subTabContainer}>
@@ -307,32 +302,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#111111",
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 24,
-    paddingTop: Platform.OS === "ios" ? 60 : 72,
-    ...Platform.select({
-      ios: {
-        // Glass effect - no solid background
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: "rgba(255, 255, 255, 0.1)",
-      },
-      default: {
-        backgroundColor: "#111111",
-        borderBottomWidth: 1,
-        borderBottomColor: "#2A2A2A",
-      },
-    }),
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-
   // Sub-tab styles
   subTabContainer: {
     flexDirection: "row",
