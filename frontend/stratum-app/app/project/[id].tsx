@@ -1018,10 +1018,12 @@ export default function ProjectDetailScreen() {
               title: "Loading...",
               headerShown: true,
               headerTransparent: Platform.OS === "ios",
-              headerBlurEffect:
-                Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+              headerBlurEffect: undefined,
               headerStyle:
-                Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+                Platform.OS === "ios"
+                  ? { backgroundColor: "transparent" }
+                  : { backgroundColor: "#111111" },
+              headerShadowVisible: Platform.OS !== "ios",
               headerTintColor: "#FF2A2A",
             }}
           />
@@ -1040,10 +1042,12 @@ export default function ProjectDetailScreen() {
             options={{
               title: "Project Not Found",
               headerTransparent: Platform.OS === "ios",
-              headerBlurEffect:
-                Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+              headerBlurEffect: undefined,
               headerStyle:
-                Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+                Platform.OS === "ios"
+                  ? { backgroundColor: "transparent" }
+                  : { backgroundColor: "#111111" },
+              headerShadowVisible: Platform.OS !== "ios",
               headerTintColor: "#FF2A2A",
               headerTitleStyle: {
                 color: "#F5F5F5",
@@ -1077,9 +1081,12 @@ export default function ProjectDetailScreen() {
             headerTitle: " ",
             // iOS: transparent for Liquid Glass, Android/web: solid background
             headerTransparent: Platform.OS === "ios",
-            headerBlurEffect:
-              Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-            headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+            headerBlurEffect: undefined,
+            headerStyle:
+              Platform.OS === "ios"
+                ? { backgroundColor: "transparent" }
+                : { backgroundColor: "#111111" },
+            headerShadowVisible: Platform.OS !== "ios",
             headerTintColor: "#FF2A2A",
             headerTitleStyle: {
               color: "transparent",

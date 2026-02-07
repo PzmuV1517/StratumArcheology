@@ -43,6 +43,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { showAlert } from "../../utils/alert";
@@ -674,7 +675,7 @@ export default function HarrisMatrix({
   const contextList = Array.from(contexts.keys());
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
@@ -1191,7 +1192,7 @@ export default function HarrisMatrix({
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
