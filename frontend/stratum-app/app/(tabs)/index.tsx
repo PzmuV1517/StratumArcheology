@@ -7,11 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Platform,
 } from "react-native";
-import { useRouter, useFocusEffect, Stack } from "expo-router";
-import { useHeaderHeight } from "@react-navigation/elements";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
@@ -37,13 +34,6 @@ export default function ProjectsScreen() {
     "projects",
   );
   const router = useRouter();
-  const headerHeight = useHeaderHeight();
-  const insets = useSafeAreaInsets();
-
-  const iosHeaderPad =
-    Platform.OS === "ios"
-      ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
-      : 0;
 
   const loadProjects = useCallback(async () => {
     try {
@@ -146,24 +136,10 @@ export default function ProjectsScreen() {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        Platform.OS === "ios" ? { paddingTop: iosHeaderPad } : null,
-      ]}
-    >
-      <Stack.Screen
-        options={{
-          title: "Projects",
-          headerShown: true,
-          headerTransparent: Platform.OS === "ios",
-          headerBlurEffect:
-            Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
-          headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5" },
-        }}
-      />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Projects</Text>
+      </View>
 
       {/* Sub-tab selector */}
       <View style={styles.subTabContainer}>
@@ -301,6 +277,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#111111",
+  },
+  header: {
+    padding: 24,
+    paddingTop: 60,
+    backgroundColor: "#111111",
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
   },
   // Sub-tab styles
   subTabContainer: {

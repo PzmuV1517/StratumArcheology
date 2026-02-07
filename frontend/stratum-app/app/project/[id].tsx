@@ -1495,7 +1495,13 @@ export default function ProjectDetailScreen() {
 
         {/* Bottom Tab Navigation: Overview + Notes + Artefacts + Matrix + More */}
         {Platform.OS === "ios" && isLiquidGlassSupported ? (
-          <LiquidGlassView style={styles.bottomTabContainerGlass} effect="regular">
+          <LiquidGlassView
+            style={[
+              styles.bottomTabContainerGlass,
+              { paddingBottom: Math.max(insets.bottom || 0, 8) },
+            ]}
+            effect="regular"
+          >
             <TouchableOpacity
               style={styles.bottomTab}
               onPress={() => setActiveTab("overview")}
@@ -1694,7 +1700,12 @@ export default function ProjectDetailScreen() {
 
         {/* More menu dropdown */}
         {showMoreMenu && (
-          <View style={styles.moreMenuOverlay}>
+          <View
+            style={[
+              styles.moreMenuOverlay,
+              Platform.OS === "ios" ? { bottom: 60 + (insets.bottom || 0) } : null,
+            ]}
+          >
             <TouchableOpacity
               style={styles.moreMenuBackdrop}
               onPress={() => setShowMoreMenu(false)}
@@ -2377,6 +2388,10 @@ const styles = StyleSheet.create({
     }),
   },
   bottomTabContainerGlass: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: "row",
     paddingTop: 8,
     paddingBottom: 8,
