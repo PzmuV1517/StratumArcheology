@@ -264,26 +264,9 @@ export default function OverviewScreen() {
     return date.toLocaleDateString();
   };
 
+  // Use the comprehensive icon mapping from activityService
   const getActivityIcon = (type: string): string => {
-    switch (type) {
-      case "project_created":
-      case "PROJECT_CREATED":
-        return "🎉";
-      case "file_uploaded":
-      case "FILE_UPLOADED":
-        return "📄";
-      case "note_created":
-      case "NOTE_CREATED":
-        return "📝";
-      case "member_joined":
-      case "MEMBER_JOINED":
-        return "👤";
-      case "folder_created":
-      case "FOLDER_CREATED":
-        return "📁";
-      default:
-        return "•";
-    }
+    return activityService.getActivityIcon(type);
   };
 
   const renderProjectCard = (project: Project) => {

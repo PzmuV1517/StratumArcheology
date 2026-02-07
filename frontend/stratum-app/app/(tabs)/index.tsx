@@ -9,7 +9,12 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, Stack } from "expo-router";
+import { BlurView } from "expo-blur";
+import {
+  LiquidGlassView,
+  isLiquidGlassSupported,
+} from "../../src/utils/liquidGlass";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
@@ -136,11 +141,34 @@ export default function ProjectsScreen() {
     );
   }
 
+  const isIOS = Platform.OS === "ios";
+  const useGlass = isIOS && isLiquidGlassSupported;
+
+  // Header component with glass effect on iOS
+  const HeaderWrapper = useGlass
+    ? LiquidGlassView
+    : isIOS
+      ? BlurView
+      : View;
+
+  const headerWrapperProps = useGlass
+    ? { effect: "regular" as const }
+    : isIOS
+      ? { intensity: 80, tint: "dark" as const }
+      : {};
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <Stack.Screen
+        options={{
+          headerShown: false,
+        }}
+      />
+
+      {/* Custom Header with Liquid Glass */}
+      <HeaderWrapper style={styles.header} {...headerWrapperProps}>
         <Text style={styles.headerTitle}>Projects</Text>
-      </View>
+      </HeaderWrapper>
 
       {/* Sub-tab selector */}
       <View style={styles.subTabContainer}>
@@ -284,10 +312,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 24,
-    paddingTop: 72,
-    backgroundColor: "#111111",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    paddingTop: Platform.OS === "ios" ? 60 : 72,
+    ...Platform.select({
+      ios: {
+        // Glass effect - no solid background
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: "rgba(255, 255, 255, 0.1)",
+      },
+      default: {
+        backgroundColor: "#111111",
+        borderBottomWidth: 1,
+        borderBottomColor: "#2A2A2A",
+      },
+    }),
   },
   headerTitle: {
     fontSize: 32,

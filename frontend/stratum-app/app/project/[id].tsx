@@ -134,15 +134,21 @@ export default function ProjectDetailScreen() {
     if (Platform.OS === "web") {
       import("react-icons/lu")
         .then((mod) => setLuFilesIcon(() => mod.LuFiles))
-        .catch((e) => console.warn("react-icons not available", e));
+        .catch(() => {
+          /* react-icons not available on web */
+        });
       import("react-icons/gi")
         .then((mod) => setGiHamburger(() => mod.GiHamburgerMenu))
-        .catch((e) => console.warn("react-icons (gi) not available", e));
+        .catch(() => {
+          /* react-icons (gi) not available on web */
+        });
     }
-    // Load Harris Matrix component lazily
+    // Load Harris Matrix component lazily (web only feature, silent fail on native)
     import("../../src/components/matrix")
       .then((mod) => setHarrisMatrixComponent(() => mod.default))
-      .catch((e) => console.warn("HarrisMatrix component not available", e));
+      .catch(() => {
+        /* HarrisMatrix not available on native - expected */
+      });
   }, []);
 
   useEffect(() => {
@@ -1120,9 +1126,13 @@ export default function ProjectDetailScreen() {
           style={styles.content}
           contentContainerStyle={
             ["matrix", "gps", "history"].includes(activeTab)
-              ? { flex: 1 }
-              : { paddingBottom: Platform.OS === "android" ? 100 : 24 }
+              ? { flex: 1, paddingTop: Platform.OS === "ios" ? 0 : 0 }
+              : {
+                  paddingBottom: Platform.OS === "android" ? 100 : 100,
+                  paddingTop: Platform.OS === "ios" ? 0 : 0,
+                }
           }
+          contentInsetAdjustmentBehavior="automatic"
           scrollEnabled={!["matrix", "gps", "history"].includes(activeTab)}
           refreshControl={
             Platform.OS !== "web" ? (
