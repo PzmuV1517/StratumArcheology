@@ -16,7 +16,6 @@ import { ProjectActionModal } from "../../src/components/project/modals/ProjectA
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { Project } from "../../src/services/projectService.types";
 import type { ProjectActivity } from "../../src/services/activityService.types";
-import { LiquidGlassSlider } from "@/src/components/ui/liquid-glass";
 
 type MyActivity = ProjectActivity & {
   project_name?: string;
@@ -85,8 +84,6 @@ export default function ProjectsScreen() {
     }
   };
 
-  const sliderValue = activeSubTab === "projects" ? 0 : 1;
-
   const renderProject = ({ item }: any) => (
     <TouchableOpacity
       style={styles.projectCard}
@@ -150,17 +147,34 @@ export default function ProjectsScreen() {
         <Text style={styles.headerTitle}>Projects</Text>
       </View>
 
-      {/* Sub-tab selector (Liquid Glass slider) */}
-      <View style={styles.sliderNavContainer}>
-        <LiquidGlassSlider
-          value={sliderValue}
-          onValueChange={(v) => handleSubTabChange(v === 0 ? "projects" : "mystuff")}
-          minimumValue={0}
-          maximumValue={1}
-          step={1}
-          label={activeSubTab === "projects" ? "All Projects" : "My Stuff"}
-          showValue={false}
-        />
+      {/* Sub-tab selector */}
+      <View style={styles.subTabContainer}>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === "projects" && styles.subTabActive]}
+          onPress={() => handleSubTabChange("projects")}
+        >
+          <Text
+            style={[
+              styles.subTabText,
+              activeSubTab === "projects" && styles.subTabTextActive,
+            ]}
+          >
+            All Projects
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === "mystuff" && styles.subTabActive]}
+          onPress={() => handleSubTabChange("mystuff")}
+        >
+          <Text
+            style={[
+              styles.subTabText,
+              activeSubTab === "mystuff" && styles.subTabTextActive,
+            ]}
+          >
+            My Stuff
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {activeSubTab === "projects" ? (
@@ -282,11 +296,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#F5F5F5",
     letterSpacing: 0.5,
-  },
-  sliderNavContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#111111",
   },
   // Sub-tab styles
   subTabContainer: {

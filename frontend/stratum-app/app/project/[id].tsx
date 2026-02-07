@@ -1111,7 +1111,7 @@ export default function ProjectDetailScreen() {
             presentation: "card",
             // Right side: Files icon (left) + Burger (right)
             headerRight: () => {
-              const useHeaderGlass = Platform.OS === "ios" && isLiquidGlassSupported;
+              const useIOSGlassButtons = Platform.OS === "ios";
 
               const filesBtn = (
                 <TouchableOpacity
@@ -1142,7 +1142,7 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
               );
 
-              if (useHeaderGlass) {
+              if (useIOSGlassButtons) {
                 return (
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <LiquidGlassButton
@@ -1150,13 +1150,7 @@ export default function ProjectDetailScreen() {
                       onPress={() => setShowFilesOverlay(true)}
                       variant="ghost"
                       size="sm"
-                      icon={
-                        Platform.OS === "web" && LuFilesIcon ? (
-                          <LuFilesIcon color="#FF2A2A" size={18} />
-                        ) : (
-                          <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
-                        )
-                      }
+                      icon={<IconSymbol name="folder.fill" size={20} color="#FF2A2A" />}
                       style={styles.headerGlassBubbleButton}
                       textStyle={{ fontSize: 0 }}
                     />
@@ -1167,15 +1161,11 @@ export default function ProjectDetailScreen() {
                       variant="ghost"
                       size="sm"
                       icon={
-                        Platform.OS === "web" && GiHamburger ? (
-                          <GiHamburger color="#FF2A2A" size={18} />
-                        ) : (
-                          <IconSymbol
-                            name="line.3.horizontal"
-                            size={20}
-                            color="#FF2A2A"
-                          />
-                        )
+                        <IconSymbol
+                          name="line.3.horizontal"
+                          size={20}
+                          color="#FF2A2A"
+                        />
                       }
                       style={styles.headerGlassBubbleButton}
                       textStyle={{ fontSize: 0 }}
