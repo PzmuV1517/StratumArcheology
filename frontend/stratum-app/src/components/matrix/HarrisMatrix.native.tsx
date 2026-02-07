@@ -259,9 +259,10 @@ export default function HarrisMatrix({
   const savedScale = useSharedValue(1);
 
   /* ── canvas dimensions ── */
+  const { height: SCREEN_H } = Dimensions.get('window');
   const [canvasDimensions, setCanvasDimensions] = useState({
     width: SCREEN_W,
-    height: 400,
+    height: SCREEN_H - 200,
   });
 
   /* ── storage keys ── */
@@ -765,20 +766,46 @@ export default function HarrisMatrix({
       {/* ── SVG Canvas ── */}
       <View
         style={styles.canvas}
+        collapsable={false}
         onLayout={e => {
           const { x, y, width, height } = e.nativeEvent.layout;
+          console.log(`[HarrisMatrix] Canvas layout: ${width}x${height}`);
           setCanvasOffset({ x, y });
-          setCanvasDimensions({ width, height });
+          if (width > 0 && height > 0) {
+            setCanvasDimensions({ width, height });
+          }
         }}
       >
+        {/* Debug overlay to verify container is rendering */}
+        <View style={styles.debugOverlay} pointerEvents="none">
+          <Text style={styles.debugText}>
+            Canvas: {canvasDimensions.width}x{canvasDimensions.height}
+          </Text>
+          <Text style={styles.debugText}>
+            Contexts: {contexts.size} | SVG: {svgBounds.width}x{svgBounds.height}
+          </Text>
+        </View>
+
         <GestureDetector gesture={composed}>
-          <Animated.View style={[styles.canvasInner, animStyle]}>
-            <Svg
-              width={canvasDimensions.width}
-              height={canvasDimensions.height}
-              viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
-              preserveAspectRatio="xMidYMid meet"
-            >
+          <Animated.View style={[styles.canvasInner, animStyle]} collapsable={false}>
+            {canvasDimensions.width > 0 && canvasDimensions.height > 0 && (
+              <Svg
+                key={`svg-${canvasDimensions.width}-${canvasDimensions.height}`}
+                width={canvasDimensions.width}
+                height={canvasDimensions.height}
+                viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
+                preserveAspectRatio="xMidYMid meet"
+                style={{ backgroundColor: 'transparent' }}
+              >
+              {/* Test rectangle to verify SVG is rendering */}
+              <Rect
+                x={svgBounds.minX + 20}
+                y={svgBounds.minY + 20}
+                width={100}
+                height={100}
+                fill="#FF0000"
+                opacity={0.3}
+              />
               <Defs>
                 <Marker
                   id="arrow"
@@ -865,6 +892,7 @@ export default function HarrisMatrix({
                 );
               })}
             </Svg>
+            )}
           </Animated.View>
         </GestureDetector>
 
@@ -1427,4 +1455,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   closeModalBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
+
+  /* debug */
+  debugOverlay: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: 8,
+    borderRadius: 8,
+  },
+  debugText: {
+    color: '#00FF00',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
 });
