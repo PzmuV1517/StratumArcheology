@@ -10,12 +10,129 @@ import {
   Modal,
   Platform,
 } from "react-native";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 import { showAlert } from "../src/utils/alert";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
+import {
+  LiquidGlassView,
+  isLiquidGlassSupported,
+} from "../src/utils/liquidGlass";
+
+const isIOS = Platform.OS === "ios";
+const useGlass = isIOS && isLiquidGlassSupported;
+
+// ---------------------------------------------------------------------------
+// Shared UI components (matching new-project / join-project)
+// ---------------------------------------------------------------------------
+function GlassCard({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) {
+  if (useGlass) {
+    return (
+      <LiquidGlassView style={[styles.glassCard, style]} effect="regular">
+        {children}
+      </LiquidGlassView>
+    );
+  }
+  if (isIOS) {
+    return (
+      <BlurView intensity={30} tint="dark" style={[styles.blurCard, style]}>
+        {children}
+      </BlurView>
+    );
+  }
+  return <View style={[styles.solidCard, style]}>{children}</View>;
+}
+
+function GlassButton({
+  onPress,
+  title,
+  variant = "primary",
+  icon,
+  disabled,
+  loading: isLoading,
+}: {
+  onPress: () => void;
+  title: string;
+  variant?: "primary" | "secondary";
+  icon?: string;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  const isPrimary = variant === "primary";
+  const content = (
+    <>
+      {icon && (
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={20}
+          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          style={{ marginRight: 8 }}
+        />
+      )}
+      {isLoading ? (
+        <ActivityIndicator color="#FFFFFF" />
+      ) : (
+        <Text
+          style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
+        >
+          {title}
+        </Text>
+      )}
+    </>
+  );
+
+  if (useGlass && isPrimary) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || isLoading}
+        activeOpacity={0.7}
+        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
+      >
+        <LiquidGlassView style={styles.primaryButtonGlass} effect="regular">
+          {content}
+        </LiquidGlassView>
+      </TouchableOpacity>
+    );
+  }
+  if (isIOS && isPrimary) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || isLoading}
+        activeOpacity={0.7}
+        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
+      >
+        <BlurView intensity={40} tint="dark" style={styles.primaryButtonBlur}>
+          {content}
+        </BlurView>
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || isLoading}
+      activeOpacity={0.7}
+      style={[
+        isPrimary ? styles.primaryButton : styles.secondaryBtn,
+        disabled && styles.disabledButton,
+      ]}
+    >
+      {content}
+    </TouchableOpacity>
+  );
+}
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
 let Sound: any = null;
@@ -314,13 +431,12 @@ export default function CreateNoteScreen() {
       <Stack.Screen
         options={{
           title: "Create Note",
-          headerTransparent: Platform.OS === "ios",
-          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+          headerTransparent: isIOS,
+          headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
+          headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: {
             color: "#F5F5F5",
-            fontSize: 18,
             fontWeight: "600",
           },
           headerBackTitle: "Project",
@@ -336,27 +452,26 @@ export default function CreateNoteScreen() {
         onRequestClose={() => setShowDraftModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <GlassCard style={styles.modalContent}>
             <Text style={styles.modalTitle}>Restore Draft?</Text>
             <Text style={styles.modalText}>
               You have an unsaved draft from a previous session. Would you like to
               restore it?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonSecondary}
+              <GlassButton
                 onPress={handleDiscardDraft}
-              >
-                <Text style={styles.modalButtonSecondaryText}>Discard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButtonPrimary}
+                title="Discard"
+                variant="secondary"
+              />
+              <GlassButton
                 onPress={handleRestoreDraft}
-              >
-                <Text style={styles.modalButtonPrimaryText}>Restore</Text>
-              </TouchableOpacity>
+                title="Restore"
+                variant="primary"
+                icon="refresh"
+              />
             </View>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
 
@@ -365,18 +480,18 @@ export default function CreateNoteScreen() {
         <View
           style={[
             styles.saveStatusBar,
-            Platform.OS === "ios"
+            isIOS
               ? { top: Math.max(headerHeight || 0, (insets.top || 0) + 44) }
               : null,
           ]}
         >
           <Text style={styles.saveStatusText}>
             {saveStatus === "saving"
-              ? "💾 Saving draft..."
+              ? "Saving draft..."
               : saveStatus === "saved"
-                ? "✓ Draft saved"
+                ? "Draft saved"
                 : saveStatus === "error"
-                  ? "⚠ Save failed"
+                  ? "Save failed"
                   : ""}
           </Text>
         </View>
@@ -384,132 +499,182 @@ export default function CreateNoteScreen() {
 
       <ScrollView
         style={styles.content}
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{
-          paddingTop: iosHeaderPad,
-        }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.form}>
-          <Text style={styles.pageTitle}>Create New Note</Text>
+        {/* Header icon */}
+        <View style={styles.headerIcon}>
+          <Ionicons name="create" size={48} color="#FF2A2A" />
+        </View>
+        <Text style={styles.title}>Create New Note</Text>
+        <Text style={styles.subtitle}>
+          Add a text or voice note to your project
+        </Text>
 
-          <Text style={styles.label}>Title *</Text>
+        {/* Title card */}
+        <GlassCard style={styles.card}>
+          <Text style={styles.label}>
+            <Ionicons name="text" size={14} color="#9A9A9A" /> Title
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="Enter note title"
-            placeholderTextColor="#666"
+            placeholderTextColor="#555"
             value={title}
             onChangeText={setTitle}
           />
+        </GlassCard>
 
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleButton, isVoiceNote && styles.toggleActive]}
-              onPress={() => {
-                setIsVoiceNote((v) => !v);
-                if (!isVoiceNote) setContent("");
-                else resetRecording();
-              }}
-              disabled={loading}
+        {/* Note type toggle */}
+        <GlassCard style={styles.card}>
+          <Text style={styles.label}>
+            <Ionicons name="options" size={14} color="#9A9A9A" /> Note Type
+          </Text>
+          <TouchableOpacity
+            style={[styles.toggleButton, isVoiceNote && styles.toggleActive]}
+            onPress={() => {
+              setIsVoiceNote((v) => !v);
+              if (!isVoiceNote) setContent("");
+              else resetRecording();
+            }}
+            disabled={loading}
+          >
+            <Ionicons
+              name={isVoiceNote ? "mic" : "mic-off"}
+              size={18}
+              color={isVoiceNote ? "#FF2A2A" : "#9A9A9A"}
+              style={{ marginRight: 8 }}
+            />
+            <Text
+              style={[
+                styles.toggleText,
+                isVoiceNote && { color: "#FF2A2A" },
+              ]}
             >
-              <Text style={styles.toggleText}>
-                {isVoiceNote ? "Voice Note Enabled" : "Voice Note: OFF"}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              {isVoiceNote ? "Voice Note Enabled" : "Voice Note: OFF"}
+            </Text>
+          </TouchableOpacity>
+        </GlassCard>
 
-          {!isVoiceNote && (
-            <>
-              <Text style={styles.label}>Content *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Describe your archaeological findings, observations, or thoughts..."
-                placeholderTextColor="#666"
-                value={content}
-                onChangeText={setContent}
-                multiline
-                numberOfLines={10}
-                textAlignVertical="top"
-              />
-            </>
-          )}
+        {/* Content card (text mode) */}
+        {!isVoiceNote && (
+          <GlassCard style={styles.card}>
+            <Text style={styles.label}>
+              <Ionicons name="document-text" size={14} color="#9A9A9A" />{" "}
+              Content
+            </Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Describe your archaeological findings, observations, or thoughts..."
+              placeholderTextColor="#555"
+              value={content}
+              onChangeText={setContent}
+              multiline
+              numberOfLines={10}
+              textAlignVertical="top"
+            />
+          </GlassCard>
+        )}
 
-          {isVoiceNote && (
-            <View style={styles.voiceContainer}>
-              <Text style={styles.label}>Voice Recording</Text>
-              {Platform.OS === "web" && (
-                <LiveWaveform stream={liveStream} isRecording={isRecording} />
-              )}
-              {Platform.OS !== "web" && (
-                <NativeLevelBar active={isRecording} meterLevel={meterLevel} />
-              )}
-              {recording ? (
-                <TouchableOpacity
-                  style={[styles.recButton, styles.stop]}
-                  onPress={stopRecording}
-                  disabled={loading}
-                >
-                  <Text style={styles.recButtonText}>Stop Recording</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.recButton,
-                    recordedUri ? styles.reRecord : styles.start,
-                  ]}
-                  onPress={startRecording}
-                  disabled={loading}
-                >
-                  <Text style={styles.recButtonText}>
-                    {recordedUri ? "Re-record" : "Start Recording"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {recordedUri && !recording && (
-                <>
-                  <Text style={styles.recInfo}>Recorded file ready to upload</Text>
-                  {Platform.OS === "web" ? (
-                    <audio
-                      src={recordedUri}
-                      controls
-                      style={{ width: "100%", marginBottom: 8 }}
-                    />
-                  ) : (
-                    <NativeAudioPreview uri={recordedUri} />
-                  )}
-                  <TouchableOpacity
-                    style={styles.clearAudio}
-                    onPress={resetRecording}
-                    disabled={loading}
-                  >
-                    <Text style={styles.clearAudioText}>Remove Audio</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              {recordingError && (
-                <Text style={styles.errorText}>{recordingError}</Text>
-              )}
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleCreate}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#F5F5F5" />
-            ) : (
-              <Text style={styles.buttonText}>Create Note</Text>
+        {/* Voice recording card */}
+        {isVoiceNote && (
+          <GlassCard style={styles.card}>
+            <Text style={styles.label}>
+              <Ionicons name="mic" size={14} color="#9A9A9A" /> Voice Recording
+            </Text>
+            {Platform.OS === "web" && (
+              <LiveWaveform stream={liveStream} isRecording={isRecording} />
             )}
-          </TouchableOpacity>
+            {Platform.OS !== "web" && (
+              <NativeLevelBar active={isRecording} meterLevel={meterLevel} />
+            )}
+            {recording ? (
+              <TouchableOpacity
+                style={[styles.recButton, styles.stop]}
+                onPress={stopRecording}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="stop-circle"
+                  size={20}
+                  color="#FFFFFF"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.recButtonText}>Stop Recording</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.recButton,
+                  recordedUri ? styles.reRecord : styles.start,
+                ]}
+                onPress={startRecording}
+                disabled={loading}
+              >
+                <Ionicons
+                  name={recordedUri ? "refresh" : "mic"}
+                  size={20}
+                  color="#FFFFFF"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.recButtonText}>
+                  {recordedUri ? "Re-record" : "Start Recording"}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {recordedUri && !recording && (
+              <>
+                <View style={styles.recordedRow}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  <Text style={styles.recInfo}>Recorded file ready to upload</Text>
+                </View>
+                {Platform.OS === "web" ? (
+                  <audio
+                    src={recordedUri}
+                    controls
+                    style={{ width: "100%", marginBottom: 8 }}
+                  />
+                ) : (
+                  <NativeAudioPreview uri={recordedUri} />
+                )}
+                <TouchableOpacity
+                  style={styles.clearAudio}
+                  onPress={resetRecording}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={16}
+                    color="#FF4444"
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.clearAudioText}>Remove Audio</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            {recordingError && (
+              <Text style={styles.errorText}>{recordingError}</Text>
+            )}
+          </GlassCard>
+        )}
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => router.back()}
+        {/* Action buttons */}
+        <View style={styles.buttonContainer}>
+          <GlassButton
+            onPress={handleCreate}
+            title="Create Note"
+            variant="primary"
+            icon="checkmark-circle"
             disabled={loading}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            loading={loading}
+          />
+          <GlassButton
+            onPress={() => router.back()}
+            title="Cancel"
+            variant="secondary"
+            disabled={loading}
+          />
         </View>
       </ScrollView>
     </View>
@@ -774,129 +939,172 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  form: {
+  scrollContent: {
     padding: 24,
+    paddingTop: 24,
+    paddingBottom: 48,
   },
-  pageTitle: {
+  // Header
+  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+  title: {
     fontSize: 28,
-    fontWeight: "700",
-    color: "#F5F5F5",
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    textAlign: "center",
     marginBottom: 32,
-    letterSpacing: 0.5,
+    lineHeight: 22,
+  },
+  // Cards
+  card: { marginBottom: 16 },
+  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+  blurCard: {
+    borderRadius: 20,
+    padding: 20,
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  solidCard: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.3,
+    color: "#9A9A9A",
+    marginBottom: 12,
   },
   input: {
-    backgroundColor: "#1E1E1E",
-    color: "#F5F5F5",
-    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#333",
+    padding: 16,
     fontSize: 16,
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   textArea: {
     height: 200,
     textAlignVertical: "top",
   },
-  button: {
-    backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  cancelButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  cancelButtonText: {
-    color: "#9A9A9A",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  toggleRow: { marginBottom: 24 },
+  // Toggle
   toggleButton: {
-    backgroundColor: "#1E1E1E",
-    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
-  toggleActive: { borderColor: "#FF2A2A", backgroundColor: "#2A2A2A" },
+  toggleActive: {
+    borderColor: "rgba(255, 42, 42, 0.4)",
+    backgroundColor: "rgba(255, 42, 42, 0.08)",
+  },
   toggleText: {
     color: "#F5F5F5",
     fontWeight: "600",
     fontSize: 14,
-    letterSpacing: 0.3,
   },
-  voiceContainer: {
-    marginBottom: 24,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "#1E1E1E",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
+  // Voice
   recButton: {
-    padding: 14,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    padding: 14,
+    borderRadius: 14,
     marginBottom: 12,
   },
   start: { backgroundColor: "#FF2A2A" },
   stop: { backgroundColor: "#FF4444" },
-  reRecord: { backgroundColor: "#2A2A2A", borderWidth: 1, borderColor: "#FF2A2A" },
+  reRecord: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FF2A2A",
+  },
   recButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 14 },
-  recInfo: { color: "#9A9A9A", fontSize: 12, marginBottom: 8 },
+  recordedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  recInfo: { color: "#9A9A9A", fontSize: 13 },
   clearAudio: {
+    flexDirection: "row",
+    alignItems: "center",
     alignSelf: "flex-start",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: "#2A2A2A",
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 68, 68, 0.1)",
     borderWidth: 1,
-    borderColor: "#444",
+    borderColor: "rgba(255, 68, 68, 0.3)",
   },
-  clearAudioText: { color: "#CFCFCF", fontSize: 12 },
+  clearAudioText: { color: "#FF4444", fontSize: 13, fontWeight: "600" },
   errorText: { color: "#FF5555", fontSize: 12, marginTop: 4 },
-  // Auto-save modal styles
+  // Buttons
+  buttonContainer: { gap: 12, marginTop: 8 },
+  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+  primaryButtonGlass: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.4)",
+  },
+  primaryButtonBlur: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.3)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  primaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FF2A2A",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  disabledButton: { opacity: 0.5 },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  secondaryButtonText: { color: "#9A9A9A" },
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   modalContent: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 24,
-    maxWidth: 400,
+    maxWidth: 420,
     width: "100%",
-    borderWidth: 1,
-    borderColor: "#333",
   },
   modalTitle: {
     color: "#F5F5F5",
@@ -915,31 +1123,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 12,
   },
-  modalButtonPrimary: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  modalButtonPrimaryText: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  modalButtonSecondary: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#444",
-  },
-  modalButtonSecondaryText: {
-    color: "#9A9A9A",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  // Save status bar - absolutely positioned to avoid layout shift
+  // Save status bar
   saveStatusBar: {
     position: "absolute",
     top: 0,
@@ -950,7 +1134,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#333",
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   saveStatusText: {
     color: "#9A9A9A",
