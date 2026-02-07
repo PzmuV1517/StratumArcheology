@@ -1237,7 +1237,7 @@ export default function ProjectDetailScreen() {
                 style={
                   Platform.OS === "web"
                     ? ({
-                        height: "calc(100vh - 280px)",
+                        height: "calc(100vh - 340px)",
                         borderRadius: 12,
                         overflow: "hidden",
                         borderWidth: 1,
@@ -1246,11 +1246,7 @@ export default function ProjectDetailScreen() {
                       } as any)
                     : {
                         flex: 1,
-                        minHeight: 520,
-                        borderRadius: 12,
-                        overflow: "hidden",
-                        borderWidth: 1,
-                        borderColor: "#2A2A2A",
+                        marginBottom: Platform.OS === "android" ? 84 : 0,
                         backgroundColor: "#0A0A0A",
                       }
                 }
