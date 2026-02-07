@@ -703,6 +703,17 @@ export default function HarrisMatrix({
 
   return (
     <View style={styles.root}>
+      {/* iOS Debug Banner - TOP */}
+      <View style={{ 
+        backgroundColor: 'red', 
+        padding: 10,
+        zIndex: 99999,
+      }}>
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>
+          iOS RENDERING TEST - Root View
+        </Text>
+      </View>
+
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
@@ -732,6 +743,11 @@ export default function HarrisMatrix({
 
       {/* ── Toolbar ── */}
       <View style={styles.toolbar}>
+        {/* iOS Debug in Toolbar */}
+        <View style={{ flex: 1, backgroundColor: 'cyan', padding: 10, minWidth: 200 }}>
+          <Text style={{ color: 'black', fontWeight: 'bold' }}>Toolbar Renders!</Text>
+        </View>
+        
         <Pressable style={styles.toolBtn} onPress={resetView}>
           <Text style={styles.toolBtnText}>Reset</Text>
         </Pressable>
@@ -765,17 +781,34 @@ export default function HarrisMatrix({
 
       {/* ── SVG Canvas ── */}
       <View
-        style={styles.canvas}
+        style={[styles.canvas, { borderWidth: 5, borderColor: 'red' }]}
         collapsable={false}
         onLayout={e => {
           const { x, y, width, height } = e.nativeEvent.layout;
-          console.log(`[HarrisMatrix] Canvas layout: ${width}x${height}`);
+          console.log(`[HarrisMatrix iOS] Canvas layout: ${width}x${height}`);
           setCanvasOffset({ x, y });
           if (width > 0 && height > 0) {
             setCanvasDimensions({ width, height });
           }
         }}
       >
+        {/* ALWAYS VISIBLE DEBUG */}
+        <View style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'yellow',
+          padding: 20,
+          zIndex: 999999,
+        }}>
+          <Text style={{ color: 'black', fontSize: 18, fontWeight: 'bold' }}>
+            ⚠️ CANVAS VIEW IS RENDERING
+          </Text>
+          <Text style={{ color: 'black', fontSize: 14 }}>
+            Dims: {canvasDimensions.width.toFixed(0)} x {canvasDimensions.height.toFixed(0)}
+          </Text>
+        </View>
         {/* Debug overlay to verify container is rendering */}
         <View style={styles.debugOverlay} pointerEvents="none">
           <Text style={styles.debugText}>
@@ -786,26 +819,22 @@ export default function HarrisMatrix({
           </Text>
         </View>
 
-        <GestureDetector gesture={composed}>
-          <Animated.View style={[styles.canvasInner, animStyle]} collapsable={false}>
-            {canvasDimensions.width > 0 && canvasDimensions.height > 0 && (
-              <Svg
-                key={`svg-${canvasDimensions.width}-${canvasDimensions.height}`}
-                width={canvasDimensions.width}
-                height={canvasDimensions.height}
-                viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
-                preserveAspectRatio="xMidYMid meet"
-                style={{ backgroundColor: 'transparent' }}
-              >
-              {/* Test rectangle to verify SVG is rendering */}
-              <Rect
-                x={svgBounds.minX + 20}
-                y={svgBounds.minY + 20}
-                width={100}
-                height={100}
-                fill="#FF0000"
-                opacity={0.3}
-              />
+        {canvasDimensions.width > 0 && canvasDimensions.height > 0 ? (
+          <Svg
+            width={canvasDimensions.width}
+            height={canvasDimensions.height}
+            viewBox={`${svgBounds.minX} ${svgBounds.minY} ${svgBounds.width} ${svgBounds.height}`}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Test rectangle to verify SVG is rendering */}
+            <Rect
+              x={svgBounds.minX + 20}
+              y={svgBounds.minY + 20}
+              width={100}
+              height={100}
+              fill="#FF0000"
+              opacity={0.8}
+            />
               <Defs>
                 <Marker
                   id="arrow"
@@ -891,13 +920,15 @@ export default function HarrisMatrix({
                   </G>
                 );
               })}
-            </Svg>
-            )}
-          </Animated.View>
-        </GestureDetector>
+          </Svg>
+        ) : (
+          <View style={styles.fallbackView}>
+            <Text style={styles.fallbackText}>Initializing canvas...</Text>
+          </View>
+        )}
 
         {/* Empty-state overlay */}
-        {contexts.size === 0 && (
+        {contexts.size === 0 && canvasDimensions.width > 0 && (
           <View style={styles.emptyOverlay} pointerEvents="box-none">
             <Text style={styles.emptyTitle}>No contexts yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -1285,18 +1316,21 @@ const styles = StyleSheet.create({
   /* canvas */
   canvas: { 
     flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#1A1A1A',
+    position: 'relative',
   },
   canvasInner: { 
     width: '100%',
     height: '100%',
-    ...Platform.select({
-      ios: {
-        // Explicit layout for iOS SVG rendering
-        position: 'relative',
-      },
-    }),
+  },
+  fallbackView: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fallbackText: {
+    color: '#9A9A9A',
+    fontSize: 14,
   },
 
   /* empty */
