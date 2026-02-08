@@ -5,7 +5,10 @@ import { Stack, router } from "expo-router";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import styles from "@/src/components/project/ProjectDetailStyles";
 import ProjectOverlays from "@/src/components/project/ProjectOverlays";
-import { ProjectDetailProvider, useProjectDetail } from "@/src/contexts/ProjectDetailContext";
+import {
+  ProjectDetailProvider,
+  useProjectDetail,
+} from "@/src/contexts/ProjectDetailContext";
 
 function ProjectStack() {
   const { loading, project, setShowFilesOverlay, setShowMenu } = useProjectDetail();
@@ -18,7 +21,9 @@ function ProjectStack() {
         headerTransparent: Platform.OS === "ios",
         headerBlurEffect: undefined,
         headerStyle:
-          Platform.OS === "ios" ? { backgroundColor: "transparent" } : { backgroundColor: "#111111" },
+          Platform.OS === "ios"
+            ? { backgroundColor: "transparent" }
+            : { backgroundColor: "#111111" },
         headerShadowVisible: Platform.OS !== "ios",
         headerTintColor: "#FF2A2A",
       }}
@@ -50,8 +55,21 @@ function ProjectStack() {
                   activeOpacity={0.6}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <IconSymbol name="chevron.backward" size={22} color="#FF2A2A" style={{ marginLeft: 20 , marginTop: -9}} />
-                  <Text style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 0, lineHeight: 22,marginTop: -9}}>
+                  <IconSymbol
+                    name="chevron.backward"
+                    size={22}
+                    color="#FF2A2A"
+                    style={{ marginLeft: 20, marginTop: -9 }}
+                  />
+                  <Text
+                    style={{
+                      color: "#FF2A2A",
+                      fontSize: 17,
+                      marginLeft: 0,
+                      lineHeight: 22,
+                      marginTop: -9,
+                    }}
+                  >
                     Projects
                   </Text>
                 </TouchableOpacity>

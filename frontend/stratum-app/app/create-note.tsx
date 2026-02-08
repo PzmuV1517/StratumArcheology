@@ -18,10 +18,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
-import {
-  LiquidGlassView,
-  isLiquidGlassSupported,
-} from "../src/utils/liquidGlass";
+import { LiquidGlassView, isLiquidGlassSupported } from "../src/utils/liquidGlass";
 
 const isIOS = Platform.OS === "ios";
 const useGlass = isIOS && isLiquidGlassSupported;
@@ -82,9 +79,7 @@ function GlassButton({
       {isLoading ? (
         <ActivityIndicator color="#FFFFFF" />
       ) : (
-        <Text
-          style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
-        >
+        <Text style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}>
           {title}
         </Text>
       )}
@@ -508,9 +503,7 @@ export default function CreateNoteScreen() {
           <Ionicons name="create" size={48} color="#FF2A2A" />
         </View>
         <Text style={styles.title}>Create New Note</Text>
-        <Text style={styles.subtitle}>
-          Add a text or voice note to your project
-        </Text>
+        <Text style={styles.subtitle}>Add a text or voice note to your project</Text>
 
         {/* Title card */}
         <GlassCard style={styles.card}>
@@ -546,12 +539,7 @@ export default function CreateNoteScreen() {
               color={isVoiceNote ? "#FF2A2A" : "#9A9A9A"}
               style={{ marginRight: 8 }}
             />
-            <Text
-              style={[
-                styles.toggleText,
-                isVoiceNote && { color: "#FF2A2A" },
-              ]}
-            >
+            <Text style={[styles.toggleText, isVoiceNote && { color: "#FF2A2A" }]}>
               {isVoiceNote ? "Voice Note Enabled" : "Voice Note: OFF"}
             </Text>
           </TouchableOpacity>
@@ -561,8 +549,7 @@ export default function CreateNoteScreen() {
         {!isVoiceNote && (
           <GlassCard style={styles.card}>
             <Text style={styles.label}>
-              <Ionicons name="document-text" size={14} color="#9A9A9A" />{" "}
-              Content
+              <Ionicons name="document-text" size={14} color="#9A9A9A" /> Content
             </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -832,7 +819,7 @@ function NativeAudioPreview({ uri }: { uri: string }) {
               setPosition(0);
             }
           }
-        }
+        },
       );
       soundRef.current = sound;
       setIsLoading(false);

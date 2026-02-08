@@ -1059,6 +1059,7 @@ async def upload_file(
 @router.get("/{node_id}/download")
 async def download_file(
     node_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user_or_token),
     db: Session = Depends(get_db),
 ):
@@ -1066,6 +1067,7 @@ async def download_file(
 
     Accepts authentication via Authorization header OR token query parameter.
     Returns a streaming response with appropriate Content-Type and Content-Disposition.
+    Supports HTTP Range requests required by iOS AVFoundation (AVPlayer).
     Notes and folders are not downloadable.
     """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
@@ -1079,12 +1081,72 @@ async def download_file(
     if not node.storage_path:
         raise HTTPException(status_code=404, detail="Stored object missing")
 
-    # Stream file from MinIO to avoid loading entire content in memory for large files
+    # Get object stat for size
     try:
-        # Get object to stream and its stat for size
         stat = minio_client.client.stat_object(
             minio_client.bucket_name, node.storage_path
         )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to retrieve object")
+
+    filename = node.name or "download"
+    media_type = node.mime_type or "application/octet-stream"
+    file_size = getattr(stat, "size", None) or 0
+
+    base_headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Accept-Ranges": "bytes",
+    }
+
+    # Handle Range requests (required by iOS AVFoundation / AVPlayer)
+    range_header = request.headers.get("range")
+    if range_header and file_size > 0:
+        try:
+            range_spec = range_header.replace("bytes=", "")
+            parts = range_spec.split("-")
+            start = int(parts[0]) if parts[0] else 0
+            end = int(parts[1]) if parts[1] else file_size - 1
+        except (ValueError, IndexError):
+            start = 0
+            end = file_size - 1
+
+        start = max(0, start)
+        end = min(end, file_size - 1)
+        content_length = end - start + 1
+
+        try:
+            obj = minio_client.client.get_object(
+                minio_client.bucket_name,
+                node.storage_path,
+                offset=start,
+                length=content_length,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=500, detail="Failed to retrieve object range"
+            )
+
+        def iterfile_range():
+            try:
+                for data in obj.stream(32 * 1024):
+                    yield data
+            finally:
+                obj.close()
+                obj.release_conn()
+
+        return StreamingResponse(
+            iterfile_range(),
+            status_code=206,
+            media_type=media_type,
+            headers={
+                **base_headers,
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Content-Length": str(content_length),
+            },
+        )
+
+    # Full response (no Range header)
+    try:
         obj = minio_client.client.get_object(
             minio_client.bucket_name, node.storage_path
         )
@@ -1099,15 +1161,8 @@ async def download_file(
             obj.close()
             obj.release_conn()
 
-    filename = node.name or "download"
-    media_type = node.mime_type or "application/octet-stream"
-
-    # Build headers - only include Content-Length if we have a valid size
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-    }
-    file_size = getattr(stat, "size", None)
-    if file_size is not None and file_size > 0:
+    headers = {**base_headers}
+    if file_size > 0:
         headers["Content-Length"] = str(file_size)
 
     return StreamingResponse(iterfile(), media_type=media_type, headers=headers)
