@@ -9,7 +9,6 @@ import {
   TextInput,
   ScrollView,
   Image,
-  // eslint-disable-next-line
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -176,6 +175,16 @@ export default function ProfileScreen() {
             <Text style={styles.menuItemText}>About</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
+
+          {Platform.OS !== "web" && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/scan-qr" as any)}
+            >
+              <Text style={styles.menuItemText}>Scan QR Code</Text>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>

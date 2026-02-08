@@ -830,11 +830,10 @@ function NativeAudioPreview({ uri }: { uri: string }) {
     }
   }, [uri]);
 
-  const stopAudio = useCallback(async () => {
+  const pauseAudio = useCallback(async () => {
     if (soundRef.current) {
-      await soundRef.current.stopAsync();
+      await soundRef.current.pauseAsync();
       setIsPlaying(false);
-      setPosition(0);
     }
   }, []);
 
@@ -851,13 +850,13 @@ function NativeAudioPreview({ uri }: { uri: string }) {
     <View style={previewStyles.container}>
       <TouchableOpacity
         style={previewStyles.playBtn}
-        onPress={isPlaying ? stopAudio : playAudio}
+        onPress={isPlaying ? pauseAudio : playAudio}
         disabled={isLoading}
       >
         {isLoading ? (
           <ActivityIndicator size="small" color="#FF2A2A" />
         ) : (
-          <Text style={previewStyles.playIcon}>{isPlaying ? "⏹" : "▶"}</Text>
+          <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#FF2A2A" />
         )}
       </TouchableOpacity>
       <View style={previewStyles.progress}>

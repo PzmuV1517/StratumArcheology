@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { fileService } from "../src/services/fileService";
 import { useAuth } from "../src/contexts/AuthContext";
 import { buildManifestFromChildren } from "../src/utils/artefactManifest";
@@ -153,11 +154,9 @@ export default function CreateArtefactScreen() {
   const [creating, setCreating] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
-  const linkForFolder = (folderId: string) => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      return `${window.location.origin}/artefact/${folderId}`;
-    }
-    return `artefact://${folderId}`;
+  const qrValue = (folderId: string) => {
+    // Encode artefact identity as a unique code string (not a link)
+    return `stratum:artefact:${projectId}:${folderId}`;
   };
 
   // ------ Pick images ------
@@ -256,20 +255,31 @@ export default function CreateArtefactScreen() {
         }
       }
 
-      // Upload notes as text files (web only)
+      // Upload notes as text files
       for (let idx = 0; idx < notes.length; idx++) {
         const content = notes[idx]?.trim();
         if (!content) continue;
+        const fd = new FormData();
+        fd.append("parent_id", String(folder.id));
         if (Platform.OS === "web") {
           const blob = new Blob([content], { type: "text/plain" });
-          const fd = new FormData();
-          fd.append("parent_id", String(folder.id));
           const file = new File([blob], `note-${idx + 1}.txt`, {
             type: "text/plain",
           });
           fd.append("file", file, `note-${idx + 1}.txt`);
-          await fileService.uploadFile(projectId, fd);
+        } else {
+          // On native, write content to a temp file, then upload
+          const tmpPath = `${FileSystem.cacheDirectory}note-${idx + 1}.txt`;
+          await FileSystem.writeAsStringAsync(tmpPath, content, {
+            encoding: FileSystem.EncodingType.UTF8,
+          });
+          fd.append("file", {
+            uri: tmpPath,
+            name: `note-${idx + 1}.txt`,
+            type: "text/plain",
+          } as any);
         }
+        await fileService.uploadFile(projectId, fd);
       }
 
       // Build artefact.json manifest
@@ -284,20 +294,32 @@ export default function CreateArtefactScreen() {
           createdBy: user || undefined,
           previewFileId,
         },
-        { user: user || undefined, qrUrl: linkForFolder(folder.id) },
+        { user: user || undefined, qrUrl: qrValue(folder.id) },
       );
+      // Upload artefact.json manifest
+      const manifestJson = JSON.stringify(manifest, null, 2);
+      const manifestFd = new FormData();
+      manifestFd.append("parent_id", String(folder.id));
       if (Platform.OS === "web") {
-        const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+        const blob = new Blob([manifestJson], {
           type: "application/json",
         });
-        const fd = new FormData();
-        fd.append("parent_id", String(folder.id));
         const file = new File([blob], "artefact.json", {
           type: "application/json",
         });
-        fd.append("file", file, "artefact.json");
-        await fileService.uploadFile(projectId, fd);
+        manifestFd.append("file", file, "artefact.json");
+      } else {
+        const tmpPath = `${FileSystem.cacheDirectory}artefact.json`;
+        await FileSystem.writeAsStringAsync(tmpPath, manifestJson, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+        manifestFd.append("file", {
+          uri: tmpPath,
+          name: "artefact.json",
+          type: "application/json",
+        } as any);
       }
+      await fileService.uploadFile(projectId, manifestFd);
 
       showAlert("Success", "Artefact created successfully!");
       router.back();
@@ -480,7 +502,7 @@ export default function CreateArtefactScreen() {
           </Text>
           <View style={{ alignItems: "center", marginTop: 8 }}>
             <QRCodeView
-              value={linkForFolder("new")}
+              value={qrValue("new")}
               label={`${name || "Artefact"} #—`}
               onReadyDataUrl={setQrDataUrl}
             />

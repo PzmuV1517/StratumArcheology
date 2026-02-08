@@ -75,7 +75,20 @@ function ProjectStack() {
                 </TouchableOpacity>
               );
             }
-            return undefined;
+            return (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={{
+                  height: 44,
+                  justifyContent: "center",
+                  paddingRight: 16,
+                }}
+                activeOpacity={0.6}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <IconSymbol name="chevron.backward" size={22} color="#FF2A2A" />
+              </TouchableOpacity>
+            );
           },
           headerRight: () => {
             if (!showHeaderActions) return null;

@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { Platform, RefreshControl, View, Text, ActivityIndicator } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
+import { useGlobalSearchParams, useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
@@ -962,9 +962,16 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const navigateToTab = (tab: ProjectTabName) => {
     if (!id) return;
-    const projectId = id as string;
-    const route = tab === "overview" ? "" : `/${tab}`;
-    router.navigate(`/project/${projectId}${route}` as any);
+    const projectId = Array.isArray(id) ? id[0] : id;
+    setCurrentTabName(tab);
+    const tabRoute = tab === "overview" ? "index" : tab;
+    // Delay slightly so the modal finishes closing before navigating
+    setTimeout(() => {
+      router.push({
+        pathname: `/project/[id]/(tabs)/${tabRoute}` as any,
+        params: { id: projectId },
+      });
+    }, 150);
   };
 
   const onExitProject = async () => {

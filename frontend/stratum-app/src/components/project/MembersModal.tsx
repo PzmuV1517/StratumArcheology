@@ -15,6 +15,7 @@ import { LiquidGlassView, isLiquidGlassSupported } from "../../utils/liquidGlass
 import { projectService } from "../../services/projectService";
 import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
+import QRCodeView from "../common/QRCodeView";
 
 interface Member {
   id: string;
@@ -819,10 +820,19 @@ export default function MembersModal({
                   {Platform.OS === "web" && (
                     <Image
                       source={{
-                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedLink)}`,
+                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedCode ? `stratum:invite:${generatedCode}` : generatedLink)}`,
                       }}
                       style={styles.qrCode}
                     />
+                  )}
+                  {Platform.OS !== "web" && (
+                    <View style={{ alignItems: "center", marginTop: 12 }}>
+                      <QRCodeView
+                        value={generatedCode ? `stratum:invite:${generatedCode}` : generatedLink}
+                        size={180}
+                        label="Scan to join"
+                      />
+                    </View>
                   )}
                   {generatedExpiresAt && (
                     <Text style={styles.expiresText}>

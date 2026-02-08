@@ -187,6 +187,7 @@ export default function ArtefactDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [children, setChildren] = useState<FileNode[]>([]);
   const [meta, setMeta] = useState<ArtefactMeta | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -203,6 +204,13 @@ export default function ArtefactDetail() {
   const load = async () => {
     try {
       setLoading(true);
+      // Get the folder info to extract the project_id
+      try {
+        const nodeInfo = await fileService.getNodeInfo(id as string);
+        if (nodeInfo?.project_id) setProjectId(nodeInfo.project_id);
+      } catch (e) {
+        console.warn("Could not fetch node info", e);
+      }
       const ch = await fileService.listChildren(id as string);
       setChildren(ch);
       const metaFile = ch.find(
@@ -264,7 +272,7 @@ export default function ArtefactDetail() {
           type: asset.mimeType || "application/octet-stream",
         } as any);
       }
-      await fileService.uploadFile(meta?.id || ("" as any), fd);
+      await fileService.uploadFile(projectId || ("" as any), fd);
     }
     try {
       const ch = await fileService.listChildren(id as string);

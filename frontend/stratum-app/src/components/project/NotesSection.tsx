@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
 import { showAlert } from "../../utils/alert";
@@ -123,11 +124,10 @@ export default function NotesSection({
       }
     }, [url, streamUrl]);
 
-    const stopNativeAudio = useCallback(async () => {
+    const pauseNativeAudio = useCallback(async () => {
       if (soundRef.current) {
-        await soundRef.current.stopAsync();
+        await soundRef.current.pauseAsync();
         setIsPlaying(false);
-        setPosition(0);
       }
     }, []);
 
@@ -198,13 +198,13 @@ export default function NotesSection({
         <View style={styles.nativeAudioPlayer}>
           <TouchableOpacity
             style={styles.audioPlayBtn}
-            onPress={isPlaying ? stopNativeAudio : playNativeAudio}
+            onPress={isPlaying ? pauseNativeAudio : playNativeAudio}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#FF2A2A" />
             ) : (
-              <Text style={styles.audioPlayIcon}>{isPlaying ? "⏹" : "▶"}</Text>
+              <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#FF2A2A" />
             )}
           </TouchableOpacity>
           <View style={styles.audioProgress}>

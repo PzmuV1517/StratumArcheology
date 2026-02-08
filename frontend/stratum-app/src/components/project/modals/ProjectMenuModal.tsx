@@ -8,7 +8,205 @@ import {
   Pressable,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
+
+// ─── Tools / Other Pages Modal ──────────────────────────────────────
+
+interface ToolItem {
+  key: string;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  active?: boolean;
+}
+
+function ToolsModal({
+  visible,
+  onClose,
+  items,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  items: ToolItem[];
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={toolStyles.backdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={toolStyles.sheet}>
+          <View style={toolStyles.handle} />
+          <Text style={toolStyles.title}>More Tools</Text>
+          <Text style={toolStyles.subtitle}>
+            Navigate to other project views
+          </Text>
+
+          <View style={toolStyles.grid}>
+            {items.map((item) => (
+              <TouchableOpacity
+                key={item.key}
+                style={[
+                  toolStyles.card,
+                  item.active && toolStyles.cardActive,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  onClose();
+                  // Small delay to let sheet dismiss
+                  setTimeout(() => item.onPress(), 200);
+                }}
+              >
+                <View
+                  style={[
+                    toolStyles.iconCircle,
+                    item.active && toolStyles.iconCircleActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon}
+                    size={26}
+                    color={item.active ? "#FFFFFF" : "#FF2A2A"}
+                  />
+                </View>
+                <Text
+                  style={[
+                    toolStyles.cardLabel,
+                    item.active && toolStyles.cardLabelActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+                <Text style={toolStyles.cardDesc} numberOfLines={2}>
+                  {item.description}
+                </Text>
+                {item.active && (
+                  <View style={toolStyles.activeBadge}>
+                    <Text style={toolStyles.activeBadgeText}>Current</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={toolStyles.closeBtn} onPress={onClose}>
+            <Text style={toolStyles.closeBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const toolStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#1C1C1E",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    paddingTop: 14,
+  },
+  handle: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#555",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  title: {
+    color: "#F5F5F5",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  subtitle: {
+    color: "#9A9A9A",
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 20,
+  },
+  card: {
+    width: "47%",
+    backgroundColor: "#2A2A2A",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#3A3A3A",
+  },
+  cardActive: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "rgba(255,42,42,0.08)",
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,42,42,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  iconCircleActive: {
+    backgroundColor: "#FF2A2A",
+  },
+  cardLabel: {
+    color: "#F5F5F5",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  cardLabelActive: {
+    color: "#FF2A2A",
+  },
+  cardDesc: {
+    color: "#9A9A9A",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  activeBadge: {
+    marginTop: 8,
+    backgroundColor: "#FF2A2A",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: "flex-start",
+  },
+  activeBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  closeBtn: {
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#2A2A2A",
+    borderRadius: 14,
+  },
+  closeBtnText: {
+    color: "#9A9A9A",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});
+
+// ─── Main Burger Menu ───────────────────────────────────────────────
 
 interface Props {
   visible: boolean;
@@ -46,6 +244,60 @@ export default function ProjectMenuModal({
   canChangeSettings = true,
 }: Props) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showToolsModal, setShowToolsModal] = useState(false);
+
+  const toolItems: ToolItem[] = [
+    ...(onOpenGallery
+      ? [
+          {
+            key: "gallery",
+            label: "Gallery",
+            description: "Browse project photos and media files",
+            icon: "images" as keyof typeof Ionicons.glyphMap,
+            onPress: () => { onClose(); onOpenGallery(); },
+            active: currentTabName === "gallery",
+          },
+        ]
+      : []),
+    ...(onOpenMap
+      ? [
+          {
+            key: "map",
+            label: "Map",
+            description: "View GPS coordinates and site locations",
+            icon: "map" as keyof typeof Ionicons.glyphMap,
+            onPress: () => { onClose(); onOpenMap(); },
+            active: currentTabName === "gps",
+          },
+        ]
+      : []),
+    ...(onOpenTimeMachine
+      ? [
+          {
+            key: "history",
+            label: "Time Machine",
+            description: "See project history and past versions",
+            icon: "time" as keyof typeof Ionicons.glyphMap,
+            onPress: () => { onClose(); onOpenTimeMachine(); },
+            active: currentTabName === "history",
+          },
+        ]
+      : []),
+    ...(onOpenTools && Platform.OS !== "web"
+      ? [
+          {
+            key: "tools",
+            label: "Tools",
+            description: "Convert, export, and utility tools",
+            icon: "construct" as keyof typeof Ionicons.glyphMap,
+            onPress: () => { onClose(); onOpenTools(); },
+            active: currentTabName === "tools",
+          },
+        ]
+      : []),
+  ];
+
+  const hasTools = toolItems.length > 0;
 
   const handleExitPress = () => {
     setShowExitConfirm(true);
@@ -111,46 +363,26 @@ export default function ProjectMenuModal({
                   </Text>
                 </View>
               )}
-              {/* Navigation items */}
-              <View style={styles.sectionDivider} />
-              {onOpenGallery && (
-                <TouchableOpacity
-                  style={[styles.menuItem, currentTabName === "gallery" && styles.activeNavItem]}
-                  onPress={() => { onClose(); onOpenGallery(); }}
-                >
-                  <Text style={[styles.menuItemText, currentTabName === "gallery" && styles.activeNavText]}>Gallery</Text>
-                </TouchableOpacity>
-              )}
-              {onOpenMap && (
-                <TouchableOpacity
-                  style={[styles.menuItem, currentTabName === "gps" && styles.activeNavItem]}
-                  onPress={() => { onClose(); onOpenMap(); }}
-                >
-                  <Text style={[styles.menuItemText, currentTabName === "gps" && styles.activeNavText]}>Map</Text>
-                </TouchableOpacity>
-              )}
-              {onOpenTimeMachine && (
-                <TouchableOpacity
-                  style={[styles.menuItem, currentTabName === "history" && styles.activeNavItem]}
-                  onPress={() => { onClose(); onOpenTimeMachine(); }}
-                >
-                  <Text style={[styles.menuItemText, currentTabName === "history" && styles.activeNavText]}>Time Machine</Text>
-                </TouchableOpacity>
-              )}
-              {onOpenTools && Platform.OS !== "web" && (
-                <TouchableOpacity
-                  style={[styles.menuItem, currentTabName === "tools" && styles.activeNavItem]}
-                  onPress={() => { onClose(); onOpenTools(); }}
-                >
-                  <Text style={[styles.menuItemText, currentTabName === "tools" && styles.activeNavText]}>Tools</Text>
-                </TouchableOpacity>
-              )}
               {onExitProject && (
                 <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
                   <Text style={[styles.menuItemText, styles.exitButtonText]}>
                     Exit Project
                   </Text>
                 </TouchableOpacity>
+              )}
+              {hasTools && (
+                <>
+                  <View style={styles.sectionDivider} />
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => setShowToolsModal(true)}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Ionicons name="grid-outline" size={18} color="#FF2A2A" />
+                      <Text style={[styles.menuItemText, { color: "#FF2A2A" }]}>More Tools</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
               )}
               <TouchableOpacity
                 style={[
@@ -194,46 +426,26 @@ export default function ProjectMenuModal({
                 </Text>
               </View>
             )}
-            {/* Navigation items */}
-            <View style={styles.sectionDivider} />
-            {onOpenGallery && (
-              <TouchableOpacity
-                style={[styles.menuItem, currentTabName === "gallery" && styles.activeNavItem]}
-                onPress={() => { onClose(); onOpenGallery(); }}
-              >
-                <Text style={[styles.menuItemText, currentTabName === "gallery" && styles.activeNavText]}>Gallery</Text>
-              </TouchableOpacity>
-            )}
-            {onOpenMap && (
-              <TouchableOpacity
-                style={[styles.menuItem, currentTabName === "gps" && styles.activeNavItem]}
-                onPress={() => { onClose(); onOpenMap(); }}
-              >
-                <Text style={[styles.menuItemText, currentTabName === "gps" && styles.activeNavText]}>Map</Text>
-              </TouchableOpacity>
-            )}
-            {onOpenTimeMachine && (
-              <TouchableOpacity
-                style={[styles.menuItem, currentTabName === "history" && styles.activeNavItem]}
-                onPress={() => { onClose(); onOpenTimeMachine(); }}
-              >
-                <Text style={[styles.menuItemText, currentTabName === "history" && styles.activeNavText]}>Time Machine</Text>
-              </TouchableOpacity>
-            )}
-            {onOpenTools && Platform.OS !== "web" && (
-              <TouchableOpacity
-                style={[styles.menuItem, currentTabName === "tools" && styles.activeNavItem]}
-                onPress={() => { onClose(); onOpenTools(); }}
-              >
-                <Text style={[styles.menuItemText, currentTabName === "tools" && styles.activeNavText]}>Tools</Text>
-              </TouchableOpacity>
-            )}
             {onExitProject && (
               <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
                 <Text style={[styles.menuItemText, styles.exitButtonText]}>
                   Exit Project
                 </Text>
               </TouchableOpacity>
+            )}
+            {hasTools && (
+              <>
+                <View style={styles.sectionDivider} />
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => setShowToolsModal(true)}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Ionicons name="grid-outline" size={18} color="#FF2A2A" />
+                    <Text style={[styles.menuItemText, { color: "#FF2A2A" }]}>More Tools</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
             )}
             <TouchableOpacity
               style={[
@@ -311,6 +523,12 @@ export default function ProjectMenuModal({
           </View>
         </View>
       </Modal>
+
+      <ToolsModal
+        visible={showToolsModal}
+        onClose={() => setShowToolsModal(false)}
+        items={toolItems}
+      />
     </>
   );
 }

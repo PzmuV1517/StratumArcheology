@@ -197,7 +197,7 @@ export function ProjectArtefactsScreen() {
         style={styles.content}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 16,
+          paddingTop: 28,
           paddingBottom: bottomContentPad,
         }}
         contentInsetAdjustmentBehavior="automatic"

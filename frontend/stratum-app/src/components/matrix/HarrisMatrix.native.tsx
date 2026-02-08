@@ -9,13 +9,7 @@
  * with the server when online.
  */
 
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -29,15 +23,8 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import Svg, {
-  Path,
-  Defs,
-  Marker,
-} from "react-native-svg";
-import {
-  Gesture,
-  GestureDetector,
-} from "react-native-gesture-handler";
+import Svg, { Path, Defs, Marker } from "react-native-svg";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -141,9 +128,7 @@ function computeLayout(
     if (["above", "seals", "cuts", "fill_of"].includes(rel.type)) {
       from = rel.to;
       to = rel.from;
-    } else if (
-      ["below", "sealed_by", "cut_by", "filled_by"].includes(rel.type)
-    ) {
+    } else if (["below", "sealed_by", "cut_by", "filled_by"].includes(rel.type)) {
       from = rel.from;
       to = rel.to;
     }
@@ -221,9 +206,7 @@ export default function HarrisMatrix({
   canEdit = true,
 }: HarrisMatrixProps) {
   /* ── data state ── */
-  const [contexts, setContexts] = useState<Map<string, ArchContext>>(
-    new Map(),
-  );
+  const [contexts, setContexts] = useState<Map<string, ArchContext>>(new Map());
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
@@ -397,16 +380,12 @@ export default function HarrisMatrix({
     }[] = [];
     for (const rel of relationships) {
       // Contemporary / equivalent → horizontal line
-      if (
-        ["contemporary_with", "equivalent", "same_as"].includes(rel.type)
-      ) {
+      if (["contemporary_with", "equivalent", "same_as"].includes(rel.type)) {
         const p1 = shiftedPositions.get(rel.from);
         const p2 = shiftedPositions.get(rel.to);
         if (p1 && p2) {
-          const x1 =
-            p1.x < p2.x ? p1.x + NODE_W / 2 : p1.x - NODE_W / 2;
-          const x2 =
-            p1.x < p2.x ? p2.x - NODE_W / 2 : p2.x + NODE_W / 2;
+          const x1 = p1.x < p2.x ? p1.x + NODE_W / 2 : p1.x - NODE_W / 2;
+          const x2 = p1.x < p2.x ? p2.x - NODE_W / 2 : p2.x + NODE_W / 2;
           result.push({
             path: `M ${x1},${p1.y} L ${x2},${p2.y}`,
             isCut: false,
@@ -421,9 +400,7 @@ export default function HarrisMatrix({
       if (["above", "seals", "cuts", "fill_of"].includes(rel.type)) {
         from = rel.to;
         to = rel.from;
-      } else if (
-        ["below", "sealed_by", "cut_by", "filled_by"].includes(rel.type)
-      ) {
+      } else if (["below", "sealed_by", "cut_by", "filled_by"].includes(rel.type)) {
         from = rel.from;
         to = rel.to;
       }
@@ -520,23 +497,19 @@ export default function HarrisMatrix({
   }, [editId, contexts, relationships, persist]);
 
   const clearAll = useCallback(() => {
-    showAlert(
-      "Clear All?",
-      "This will permanently delete all Harris Matrix data.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear All",
-          style: "destructive",
-          onPress: () => {
-            const empty = new Map<string, ArchContext>();
-            setContexts(empty);
-            setRelationships([]);
-            persist(empty, []);
-          },
+    showAlert("Clear All?", "This will permanently delete all Harris Matrix data.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear All",
+        style: "destructive",
+        onPress: () => {
+          const empty = new Map<string, ArchContext>();
+          setContexts(empty);
+          setRelationships([]);
+          persist(empty, []);
         },
-      ],
-    );
+      },
+    ]);
   }, [persist]);
 
   /* ── open modals / node actions (must be defined before gestures) ── */
@@ -617,7 +590,12 @@ export default function HarrisMatrix({
       x: (vpW - contentW) / 2,
       y: (vpH - contentH) / 2,
     };
-  }, [canvasDimensions.width, canvasDimensions.height, svgBounds.width, svgBounds.height]);
+  }, [
+    canvasDimensions.width,
+    canvasDimensions.height,
+    svgBounds.width,
+    svgBounds.height,
+  ]);
 
   const hasInitializedView = useRef(false);
 
@@ -631,7 +609,12 @@ export default function HarrisMatrix({
     scale.value = 1;
     savedScale.value = 1;
     hasInitializedView.current = true;
-  }, [canvasDimensions.width, canvasDimensions.height, defaultView.x, defaultView.y]);
+  }, [
+    canvasDimensions.width,
+    canvasDimensions.height,
+    defaultView.x,
+    defaultView.y,
+  ]);
 
   useEffect(() => {
     if (contexts.size !== 0) return;
@@ -688,9 +671,7 @@ export default function HarrisMatrix({
               { backgroundColor: isOnline ? "#4CAF50" : "#FF4444" },
             ]}
           />
-          <Text style={styles.statusText}>
-            {isOnline ? "Online" : "Offline"}
-          </Text>
+          <Text style={styles.statusText}>{isOnline ? "Online" : "Offline"}</Text>
           {hasPending && (
             <View style={styles.pendingBadge}>
               <Text style={styles.pendingText}>Unsaved</Text>
@@ -711,10 +692,7 @@ export default function HarrisMatrix({
         <Pressable style={styles.toolBtn} onPress={resetView}>
           <Text style={styles.toolBtnText}>Reset</Text>
         </Pressable>
-        <Pressable
-          style={styles.toolBtn}
-          onPress={() => setShowInfoPanel(true)}
-        >
+        <Pressable style={styles.toolBtn} onPress={() => setShowInfoPanel(true)}>
           <Text style={styles.toolBtnText}>Info</Text>
         </Pressable>
         {canEdit && (
@@ -722,9 +700,7 @@ export default function HarrisMatrix({
             style={[styles.toolBtn, styles.toolBtnAccent]}
             onPress={openNewCtx}
           >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>
-              Add Context
-            </Text>
+            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Add Context</Text>
           </Pressable>
         )}
         {canEdit && (
@@ -732,9 +708,7 @@ export default function HarrisMatrix({
             style={[styles.toolBtn, { backgroundColor: "#dc3545" }]}
             onPress={clearAll}
           >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>
-              Clear
-            </Text>
+            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Clear</Text>
           </Pressable>
         )}
       </View>
@@ -742,7 +716,7 @@ export default function HarrisMatrix({
       {/* ── SVG Canvas ── */}
       <View
         style={styles.canvas}
-        onLayout={e => {
+        onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           if (width > 0 && height > 0) setCanvasDimensions({ width, height });
         }}
@@ -798,19 +772,11 @@ export default function HarrisMatrix({
                     d={e.path}
                     fill="none"
                     stroke={
-                      e.isContemporary
-                        ? "#495057"
-                        : e.isCut
-                          ? "#dc3545"
-                          : "#495057"
+                      e.isContemporary ? "#495057" : e.isCut ? "#dc3545" : "#495057"
                     }
                     strokeWidth={e.isCut ? 2.5 : e.isContemporary ? 1.5 : 2}
                     strokeDasharray={
-                      e.isCut
-                        ? [6, 4]
-                        : e.isContemporary
-                          ? [4, 4]
-                          : undefined
+                      e.isCut ? [6, 4] : e.isContemporary ? [4, 4] : undefined
                     }
                     markerEnd={
                       e.isContemporary
@@ -863,7 +829,6 @@ export default function HarrisMatrix({
             </Text>
           </View>
         )}
-
       </View>
 
       {/* ═══════════ Modals ═══════════ */}
@@ -888,9 +853,7 @@ export default function HarrisMatrix({
                 <Text style={styles.statLabel}>Contexts</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>
-                  {relationships.length}
-                </Text>
+                <Text style={styles.statValue}>{relationships.length}</Text>
                 <Text style={styles.statLabel}>Relations</Text>
               </View>
             </View>
@@ -932,20 +895,11 @@ export default function HarrisMatrix({
               style={{ marginBottom: 12 }}
             >
               {(
-                [
-                  "layer",
-                  "deposit",
-                  "cut",
-                  "fill",
-                  "structure",
-                ] as ContextType[]
+                ["layer", "deposit", "cut", "fill", "structure"] as ContextType[]
               ).map((t) => (
                 <TouchableOpacity
                   key={t}
-                  style={[
-                    styles.chipBtn,
-                    newCtxType === t && styles.chipBtnActive,
-                  ]}
+                  style={[styles.chipBtn, newCtxType === t && styles.chipBtnActive]}
                   onPress={() => setNewCtxType(t)}
                 >
                   <Text
@@ -997,9 +951,7 @@ export default function HarrisMatrix({
       >
         <View style={styles.backdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {relSource} → ?
-            </Text>
+            <Text style={styles.modalTitle}>{relSource} → ?</Text>
 
             <Text style={styles.inputLabel}>Target</Text>
             <ScrollView
@@ -1012,10 +964,7 @@ export default function HarrisMatrix({
                 .map((k) => (
                   <TouchableOpacity
                     key={k}
-                    style={[
-                      styles.chipBtn,
-                      relTarget === k && styles.chipBtnActive,
-                    ]}
+                    style={[styles.chipBtn, relTarget === k && styles.chipBtnActive]}
                     onPress={() => setRelTarget(k)}
                   >
                     <Text
@@ -1091,20 +1040,11 @@ export default function HarrisMatrix({
               style={{ marginBottom: 12 }}
             >
               {(
-                [
-                  "layer",
-                  "deposit",
-                  "cut",
-                  "fill",
-                  "structure",
-                ] as ContextType[]
+                ["layer", "deposit", "cut", "fill", "structure"] as ContextType[]
               ).map((t) => (
                 <TouchableOpacity
                   key={t}
-                  style={[
-                    styles.chipBtn,
-                    editType === t && styles.chipBtnActive,
-                  ]}
+                  style={[styles.chipBtn, editType === t && styles.chipBtnActive]}
                   onPress={() => canEdit && setEditType(t)}
                   disabled={!canEdit}
                 >
@@ -1132,9 +1072,8 @@ export default function HarrisMatrix({
             />
 
             {/* Relationships for this node */}
-            {relationships.filter(
-              (r) => r.from === editId || r.to === editId,
-            ).length > 0 && (
+            {relationships.filter((r) => r.from === editId || r.to === editId)
+              .length > 0 && (
               <View style={{ marginBottom: 12 }}>
                 <Text style={styles.inputLabel}>Relationships</Text>
                 {relationships
@@ -1148,8 +1087,7 @@ export default function HarrisMatrix({
                         <TouchableOpacity
                           onPress={() => {
                             const next = relationships.filter(
-                              (_, idx) =>
-                                idx !== relationships.indexOf(r),
+                              (_, idx) => idx !== relationships.indexOf(r),
                             );
                             setRelationships(next);
                             persist(contexts, next);
@@ -1174,10 +1112,7 @@ export default function HarrisMatrix({
               )}
               {canEdit && (
                 <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: "#dc3545" },
-                  ]}
+                  style={[styles.actionBtn, { backgroundColor: "#dc3545" }]}
                   onPress={deleteNode}
                 >
                   <Text style={styles.actionBtnText}>Delete</Text>
@@ -1241,20 +1176,20 @@ const styles = StyleSheet.create({
   syncBtnText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
 
   /* canvas */
-  canvas: { 
+  canvas: {
     flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#0A0A0A',
+    overflow: "hidden",
+    backgroundColor: "#0A0A0A",
   },
   gestureLayer: {
     ...StyleSheet.absoluteFillObject,
   },
-  canvasInner: { 
-    position: 'relative',
+  canvasInner: {
+    position: "relative",
     ...Platform.select({
       ios: {
         // Explicit layout for iOS SVG rendering
-        position: 'relative',
+        position: "relative",
       },
     }),
   },

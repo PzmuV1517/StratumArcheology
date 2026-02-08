@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,10 +37,21 @@ export default function ArtefactsTab({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
     { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[]
   >([]);
+
+  const filteredArtefacts = useMemo(() => {
+    if (!searchQuery.trim()) return artefacts;
+    const q = searchQuery.toLowerCase();
+    return artefacts.filter(({ folder, meta }) => {
+      const name = (meta?.name || folder.name).toLowerCase();
+      const num = meta?.number?.toString() || "";
+      return name.includes(q) || num.includes(q);
+    });
+  }, [artefacts, searchQuery]);
 
   useEffect(() => {
     if (projectId) load();
@@ -145,6 +157,28 @@ export default function ArtefactsTab({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Search bar */}
+      {artefacts.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color="#9A9A9A" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search artefacts..."
+            placeholderTextColor="#666"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={18} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
           <ActivityIndicator color="#FF2A2A" />
@@ -154,9 +188,13 @@ export default function ArtefactsTab({
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
           <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>
         </View>
+      ) : filteredArtefacts.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 24 }}>
+          <Text style={{ color: "#9A9A9A" }}>No artefacts match "{searchQuery}"</Text>
+        </View>
       ) : (
         <View style={styles.grid}>
-          {artefacts.map(({ folder, meta, previewUrl }) => (
+          {filteredArtefacts.map(({ folder, meta, previewUrl }) => (
             <TouchableOpacity
               key={folder.id}
               style={styles.card}
@@ -192,6 +230,23 @@ export default function ArtefactsTab({
 }
 
 const styles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  searchInput: {
+    flex: 1,
+    color: "#F5F5F5",
+    fontSize: 15,
+    padding: 0,
+  },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   card: {
     width: 180,
