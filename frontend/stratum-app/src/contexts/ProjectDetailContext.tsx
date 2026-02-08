@@ -962,14 +962,9 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const navigateToTab = (tab: ProjectTabName) => {
     if (!id) return;
-    if (tab === "overview") {
-      router.push({ pathname: "/project/[id]", params: { id: id as string } });
-      return;
-    }
-    router.push({
-      pathname: `/project/[id]/${tab}` as const,
-      params: { id: id as string },
-    });
+    const projectId = id as string;
+    const route = tab === "overview" ? "" : `/${tab}`;
+    router.navigate(`/project/${projectId}${route}` as any);
   };
 
   const onExitProject = async () => {

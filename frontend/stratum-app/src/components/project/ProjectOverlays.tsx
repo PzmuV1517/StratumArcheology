@@ -75,10 +75,10 @@ export default function ProjectOverlays() {
         onClose={() => setShowMenu(false)}
         onOpenMembers={() => setShowMembersModal(true)}
         onOpenSettings={handleProjectSettings}
-        onOpenGallery={() => navigateToTab("gallery")}
-        onOpenMap={() => navigateToTab("gps")}
-        onOpenTimeMachine={() => navigateToTab("history")}
-        onOpenTools={() => navigateToTab("tools")}
+        onOpenGallery={() => setTimeout(() => navigateToTab("gallery"), 400)}
+        onOpenMap={() => setTimeout(() => navigateToTab("gps"), 400)}
+        onOpenTimeMachine={() => setTimeout(() => navigateToTab("history"), 400)}
+        onOpenTools={() => setTimeout(() => navigateToTab("tools"), 400)}
         currentTabName={currentTabName}
         onExitProject={onExitProject}
         onDeleteProject={onDeleteProject}
