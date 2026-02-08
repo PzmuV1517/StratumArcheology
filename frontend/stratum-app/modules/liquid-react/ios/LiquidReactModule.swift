@@ -14,9 +14,9 @@ public class LiquidReactModule: Module {
 
           let idiom = tabBarController.traitCollection.userInterfaceIdiom
           if forceSidebar && (idiom == .pad || idiom == .mac) {
-            tabBarController.mode = .sidebar
+            tabBarController.mode = .tabSidebar
           } else {
-            tabBarController.mode = .sidebarAdaptable
+            tabBarController.mode = .automatic
           }
         }
       }

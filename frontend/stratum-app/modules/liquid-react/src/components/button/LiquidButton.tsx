@@ -1,5 +1,13 @@
 import * as React from "react";
-import { Platform, StyleProp, ViewStyle, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  ViewStyle,
+  View,
+  Text,
+} from "react-native";
 import { requireNativeViewManager } from "expo-modules-core";
 
 type ButtonInsets = {
@@ -38,12 +46,38 @@ export type LiquidButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const NativeLiquidButton =
-  Platform.OS === "web" ? null : requireNativeViewManager("LiquidReactButton");
+let NativeLiquidButton: any = null;
+if (Platform.OS !== "web") {
+  try {
+    NativeLiquidButton = requireNativeViewManager(
+      "LiquidReactButton_LiquidReactButtonView",
+    );
+  } catch {
+    NativeLiquidButton = null;
+  }
+}
 
 export default function LiquidButton(props: LiquidButtonProps) {
+  const { onPress, style, ...nativeProps } = props;
   if (!NativeLiquidButton) {
-    return <View style={props.style} />;
+    // Fallback: render a simple pressable with icon placeholder + title
+    return (
+      <Pressable onPress={onPress} style={[{ flexDirection: "row", alignItems: "center" }, style]}>
+        {props.title ? (
+          <Text style={{ color: props.tintColor || props.titleColor || "#fff", fontSize: props.fontSize || 17 }}>
+            {props.title}
+          </Text>
+        ) : null}
+      </Pressable>
+    );
   }
-  return <NativeLiquidButton {...props} />;
+  return (
+    <Pressable onPress={onPress} style={style}>
+      <NativeLiquidButton
+        {...nativeProps}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+    </Pressable>
+  );
 }

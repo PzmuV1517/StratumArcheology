@@ -8,23 +8,24 @@ struct ButtonInsets: Record {
   @Field var right: Double = 0
 }
 
-final class LiquidReactButtonView: ExpoView {
+class LiquidReactButtonView: ExpoView {
   let button = UIButton(type: .system)
-  let onPress = EventDispatcher()
 
-  override init(frame: CGRect) {
-    super.init(frame: frame)
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
+    isUserInteractionEnabled = false
+    button.isUserInteractionEnabled = false
     addSubview(button)
-    button.addTarget(self, action: #selector(handlePress), for: .touchUpInside)
-  }
-
-  @objc private func handlePress() {
-    onPress()
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
     button.frame = bounds
+  }
+
+  // Let touches pass to JS Pressable
+  override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    return nil
   }
 
   func applyInsets(_ insets: ButtonInsets?, to type: String) {

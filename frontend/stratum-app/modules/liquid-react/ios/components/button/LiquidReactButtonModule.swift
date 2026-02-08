@@ -6,7 +6,6 @@ public class LiquidReactButtonModule: Module {
     Name("LiquidReactButton")
 
     View(LiquidReactButtonView.self) {
-      Events("onPress")
 
       Prop("title") { (view: LiquidReactButtonView, title: String?) in
         view.button.setTitle(title, for: .normal)

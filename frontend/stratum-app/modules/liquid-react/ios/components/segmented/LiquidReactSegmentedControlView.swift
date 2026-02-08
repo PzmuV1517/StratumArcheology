@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import UIKit
 
-final class LiquidReactSegmentedControlView: ExpoView {
+class LiquidReactSegmentedControlView: ExpoView {
   let segmentedControl = UISegmentedControl(items: [])
   let onChange = EventDispatcher()
   private var topConstraint: NSLayoutConstraint?
@@ -10,8 +10,8 @@ final class LiquidReactSegmentedControlView: ExpoView {
   private var topAnchorValue: Double?
   private var trailingAnchorValue: Double?
 
-  override init(frame: CGRect) {
-    super.init(frame: frame)
+  required init(appContext: AppContext? = nil) {
+    super.init(appContext: appContext)
     addSubview(segmentedControl)
     segmentedControl.addTarget(self, action: #selector(handleChange), for: .valueChanged)
   }

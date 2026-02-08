@@ -1,6 +1,6 @@
 import React from "react";
-import { Platform, TouchableOpacity, View } from "react-native";
-import { Stack } from "expo-router";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { Stack, router } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import styles from "@/src/components/project/ProjectDetailStyles";
@@ -35,6 +35,30 @@ function ProjectStack() {
           headerBackTitle: "Projects",
           headerBackVisible: true,
           presentation: "card",
+          headerLeft: () => {
+            if (Platform.OS === "ios") {
+              return (
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    height: 44,
+                    marginLeft: -8,
+                    paddingRight: 20,
+                  }}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <IconSymbol name="chevron.backward" size={22} color="#FF2A2A" style={{ marginLeft: 20 , marginTop: -9}} />
+                  <Text style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 0, lineHeight: 22,marginTop: -9}}>
+                    Projects
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
+            return undefined;
+          },
           headerRight: () => {
             if (!showHeaderActions) return null;
             return (
