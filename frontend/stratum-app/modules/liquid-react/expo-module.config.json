@@ -2,6 +2,10 @@
   "name": "liquid-react",
   "platforms": ["ios"],
   "ios": {
-    "modules": ["LiquidReactModule"]
+    "modules": [
+      "LiquidReactModule",
+      "LiquidReactButtonModule",
+      "LiquidReactSegmentedControlModule"
+    ]
   }
 }

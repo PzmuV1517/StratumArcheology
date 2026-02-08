@@ -3,7 +3,6 @@ import { Platform, TouchableOpacity, View } from "react-native";
 import { Stack } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
 import styles from "@/src/components/project/ProjectDetailStyles";
 import ProjectOverlays from "@/src/components/project/ProjectOverlays";
 import { ProjectDetailProvider, useProjectDetail } from "@/src/contexts/ProjectDetailContext";
@@ -38,31 +37,6 @@ function ProjectStack() {
           presentation: "card",
           headerRight: () => {
             if (!showHeaderActions) return null;
-            if (Platform.OS === "ios") {
-              return (
-                <>
-                  <LiquidGlassButton
-                    title=""
-                    onPress={() => setShowFilesOverlay(true)}
-                    variant="ghost"
-                    size="sm"
-                    icon={<IconSymbol name="folder.fill" size={20} color="#FF2A2A" />}
-                    style={styles.headerGlassBubbleButtonSpaced}
-                    textStyle={{ fontSize: 0 }}
-                  />
-                  <LiquidGlassButton
-                    title=""
-                    onPress={() => setShowMenu(true)}
-                    variant="ghost"
-                    size="sm"
-                    icon={<IconSymbol name="line.3.horizontal" size={20} color="#FF2A2A" />}
-                    style={styles.headerGlassBubbleButton}
-                    textStyle={{ fontSize: 0 }}
-                  />
-                </>
-              );
-            }
-
             return (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <TouchableOpacity
