@@ -90,3 +90,7 @@ test-frontend:
 	cd frontend/stratum-app && npm test
 
 test: test-backend test-frontend
+
+# get en0 address
+ip:
+	ipconfig getifaddr en0
