@@ -11,6 +11,21 @@ import {
 } from "react-native";
 import { LiquidGlassView, isLiquidGlassSupported } from "../../utils/liquidGlass";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// liquid-react native toolbar (iOS only)
+let NativeToolbar: React.ComponentType<any> | null = null;
+let NativeToolbarButton: React.ComponentType<any> | null = null;
+if (Platform.OS === "ios") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const lr = require("liquid-react");
+    NativeToolbar = lr.NativeToolbar;
+    NativeToolbarButton = lr.NativeToolbarButton;
+  } catch {
+    // fallback
+  }
+}
+const useNativeToolbar = Platform.OS === "ios" && NativeToolbar != null;
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
 import { offlineFilesStorage } from "../../services/offlineService";
@@ -676,17 +691,34 @@ export default function FilesOverlay({
       ref={rootRef}
       style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
     >
-      <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassSupported ? { effect: "regular" } : {})}>
-        <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
-          <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text
-          style={{ color: "#F5F5F5", fontSize: 18, fontWeight: "700", flex: 1 }}
-          numberOfLines={1}
+      {useNativeToolbar && NativeToolbar && NativeToolbarButton ? (
+        <NativeToolbar
+          translucent
+          style={[styles.headerGlass, { height: 44 }]}
         >
-          {title}
-        </Text>
-      </HeaderWrapper>
+          <NativeToolbarButton
+            icon="chevron.backward"
+            title="Back"
+            onPress={onClose}
+          />
+          <NativeToolbarButton
+            title={title}
+            disabled
+          />
+        </NativeToolbar>
+      ) : (
+        <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassSupported ? { effect: "regular" } : {})}>
+          <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
+            <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
+          </TouchableOpacity>
+          <Text
+            style={{ color: "#F5F5F5", fontSize: 18, fontWeight: "700", flex: 1 }}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        </HeaderWrapper>
+      )}
       {/* Bulk actions bar - separate row when selections exist */}
       {multiSelect && selectedIds.size > 0 && (
         <ScrollView

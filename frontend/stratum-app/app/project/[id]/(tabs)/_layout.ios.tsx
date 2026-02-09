@@ -1,16 +1,10 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { DynamicColorIOS } from "react-native";
-
-import { LiquidReact } from "liquid-react";
 
 const ACTIVE_COLOR = "#FF2A2A";
 
 export default function ProjectTabsLayout() {
-  useEffect(() => {
-    LiquidReact.setSidebarAdaptable(true);
-  }, []);
-
   return (
     <NativeTabs
       minimizeBehavior="onScrollDown"
