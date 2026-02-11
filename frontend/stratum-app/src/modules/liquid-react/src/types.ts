@@ -137,9 +137,9 @@ onValueChange?: BubblingEventHandler<SegmentedControlValueChangeEvent>;
 export interface NativeSearchBarProps extends ViewProps {
 placeholder?: string;
 text?: string;
-onChangeText?: BubblingEventHandler<SearchBarChangeEvent>;
-onSearchPress?: BubblingEventHandler<SearchBarChangeEvent>;
-onCancelPress?: BubblingEventHandler<{}>;
+onTextChanged?: DirectEventHandler<SearchBarChangeEvent>;
+onSearchPressed?: DirectEventHandler<SearchBarChangeEvent>;
+onCancelPressed?: DirectEventHandler<{}>;
 }
 
 export interface NativeNavigationBarProps extends ViewProps {
