@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Modal,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { projectService } from "../../src/services/projectService";
+import { activityService } from "../../src/services/activityService";
 import { useAuth } from "../../src/contexts/AuthContext";
 import type { Project } from "../../src/services/projectService.types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "../../src/config/config";
 
 interface Activity {
   id: string;
@@ -23,6 +24,66 @@ interface Activity {
   user_id?: string;
   project_id: string;
 }
+
+// All available quick actions
+interface QuickAction {
+  id: string;
+  icon: string;
+  label: string;
+  route: string;
+  needsProject?: boolean; // If true, shows project picker first
+  projectTab?: string; // Tab index to navigate to within a project
+}
+
+const ALL_QUICK_ACTIONS: QuickAction[] = [
+  { id: "new-project", icon: "➕", label: "New Project", route: "/modal" },
+  { id: "join-project", icon: "🔗", label: "Join", route: "/join-project" },
+  { id: "settings", icon: "⚙️", label: "Settings", route: "/settings" },
+  {
+    id: "open-project",
+    icon: "📂",
+    label: "Open Project",
+    route: "",
+    needsProject: true,
+  },
+  {
+    id: "project-notes",
+    icon: "📝",
+    label: "Notes",
+    route: "",
+    needsProject: true,
+    projectTab: "notes",
+  },
+  {
+    id: "project-files",
+    icon: "🗂️",
+    label: "Files",
+    route: "",
+    needsProject: true,
+    projectTab: "artefacts",
+  },
+  {
+    id: "project-gps",
+    icon: "📍",
+    label: "GPS Map",
+    route: "",
+    needsProject: true,
+    projectTab: "gps",
+  },
+  {
+    id: "project-gallery",
+    icon: "🖼️",
+    label: "Gallery",
+    route: "",
+    needsProject: true,
+    projectTab: "gallery",
+  },
+  { id: "explore", icon: "🔍", label: "Explore", route: "/(tabs)/explore" },
+  { id: "profile", icon: "👤", label: "Profile", route: "/(tabs)/profile" },
+];
+
+const DEFAULT_ACTIONS = ["new-project", "join-project", "settings"];
+const QUICK_ACTIONS_KEY = "overview_quick_actions";
 
 /**
  * Overview Tab - Main landing page showing:
@@ -39,6 +100,94 @@ export default function OverviewScreen() {
   >({});
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+
+  // Quick actions customization
+  const [selectedActionIds, setSelectedActionIds] =
+    useState<string[]>(DEFAULT_ACTIONS);
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [tempSelectedIds, setTempSelectedIds] = useState<string[]>([]);
+
+  // Project picker for project-specific quick actions
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [pendingAction, setPendingAction] = useState<QuickAction | null>(null);
+
+  // Load saved quick actions on mount
+  useEffect(() => {
+    AsyncStorage.getItem(QUICK_ACTIONS_KEY).then((saved) => {
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSelectedActionIds(parsed);
+          }
+        } catch {
+          // Use default
+        }
+      }
+    });
+  }, []);
+
+  const openModifyModal = () => {
+    setTempSelectedIds([...selectedActionIds]);
+    setShowModifyModal(true);
+  };
+
+  const toggleAction = (actionId: string) => {
+    setTempSelectedIds((prev) => {
+      if (prev.includes(actionId)) {
+        // Don't allow less than 1 action
+        if (prev.length <= 1) return prev;
+        return prev.filter((id) => id !== actionId);
+      } else {
+        // Max 4 actions
+        if (prev.length >= 4) return prev;
+        return [...prev, actionId];
+      }
+    });
+  };
+
+  const saveQuickActions = async () => {
+    setSelectedActionIds(tempSelectedIds);
+    await AsyncStorage.setItem(QUICK_ACTIONS_KEY, JSON.stringify(tempSelectedIds));
+    setShowModifyModal(false);
+  };
+
+  const getSelectedActions = (): QuickAction[] => {
+    return selectedActionIds
+      .map((id) => ALL_QUICK_ACTIONS.find((a) => a.id === id))
+      .filter(Boolean) as QuickAction[];
+  };
+
+  const handleQuickAction = (action: QuickAction) => {
+    if (action.needsProject) {
+      if (recentProjects.length === 0) {
+        // No projects — just go to Projects tab
+        router.push("/(tabs)/projects" as any);
+        return;
+      }
+      if (recentProjects.length === 1) {
+        // Only one project — go directly
+        navigateToProject(recentProjects[0].id, action);
+        return;
+      }
+      // Multiple projects — show picker
+      setPendingAction(action);
+      setShowProjectPicker(true);
+    } else {
+      router.push(action.route as any);
+    }
+  };
+
+  const navigateToProject = (projectId: string, action: QuickAction) => {
+    const tab = action.projectTab;
+    if (tab) {
+      router.push(`/project/${projectId}?tab=${tab}` as any);
+    } else {
+      router.push(`/project/${projectId}` as any);
+    }
+    setShowProjectPicker(false);
+    setPendingAction(null);
+  };
 
   const loadRecentProjects = useCallback(async () => {
     try {
@@ -78,30 +227,21 @@ export default function OverviewScreen() {
     const activitiesMap: Record<string, Activity[]> = {};
 
     try {
-      const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
-      for (const project of projects) {
-        try {
-          const response = await fetch(
-            `${apiBaseUrl}/api/activities/project/${project.id}?limit=5`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          );
-
-          if (response.ok) {
-            const activities = await response.json();
-            activitiesMap[project.id] = activities;
+      // Load activities in parallel using activityService
+      await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const activities = await activityService.getActivities(project.id, 5, 0);
+            activitiesMap[project.id] = activities as unknown as Activity[];
+          } catch (err) {
+            console.error(
+              `Failed to load activities for project ${project.id}:`,
+              err,
+            );
+            activitiesMap[project.id] = [];
           }
-        } catch (err) {
-          console.error(`Failed to load activities for project ${project.id}:`, err);
-          activitiesMap[project.id] = [];
-        }
-      }
+        }),
+      );
 
       setProjectActivities(activitiesMap);
     } finally {
@@ -124,26 +264,9 @@ export default function OverviewScreen() {
     return date.toLocaleDateString();
   };
 
+  // Use the comprehensive icon mapping from activityService
   const getActivityIcon = (type: string): string => {
-    switch (type) {
-      case "project_created":
-      case "PROJECT_CREATED":
-        return "🎉";
-      case "file_uploaded":
-      case "FILE_UPLOADED":
-        return "📄";
-      case "note_created":
-      case "NOTE_CREATED":
-        return "📝";
-      case "member_joined":
-      case "MEMBER_JOINED":
-        return "👤";
-      case "folder_created":
-      case "FOLDER_CREATED":
-        return "📁";
-      default:
-        return "•";
-    }
+    return activityService.getActivityIcon(type);
   };
 
   const renderProjectCard = (project: Project) => {
@@ -274,39 +397,172 @@ export default function OverviewScreen() {
           <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
             Quick Actions
           </Text>
-          <TouchableOpacity
-            style={styles.modifyButton}
-            onPress={() => router.push("/settings")}
-          >
+          <TouchableOpacity style={styles.modifyButton} onPress={openModifyModal}>
             <Text style={styles.modifyButtonText}>Modify</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/modal")}
-          >
-            <Text style={styles.quickActionIcon}>⚙️</Text>
-            <Text style={styles.quickActionText}>New Project</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/join-project")}
-          >
-            <Text style={styles.quickActionIcon}>🔗</Text>
-            <Text style={styles.quickActionText}>Join Project</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push("/settings")}
-          >
-            <Text style={styles.quickActionIcon}>⚙️</Text>
-            <Text style={styles.quickActionText}>Settings</Text>
-          </TouchableOpacity>
+          {getSelectedActions().map((action) => (
+            <TouchableOpacity
+              key={action.id}
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction(action)}
+            >
+              <Text style={styles.quickActionIcon}>{action.icon}</Text>
+              <Text style={styles.quickActionText}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
+
+      {/* Modify Quick Actions Modal */}
+      <Modal
+        visible={showModifyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowModifyModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Customize Quick Actions</Text>
+
+            {/* Selection counter */}
+            <View style={styles.selectionCounter}>
+              <Text style={styles.selectionCounterText}>
+                {tempSelectedIds.length}/4 selected
+              </Text>
+              {tempSelectedIds.length >= 4 && (
+                <Text style={styles.maxReachedText}>Maximum reached</Text>
+              )}
+            </View>
+
+            <ScrollView
+              style={styles.actionsScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.actionsList}>
+                {ALL_QUICK_ACTIONS.map((action) => {
+                  const isSelected = tempSelectedIds.includes(action.id);
+                  const isDisabled = !isSelected && tempSelectedIds.length >= 4;
+                  return (
+                    <TouchableOpacity
+                      key={action.id}
+                      style={[
+                        styles.actionItem,
+                        isSelected && styles.actionItemSelected,
+                        isDisabled && styles.actionItemDisabled,
+                      ]}
+                      onPress={() => toggleAction(action.id)}
+                      disabled={isDisabled}
+                    >
+                      <Text
+                        style={[
+                          styles.actionItemIcon,
+                          isDisabled && styles.actionItemIconDisabled,
+                        ]}
+                      >
+                        {action.icon}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.actionItemLabel,
+                          isSelected && styles.actionItemLabelSelected,
+                          isDisabled && styles.actionItemLabelDisabled,
+                        ]}
+                      >
+                        {action.label}
+                      </Text>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          isSelected && styles.checkboxSelected,
+                          isDisabled && styles.checkboxDisabled,
+                        ]}
+                      >
+                        {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowModifyModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={saveQuickActions}>
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Project Picker Modal */}
+      <Modal
+        visible={showProjectPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowProjectPicker(false);
+          setPendingAction(null);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {pendingAction?.label
+                ? `${pendingAction.label} — Choose Project`
+                : "Choose Project"}
+            </Text>
+            <ScrollView
+              style={styles.actionsScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.actionsList}>
+                {recentProjects.map((project) => (
+                  <TouchableOpacity
+                    key={project.id}
+                    style={styles.actionItem}
+                    onPress={() => navigateToProject(project.id, pendingAction!)}
+                  >
+                    <Text style={styles.actionItemIcon}>📋</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.actionItemLabel} numberOfLines={1}>
+                        {project.name}
+                      </Text>
+                      {project.description ? (
+                        <Text
+                          style={{ color: "#9A9A9A", fontSize: 12, marginTop: 2 }}
+                          numberOfLines={1}
+                        >
+                          {project.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={{ color: "#9A9A9A", fontSize: 16 }}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowProjectPicker(false);
+                  setPendingAction(null);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -317,7 +573,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   contentContainer: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
@@ -507,11 +763,12 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 12,
   },
   quickActionButton: {
-    flex: 1,
+    width: "47%",
     backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 16,
@@ -520,13 +777,149 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
   },
   quickActionIcon: {
-    fontSize: 24,
+    fontSize: 28,
     marginBottom: 8,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#F5F5F5",
-    fontWeight: "500",
+    fontWeight: "600",
     textAlign: "center",
+  },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  selectionCounter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#111111",
+    borderRadius: 10,
+  },
+  selectionCounterText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FF2A2A",
+  },
+  maxReachedText: {
+    fontSize: 12,
+    color: "#9A9A9A",
+    fontStyle: "italic",
+  },
+  actionsScrollView: {
+    maxHeight: 350,
+    marginBottom: 16,
+  },
+  actionsList: {
+    gap: 10,
+  },
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    backgroundColor: "#111111",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  actionItemSelected: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "rgba(255, 42, 42, 0.1)",
+  },
+  actionItemDisabled: {
+    opacity: 0.4,
+  },
+  actionItemIcon: {
+    fontSize: 22,
+    marginRight: 14,
+  },
+  actionItemIconDisabled: {
+    opacity: 0.5,
+  },
+  actionItemLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: "#9A9A9A",
+    fontWeight: "500",
+  },
+  actionItemLabelSelected: {
+    color: "#F5F5F5",
+  },
+  actionItemLabelDisabled: {
+    color: "#5A5A5A",
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#3A3A3A",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxSelected: {
+    backgroundColor: "#FF2A2A",
+    borderColor: "#FF2A2A",
+  },
+  checkboxDisabled: {
+    borderColor: "#2A2A2A",
+  },
+  checkmark: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#9A9A9A",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  saveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#FF2A2A",
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#F5F5F5",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

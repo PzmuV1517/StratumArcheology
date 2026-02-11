@@ -14,8 +14,10 @@ export enum ActivityType {
 
   // Files
   FILE_UPLOADED = "file_uploaded",
+  FILE_UPDATED = "file_updated",
   FILE_DELETED = "file_deleted",
   FILE_MOVED = "file_moved",
+  FILE_RENAMED = "file_renamed",
   FOLDER_CREATED = "folder_created",
   FOLDER_DELETED = "folder_deleted",
 
@@ -24,16 +26,23 @@ export enum ActivityType {
   NOTE_UPDATED = "note_updated",
   NOTE_DELETED = "note_deleted",
   NOTE_ATTACHMENT_ADDED = "note_attachment_added",
+  NOTE_ATTACHMENT_DELETED = "note_attachment_deleted",
 
   // Forms
   CONTEXT_FEATURE_CREATED = "context_feature_created",
+  CONTEXT_FEATURE_ADDED = "context_feature_added",
   STRATIGRAPHIC_UNIT_CREATED = "stratigraphic_unit_created",
+  STRATIGRAPHIC_UNIT_ADDED = "stratigraphic_unit_added",
   ARTEFACT_CREATED = "artefact_created",
+  ARTEFACT_ADDED = "artefact_added",
 
   // GPS
   GPS_ENABLED = "gps_enabled",
   GPS_DISABLED = "gps_disabled",
   GPS_UPDATED = "gps_updated",
+
+  // Harris Matrix
+  HARRIS_MATRIX_UPDATED = "harris_matrix_updated",
 }
 
 export interface ActivityExtraData {
@@ -45,9 +54,12 @@ export interface ActivityExtraData {
   attachment_type?: string;
   old_role?: string;
   new_role?: string;
+  old_name?: string;
+  new_name?: string;
   new_owner_id?: number;
   form_type?: string;
   record_id?: string;
+  file_id?: string;
   [key: string]: any;
 }
 

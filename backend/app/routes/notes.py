@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -381,10 +381,13 @@ async def add_note_attachment(
         "audio/aac",
         "audio/ogg",
         "audio/m4a",
+        "audio/x-m4a",
+        "audio/mp4a-latm",
     }
-    if (file.content_type or "") not in allowed:
+    content_type = (file.content_type or "").lower()
+    if content_type not in allowed:
         raise HTTPException(
-            status_code=400, detail=f"File type {file.content_type} not allowed"
+            status_code=400, detail=f"File type {file.content_type} not allowed. Allowed: {', '.join(sorted(allowed))}"
         )
 
     # Upload to MinIO
@@ -545,3 +548,97 @@ async def delete_note_attachment(
     await emit_content_update(project_id, "notes")
 
     return None
+
+
+@router.get("/{note_id}/attachments/{attachment_id}/stream")
+async def stream_note_attachment(
+    note_id: str,
+    attachment_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Stream an attachment through the backend.
+    This proxies the file from MinIO so mobile devices can access it without
+    needing direct MinIO connectivity.
+    Supports HTTP Range requests required by iOS AVFoundation (AVPlayer).
+    """
+    from fastapi.responses import Response, StreamingResponse
+    from io import BytesIO
+
+    note = db.query(Note).filter(Note.id == note_id).first()
+
+    if not note:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
+        )
+
+    check_project_permission(note.project_id, current_user, db)
+
+    attachment = (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.id == attachment_id, NoteAttachment.note_id == note_id
+        )
+        .first()
+    )
+
+    if not attachment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
+        )
+
+    # Get file from MinIO
+    file_data = await minio_client.get_file(attachment.file_path)
+    if not file_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found in storage"
+        )
+
+    total_size = len(file_data)
+    content_type = attachment.file_type or "application/octet-stream"
+    base_headers = {
+        "Content-Disposition": f'inline; filename="{attachment.filename}"',
+        "Accept-Ranges": "bytes",
+    }
+
+    # Handle Range requests (required by iOS AVFoundation / AVPlayer)
+    range_header = request.headers.get("range")
+    if range_header:
+        # Parse "bytes=start-end"
+        try:
+            range_spec = range_header.replace("bytes=", "")
+            parts = range_spec.split("-")
+            start = int(parts[0]) if parts[0] else 0
+            end = int(parts[1]) if parts[1] else total_size - 1
+        except (ValueError, IndexError):
+            start = 0
+            end = total_size - 1
+
+        # Clamp
+        start = max(0, start)
+        end = min(end, total_size - 1)
+        content_length = end - start + 1
+
+        return Response(
+            content=file_data[start : end + 1],
+            status_code=206,
+            media_type=content_type,
+            headers={
+                **base_headers,
+                "Content-Range": f"bytes {start}-{end}/{total_size}",
+                "Content-Length": str(content_length),
+            },
+        )
+
+    # Full response (no Range header)
+    return Response(
+        content=file_data,
+        status_code=200,
+        media_type=content_type,
+        headers={
+            **base_headers,
+            "Content-Length": str(total_size),
+        },
+    )

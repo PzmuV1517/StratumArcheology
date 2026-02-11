@@ -15,9 +15,9 @@ import {
   Modal,
   StyleSheet,
   Platform,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { showAlert } from "../../utils/alert";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 
@@ -49,7 +49,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Camera Permission", "Camera access is needed to take photos.", [
+      showAlert("Camera Permission", "Camera access is needed to take photos.", [
         { text: "OK" },
       ]);
       return false;
@@ -62,7 +62,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert(
+      showAlert(
         "Gallery Permission",
         "Photo library access is needed to upload photos.",
         [{ text: "OK" }],
@@ -102,7 +102,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
       }
     } catch (error) {
       console.error("[FileUploadMenu] Camera error:", error);
-      Alert.alert("Error", "Failed to take photo. Please try again.");
+      showAlert("Error", "Failed to take photo. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -142,7 +142,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
       }
     } catch (error) {
       console.error("[FileUploadMenu] Gallery error:", error);
-      Alert.alert("Error", "Failed to select photos. Please try again.");
+      showAlert("Error", "Failed to select photos. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -170,7 +170,7 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
       }
     } catch (error) {
       console.error("[FileUploadMenu] Document picker error:", error);
-      Alert.alert("Error", "Failed to select files. Please try again.");
+      showAlert("Error", "Failed to select files. Please try again.");
     } finally {
       setLoading(false);
     }

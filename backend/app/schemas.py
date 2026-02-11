@@ -44,6 +44,7 @@ class UserBase(BaseModel):
     email: EmailStr
     display_name: str | None = None
     photo_url: str | None = None
+    bio: str | None = None
 
 
 class UserCreate(UserBase):
@@ -63,6 +64,7 @@ class UserResponse(UserBase):
 class ProfileUpdateRequest(BaseModel):
     display_name: str | None = None
     photo_url: str | None = None
+    bio: str | None = None
 
 
 # Project Member Response (includes role from join table)
@@ -71,6 +73,7 @@ class ProjectMemberResponse(BaseModel):
     email: str
     display_name: str | None = None
     photo_url: str | None = None
+    bio: str | None = None
     role: UserRole
 
     class Config:

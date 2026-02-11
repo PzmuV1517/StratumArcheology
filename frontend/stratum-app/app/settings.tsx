@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -18,6 +17,7 @@ import { useAuth } from "../src/contexts/AuthContext";
 import api from "../src/services/api";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import { showAlert } from "../src/utils/alert";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import {
   offlineFilesStorage,
@@ -127,6 +127,7 @@ export default function SettingsScreen() {
   const [otherUsed, setOtherUsed] = useState(0);
   const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
   const [loadingStorage, setLoadingStorage] = useState(true);
+  const [storageAvailable, setStorageAvailable] = useState(false);
   const [offlineStorageStats, setOfflineStorageStats] =
     useState<OfflineStorageStats | null>(null);
 
@@ -151,6 +152,7 @@ export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(user?.display_name || "");
   const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
+  const [newBio, setNewBio] = useState(user?.bio || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -234,17 +236,20 @@ export default function SettingsScreen() {
               totalDiskSpace = await FileSystem.getTotalDiskCapacityAsync();
               setTotalStorage(totalDiskSpace);
               setOtherUsed(totalDiskSpace - freeSpace - stratumSize);
+              setStorageAvailable(true);
             } catch {
               // Fallback: estimate total based on free space
               const estimatedTotal = freeSpace + stratumSize + 20 * 1e9; // Rough estimate
               setTotalStorage(estimatedTotal);
               setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+              setStorageAvailable(true);
             }
           } else {
             // Fallback: estimate total based on free space
             const estimatedTotal = freeSpace + stratumSize + 20 * 1e9;
             setTotalStorage(estimatedTotal);
             setOtherUsed(estimatedTotal - freeSpace - stratumSize);
+            setStorageAvailable(true);
           }
         } else {
           // Fallback for Expo Go where this API may not be available
@@ -284,7 +289,7 @@ export default function SettingsScreen() {
 
       if (!netState.isConnected) {
         setConnectionStatus("disconnected");
-        Alert.alert(
+        showAlert(
           "No Network",
           "Your device is not connected to a network. Check your Wi-Fi or cellular data.",
         );
@@ -294,7 +299,7 @@ export default function SettingsScreen() {
 
       if (!netState.isInternetReachable) {
         setConnectionStatus("disconnected");
-        Alert.alert(
+        showAlert(
           "No Internet",
           "Network connected but internet is not reachable. Try again later.",
         );
@@ -310,17 +315,17 @@ export default function SettingsScreen() {
           pendingQueueCount > 0
             ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
             : "";
-        Alert.alert(
+        showAlert(
           "Connected ✓",
           `Successfully connected to STRATUM backend.${pendingMessage}`,
         );
       } else {
         setConnectionStatus("disconnected");
-        Alert.alert("Connection Failed", "Could not reach STRATUM backend.");
+        showAlert("Connection Failed", "Could not reach STRATUM backend.");
       }
     } catch {
       setConnectionStatus("disconnected");
-      Alert.alert(
+      showAlert(
         "Connection Failed",
         "Could not reach STRATUM backend. The server may be temporarily unavailable.",
       );
@@ -336,7 +341,7 @@ export default function SettingsScreen() {
   };
 
   const clearAllOfflineFiles = async () => {
-    Alert.alert(
+    showAlert(
       "Clear All Offline Files",
       "This will remove all files saved for offline access. You will need an internet connection to view them again.",
       [
@@ -355,7 +360,7 @@ export default function SettingsScreen() {
   };
 
   const removeDownloadedProject = async (projectId: string) => {
-    Alert.alert(
+    showAlert(
       "Remove Downloaded Project",
       "This will remove the cached project data. You will need internet to view it again.",
       [
@@ -370,7 +375,7 @@ export default function SettingsScreen() {
               await loadStorageInfo();
             } catch (error) {
               console.error("Failed to remove downloaded project:", error);
-              Alert.alert("Error", "Failed to remove downloaded project");
+              showAlert("Error", "Failed to remove downloaded project");
             }
           },
         },
@@ -384,7 +389,7 @@ export default function SettingsScreen() {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
+        showAlert(
           "Permission Required",
           "Please allow access to your photo library to upload a profile picture.",
         );
@@ -402,14 +407,14 @@ export default function SettingsScreen() {
         const asset = result.assets[0];
         // Check file size (50MB max) - fileSize may not always be available
         if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
-          Alert.alert("Image Too Large", "Please select an image under 50MB.");
+          showAlert("Image Too Large", "Please select an image under 50MB.");
           return;
         }
         setSelectedImage(asset.uri);
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image.");
+      showAlert("Error", "Failed to pick image.");
     }
   };
 
@@ -469,12 +474,16 @@ export default function SettingsScreen() {
         }
       }
 
-      const updates: { display_name?: string; photo_url?: string } = {};
+      const updates: { display_name?: string; photo_url?: string; bio?: string } =
+        {};
       if (newDisplayName !== user?.display_name) {
         updates.display_name = newDisplayName;
       }
       if (photoUrl !== user?.photo_url) {
         updates.photo_url = photoUrl;
+      }
+      if (newBio !== (user?.bio || "")) {
+        updates.bio = newBio;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -482,16 +491,24 @@ export default function SettingsScreen() {
         if (refreshUser) {
           await refreshUser();
         }
-        Alert.alert("Success", "Profile updated successfully.");
+        showAlert("Success", "Profile updated successfully.");
       }
 
       setShowProfileModal(false);
       setSelectedImage(null);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to update profile.");
+      showAlert("Error", error.message || "Failed to update profile.");
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const openProfileModal = () => {
+    setNewDisplayName(user?.display_name || "");
+    setNewPhotoUrl(user?.photo_url || "");
+    setNewBio(user?.bio || "");
+    setSelectedImage(null);
+    setShowProfileModal(true);
   };
 
   // Group offline files by project
@@ -517,9 +534,6 @@ export default function SettingsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Back</Text>
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
       </View>
 
@@ -531,15 +545,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => {
-              setNewDisplayName(user?.display_name || "");
-              setNewPhotoUrl(user?.photo_url || "");
-              setSelectedImage(null);
-              setShowProfileModal(true);
-            }}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={openProfileModal}>
             <View style={styles.profilePreview}>
               {user?.photo_url ? (
                 <Image
@@ -573,12 +579,21 @@ export default function SettingsScreen() {
               <Text style={styles.cardTitle}>Device Storage</Text>
               {loadingStorage ? (
                 <ActivityIndicator color="#FF2A2A" style={{ marginVertical: 20 }} />
-              ) : (
+              ) : storageAvailable ? (
                 <StorageBar
                   stratumUsed={stratumUsed}
                   otherUsed={otherUsed}
                   totalStorage={totalStorage}
                 />
+              ) : (
+                <View style={{ paddingVertical: 16, alignItems: "center" }}>
+                  <Text
+                    style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center" }}
+                  >
+                    Storage info unavailable in this environment.{"\n"}
+                    Build a development build for accurate data.
+                  </Text>
+                </View>
               )}
             </View>
 
@@ -921,6 +936,23 @@ export default function SettingsScreen() {
                 autoCapitalize="words"
               />
             </View>
+
+            {/* Bio */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Bio</Text>
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={newBio}
+                onChangeText={setNewBio}
+                placeholder="Tell us about yourself..."
+                placeholderTextColor="#666"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={300}
+              />
+              <Text style={styles.charCount}>{newBio.length}/300</Text>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -1208,6 +1240,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
+  },
+  bioInput: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 12,
+    padding: 16,
+    color: "#F5F5F5",
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    height: 100,
+    textAlignVertical: "top",
+  },
+  charCount: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "right",
+    marginTop: 4,
   },
   // Connection & Sync styles
   connectionRow: {

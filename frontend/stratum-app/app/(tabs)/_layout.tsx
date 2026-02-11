@@ -1,59 +1,35 @@
+/**
+ * Fallback Tab Layout
+ * Used when no platform-specific layout matches (e.g., _layout.ios.tsx, _layout.android.tsx)
+ * This is required by expo-router when using platform extensions
+ */
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
-import { BlurView } from "expo-blur";
-
-import { HapticTab } from "@/components/haptic-tab";
+import { StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
-/**
- * TabLayout - Main navigation tabs
- * Tab order: Overview (landing), Projects, Profile, Settings
- * Auth is handled by AuthRedirector at the root level
- *
- * Uses iOS-style liquid glass aesthetic with blur effects
- */
+const ACTIVE_COLOR = "#FF2A2A";
+const INACTIVE_COLOR = "#9A9A9A";
+
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#FF2A2A",
-        tabBarInactiveTintColor: "#9A9A9A",
+        tabBarActiveTintColor: ACTIVE_COLOR,
+        tabBarInactiveTintColor: INACTIVE_COLOR,
         headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: () =>
-          Platform.OS === "ios" ? (
-            <BlurView
-              intensity={50}
-              tint="systemChromeMaterialDark"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: "rgba(26, 26, 26, 0.95)" },
-              ]}
-            />
-          ),
-        tabBarStyle: Platform.select({
-          ios: {
-            position: "absolute",
-            backgroundColor: "transparent",
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
-            borderTopWidth: StyleSheet.hairlineWidth,
-          },
-          default: {
-            backgroundColor: "#1A1A1A",
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
-            borderTopWidth: StyleSheet.hairlineWidth,
-          },
-        }),
+        tabBarStyle: {
+          backgroundColor: "#1A1A1A",
+          borderTopColor: "rgba(255, 255, 255, 0.1)",
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
           letterSpacing: 0.3,
-          marginTop: 2,
         },
       }}
       initialRouteName="overview"

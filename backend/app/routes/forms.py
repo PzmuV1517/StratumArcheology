@@ -487,6 +487,50 @@ async def append_stratigraphic_unit(
     return {"status": "ok"}
 
 
+@router.get("/project/{project_id}/artefacts")
+async def get_artefacts(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get all artefacts for a project from the CSV file."""
+    check_project_permission(project_id, current_user, db)
+
+    # Find the artefacts.csv file
+    forms_folder = _find_child_by_name(db, project_id, None, "Forms")
+    if not forms_folder:
+        return []
+
+    artefacts_file = _find_child_by_name(
+        db, project_id, forms_folder.id, "artefacts.csv"
+    )
+    if not artefacts_file or not artefacts_file.storage_path:
+        return []
+
+    # Read and parse CSV
+    try:
+        data = minio_client.client.get_object(
+            minio_client.bucket_name, artefacts_file.storage_path
+        )
+        buf = data.read()
+        data.close()
+        data.release_conn()
+
+        if not buf:
+            return []
+
+        s = buf.decode("utf-8", errors="ignore")
+        reader = csv.DictReader(io.StringIO(s))
+        artefacts = []
+        for row in reader:
+            artefacts.append(dict(row))
+        return artefacts
+    except Exception as e:
+        # File doesn't exist or can't be read
+        print(f"Error reading artefacts: {e}")
+        return []
+
+
 @router.post("/project/{project_id}/artefact", status_code=status.HTTP_201_CREATED)
 async def append_artefact(
     project_id: str,

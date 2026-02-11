@@ -74,6 +74,9 @@ class ActivityType(str, enum.Enum):
     # GPS activities
     GPS_UPDATED = "gps_updated"
 
+    # Harris Matrix activities
+    HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
+
 
 # Association table for project members
 project_members = Table(
@@ -94,6 +97,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     display_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)  # User bio/about me
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -123,6 +127,7 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    harris_matrix_data = Column(JSON, nullable=True)  # Harris Matrix visualization data
 
     # Relationships
     owner = relationship("User", back_populates="owned_projects")

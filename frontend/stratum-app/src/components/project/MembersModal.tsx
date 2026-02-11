@@ -8,16 +8,22 @@ import {
   StyleSheet,
   Platform,
   Image,
-  Alert,
   Clipboard,
+  ActivityIndicator,
 } from "react-native";
+
 import { projectService } from "../../services/projectService";
+import api from "../../services/api";
+import { showAlert } from "../../utils/alert";
+import QRCodeView from "../common/QRCodeView";
 
 interface Member {
   id: string;
   display_name: string;
   email: string;
   role: "LEADER" | "RESEARCHER" | "GUEST" | "leader" | "researcher" | "guest";
+  photo_url?: string;
+  bio?: string;
 }
 
 interface Props {
@@ -61,6 +67,8 @@ export default function MembersModal({
   const canManage = isOwner || isResearcher; // Both can manage, but with different permissions
 
   const [inviteRole, setInviteRole] = useState<"RESEARCHER" | "GUEST">("GUEST");
+  const [inviteMaxUses, setInviteMaxUses] = useState<number | null>(null); // null = unlimited
+  const [inviteTtlHours, setInviteTtlHours] = useState<number>(336); // 14 days default
   const appOrigin =
     Platform.OS === "web"
       ? typeof window !== "undefined"
@@ -73,6 +81,7 @@ export default function MembersModal({
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [generatedExpiresAt, setGeneratedExpiresAt] = useState<string | null>(null);
+  const [generatedMaxUses, setGeneratedMaxUses] = useState<number | null>(null);
   const [isManaging, setIsManaging] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(
@@ -85,6 +94,49 @@ export default function MembersModal({
   } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Profile viewing state
+  const [viewingProfile, setViewingProfile] = useState<{
+    id: string;
+    display_name: string;
+    email: string;
+    photo_url?: string;
+    bio?: string;
+    role: string;
+  } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Fetch and show user profile
+  const viewProfile = async (member: Member) => {
+    setLoadingProfile(true);
+    setViewingProfile({
+      id: member.id,
+      display_name: member.display_name,
+      email: member.email,
+      photo_url: member.photo_url,
+      bio: member.bio,
+      role: getMemberRole(member),
+    });
+    
+    // Try to fetch the full profile with bio if not already present
+    if (!member.bio && !member.photo_url) {
+      try {
+        const response = await api.get(`/auth/users/${member.id}`);
+        setViewingProfile({
+          id: member.id,
+          display_name: response.data.display_name || member.display_name,
+          email: response.data.email || member.email,
+          photo_url: response.data.photo_url,
+          bio: response.data.bio,
+          role: getMemberRole(member),
+        });
+      } catch (e) {
+        // Ignore errors, just show what we have
+        console.log("Could not fetch full profile:", e);
+      }
+    }
+    setLoadingProfile(false);
+  };
 
   // Role hierarchy for permission checks
   const roleHierarchy: Record<string, number> = {
@@ -208,7 +260,7 @@ export default function MembersModal({
       if (Platform.OS === "web") {
         alert("Ownership transferred successfully. You are now a researcher.");
       } else {
-        Alert.alert(
+        showAlert(
           "Success",
           "Ownership transferred successfully. You are now a researcher.",
         );
@@ -229,11 +281,14 @@ export default function MembersModal({
       const resp = await projectService.createInvite(
         projectId,
         inviteRole.toLowerCase(),
+        inviteTtlHours,
+        inviteMaxUses,
       );
       const link = `${appOrigin || "stratum://app"}${resp.accept_path}`;
       setGeneratedLink(link);
       setGeneratedCode(resp.code || null);
       setGeneratedExpiresAt(resp.expires_at || (null as any));
+      setGeneratedMaxUses(resp.max_uses ?? null);
     } catch (e: any) {
       setManageError(e?.detail || e?.message || "Failed to generate invite");
     } finally {
@@ -295,6 +350,13 @@ export default function MembersModal({
     }
   };
 
+  // GlassCard wrapper for iOS 26+ Liquid Glass effect
+  const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+    // Use consistent styling across platforms
+    // Fallback to regular View on other platforms
+    return <View style={[styles.modalCard, style]}>{children}</View>;
+  };
+
   return (
     <Modal
       visible={visible}
@@ -303,7 +365,7 @@ export default function MembersModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalBackdrop}>
-        <View style={[styles.modalCard, { maxHeight: "85%" }]}>
+        <GlassCard style={{ maxHeight: "85%" }}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <Text style={styles.sectionTitle}>Team Members</Text>
             {canManage && (
@@ -318,7 +380,7 @@ export default function MembersModal({
             )}
           </View>
 
-          <ScrollView style={{ maxHeight: "60%" }}>
+          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={true}>
             {members.length > 0 ? (
               members.map((m) => {
                 const memberRole = getMemberRole(m);
@@ -332,10 +394,11 @@ export default function MembersModal({
                       onPress={() => {
                         if (isManaging && canManageThis) {
                           toggleMemberExpand(m.id);
+                        } else if (!isManaging) {
+                          viewProfile(m);
                         }
                       }}
                       activeOpacity={0.7}
-                      disabled={!isManaging || !canManageThis}
                     >
                       <View style={styles.memberInfo}>{renderMember(m)}</View>
                       <View
@@ -416,7 +479,6 @@ export default function MembersModal({
                 </Text>
               </View>
             )}
-          </ScrollView>
 
           {/* Transfer ownership confirmation modal */}
           {showTransferConfirm && (
@@ -522,10 +584,65 @@ export default function MembersModal({
             </View>
           )}
 
+          {/* Profile view modal */}
+          {viewingProfile && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.profileCard}>
+                <TouchableOpacity
+                  style={styles.profileCloseBtn}
+                  onPress={() => setViewingProfile(null)}
+                >
+                  <Text style={styles.profileCloseBtnText}>✕</Text>
+                </TouchableOpacity>
+                
+                {loadingProfile ? (
+                  <ActivityIndicator size="large" color="#FF2A2A" style={{ marginVertical: 40 }} />
+                ) : (
+                  <>
+                    {/* Profile picture */}
+                    <View style={styles.profileImageContainer}>
+                      {viewingProfile.photo_url ? (
+                        <Image
+                          source={{ uri: viewingProfile.photo_url }}
+                          style={styles.profileImage}
+                        />
+                      ) : (
+                        <View style={styles.profilePlaceholder}>
+                          <Text style={styles.profilePlaceholderText}>
+                            {viewingProfile.display_name?.charAt(0).toUpperCase() || "U"}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Name and role */}
+                    <Text style={styles.profileName}>{viewingProfile.display_name}</Text>
+                    <View style={[styles.profileRoleBadge, getRoleBadgeStyle(viewingProfile.role)]}>
+                      <Text style={styles.profileRoleBadgeText}>{viewingProfile.role}</Text>
+                    </View>
+
+                    {/* Bio */}
+                    {viewingProfile.bio ? (
+                      <Text style={styles.profileBio}>{viewingProfile.bio}</Text>
+                    ) : (
+                      <Text style={styles.profileBioEmpty}>No bio added</Text>
+                    )}
+
+                    {/* Email */}
+                    <Text style={styles.profileEmail}>{viewingProfile.email}</Text>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Invite section (leaders only) */}
           {isOwner && (
             <View style={styles.inviteSection}>
               <Text style={styles.inviteTitle}>Invite to project</Text>
+              
+              {/* Role selector */}
+              <Text style={styles.inviteSubtitle}>Role</Text>
               <View style={styles.roleSelector}>
                 <TouchableOpacity
                   style={[
@@ -544,6 +661,88 @@ export default function MembersModal({
                   onPress={() => setInviteRole("RESEARCHER")}
                 >
                   <Text style={styles.roleBtnText}>Researcher</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Expiration selector */}
+              <Text style={styles.inviteSubtitle}>Expires after</Text>
+              <View style={styles.roleSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 24 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(24)}
+                >
+                  <Text style={styles.roleBtnText}>1 day</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 168 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(168)}
+                >
+                  <Text style={styles.roleBtnText}>7 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 336 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(336)}
+                >
+                  <Text style={styles.roleBtnText}>14 days</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteTtlHours === 720 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteTtlHours(720)}
+                >
+                  <Text style={styles.roleBtnText}>30 days</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Max uses selector */}
+              <Text style={styles.inviteSubtitle}>Max uses</Text>
+              <View style={styles.roleSelector}>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 1 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(1)}
+                >
+                  <Text style={styles.roleBtnText}>1</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 5 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(5)}
+                >
+                  <Text style={styles.roleBtnText}>5</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === 10 && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(10)}
+                >
+                  <Text style={styles.roleBtnText}>10</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.roleBtn,
+                    inviteMaxUses === null && styles.roleBtnActive,
+                  ]}
+                  onPress={() => setInviteMaxUses(null)}
+                >
+                  <Text style={styles.roleBtnText}>∞</Text>
                 </TouchableOpacity>
               </View>
 
@@ -569,6 +768,7 @@ export default function MembersModal({
                       setGeneratedLink(null);
                       setGeneratedCode(null);
                       setGeneratedExpiresAt(null);
+                      setGeneratedMaxUses(null);
                       setCopiedLink(false);
                       setCopiedCode(false);
                     }}
@@ -610,16 +810,28 @@ export default function MembersModal({
                   {Platform.OS === "web" && (
                     <Image
                       source={{
-                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedLink)}`,
+                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedCode ? `stratum:invite:${generatedCode}` : generatedLink)}`,
                       }}
                       style={styles.qrCode}
                     />
+                  )}
+                  {Platform.OS !== "web" && (
+                    <View style={{ alignItems: "center", marginTop: 12 }}>
+                      <QRCodeView
+                        value={generatedCode ? `stratum:invite:${generatedCode}` : generatedLink}
+                        size={180}
+                        label="Scan to join"
+                      />
+                    </View>
                   )}
                   {generatedExpiresAt && (
                     <Text style={styles.expiresText}>
                       Expires: {new Date(generatedExpiresAt).toLocaleString()}
                     </Text>
                   )}
+                  <Text style={styles.expiresText}>
+                    Max uses: {generatedMaxUses ?? "Unlimited"}
+                  </Text>
                 </View>
               )}
 
@@ -630,13 +842,14 @@ export default function MembersModal({
           )}
 
           {manageError && <Text style={styles.errorText}>{manageError}</Text>}
+          </ScrollView>
 
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Text style={styles.closeBtnText}>Close</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </GlassCard>
       </View>
     </Modal>
   );
@@ -658,6 +871,11 @@ const styles = StyleSheet.create({
     borderColor: "#333",
     width: "100%",
     maxWidth: 600,
+  },
+  glassCard: {
+    backgroundColor: "rgba(26, 26, 24, 0.75)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -838,10 +1056,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 10,
   },
+  inviteSubtitle: {
+    color: "#AAA",
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: 6,
+    marginTop: 4,
+  },
   roleSelector: {
     flexDirection: "row",
     gap: 8,
     marginBottom: 12,
+    flexWrap: "wrap",
   },
   roleBtn: {
     backgroundColor: "#333",
@@ -987,5 +1213,96 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     fontSize: 14,
     fontWeight: "600",
+  },
+  // Profile view styles
+  profileCard: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    minWidth: 280,
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "#333",
+    position: "relative",
+  },
+  profileCloseBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#333",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileCloseBtnText: {
+    color: "#F5F5F5",
+    fontSize: 16,
+  },
+  profileImageContainer: {
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#FF2A2A",
+  },
+  profilePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#FF2A2A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#FF2A2A",
+  },
+  profilePlaceholderText: {
+    color: "#FFF",
+    fontSize: 40,
+    fontWeight: "700",
+  },
+  profileName: {
+    color: "#F5F5F5",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  profileRoleBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  profileRoleBadgeText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  profileBio: {
+    color: "#CCC",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  profileBioEmpty: {
+    color: "#666",
+    fontSize: 13,
+    fontStyle: "italic",
+    marginBottom: 16,
+  },
+  profileEmail: {
+    color: "#888",
+    fontSize: 12,
+    textAlign: "center",
   },
 });

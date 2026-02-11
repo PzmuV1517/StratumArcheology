@@ -7,12 +7,15 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  Alert,
   TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+
 import { fileService } from "../../services/fileService";
+import { showAlert } from "../../utils/alert";
 import { offlineFilesStorage } from "../../services/offlineService";
+import { useWebSocket } from "../../contexts/WebSocketContext";
 import FileUploadMenu, { SelectedFile } from "../files/FileUploadMenu";
 import MyFolderSettingsModal from "./MyFolderSettingsModal";
 
@@ -37,7 +40,7 @@ interface Props {
   onNavigateBreadcrumb?: (index: number) => void;
   onClose: () => void;
   onLoadRoot: () => void;
-  onOpenFolder: (node: FileNode) => void;
+  onOpenFolder: (node: FileNode, customBreadcrumbs?: { id: string | null; name: string }[]) => void;
   onUpload: () => void;
   onFileSelected?: (file: SelectedFile) => void; // New: callback for file selection from menu
   onCreateFolder: () => void;
@@ -95,6 +98,7 @@ export default function FilesOverlay({
 }: Props) {
   // Get safe area insets for proper header spacing on iOS
   const insets = useSafeAreaInsets();
+  const { socket } = useWebSocket();
   const [isDragging, setIsDragging] = useState(false);
   const [dragDepth, setDragDepth] = useState(0);
   const lastDragEvent = useRef<number>(0);
@@ -189,13 +193,18 @@ export default function FilesOverlay({
           /^[a-zA-Z0-9]{20,}$/.test(node.name); // Firebase UID
 
         if (isLikelyUserId) {
+          // If this is the current user's folder, show "My Folder"
+          if (currentUserId && node.name === currentUserId) {
+            return "My Folder";
+          }
+          // Otherwise show other user's display name
           const username = getUsernameForId(node.name);
           if (username) return username;
         }
       }
       return node.name;
     },
-    [isInsideUsersFolder, getUsernameForId],
+    [isInsideUsersFolder, getUsernameForId, currentUserId],
   );
 
   // Get display name for a breadcrumb (handles user ID -> username transformation)
@@ -212,19 +221,24 @@ export default function FilesOverlay({
           /^[a-zA-Z0-9]{20,}$/.test(crumbName); // Firebase UID
 
         if (isLikelyUserId) {
+          // If this is the current user's folder, show "My Folder"
+          if (currentUserId && crumbName === currentUserId) {
+            return "My Folder";
+          }
+          // Otherwise show other user's display name
           const username = getUsernameForId(crumbName);
           if (username) return username;
         }
       }
       return crumbName;
     },
-    [breadcrumbs, getUsernameForId],
+    [breadcrumbs, getUsernameForId, currentUserId],
   );
 
   // Navigate to user's personal folder (creates if doesn't exist)
   const handleGoToMyFolder = useCallback(async () => {
     if (!projectId) {
-      Alert.alert("Error", "Project context missing");
+      showAlert("Error", "Project context missing");
       return;
     }
 
@@ -250,7 +264,7 @@ export default function FilesOverlay({
             myFolder = await fileService.getMyFolder(projectId);
             if (!myFolder) {
               // Still can't find it - there might be a naming mismatch
-              Alert.alert(
+              showAlert(
                 "Error",
                 "Your personal folder exists but could not be found. Please check the file list.",
               );
@@ -258,7 +272,7 @@ export default function FilesOverlay({
             }
           } else {
             console.error("Failed to create My Folder:", createError);
-            Alert.alert(
+            showAlert(
               "Error",
               createError.response?.data?.detail ||
                 createError.message ||
@@ -272,16 +286,29 @@ export default function FilesOverlay({
       if (myFolder) {
         // Store the folder ID so we can detect if we're already there
         setMyFolderId(myFolder.id);
-        // Navigate to the folder
-        onOpenFolder({
-          id: myFolder.id,
-          name: myFolder.name,
-          type: "folder",
-        });
+        
+        // Build correct breadcrumb path: Root > users > {user's folder}
+        // The myFolder.parent_id is the "users" folder
+        const usersFolderId = myFolder.parent_id;
+        const customBreadcrumbs: { id: string | null; name: string }[] = [
+          { id: null, name: "Root" },
+          { id: usersFolderId, name: "users" },
+          { id: myFolder.id, name: myFolder.name },
+        ];
+        
+        // Navigate to the folder with correct breadcrumb path
+        onOpenFolder(
+          {
+            id: myFolder.id,
+            name: myFolder.name,
+            type: "folder",
+          },
+          customBreadcrumbs
+        );
       }
     } catch (error: any) {
       console.error("Failed to access My Folder:", error);
-      Alert.alert(
+      showAlert(
         "Error",
         error.response?.data?.detail ||
           error.message ||
@@ -306,7 +333,7 @@ export default function FilesOverlay({
       if (!projectId) return;
       try {
         await fileService.updateMyFolderPermissions(projectId, settings);
-        Alert.alert("Success", "Privacy settings updated");
+        showAlert("Success", "Privacy settings updated");
       } catch (error: any) {
         console.error("Failed to update My Folder settings:", error);
         throw error; // Let the modal handle the error display
@@ -332,7 +359,7 @@ export default function FilesOverlay({
 
       // Otherwise, directly upload using fileService
       if (!projectId) {
-        Alert.alert("Error", "Cannot upload - project context missing");
+        showAlert("Error", "Cannot upload - project context missing");
         return;
       }
 
@@ -397,11 +424,11 @@ export default function FilesOverlay({
           files.length === 1
             ? `${files[0].name || "File"} uploaded successfully`
             : `${files.length} files uploaded successfully`;
-        Alert.alert("Success", msg);
+        showAlert("Success", msg);
         onRefreshAfterUpload?.();
       } catch (error: any) {
         console.error("File upload failed:", error);
-        Alert.alert("Upload Failed", error.message || "Failed to upload file");
+        showAlert("Upload Failed", error.message || "Failed to upload file");
       } finally {
         setIsUploading(false);
         setUploadCount(0);
@@ -440,6 +467,33 @@ export default function FilesOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, autoOpenMyFolder]);
 
+  // Listen for WebSocket file updates to silently refresh the file list
+  useEffect(() => {
+    if (!socket || !projectId || !visible) return;
+
+    const handleFilesUpdated = (data: any) => {
+      if (data.project_id === projectId) {
+        // Silently refresh the file list
+        console.log("[FilesOverlay] Received files_updated, refreshing...");
+        if (onRefreshAfterUpload) {
+          onRefreshAfterUpload();
+        }
+      }
+    };
+
+    socket.on("files_updated", handleFilesUpdated);
+    socket.on("content_updated", (data: any) => {
+      if (data.project_id === projectId && data.content_type === "files") {
+        handleFilesUpdated(data);
+      }
+    });
+
+    return () => {
+      socket.off("files_updated", handleFilesUpdated);
+      socket.off("content_updated");
+    };
+  }, [socket, projectId, visible, onRefreshAfterUpload]);
+
   const handleFilesUpload = useCallback(
     async (dropped: File[]) => {
       if (onDropFiles) {
@@ -451,7 +505,7 @@ export default function FilesOverlay({
           console.warn(
             "FilesOverlay: missing projectId prop, cannot auto-upload dropped files",
           );
-          Alert.alert("Cannot upload", "Project context missing.");
+          showAlert("Cannot upload", "Project context missing.");
           warnedMissingProject.current = true;
         }
         return;
@@ -464,7 +518,7 @@ export default function FilesOverlay({
         if (currentFolder?.id) fd.append("parent_id", currentFolder.id);
         return fileService.uploadFile(projectId, fd).catch((err: any) => {
           console.error("Upload failed for", f.name, err);
-          Alert.alert("Upload failed", f.name);
+          showAlert("Upload failed", f.name);
         });
       });
       await Promise.all(tasks);
@@ -618,18 +672,21 @@ export default function FilesOverlay({
   return (
     <View
       ref={rootRef}
-      style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
+      style={styles.root}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
-          <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
-        </TouchableOpacity>
-        <Text
-          style={{ color: "#F5F5F5", fontSize: 18, fontWeight: "700", flex: 1 }}
-          numberOfLines={1}
+      {/* Notes-style header */}
+      <View style={styles.modalHeader}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.modalBackButton}
+          activeOpacity={0.6}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          {title}
-        </Text>
+          <IconSymbol name="chevron.backward" size={20} color="#FF2A2A" />
+          <Text style={styles.modalBackText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.modalHeaderTitle}>{title}</Text>
+        <View style={styles.modalHeaderSpacer} />
       </View>
       {/* Bulk actions bar - separate row when selections exist */}
       {multiSelect && selectedIds.size > 0 && (
@@ -644,7 +701,7 @@ export default function FilesOverlay({
             onPress={async () => {
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkMove) return void onBulkMove(nodes);
-              Alert.alert(
+              showAlert(
                 "Bulk move",
                 "Parent needs to implement bulk move destination chooser.",
               );
@@ -658,7 +715,7 @@ export default function FilesOverlay({
               const nodes = fileNodes.filter((n) => selectedIds.has(n.id));
               if (onBulkDelete) return void onBulkDelete(nodes);
               // default: confirm once, then delete sequentially
-              Alert.alert("Delete selected", `Delete ${nodes.length} item(s)?`, [
+              showAlert("Delete selected", `Delete ${nodes.length} item(s)?`, [
                 { text: "Cancel", style: "cancel" },
                 {
                   text: "Delete",
@@ -698,13 +755,13 @@ export default function FilesOverlay({
                   (n) => selectedIds.has(n.id) && n.type === "file",
                 );
                 if (nodes.length === 0) {
-                  Alert.alert(
+                  showAlert(
                     "No files selected",
                     "Please select files to save for offline access.",
                   );
                   return;
                 }
-                Alert.alert(
+                showAlert(
                   "Save for Offline",
                   `This will save ${nodes.length} file(s) for offline access. You can view them without an internet connection.`,
                   [
@@ -747,12 +804,12 @@ export default function FilesOverlay({
                           });
 
                           if (result.failed > 0) {
-                            Alert.alert(
+                            showAlert(
                               "Partially Saved",
                               `${result.success} file(s) saved, ${result.failed} failed.\n${result.errors.slice(0, 3).join("\n")}`,
                             );
                           } else {
-                            Alert.alert(
+                            showAlert(
                               "Saved for Offline",
                               `${result.success} file(s) are now available offline.`,
                             );
@@ -760,7 +817,7 @@ export default function FilesOverlay({
                           setSelectedIds(new Set());
                           setMultiSelect(false);
                         } catch (error: any) {
-                          Alert.alert(
+                          showAlert(
                             "Error",
                             error.message || "Failed to save files for offline.",
                           );
@@ -1281,6 +1338,43 @@ const styles = StyleSheet.create({
     borderBottomColor: "#2A2A2A",
     flexDirection: "row",
     alignItems: "center",
+  },
+  headerGlass: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: "#111111",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#333333",
+  },
+  modalBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 70,
+  },
+  modalBackText: {
+    color: "#FF2A2A",
+    fontSize: 17,
+    marginLeft: 4,
+  },
+  modalHeaderTitle: {
+    color: "#F5F5F5",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  modalHeaderSpacer: {
+    minWidth: 70,
   },
   bulkBarContainer: {
     borderBottomWidth: 1,

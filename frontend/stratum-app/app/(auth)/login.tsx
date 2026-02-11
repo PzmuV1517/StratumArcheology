@@ -1,33 +1,52 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FaEyeSlash, FaEye } from "react-icons/fa";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Modal,
   Platform,
   Animated,
   Easing,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../src/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../src/services/api";
+import { showAlert } from "../../src/utils/alert";
 import { config } from "../../src/config/config";
+import RAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing as REasing,
+  interpolate,
+} from "react-native-reanimated";
 
-const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
-// Prevent unnecessary re-renders of the heavy background
-const MemoFaultyTerminal = React.memo(FaultyTerminal);
-// Load component CSS only on web
+// Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
+let FaEyeSlash: any = null;
+let FaEye: any = null;
+let MemoFaultyTerminal: any = null;
+
 if (Platform.OS === "web") {
-  // @ts-ignore - CSS handled by web bundler
-  require("../../components/FaultyTerminal.css");
+  try {
+    const fa = require("react-icons/fa");
+    FaEyeSlash = fa.FaEyeSlash;
+    FaEye = fa.FaEye;
+  } catch {}
+  try {
+    const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
+    MemoFaultyTerminal = React.memo(FaultyTerminal);
+    // @ts-ignore - CSS handled by web bundler
+    require("../../components/FaultyTerminal.css");
+  } catch {}
 }
+
+import NativeTerminalBg from "../../components/NativeTerminalBg";
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
@@ -50,11 +69,88 @@ export default function LoginScreen() {
     }, fadeDelayMs);
     return () => clearTimeout(t);
   }, [fade, fadeDelayMs]);
+
+  const { login, register } = useAuth();
+
+  // Card swap animation: 0 = login in front, 1 = register in front
+  const SWAP_DURATION = 500;
+  const SWAP_EASING = REasing.bezier(0.4, 0.0, 0.2, 1);
+  const cardProgress = useSharedValue(0);
+  const [activeCard, setActiveCard] = useState<"login" | "register">("login");
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Measure card heights so the stack can animate its own height
+  const loginHeightSV = useSharedValue(400);
+  const registerHeightSV = useSharedValue(500);
+
+  const onLoginLayout = useCallback((e: any) => {
+    loginHeightSV.value = e.nativeEvent.layout.height;
+  }, [loginHeightSV]);
+  const onRegisterLayout = useCallback((e: any) => {
+    registerHeightSV.value = e.nativeEvent.layout.height;
+  }, [registerHeightSV]);
+
+  const stackAnimStyle = useAnimatedStyle(() => ({
+    height: interpolate(cardProgress.value, [0, 1], [loginHeightSV.value, registerHeightSV.value]),
+  }));
+
+  const switchToRegister = useCallback(() => {
+    if (isAnimating || activeCard === "register") return;
+    setIsAnimating(true);
+    setActiveCard("register");
+    cardProgress.value = withTiming(1, { duration: SWAP_DURATION, easing: SWAP_EASING });
+    setTimeout(() => { setIsAnimating(false); }, SWAP_DURATION);
+  }, [isAnimating, activeCard, cardProgress]);
+
+  const switchToLogin = useCallback(() => {
+    if (isAnimating || activeCard === "login") return;
+    setIsAnimating(true);
+    setActiveCard("login");
+    cardProgress.value = withTiming(0, { duration: SWAP_DURATION, easing: SWAP_EASING });
+    setTimeout(() => { setIsAnimating(false); }, SWAP_DURATION);
+  }, [isAnimating, activeCard, cardProgress]);
+
+  // Login card: front at 0, behind at 1
+  const loginCardStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: interpolate(cardProgress.value, [0, 1], [1, 0.92]) },
+      { translateY: interpolate(cardProgress.value, [0, 1], [0, -20]) },
+    ],
+    opacity: interpolate(cardProgress.value, [0, 0.5, 1], [1, 0.5, 0]),
+    zIndex: cardProgress.value < 0.5 ? 2 : 1,
+  }));
+
+  // Register card: behind at 0, front at 1
+  const registerCardStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: interpolate(cardProgress.value, [0, 1], [0.92, 1]) },
+      { translateY: interpolate(cardProgress.value, [0, 1], [20, 0]) },
+    ],
+    opacity: interpolate(cardProgress.value, [0, 0.5, 1], [0, 0.5, 1]),
+    zIndex: cardProgress.value >= 0.5 ? 2 : 1,
+  }));
+
+  // Login form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+
+  // Refs for iOS AutoFill focus chaining
+  const loginPasswordRef = useRef<TextInput>(null);
+  const regEmailRef = useRef<TextInput>(null);
+  const regPasswordRef = useRef<TextInput>(null);
+  const regConfirmRef = useRef<TextInput>(null);
+
+  // Register form state
+  const [regDisplayName, setRegDisplayName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
+
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState("");
   const [savingApi, setSavingApi] = useState(false);
@@ -102,7 +198,7 @@ export default function LoginScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert(
+      showAlert(
         "Invalid URL",
         "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api",
       );
@@ -113,9 +209,9 @@ export default function LoginScreen() {
       await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
       api.defaults.baseURL = apiInput;
       setShowDevModal(false);
-      Alert.alert("Applied", "Backend API base URL updated for this app.");
+      showAlert("Applied", "Backend API base URL updated for this app.");
     } catch (e) {
-      Alert.alert("Error", "Failed to save API URL override");
+      showAlert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -128,9 +224,9 @@ export default function LoginScreen() {
       api.defaults.baseURL = config.apiBaseUrl;
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
-      Alert.alert("Reset", "Reverted to default backend API URL.");
+      showAlert("Reset", "Reverted to default backend API URL.");
     } catch (e) {
-      Alert.alert("Error", "Failed to reset API URL override");
+      showAlert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -143,151 +239,294 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    console.log("[Login] handleLogin called, email:", email);
     if (!email || !password) {
-      if (Platform.OS === "web") {
-        window.alert("Please fill in all fields");
-      } else {
-        Alert.alert("Error", "Please fill in all fields");
-      }
+      showAlert("Error", "Please fill in all fields");
       return;
     }
-
     if (!isValidEmail(email)) {
-      if (Platform.OS === "web") {
-        window.alert("Please enter a valid email address (e.g., user@example.com)");
-      } else {
-        Alert.alert(
-          "Invalid Email",
-          "Please enter a valid email address (e.g., user@example.com)",
-        );
-      }
+      showAlert("Invalid Email", "Please enter a valid email address (e.g., user@example.com)");
       return;
     }
-
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
     console.log("[Login] Calling login...");
-    const result = await login(email, password);
+    const result = await login(normalizedEmail, password);
     console.log("[Login] Result:", result);
     setLoading(false);
-
     if (!result.success) {
-      console.log("[Login] Login failed:", result.error);
-      if (Platform.OS === "web") {
-        window.alert("Login Failed: " + (result.error || "Unknown error"));
-      } else {
-        Alert.alert("Login Failed", result.error);
-      }
-    } else {
-      console.log("[Login] Login successful, user should be set in context");
+      showAlert("Login Failed", result.error || "Unknown error");
     }
   };
 
+  const handleRegister = async () => {
+    if (!regEmail || !regPassword || !regDisplayName) {
+      showAlert("Error", "Please fill in all fields");
+      return;
+    }
+    if (!isValidEmail(regEmail)) {
+      showAlert("Invalid Email", "Please enter a valid email address (e.g., user@example.com)");
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      showAlert("Error", "Passwords do not match");
+      return;
+    }
+    if (regPassword.length < 6) {
+      showAlert("Error", "Password must be at least 6 characters");
+      return;
+    }
+    setRegLoading(true);
+    const result = await register(regEmail, regPassword, regDisplayName);
+    setRegLoading(false);
+    if (!result.success) {
+      showAlert("Registration Failed", result.error);
+    }
+  };
+
+  const EyeToggle = ({ visible, onPress, disabled }: { visible: boolean; onPress: () => void; disabled?: boolean }) => (
+    <TouchableOpacity
+      style={styles.passwordToggle}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={visible ? "Hide password" : "Show password"}
+    >
+      {Platform.OS === "web" ? (
+        visible ? <FaEyeSlash size={18} color="#FF2A2A" /> : <FaEye size={18} color="#FF2A2A" />
+      ) : (
+        <Ionicons name={visible ? "eye-off" : "eye"} size={20} color="#FF2A2A" />
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderForm = () => (
+    <View style={styles.form}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>EMAIL</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#4A4A4A"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="username"
+          {...(Platform.OS === "android" && {
+            importantForAutofill: "yes",
+          })}
+          returnKeyType="next"
+          onSubmitEditing={() => loginPasswordRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            ref={loginPasswordRef}
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Enter your password"
+            placeholderTextColor="#4A4A4A"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoComplete="current-password"
+            textContentType="password"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
+            returnKeyType="go"
+            onSubmitEditing={handleLogin}
+          />
+          <EyeToggle visible={showPassword} onPress={() => setShowPassword((v) => !v)} disabled={loading} />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#F5F5F5" />
+        ) : (
+          <Text style={styles.buttonText}>LOGIN</Text>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.devButton}
+        onPress={() => setShowDevModal(true)}
+      >
+        <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderRegisterForm = () => (
+    <View style={styles.form}>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>DISPLAY NAME</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter your full name"
+          placeholderTextColor="#4A4A4A"
+          value={regDisplayName}
+          onChangeText={setRegDisplayName}
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="next"
+          onSubmitEditing={() => regEmailRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>EMAIL</Text>
+        <TextInput
+          ref={regEmailRef}
+          style={styles.input}
+          placeholder="Enter your email"
+          placeholderTextColor="#4A4A4A"
+          value={regEmail}
+          onChangeText={setRegEmail}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="next"
+          onSubmitEditing={() => regPasswordRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            ref={regPasswordRef}
+            style={[styles.input, styles.passwordInput]}
+            placeholder="At least 6 characters"
+            placeholderTextColor="#4A4A4A"
+            value={regPassword}
+            onChangeText={setRegPassword}
+            secureTextEntry={!showRegPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
+            returnKeyType="next"
+            onSubmitEditing={() => regPasswordRef.current?.focus()}
+            blurOnSubmit={false}
+          />
+          <EyeToggle visible={showRegPassword} onPress={() => setShowRegPassword((v) => !v)} />
+        </View>
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>CONFIRM PASSWORD</Text>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            ref={regConfirmRef}
+            style={[styles.input, styles.passwordInput]}
+            placeholder="Re-enter password"
+            placeholderTextColor="#4A4A4A"
+            value={regConfirmPassword}
+            onChangeText={setRegConfirmPassword}
+            secureTextEntry={!showRegConfirmPassword}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            {...(Platform.OS === "android" && {
+              importantForAutofill: "yes",
+            })}
+            returnKeyType="go"
+            onSubmitEditing={handleRegister}
+          />
+          <EyeToggle visible={showRegConfirmPassword} onPress={() => setShowRegConfirmPassword((v) => !v)} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={regLoading}>
+        {regLoading ? (
+          <ActivityIndicator color="#F5F5F5" />
+        ) : (
+          <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  const wrapForm = (content: React.ReactNode, onSubmit: () => void, isLoading: boolean) =>
+    Platform.OS === "web" ? (
+      <form onSubmit={(e: any) => { e.preventDefault(); if (!isLoading) onSubmit(); }} style={{ display: "contents" }}>
+        {content}
+      </form>
+    ) : content;
+
   return (
     <View style={styles.container}>
-      {/* Background: FaultyTerminal (web only) */}
-      {Platform.OS === "web" ? (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
-        >
+      {Platform.OS === "web" && MemoFaultyTerminal ? (
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
           <div style={{ position: "absolute", inset: 0 }}>
             {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
         </div>
+      ) : Platform.OS !== "web" ? (
+        <NativeTerminalBg />
       ) : null}
-      {/* Login card with fade-up */}
+
+      {/* Card stack with fade-up entrance */}
       <Animated.View
         style={[
-          styles.loginCard,
+          styles.cardStack,
           { opacity: fade, transform: [{ translateY: translate }] },
         ]}
       >
-        <View style={styles.header}>
-          <Text style={styles.logo}>STRATUM</Text>
-        </View>
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>EMAIL</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor="#4A4A4A"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="username"
-              textContentType="username"
-              importantForAutofill="yes"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>PASSWORD</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Enter your password"
-                placeholderTextColor="#4A4A4A"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                textContentType="password"
-                importantForAutofill="yes"
-              />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword((v) => !v)}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-              >
-                {Platform.OS === "web" ? (
-                  showPassword ? (
-                    <FaEyeSlash size={18} color="#FF2A2A" />
-                  ) : (
-                    <FaEye size={18} color="#FF2A2A" />
-                  )
-                ) : (
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color="#FF2A2A"
-                  />
-                )}
+        <RAnimated.View style={stackAnimStyle}>
+        {/* Login card */}
+        <RAnimated.View
+          onLayout={onLoginLayout}
+          style={[styles.card, styles.cardAbsolute, loginCardStyle]}
+          pointerEvents={activeCard === "login" ? "auto" : "none"}
+        >
+          <ScrollView contentContainerStyle={styles.cardContent} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+            <View style={styles.header}>
+              <Text style={styles.logo}>STRATUM</Text>
+            </View>
+            {activeCard === "login" ? wrapForm(renderForm(), handleLogin, loading) : null}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <TouchableOpacity onPress={switchToRegister}>
+                <Text style={styles.linkText}>Register</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
+        </RAnimated.View>
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#F5F5F5" />
-            ) : (
-              <Text style={styles.buttonText}>LOGIN</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={() => setShowDevModal(true)}
-          >
-            <Text style={styles.devButtonText}>Dev: API Base URL</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <Link href="/(auth)/register" asChild>
-            <TouchableOpacity>
-              <Text style={styles.linkText}>Register</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
+        {/* Register card */}
+        <RAnimated.View
+          onLayout={onRegisterLayout}
+          style={[styles.card, styles.cardAbsolute, registerCardStyle]}
+          pointerEvents={activeCard === "register" ? "auto" : "none"}
+        >
+          <ScrollView contentContainerStyle={styles.cardContent} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
+            <View style={styles.header}>
+              <Text style={styles.logo}>STRATUM</Text>
+            </View>
+            {activeCard === "register" ? wrapForm(renderRegisterForm(), handleRegister, regLoading) : null}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <TouchableOpacity onPress={switchToLogin}>
+                <Text style={styles.linkText}>Login</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </RAnimated.View>
+      </RAnimated.View>
       </Animated.View>
 
       {/* Dev modal for API override */}
@@ -378,15 +617,27 @@ const styles: any = StyleSheet.create({
     marginBottom: 25,
     textAlign: "center",
   },
-  loginCard: {
+  cardStack: {
     width: "100%",
     maxWidth: 520,
     alignSelf: "center",
+  },
+  card: {
     backgroundColor: "#0A0A0A",
     borderWidth: 1,
     borderColor: "#2A2A2A",
     borderRadius: 16,
     padding: 20,
+    width: "100%",
+  },
+  cardAbsolute: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  cardContent: {
+    flexGrow: 1,
   },
   header: {
     minHeight: 80,

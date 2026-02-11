@@ -1,3 +1,7 @@
+"""
+Invite management routes for creating and accepting project invites. This includes generating unique invite codes, validating invite tokens, and handling membership additions when invites are accepted.
+"""
+
 import secrets
 import string
 from datetime import datetime, timedelta
@@ -43,7 +47,6 @@ def generate_unique_code(
             return code
     # If we can't generate unique after max attempts, use longer random
     return generate_short_code(project_id, length=10)
-
 
 @router.post(
     "/projects/{project_id}/invites",

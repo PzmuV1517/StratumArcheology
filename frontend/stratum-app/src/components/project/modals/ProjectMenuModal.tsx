@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
+  Platform,
 } from "react-native";
+
+// ─── Main Burger Menu ───────────────────────────────────────────────
 
 interface Props {
   visible: boolean;
@@ -14,6 +17,7 @@ interface Props {
   onClose: () => void;
   onOpenMembers: () => void;
   onOpenSettings: () => void;
+  currentTabName?: string;
   onExitProject?: () => void;
   onDeleteProject?: () => void;
   onTransferLeadership?: () => void;
@@ -27,6 +31,7 @@ export default function ProjectMenuModal({
   onClose,
   onOpenMembers,
   onOpenSettings,
+  currentTabName,
   onExitProject,
   onDeleteProject,
   onTransferLeadership,
@@ -69,56 +74,54 @@ export default function ProjectMenuModal({
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           <View style={styles.menuCard}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                onClose();
-                onOpenMembers();
-              }}
-            >
-              <Text style={styles.menuItemText}>Members ({membersCount})</Text>
-            </TouchableOpacity>
-            {canChangeSettings ? (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
                   onClose();
-                  onOpenSettings();
+                  onOpenMembers();
                 }}
               >
-                <Text style={styles.menuItemText}>Settings</Text>
+                <Text style={styles.menuItemText}>Members ({membersCount})</Text>
               </TouchableOpacity>
-            ) : (
-              <View style={[styles.menuItem, styles.disabledMenuItem]}>
-                <Text style={[styles.menuItemText, styles.disabledText]}>
-                  Settings
-                </Text>
-                <Text style={styles.permissionHint}>
-                  Only the leader can change settings
-                </Text>
-              </View>
-            )}
-            {onExitProject && (
-              <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
-                <Text style={[styles.menuItemText, styles.exitButtonText]}>
-                  Exit Project
-                </Text>
+              {canChangeSettings ? (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    onClose();
+                    onOpenSettings();
+                  }}
+                >
+                  <Text style={styles.menuItemText}>Settings</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[styles.menuItem, styles.disabledMenuItem]}>
+                  <Text style={[styles.menuItemText, styles.disabledText]}>
+                    Settings
+                  </Text>
+                  <Text style={styles.permissionHint}>
+                    Only the leader can change settings
+                  </Text>
+                </View>
+              )}
+              {onExitProject && (
+                <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
+                  <Text style={[styles.menuItemText, styles.exitButtonText]}>
+                    Exit Project
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.menuItem,
+                  styles.closeButton,
+                  { justifyContent: "center" },
+                ]}
+                onPress={onClose}
+              >
+                <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.menuItem,
-                styles.closeButton,
-                { justifyContent: "center" },
-              ]}
-              onPress={onClose}
-            >
-              <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </View>        </View>
       </Modal>
-
       {/* Exit confirmation modal */}
       <Modal
         visible={showExitConfirm}
@@ -200,6 +203,11 @@ const styles = StyleSheet.create({
     borderColor: "#333",
     width: "100%",
   },
+  menuCardGlass: {
+    borderRadius: 20,
+    padding: 20,
+    width: "100%",
+  },
   menuItem: { paddingVertical: 12 },
   menuItemText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
   disabledMenuItem: { opacity: 0.6 },
@@ -212,6 +220,18 @@ const styles = StyleSheet.create({
     borderTopColor: "#333",
     marginTop: 8,
     paddingTop: 16,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "#333",
+    marginVertical: 8,
+  },
+  activeNavItem: {
+    backgroundColor: "rgba(255, 42, 42, 0.12)",
+    borderRadius: 10,
+  },
+  activeNavText: {
+    color: "#FF2A2A",
   },
   permissionHint: {
     color: "#FF6B6B",

@@ -139,6 +139,7 @@ async def get_project(
                 "email": user.email,
                 "display_name": user.display_name,
                 "photo_url": user.photo_url,
+                "bio": user.bio,
                 "role": member_role,
             }
         )
@@ -277,11 +278,21 @@ async def remove_project_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Remove a member from the project (leader can remove anyone, researcher can remove guests only)"""
+    """Remove a member from the project (leader can remove anyone, researcher can remove guests only, anyone can remove self)"""
     # First check basic project access
     check_project_permission(project_id, current_user, db)
 
     project = db.query(Project).filter(Project.id == project_id).first()
+
+    # Check if user is trying to remove themselves (leave project)
+    is_self_removal = str(user_id) == str(current_user.id)
+
+    # Owners cannot leave - they must transfer ownership or delete the project
+    if is_self_removal and project.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Project owner cannot leave. Transfer leadership or delete the project instead.",
+        )
 
     # Get current user's role
     if project.owner_id == current_user.id:
@@ -309,16 +320,17 @@ async def remove_project_member(
 
     target_role = target_result.role.value
 
-    # Role hierarchy check: can only remove members with lower roles
-    role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
+    # Role hierarchy check: can only remove members with lower roles (skip for self-removal)
+    if not is_self_removal:
+        role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
 
-    if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(
-        target_role, 0
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only remove members with lower roles than yours",
-        )
+        if role_hierarchy.get(current_user_role, 0) <= role_hierarchy.get(
+            target_role, 0
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only remove members with lower roles than yours",
+            )
 
     stmt = project_members.delete().where(
         project_members.c.project_id == project_id,
@@ -527,4 +539,62 @@ async def transfer_ownership(
     return {
         "message": "Ownership transferred successfully",
         "new_owner_id": new_owner_id,
+    }
+
+
+@router.get("/{project_id}/harris-matrix")
+async def get_harris_matrix(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get Harris Matrix data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Return the stored Harris Matrix data or empty default
+    return {
+        "project_id": project_id,
+        "data": project.harris_matrix_data or {},
+    }
+
+
+@router.put("/{project_id}/harris-matrix")
+async def update_harris_matrix(
+    project_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update Harris Matrix data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # Store the Harris Matrix data
+    project.harris_matrix_data = payload.get("data", {})
+    db.commit()
+
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type="HARRIS_MATRIX_UPDATED",
+        description=f"Harris Matrix updated by {current_user.email}",
+        user_id=str(current_user.id),
+        metadata={"updated_by": current_user.email},
+    )
+
+    return {
+        "message": "Harris Matrix data updated successfully",
+        "project_id": project_id,
     }

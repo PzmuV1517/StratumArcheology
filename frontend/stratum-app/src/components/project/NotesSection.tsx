@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,24 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { config } from "../../config/config";
+import { showAlert } from "../../utils/alert";
+
+// Get API base URL for streaming endpoint (uses the same logic as api.ts)
+const getApiBaseUrl = async (): Promise<string> => {
+  try {
+    // Check for runtime override first (same key as api.ts uses)
+    const override = await AsyncStorage.getItem("apiBaseUrlOverride");
+    return override || config.apiBaseUrl;
+  } catch {
+    return config.apiBaseUrl;
+  }
+};
 
 interface NoteAttachment {
   id?: string;
@@ -43,11 +59,86 @@ export default function NotesSection({
 }: Props) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const MiniAudio = ({ url }: { url?: string }) => {
+  const MiniAudio = ({ url, noteId, attachmentId }: { url?: string; noteId?: string; attachmentId?: string }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const ctxRef = useRef<AudioContext | null>(null);
     const rafRef = useRef<number>(0);
+    const soundRef = useRef<Audio.Sound | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [duration, setDuration] = useState(0);
+    const [position, setPosition] = useState(0);
+    const [streamUrl, setStreamUrl] = useState<string | null>(null);
+
+    // Build streaming URL for native platforms
+    useEffect(() => {
+      if (Platform.OS !== "web" && noteId && attachmentId) {
+        getApiBaseUrl().then((baseUrl) => {
+          // baseUrl already ends with /api, so just append /notes/...
+          setStreamUrl(`${baseUrl}/notes/${noteId}/attachments/${attachmentId}/stream`);
+        });
+      }
+    }, [noteId, attachmentId]);
+
+    // Native audio playback - use streaming URL on native, direct URL on web
+    const playNativeAudio = useCallback(async () => {
+      const audioUrl = Platform.OS === "web" ? url : streamUrl;
+      if (!audioUrl) return;
+      try {
+        setIsLoading(true);
+        // Unload previous sound if exists
+        if (soundRef.current) {
+          await soundRef.current.unloadAsync();
+          soundRef.current = null;
+        }
+        
+        // Get auth token for the streaming request
+        const token = await AsyncStorage.getItem("authToken");
+        
+        // Create and play new sound
+        const { sound, status } = await Audio.Sound.createAsync(
+          { 
+            uri: audioUrl,
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          },
+          { shouldPlay: true },
+          (playbackStatus) => {
+            if (playbackStatus.isLoaded) {
+              setPosition(playbackStatus.positionMillis);
+              setDuration(playbackStatus.durationMillis || 0);
+              setIsPlaying(playbackStatus.isPlaying);
+              if (playbackStatus.didJustFinish) {
+                setIsPlaying(false);
+                setPosition(0);
+              }
+            }
+          }
+        );
+        soundRef.current = sound;
+        setIsLoading(false);
+      } catch (e) {
+        console.error("Failed to play audio:", e);
+        setIsLoading(false);
+        showAlert("Error", "Failed to play audio");
+      }
+    }, [url, streamUrl]);
+
+    const pauseNativeAudio = useCallback(async () => {
+      if (soundRef.current) {
+        await soundRef.current.pauseAsync();
+        setIsPlaying(false);
+      }
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => {
+        if (soundRef.current) {
+          soundRef.current.unloadAsync();
+        }
+      };
+    }, []);
 
     useEffect(() => {
       if (Platform.OS !== "web") return;
@@ -96,10 +187,38 @@ export default function NotesSection({
     }, [url]);
 
     if (Platform.OS !== "web") {
+      const formatTime = (ms: number) => {
+        const secs = Math.floor(ms / 1000);
+        const mins = Math.floor(secs / 60);
+        const remainingSecs = secs % 60;
+        return `${mins}:${remainingSecs.toString().padStart(2, "0")}`;
+      };
+
       return (
-        <Text style={{ color: "#9A9A9A", fontSize: 12 }}>
-          Audio (open note to play)
-        </Text>
+        <View style={styles.nativeAudioPlayer}>
+          <TouchableOpacity
+            style={styles.audioPlayBtn}
+            onPress={isPlaying ? pauseNativeAudio : playNativeAudio}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FF2A2A" />
+            ) : (
+              <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#FF2A2A" />
+            )}
+          </TouchableOpacity>
+          <View style={styles.audioProgress}>
+            <View
+              style={[
+                styles.audioProgressBar,
+                { width: duration > 0 ? `${(position / duration) * 100}%` : "0%" },
+              ]}
+            />
+          </View>
+          <Text style={styles.audioTime}>
+            {formatTime(position)} / {formatTime(duration)}
+          </Text>
+        </View>
       );
     }
 
@@ -154,7 +273,13 @@ export default function NotesSection({
               {item.content}
             </Text>
           )}
-          {isVoice && audioAtt?.url && <MiniAudio url={audioAtt.url} />}
+          {isVoice && audioAtt?.url && (
+            <MiniAudio 
+              url={audioAtt.url} 
+              noteId={item.id} 
+              attachmentId={audioAtt.id}
+            />
+          )}
         </TouchableOpacity>
         {isVoice && canEdit && (
           <View style={styles.voiceActions}>
@@ -189,7 +314,7 @@ export default function NotesSection({
                     // Inline confirmation for web
                     setPendingDeleteId(item.id);
                   } else {
-                    Alert.alert(
+                    showAlert(
                       "Delete voice note?",
                       "This will permanently delete the note and its audio attachment.",
                       [
@@ -342,4 +467,44 @@ const styles = StyleSheet.create({
   confirmText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600" },
   confirmButtons: { flexDirection: "row", gap: 8 },
   cancelBtn: { backgroundColor: "#2A2A2A", borderColor: "#444" },
+  // Native audio player styles
+  nativeAudioPlayer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#111",
+    borderRadius: 8,
+    padding: 8,
+    gap: 8,
+  },
+  audioPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FF2A2A",
+  },
+  audioPlayIcon: {
+    color: "#FF2A2A",
+    fontSize: 14,
+  },
+  audioProgress: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#2A2A2A",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  audioProgressBar: {
+    height: "100%",
+    backgroundColor: "#FF2A2A",
+  },
+  audioTime: {
+    color: "#9A9A9A",
+    fontSize: 11,
+    minWidth: 70,
+    textAlign: "right",
+  },
 });

@@ -34,6 +34,19 @@ export const noteService = {
     return response.data;
   },
 
+  // Alias for uploadAudio to match the interface expected by create-note
+  uploadAudioBlob: async (
+    noteId: string,
+    blob: Blob,
+    filename: string = "voice-note.webm",
+  ): Promise<Attachment> => {
+    const formData = new FormData();
+    const file = new File([blob], filename, { type: blob.type || "audio/webm" });
+    formData.append("file", file, filename);
+    const response = await api.post(`/notes/${noteId}/attachments`, formData);
+    return response.data;
+  },
+
   // Web-specific: upload any file as attachment
   uploadAttachment: async (noteId: string, file: File): Promise<Attachment> => {
     const formData = new FormData();

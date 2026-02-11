@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
   Modal,
 } from "react-native";
@@ -16,6 +15,7 @@ import TextFilePanel from "../src/components/data/TextFilePanel";
 import CsvPanel from "../src/components/data/CsvPanel";
 import ExcelPanel from "../src/components/data/ExcelPanel";
 import { useAutoSave } from "../src/hooks/useAutoSave";
+import { showAlert } from "../src/utils/alert";
 
 // Platform-specific panels (bundler resolves .native.tsx vs .web.tsx automatically)
 import PdfPanel from "../src/components/data/PdfPanel";
@@ -431,12 +431,12 @@ export default function DataPreviewScreen() {
         if (result?.uri) {
           await fileService.shareFile(result.uri);
         } else {
-          Alert.alert("Error", "Failed to download file");
+          showAlert("Error", "Failed to download file");
         }
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to download file");
+      showAlert("Error", "Failed to download file");
     }
   };
 
@@ -451,7 +451,7 @@ export default function DataPreviewScreen() {
         // For text files on native, we need to upload the content to the server
         if (ext.endsWith(".txt") || ext.endsWith(".md") || ext.endsWith(".json")) {
           if (!textContent) {
-            Alert.alert("Error", "No content to save");
+            showAlert("Error", "No content to save");
             setSaving(false);
             return;
           }
@@ -465,7 +465,7 @@ export default function DataPreviewScreen() {
               setOriginalTitle(editableTitle);
             } catch (e) {
               console.error("Failed to rename file:", e);
-              Alert.alert(
+              showAlert(
                 "Warning",
                 "Failed to rename file, but content will be saved.",
               );
@@ -499,10 +499,10 @@ export default function DataPreviewScreen() {
 
           setDirty(false);
           clearDraft();
-          Alert.alert("Success", "File saved successfully");
+          showAlert("Success", "File saved successfully");
         } else if (table) {
           // CSV/Excel on native - needs more complex handling
-          Alert.alert(
+          showAlert(
             "Info",
             "Spreadsheet saving on native is coming soon. Please use web for now.",
           );
@@ -533,7 +533,7 @@ export default function DataPreviewScreen() {
             setOriginalTitle(editableTitle); // Update the original title
           } catch (e) {
             console.error("Failed to rename file:", e);
-            Alert.alert(
+            showAlert(
               "Warning",
               "Failed to rename file, but content will be saved.",
             );
@@ -602,10 +602,10 @@ export default function DataPreviewScreen() {
       setDirty(false);
       // Clear draft after successful save
       await clearDraft();
-      Alert.alert("Saved", "File updated successfully.");
+      showAlert("Saved", "File updated successfully.");
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to save file");
+      showAlert("Error", "Failed to save file");
     } finally {
       setSaving(false);
     }
@@ -763,7 +763,9 @@ export default function DataPreviewScreen() {
       <Stack.Screen
         options={{
           title: header,
-          headerStyle: { backgroundColor: "#111111" },
+          headerTransparent: Platform.OS === "ios",
+          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5" },
         }}

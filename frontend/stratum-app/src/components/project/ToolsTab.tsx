@@ -2,14 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
+  ScrollView,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
   Platform,
-  Alert,
   Animated,
   Easing,
 } from "react-native";
+import { showAlert } from "../../utils/alert";
 
 // Types for expo-location (dynamically imported)
 type LocationSubscription = { remove: () => void };
@@ -40,26 +41,41 @@ interface LocationData {
   timestamp: number;
 }
 
+// Module-level cache to persist state across component unmount/remount
+let cachedLocationModule: any = null;
+let cachedLocationPermission: boolean | null = null;
+let cachedLocation: LocationData | null = null;
+let cachedHeadingSubscription: { remove: () => void } | null = null;
+let lastHeading = 0;
+
 export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
-  const [location, setLocation] = useState<LocationData | null>(null);
-  const [heading, setHeading] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
+  const [locationPermission, setLocationPermission] = useState<boolean | null>(cachedLocationPermission);
+  const [location, setLocation] = useState<LocationData | null>(cachedLocation);
+  const [heading, setHeading] = useState<number>(lastHeading);
+  const [loading, setLoading] = useState(cachedLocationPermission === null);
   const [acquiringGPS, setAcquiringGPS] = useState(false); // True when getting fresh GPS fix
   const [watchingLocation, setWatchingLocation] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  const [LocationModule, setLocationModule] = useState<any>(null);
+  const [LocationModule, setLocationModule] = useState<any>(cachedLocationModule);
 
-  const compassRotation = useRef(new Animated.Value(0)).current;
+  const compassRotation = useRef(new Animated.Value(-lastHeading)).current;
+  const currentRotation = useRef(-lastHeading); // Track actual rotation value for shortest path calculation
   const locationSubscription = useRef<LocationSubscription | null>(null);
-  const headingSubscription = useRef<{ remove: () => void } | null>(null);
+  const headingSubscription = useRef<{ remove: () => void } | null>(cachedHeadingSubscription);
 
   // Load expo-location dynamically on native only
   useEffect(() => {
     if (Platform.OS !== "web") {
+      // Use cached module if available
+      if (cachedLocationModule) {
+        setLocationModule(cachedLocationModule);
+        return;
+      }
+      
       import("expo-location")
         .then((module) => {
+          cachedLocationModule = module;
           setLocationModule(module);
         })
         .catch((err) => {
@@ -73,25 +89,43 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   useEffect(() => {
     if (LocationModule && Platform.OS !== "web") {
+      // If we already have permission and heading subscription, just reattach the listener
+      if (cachedLocationPermission === true && cachedHeadingSubscription) {
+        // Reuse existing heading subscription - it's still running
+        setLoading(false);
+        return;
+      }
+      
       requestPermissions();
     }
 
     return () => {
-      // Cleanup subscriptions
+      // Don't cleanup heading subscription - keep it running for faster remount
+      // Only cleanup location watching subscription
       if (locationSubscription.current) {
         locationSubscription.current.remove();
-      }
-      if (headingSubscription.current) {
-        headingSubscription.current.remove();
+        locationSubscription.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [LocationModule]);
 
   useEffect(() => {
-    // Animate compass rotation
+    // Animate compass rotation - take shortest path when crossing 0/360 boundary
+    const targetHeading = -heading;
+    const current = currentRotation.current;
+    
+    // Calculate the difference and normalize to [-180, 180]
+    let diff = targetHeading - current;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    
+    // Calculate new rotation value (continuous, not bounded to 0-360)
+    const newRotation = current + diff;
+    currentRotation.current = newRotation;
+    
     Animated.timing(compassRotation, {
-      toValue: -heading,
+      toValue: newRotation,
       duration: 200,
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
@@ -107,11 +141,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
       if (foregroundStatus !== "granted") {
         setLocationPermission(false);
+        cachedLocationPermission = false;
         setLoading(false);
         return;
       }
 
       setLocationPermission(true);
+      cachedLocationPermission = true;
       setAcquiringGPS(true);
 
       // Get fresh location with high accuracy (not cached)
@@ -123,7 +159,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
           timeout: 15000, // 15 second timeout
         });
 
-      setLocation({
+      const locationData = {
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
         altitude: currentLocation.coords.altitude,
@@ -131,18 +167,23 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         heading: currentLocation.coords.heading,
         speed: currentLocation.coords.speed,
         timestamp: currentLocation.timestamp,
-      });
+      };
+      setLocation(locationData);
+      cachedLocation = locationData;
 
       setAcquiringGPS(false);
 
       // Start heading updates for compass (mobile only)
-      if (Platform.OS !== "web") {
+      if (Platform.OS !== "web" && !cachedHeadingSubscription) {
         const headingSub = await LocationModule.watchHeadingAsync(
           (headingData: HeadingObject) => {
-            setHeading(headingData.trueHeading || headingData.magHeading || 0);
+            const newHeading = headingData.trueHeading || headingData.magHeading || 0;
+            lastHeading = newHeading;
+            setHeading(newHeading);
           },
         );
         headingSubscription.current = headingSub;
+        cachedHeadingSubscription = headingSub;
       }
 
       setLoading(false);
@@ -150,6 +191,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       console.error("Error getting location:", error);
       setAcquiringGPS(false);
       setLocationPermission(false);
+      cachedLocationPermission = false;
       setLoading(false);
     }
   };
@@ -167,7 +209,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
           distanceInterval: 1,
         },
         (newLocation: LocationObject) => {
-          setLocation({
+          const locationData = {
             latitude: newLocation.coords.latitude,
             longitude: newLocation.coords.longitude,
             altitude: newLocation.coords.altitude,
@@ -175,7 +217,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             heading: newLocation.coords.heading,
             speed: newLocation.coords.speed,
             timestamp: newLocation.timestamp,
-          });
+          };
+          setLocation(locationData);
+          cachedLocation = locationData;
         },
       );
     } catch (error) {
@@ -204,7 +248,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
           timeout: 15000,
         });
 
-      setLocation({
+      const locationData = {
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
         altitude: currentLocation.coords.altitude,
@@ -212,10 +256,12 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         heading: currentLocation.coords.heading,
         speed: currentLocation.coords.speed,
         timestamp: currentLocation.timestamp,
-      });
+      };
+      setLocation(locationData);
+      cachedLocation = locationData;
     } catch (error) {
       console.error("Error refreshing location:", error);
-      Alert.alert("Error", "Failed to refresh location. Make sure GPS is enabled.");
+      showAlert("Error", "Failed to refresh location. Make sure GPS is enabled.");
     } finally {
       setAcquiringGPS(false);
     }
@@ -323,7 +369,11 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Compass Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Compass</Text>
@@ -502,7 +552,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -510,7 +560,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0A0A0A",
+  },
+  scrollContent: {
     padding: 16,
+    paddingBottom: 100,
   },
   loadingContainer: {
     flex: 1,

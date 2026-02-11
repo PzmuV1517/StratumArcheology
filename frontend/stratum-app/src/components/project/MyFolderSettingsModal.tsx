@@ -8,9 +8,9 @@ import {
   ScrollView,
   Switch,
   ActivityIndicator,
-  Alert,
   Platform,
 } from "react-native";
+import { showAlert } from "../../utils/alert";
 
 interface Member {
   id: string;
@@ -120,7 +120,7 @@ export default function MyFolderSettingsModal({
       });
       return updated;
     });
-    Alert.alert("Applied", "Default permissions applied to all members");
+    showAlert("Applied", "Default permissions applied to all members");
   };
 
   const handleSave = async () => {
@@ -143,7 +143,7 @@ export default function MyFolderSettingsModal({
 
       onClose();
     } catch {
-      Alert.alert("Error", "Failed to save folder settings");
+      showAlert("Error", "Failed to save folder settings");
     } finally {
       setLoading(false);
     }

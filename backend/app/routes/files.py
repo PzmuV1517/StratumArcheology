@@ -47,9 +47,64 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 
 # =============================================================================
+# PROFILE PICTURE UPLOAD
+# =============================================================================
+
+
+@router.post("/profile-picture")
+async def upload_profile_picture(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a profile picture for the current user"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}",
+        )
+
+    # Limit file size (5MB)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 5MB.",
+        )
+
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"profile_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    storage_path = f"profiles/{current_user.id}/{filename}"
+
+    # Upload to MinIO
+    await minio_client.upload_file(content, storage_path, file.content_type)
+
+    # Get public URL
+    url = await minio_client.get_presigned_url(storage_path)
+
+    # Update user's photo_url
+    current_user.photo_url = url
+    db.commit()
+    db.refresh(current_user)
+
+    return {"url": url, "filename": filename}
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
+def __compute_checksum(file: UploadFile) -> str:
+    """Compute SHA256 checksum of an uploaded file"""
+    hash_sha256 = hashlib.sha256()
+    for chunk in iter(lambda: file.file.read(8192), b""):
+        hash_sha256.update(chunk)
+    # Reset file pointer to the beginning after reading
+    file.file.seek(0)
+    return hash_sha256.hexdigest()
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
     """Check if a user can access a file based on privacy settings"""
@@ -94,6 +149,7 @@ class FileWithVersionsResponse(BaseModel):
     type: str
     mime_type: str | None
     size: str | None
+    deleted: bool = False
     current_version: int
     created_at: datetime
     updated_at: datetime
@@ -1003,6 +1059,7 @@ async def upload_file(
 @router.get("/{node_id}/download")
 async def download_file(
     node_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user_or_token),
     db: Session = Depends(get_db),
 ):
@@ -1010,6 +1067,7 @@ async def download_file(
 
     Accepts authentication via Authorization header OR token query parameter.
     Returns a streaming response with appropriate Content-Type and Content-Disposition.
+    Supports HTTP Range requests required by iOS AVFoundation (AVPlayer).
     Notes and folders are not downloadable.
     """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
@@ -1023,12 +1081,72 @@ async def download_file(
     if not node.storage_path:
         raise HTTPException(status_code=404, detail="Stored object missing")
 
-    # Stream file from MinIO to avoid loading entire content in memory for large files
+    # Get object stat for size
     try:
-        # Get object to stream and its stat for size
         stat = minio_client.client.stat_object(
             minio_client.bucket_name, node.storage_path
         )
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to retrieve object")
+
+    filename = node.name or "download"
+    media_type = node.mime_type or "application/octet-stream"
+    file_size = getattr(stat, "size", None) or 0
+
+    base_headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Accept-Ranges": "bytes",
+    }
+
+    # Handle Range requests (required by iOS AVFoundation / AVPlayer)
+    range_header = request.headers.get("range")
+    if range_header and file_size > 0:
+        try:
+            range_spec = range_header.replace("bytes=", "")
+            parts = range_spec.split("-")
+            start = int(parts[0]) if parts[0] else 0
+            end = int(parts[1]) if parts[1] else file_size - 1
+        except (ValueError, IndexError):
+            start = 0
+            end = file_size - 1
+
+        start = max(0, start)
+        end = min(end, file_size - 1)
+        content_length = end - start + 1
+
+        try:
+            obj = minio_client.client.get_object(
+                minio_client.bucket_name,
+                node.storage_path,
+                offset=start,
+                length=content_length,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=500, detail="Failed to retrieve object range"
+            )
+
+        def iterfile_range():
+            try:
+                for data in obj.stream(32 * 1024):
+                    yield data
+            finally:
+                obj.close()
+                obj.release_conn()
+
+        return StreamingResponse(
+            iterfile_range(),
+            status_code=206,
+            media_type=media_type,
+            headers={
+                **base_headers,
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Content-Length": str(content_length),
+            },
+        )
+
+    # Full response (no Range header)
+    try:
         obj = minio_client.client.get_object(
             minio_client.bucket_name, node.storage_path
         )
@@ -1043,15 +1161,8 @@ async def download_file(
             obj.close()
             obj.release_conn()
 
-    filename = node.name or "download"
-    media_type = node.mime_type or "application/octet-stream"
-
-    # Build headers - only include Content-Length if we have a valid size
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-    }
-    file_size = getattr(stat, "size", None)
-    if file_size is not None and file_size > 0:
+    headers = {**base_headers}
+    if file_size > 0:
         headers["Content-Length"] = str(file_size)
 
     return StreamingResponse(iterfile(), media_type=media_type, headers=headers)
@@ -1516,3 +1627,4 @@ async def get_files_info_batch(
     accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
 
     return accessible_nodes
+
