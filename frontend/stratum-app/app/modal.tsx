@@ -21,6 +21,70 @@ import { showAlert } from "../src/utils/alert";
 
 const isIOS = Platform.OS === "ios";
 
+// Wrapper component for glass effect
+const GlassCard = ({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) => {
+  return <View style={[styles.solidCard, style]}>{children}</View>;
+};
+
+const GlassButton = ({
+  onPress,
+  title,
+  variant = "primary",
+  icon,
+  disabled,
+  loading,
+}: {
+  onPress: () => void;
+  title: string;
+  variant?: "primary" | "secondary";
+  icon?: string;
+  disabled?: boolean;
+  loading?: boolean;
+}) => {
+  const isPrimary = variant === "primary";
+  const buttonContent = (
+    <>
+      {icon && (
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={20}
+          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          style={{ marginRight: 8 }}
+        />
+      )}
+      {loading && isPrimary ? (
+        <ActivityIndicator color="#FFFFFF" />
+      ) : (
+        <Text
+          style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
+        >
+          {title}
+        </Text>
+      )}
+    </>
+  );
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.7}
+      style={[
+        isPrimary ? styles.primaryButton : styles.secondaryButton,
+        disabled && styles.disabledButton,
+      ]}
+    >
+      {buttonContent}
+    </TouchableOpacity>
+  );
+};
+
 export default function CreateProjectModal() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -63,68 +127,6 @@ export default function CreateProjectModal() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Wrapper component for glass effect
-  const GlassCard = ({
-    children,
-    style,
-  }: {
-    children: React.ReactNode;
-    style?: object;
-  }) => {
-    return <View style={[styles.solidCard, style]}>{children}</View>;
-  };
-
-  const GlassButton = ({
-    onPress,
-    title,
-    variant = "primary",
-    icon,
-    disabled,
-  }: {
-    onPress: () => void;
-    title: string;
-    variant?: "primary" | "secondary";
-    icon?: string;
-    disabled?: boolean;
-  }) => {
-    const isPrimary = variant === "primary";
-    const buttonContent = (
-      <>
-        {icon && (
-          <Ionicons
-            name={icon as keyof typeof Ionicons.glyphMap}
-            size={20}
-            color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
-            style={{ marginRight: 8 }}
-          />
-        )}
-        {loading && isPrimary ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text
-            style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
-          >
-            {title}
-          </Text>
-        )}
-      </>
-    );
-
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || loading}
-        activeOpacity={0.7}
-        style={[
-          isPrimary ? styles.primaryButton : styles.secondaryButton,
-          disabled && styles.disabledButton,
-        ]}
-      >
-        {buttonContent}
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -172,7 +174,6 @@ export default function CreateProjectModal() {
               placeholderTextColor="#555"
               value={name}
               onChangeText={setName}
-              autoFocus
             />
           </View>
 
@@ -218,12 +219,14 @@ export default function CreateProjectModal() {
             variant="primary"
             icon="add-circle"
             disabled={!name.trim() || !ranLmiId.trim()}
+            loading={loading}
           />
 
           <GlassButton
             onPress={() => router.back()}
             title="Cancel"
             variant="secondary"
+            loading={loading}
           />
         </View>
       </ScrollView>
