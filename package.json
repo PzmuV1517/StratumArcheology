@@ -1,6 +1,9 @@
 {
   "dependencies": {
+    "@callstack/liquid-glass": "^0.7.0",
+    "easy-qrcode": "^0.1.0",
     "gsap": "^3.13.0",
+    "qrcode": "^1.5.4",
     "socket.io-client": "^4.8.1"
   }
 }

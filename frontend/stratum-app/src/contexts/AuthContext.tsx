@@ -6,15 +6,16 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import { Alert } from "react-native";
 import { authService } from "../services/authService";
 import api, { authEvents, AUTH_SESSION_EXPIRED } from "../services/api";
+import { showAlert } from "../utils/alert";
 
 interface User {
   id: string;
   email: string;
   display_name: string;
   photo_url?: string;
+  bio?: string;
 }
 
 interface AuthContextType {
@@ -56,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("[AuthContext] Session expired event received");
     setUser(null);
     setSessionExpired(true);
-    Alert.alert(
+    showAlert(
       "Session Expired",
       "Your session has expired. Please log in again.",
       [{ text: "OK" }],

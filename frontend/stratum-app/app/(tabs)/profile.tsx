@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -17,6 +16,7 @@ import { useAuth } from "../../src/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../src/services/api";
 import { config } from "../../src/config/config";
+import { showAlert } from "../../src/utils/alert";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -64,7 +64,7 @@ export default function ProfileScreen() {
   };
 
   const handleHelpSupport = () => {
-    Alert.alert(
+    showAlert(
       "Help & Support",
       "Need help?\n\n• Email: support@stratum.app\n• Documentation: docs.stratum.app\n• Community Forum: forum.stratum.app",
       [{ text: "OK", style: "default" }],
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
   };
 
   const handleAbout = () => {
-    Alert.alert(
+    showAlert(
       "About STRATUM",
       "STRATUM v1.0.0\n\nArchaeological Site Documentation & Collaboration Platform\n\nBuilt for FLL 2025-2026 UNEARTHED Challenge\n\n© 2025 QuantumBits Team",
       [{ text: "OK", style: "default" }],
@@ -85,6 +85,7 @@ export default function ProfileScreen() {
       const current = override || config.apiBaseUrl;
       setApiInput(current);
       setShowDevModal(true);
+      // eslint-disable-next-line
     } catch (e) {
       setApiInput(config.apiBaseUrl);
       setShowDevModal(true);
@@ -95,7 +96,7 @@ export default function ProfileScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      Alert.alert(
+      showAlert(
         "Invalid URL",
         "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api",
       );
@@ -107,9 +108,10 @@ export default function ProfileScreen() {
       api.defaults.baseURL = apiInput;
       setEffectiveApi(apiInput);
       setShowDevModal(false);
-      Alert.alert("Applied", "Backend API base URL updated for this app.");
+      showAlert("Applied", "Backend API base URL updated for this app.");
+      // eslint-disable-next-line
     } catch (e) {
-      Alert.alert("Error", "Failed to save API URL override");
+      showAlert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -123,9 +125,10 @@ export default function ProfileScreen() {
       setEffectiveApi(config.apiBaseUrl);
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
-      Alert.alert("Reset", "Reverted to default backend API URL.");
+      showAlert("Reset", "Reverted to default backend API URL.");
+      // eslint-disable-next-line
     } catch (e) {
-      Alert.alert("Error", "Failed to reset API URL override");
+      showAlert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
     }
@@ -139,7 +142,7 @@ export default function ProfileScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View style={styles.profileSection}>
           {user?.photo_url ? (
@@ -172,6 +175,16 @@ export default function ProfileScreen() {
             <Text style={styles.menuItemText}>About</Text>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
+
+          {Platform.OS !== "web" && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/scan-qr" as any)}
+            >
+              <Text style={styles.menuItemText}>Scan QR Code</Text>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>

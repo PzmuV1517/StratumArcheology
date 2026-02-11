@@ -1,3 +1,6 @@
+"""
+Conversion endpoints for point clouds and other large data formats that require server-side processing.
+"""
 import hashlib
 from io import BytesIO
 

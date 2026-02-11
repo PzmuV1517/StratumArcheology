@@ -5,13 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { fileService } from "../src/services/fileService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import PhotoPanel from "../src/components/data/PhotoPanel";
+import { showAlert } from "../src/utils/alert";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();
@@ -81,7 +81,7 @@ export default function ImagePreviewScreen() {
       a.click();
       a.remove();
     } else {
-      Alert.alert("Download", "Mobile download not implemented yet.");
+      showAlert("Download", "Mobile download not implemented yet.");
     }
   };
 
@@ -90,7 +90,9 @@ export default function ImagePreviewScreen() {
       <Stack.Screen
         options={{
           title: (name as string) || "Image",
-          headerStyle: { backgroundColor: "#111111" },
+          headerTransparent: Platform.OS === "ios",
+          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5" },
         }}

@@ -5,19 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
-  TextInput,
   Platform,
-  ScrollView,
   Image,
-  Alert,
+  TextInput,
 } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
-import QRCodeView from "../common/QRCodeView";
-import { useAuth } from "../../contexts/AuthContext";
-import { buildManifestFromChildren } from "../../utils/artefactManifest";
+import { showAlert } from "../../utils/alert";
 
 interface FileNode {
   id: string;
@@ -41,21 +36,22 @@ export default function ArtefactsTab({
   canEdit?: boolean;
 }) {
   const router = useRouter();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
     { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[]
   >([]);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [pickedImages, setPickedImages] = useState<
-    { uri: string; name: string; mime: string }[]
-  >([]);
-  const [previewIndex, setPreviewIndex] = useState<number>(0);
-  const [notes, setNotes] = useState<string[]>([""]);
-  const [creating, setCreating] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  const filteredArtefacts = useMemo(() => {
+    if (!searchQuery.trim()) return artefacts;
+    const q = searchQuery.toLowerCase();
+    return artefacts.filter(({ folder, meta }) => {
+      const name = (meta?.name || folder.name).toLowerCase();
+      const num = meta?.number?.toString() || "";
+      return name.includes(q) || num.includes(q);
+    });
+  }, [artefacts, searchQuery]);
 
   useEffect(() => {
     if (projectId) load();
@@ -124,153 +120,18 @@ export default function ArtefactsTab({
     }
   };
 
-  const pickImages = async () => {
+  const handleNewArtefact = () => {
     if (!canEdit) {
-      Alert.alert(
+      showAlert(
         "Permission Denied",
         "Guests can only view artefacts. Creating artefacts is not permitted.",
       );
       return;
     }
-
-    const res = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: true,
-      type: "image/*",
+    router.push({
+      pathname: "/create-artefact" as any,
+      params: { projectId } as any,
     });
-    if (res.canceled) return;
-    const items = res.assets.map((a) => ({
-      uri: a.uri,
-      name: a.name || "image",
-      mime: a.mimeType || "image/jpeg",
-    }));
-    setPickedImages((prev) => [...prev, ...items]);
-  };
-
-  const addNoteField = () => setNotes((n) => [...n, ""]);
-
-  const createArtefact = async () => {
-    if (!canEdit) {
-      Alert.alert(
-        "Permission Denied",
-        "Guests can only view artefacts. Creating artefacts is not permitted.",
-      );
-      return;
-    }
-
-    if (!artefactFolder) return;
-    if (!newName.trim()) return;
-    try {
-      setCreating(true);
-      // Determine sequence number
-      const children = await fileService.listChildren(artefactFolder.id);
-      const existingFolders = children.filter((c: any) => c.type === "folder");
-      const number = existingFolders.length + 1;
-      // Create folder
-      const folder = await fileService.createFolder(
-        projectId,
-        newName.trim(),
-        artefactFolder.id as any,
-      );
-      // Upload images
-      const uploadedIds: string[] = [];
-      for (let i = 0; i < pickedImages.length; i++) {
-        const img = pickedImages[i];
-        const fd = new FormData();
-        fd.append("parent_id", String(folder.id));
-        if (Platform.OS === "web") {
-          const blob = await fetch(img.uri).then((r) => r.blob());
-          const file = new File([blob], img.name, { type: img.mime });
-          fd.append("file", file, img.name);
-        } else {
-          fd.append("file", { uri: img.uri, name: img.name, type: img.mime } as any);
-        }
-        const up = await fileService.uploadFile(projectId, fd);
-        uploadedIds.push(up.id || up.file_id || up.node_id || up?.file?.id);
-      }
-      // Generate and upload preview (web only for now)
-      let previewFileId: string | undefined;
-      if (Platform.OS === "web" && pickedImages[previewIndex]) {
-        try {
-          const blob = await downscaleWebImage(
-            pickedImages[previewIndex].uri,
-            512,
-            512,
-            0.6,
-          );
-          const fd = new FormData();
-          fd.append("parent_id", String(folder.id));
-          const file = new File([blob], "preview.jpg", { type: "image/jpeg" });
-          fd.append("file", file, "preview.jpg");
-          const up = await fileService.uploadFile(projectId, fd);
-          previewFileId = up.id || up.file_id || up.node_id || up?.file?.id;
-        } catch (e) {
-          console.warn("Preview generation failed", e);
-        }
-      }
-      // Upload notes as text files (web only for now)
-      const noteFileIds: string[] = [];
-      for (let idx = 0; idx < notes.length; idx++) {
-        const content = notes[idx]?.trim();
-        if (!content) continue;
-        if (Platform.OS === "web") {
-          const blob = new Blob([content], { type: "text/plain" });
-          const fd = new FormData();
-          fd.append("parent_id", String(folder.id));
-          const file = new File([blob], `note-${idx + 1}.txt`, {
-            type: "text/plain",
-          });
-          fd.append("file", file, `note-${idx + 1}.txt`);
-          const up = await fileService.uploadFile(projectId, fd);
-          noteFileIds.push(up.id || up.file_id || up.node_id || up?.file?.id);
-        }
-      }
-      // Build comprehensive artefact.json from folder children
-      const freshChildren = await fileService.listChildren(folder.id);
-      const manifest = buildManifestFromChildren(
-        folder.id,
-        newName.trim(),
-        number,
-        freshChildren as any,
-        {
-          createdAt: new Date().toISOString(),
-          createdBy: user || undefined,
-          previewFileId,
-        },
-        { user: user || undefined, qrUrl: linkForFolder(folder.id) },
-      );
-      if (Platform.OS === "web") {
-        const blob = new Blob([JSON.stringify(manifest, null, 2)], {
-          type: "application/json",
-        });
-        const fd = new FormData();
-        fd.append("parent_id", String(folder.id));
-        const file = new File([blob], "artefact.json", { type: "application/json" });
-        fd.append("file", file, "artefact.json");
-        await fileService.uploadFile(projectId, fd);
-      }
-      setShowCreate(false);
-      setNewName("");
-      setPickedImages([]);
-      setNotes([""]);
-      setPreviewIndex(0);
-      Alert.alert("Success", "Artefact created successfully!");
-      await load();
-    } catch (e: any) {
-      console.error("Failed to create artefact", e);
-      const message =
-        e?.detail || e?.message || "Failed to create artefact. Please try again.";
-      Alert.alert("Error", message);
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const linkForFolder = (folderId: string) => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      return `${window.location.origin}/artefact/${folderId}`;
-    }
-    return `artefact://${folderId}`;
   };
 
   return (
@@ -289,12 +150,35 @@ export default function ArtefactsTab({
         {canEdit && (
           <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => setShowCreate(true)}
+            onPress={handleNewArtefact}
           >
+            <Ionicons name="add" size={16} color="#F5F5F5" style={{ marginRight: 4 }} />
             <Text style={styles.primaryBtnText}>New Artefact</Text>
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Search bar */}
+      {artefacts.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color="#9A9A9A" style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search artefacts..."
+            placeholderTextColor="#666"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={18} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {loading ? (
         <View style={{ paddingVertical: 24, alignItems: "center" }}>
           <ActivityIndicator color="#FF2A2A" />
@@ -304,9 +188,13 @@ export default function ArtefactsTab({
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
           <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>
         </View>
+      ) : filteredArtefacts.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 24 }}>
+          <Text style={{ color: "#9A9A9A" }}>No artefacts match "{searchQuery}"</Text>
+        </View>
       ) : (
         <View style={styles.grid}>
-          {artefacts.map(({ folder, meta, previewUrl }) => (
+          {filteredArtefacts.map(({ folder, meta, previewUrl }) => (
             <TouchableOpacity
               key={folder.id}
               style={styles.card}
@@ -337,192 +225,28 @@ export default function ArtefactsTab({
         </View>
       )}
 
-      {/* Create Modal */}
-      <Modal
-        visible={showCreate}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        transparent={false}
-        onRequestClose={() => setShowCreate(false)}
-      >
-        <View style={styles.modalScreen}>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalRoot}>
-            <Text style={styles.modalTitle}>New Artefact</Text>
-            <TextInput
-              placeholder="Artefact name"
-              placeholderTextColor="#777"
-              value={newName}
-              onChangeText={setNewName}
-              style={styles.input}
-            />
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <Text style={styles.modalLabel}>Pictures</Text>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={pickImages}>
-                <Text style={styles.secondaryBtnText}>Add Pictures</Text>
-              </TouchableOpacity>
-            </View>
-            {pickedImages.length > 0 ? (
-              <View style={{ gap: 8 }}>
-                {pickedImages.map((img, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.imageRow,
-                      previewIndex === idx && styles.imageRowActive,
-                    ]}
-                    onPress={() => setPreviewIndex(idx)}
-                  >
-                    <Text style={{ color: "#F5F5F5" }}>{img.name}</Text>
-                    <Text
-                      style={{ color: previewIndex === idx ? "#FF2A2A" : "#9A9A9A" }}
-                    >
-                      {previewIndex === idx ? "Preview" : "Set preview"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <Text style={{ color: "#9A9A9A", marginBottom: 8 }}>
-                No images selected
-              </Text>
-            )}
-
-            <Text style={styles.modalLabel}>Notes (.txt)</Text>
-            {notes.map((n, i) => (
-              <TextInput
-                key={i}
-                multiline
-                placeholder={`Note ${i + 1}`}
-                placeholderTextColor="#777"
-                value={n}
-                onChangeText={(t) =>
-                  setNotes((arr) => arr.map((x, idx) => (idx === i ? t : x)))
-                }
-                style={[styles.input, { height: 120, textAlignVertical: "top" }]}
-              />
-            ))}
-            <TouchableOpacity onPress={addNoteField} style={styles.secondaryBtn}>
-              <Text style={styles.secondaryBtnText}>Add another note</Text>
-            </TouchableOpacity>
-
-            {/* QR Preview (web) */}
-            <View style={{ marginTop: 16, alignItems: "center" }}>
-              <Text style={styles.modalLabel}>QR (for this artefact page)</Text>
-              <QRCodeView
-                value={linkForFolder("new")}
-                label={`${newName || "Artefact"} #—`}
-                onReadyDataUrl={setQrDataUrl}
-              />
-              {Platform.OS === "web" && qrDataUrl ? (
-                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={styles.secondaryBtn}
-                    onPress={() =>
-                      printQr(
-                        qrDataUrl,
-                        `${newName || "artefact"}-qr.png`,
-                        `${newName || "Artefact"} #—`,
-                      )
-                    }
-                  >
-                    <Text style={styles.secondaryBtnText}>Print</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.secondaryBtn}
-                    onPress={() =>
-                      downloadDataUrl(qrDataUrl, `${newName || "artefact"}-qr.png`)
-                    }
-                  >
-                    <Text style={styles.secondaryBtnText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-            </View>
-
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginTop: 16,
-              }}
-            >
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { flex: 1, marginRight: 8 }]}
-                onPress={() => setShowCreate(false)}
-              >
-                <Text style={styles.secondaryBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.primaryBtn, { flex: 1, marginLeft: 8 }]}
-                onPress={createArtefact}
-                disabled={creating}
-              >
-                <Text style={styles.primaryBtnText}>
-                  {creating ? "Creating…" : "Create Artefact"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
     </View>
   );
 }
 
-async function downscaleWebImage(
-  uri: string,
-  maxW: number,
-  maxH: number,
-  quality = 0.7,
-): Promise<Blob> {
-  const img = document.createElement("img");
-  img.crossOrigin = "anonymous";
-  img.src = uri;
-  await new Promise((res, rej) => {
-    img.onload = () => res(null);
-    img.onerror = rej;
-  });
-  let { width, height } = img;
-  const scale = Math.min(maxW / width, maxH / height, 1);
-  width = Math.floor(width * scale);
-  height = Math.floor(height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D context not available");
-  ctx.drawImage(img, 0, 0, width, height);
-  return await new Promise<Blob>((resolve) =>
-    canvas.toBlob((b) => resolve(b || new Blob()), "image/jpeg", quality),
-  );
-}
-
-function downloadDataUrl(dataUrl: string, filename: string) {
-  const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
-
-function printQr(dataUrl: string, filename: string, label?: string) {
-  const win = window.open("", "_blank");
-  if (!win) return;
-  const html = `<!doctype html><html><head><title>QR</title><style>body{font-family:system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0} img{width:320px;height:320px} h1{font-size:18px;margin-top:8px}</style></head><body><img src="${dataUrl}" alt="QR"/>${label ? `<h1>${label}</h1>` : ""}<script>setTimeout(()=>{window.print();},300);</script></body></html>`;
-  win.document.write(html);
-  win.document.close();
-}
-
 const styles = StyleSheet.create({
-  modalScreen: { flex: 1, backgroundColor: "#111" },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  searchInput: {
+    flex: 1,
+    color: "#F5F5F5",
+    fontSize: 15,
+    padding: 0,
+  },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   card: {
     width: 180,
@@ -545,44 +269,12 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#F5F5F5", fontWeight: "700" },
   cardMeta: { color: "#9A9A9A", fontSize: 12 },
   primaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#FF2A2A",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
   },
   primaryBtnText: { color: "#F5F5F5", fontWeight: "700" },
-  secondaryBtn: {
-    backgroundColor: "#222222",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  secondaryBtnText: { color: "#F5F5F5", fontWeight: "600" },
-  modalRoot: { padding: 16, backgroundColor: "#111", gap: 10 },
-  modalTitle: { color: "#F5F5F5", fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  modalLabel: { color: "#F5F5F5", fontWeight: "600", marginVertical: 8 },
-  input: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  imageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  imageRowActive: { borderColor: "#FF2A2A" },
 });

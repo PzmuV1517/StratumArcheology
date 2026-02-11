@@ -27,9 +27,18 @@ const expoExtra = Constants.expoConfig?.extra as Record<string, any> | undefined
  * - Android emulator: uses 10.0.2.2 (special alias for host machine's localhost)
  * - iOS simulator: uses localhost (shares network with host)
  * - Physical devices: uses Expo dev server's host IP (same network)
+ * - Tunnel mode: use EXPO_PUBLIC_API_URL env var for ngrok backend URL
  */
 const getApiBaseUrl = (): string => {
-  // Allow override via app.json extra config
+  // Priority 1: Environment variable (for tunnel/hotspot mode)
+  // Set via: EXPO_PUBLIC_API_URL=https://xxx.ngrok.io/api npx expo start --tunnel
+  const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (envApiUrl) {
+    console.log("[Config] Using EXPO_PUBLIC_API_URL:", envApiUrl);
+    return envApiUrl;
+  }
+
+  // Priority 2: app.json extra config
   if (expoExtra?.apiBaseUrl) {
     console.log(
       "[Config] Using apiBaseUrl from app.json extra:",
@@ -59,24 +68,23 @@ const getApiBaseUrl = (): string => {
   }
 
   // For iOS simulator, always use 127.0.0.1 - it shares network with host machine
+  // For physical iOS devices, use the debuggerHost IP from Expo
   if (Platform.OS === "ios") {
-    // Check if we're running in a simulator vs physical device
-    // Physical iOS devices need the debuggerHost IP to reach the dev machine
     const debuggerHost =
       Constants.expoConfig?.hostUri ||
       Constants.manifest2?.extra?.expoGo?.debuggerHost;
     const hostIp = debuggerHost?.split(":")[0];
 
-    // If hostIp is a real network IP (not localhost/127.0.0.1), we might be on a physical device
-    // But we can't reliably detect simulator vs physical device, so we provide both options
-    // For now, default to 127.0.0.1 for iOS (works in simulator)
-    // Users on physical devices can set apiBaseUrl override in AsyncStorage
+    // If we have a real network IP from Expo, use it (physical device over hotspot/wifi)
+    if (hostIp && hostIp !== "localhost" && hostIp !== "127.0.0.1") {
+      const url = `http://${hostIp}:${port}/api`;
+      console.log("[Config] iOS physical device, using debuggerHost IP:", url);
+      return url;
+    }
+
+    // Fallback for simulator (shares host network)
     const url = `http://127.0.0.1:${port}/api`;
-    console.log("[Config] iOS platform (simulator), using:", url);
-    console.log(
-      "[Config] If on physical device, the app may need debuggerHost:",
-      hostIp,
-    );
+    console.log("[Config] iOS simulator, using:", url);
     return url;
   }
 

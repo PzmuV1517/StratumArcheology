@@ -76,8 +76,10 @@ export const activityService = {
 
       // Files
       [ActivityType.FILE_UPLOADED]: "📄",
+      [ActivityType.FILE_UPDATED]: "📄",
       [ActivityType.FILE_DELETED]: "🗑️",
       [ActivityType.FILE_MOVED]: "📁",
+      [ActivityType.FILE_RENAMED]: "✏️",
       [ActivityType.FOLDER_CREATED]: "📁",
       [ActivityType.FOLDER_DELETED]: "🗑️",
 
@@ -86,16 +88,23 @@ export const activityService = {
       [ActivityType.NOTE_UPDATED]: "✏️",
       [ActivityType.NOTE_DELETED]: "🗑️",
       [ActivityType.NOTE_ATTACHMENT_ADDED]: "📎",
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: "📎",
 
       // Forms
       [ActivityType.CONTEXT_FEATURE_CREATED]: "🏛️",
+      [ActivityType.CONTEXT_FEATURE_ADDED]: "🏛️",
       [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "📊",
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "📊",
       [ActivityType.ARTEFACT_CREATED]: "🏺",
+      [ActivityType.ARTEFACT_ADDED]: "🏺",
 
       // GPS
       [ActivityType.GPS_ENABLED]: "📍",
       [ActivityType.GPS_DISABLED]: "📍",
       [ActivityType.GPS_UPDATED]: "📍",
+
+      // Harris Matrix
+      [ActivityType.HARRIS_MATRIX_UPDATED]: "🔗",
     };
 
     return iconMap[activityType] || "📌";
@@ -121,10 +130,12 @@ export const activityService = {
       [ActivityType.MEMBER_ROLE_CHANGED]: "#FFD60A",
       [ActivityType.OWNERSHIP_TRANSFERRED]: "#FFD60A",
 
-      // Files - Green for upload/create, Blue for move, Red for delete
+      // Files - Green for upload/create, Yellow for update/rename, Blue for move, Red for delete
       [ActivityType.FILE_UPLOADED]: "#34C759",
+      [ActivityType.FILE_UPDATED]: "#FFD60A",
       [ActivityType.FILE_DELETED]: "#FF453A",
       [ActivityType.FILE_MOVED]: "#007AFF",
+      [ActivityType.FILE_RENAMED]: "#FFD60A",
       [ActivityType.FOLDER_CREATED]: "#34C759",
       [ActivityType.FOLDER_DELETED]: "#FF453A",
 
@@ -133,16 +144,23 @@ export const activityService = {
       [ActivityType.NOTE_UPDATED]: "#FFD60A",
       [ActivityType.NOTE_DELETED]: "#FF453A",
       [ActivityType.NOTE_ATTACHMENT_ADDED]: "#34C759",
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: "#FF453A",
 
       // Forms - Green for all creation
       [ActivityType.CONTEXT_FEATURE_CREATED]: "#34C759",
+      [ActivityType.CONTEXT_FEATURE_ADDED]: "#34C759",
       [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "#34C759",
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "#34C759",
       [ActivityType.ARTEFACT_CREATED]: "#34C759",
+      [ActivityType.ARTEFACT_ADDED]: "#34C759",
 
       // GPS - Blue for info/location actions
       [ActivityType.GPS_ENABLED]: "#007AFF",
       [ActivityType.GPS_DISABLED]: "#8E8E93",
       [ActivityType.GPS_UPDATED]: "#007AFF",
+
+      // Harris Matrix
+      [ActivityType.HARRIS_MATRIX_UPDATED]: "#FFD60A",
     };
 
     return colorMap[activityType] || "#8E8E93";
@@ -170,32 +188,41 @@ export const activityService = {
       [ActivityType.MEMBER_JOINED]: `${userName} joined the project`,
       [ActivityType.MEMBER_LEFT]: `${userName} left the project`,
       [ActivityType.MEMBER_ROLE_CHANGED]: isCurrentUser
-        ? `Your role changed from ${extra.old_role} to ${extra.new_role}`
-        : `${userName}'s role changed from ${extra.old_role} to ${extra.new_role}`,
+        ? `Your role changed from ${extra.old_role || "unknown"} to ${extra.new_role || "unknown"}`
+        : `${userName}'s role changed from ${extra.old_role || "unknown"} to ${extra.new_role || "unknown"}`,
       [ActivityType.OWNERSHIP_TRANSFERRED]: `${userName} transferred ownership`,
 
       // Files
       [ActivityType.FILE_UPLOADED]: `${userName} uploaded ${extra.file_name || "a file"}`,
+      [ActivityType.FILE_UPDATED]: `${userName} updated ${extra.file_name || "a file"}`,
       [ActivityType.FILE_DELETED]: `${userName} deleted ${extra.file_name || "a file"}`,
       [ActivityType.FILE_MOVED]: `${userName} moved ${extra.file_name || "a file"}`,
-      [ActivityType.FOLDER_CREATED]: `${userName} created folder ${extra.folder_name || ""}`,
-      [ActivityType.FOLDER_DELETED]: `${userName} deleted folder ${extra.folder_name || ""}`,
+      [ActivityType.FILE_RENAMED]: `${userName} renamed ${extra.old_name || "a file"} to ${extra.new_name || extra.file_name || "a new name"}`,
+      [ActivityType.FOLDER_CREATED]: `${userName} created folder "${extra.folder_name || ""}"`,
+      [ActivityType.FOLDER_DELETED]: `${userName} deleted folder "${extra.folder_name || ""}"`,
 
       // Notes
       [ActivityType.NOTE_CREATED]: `${userName} created note "${extra.note_title || "Untitled"}"`,
       [ActivityType.NOTE_UPDATED]: `${userName} updated note "${extra.note_title || "Untitled"}"`,
       [ActivityType.NOTE_DELETED]: `${userName} deleted a note`,
       [ActivityType.NOTE_ATTACHMENT_ADDED]: `${userName} added ${extra.attachment_type || "attachment"} to note`,
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: `${userName} removed attachment from note`,
 
       // Forms
       [ActivityType.CONTEXT_FEATURE_CREATED]: `${userName} recorded a context/feature`,
+      [ActivityType.CONTEXT_FEATURE_ADDED]: `${userName} recorded a context/feature`,
       [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: `${userName} recorded a stratigraphic unit`,
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: `${userName} recorded a stratigraphic unit`,
       [ActivityType.ARTEFACT_CREATED]: `${userName} recorded an artefact`,
+      [ActivityType.ARTEFACT_ADDED]: `${userName} recorded an artefact`,
 
       // GPS
       [ActivityType.GPS_ENABLED]: `${userName} enabled GPS tracking`,
       [ActivityType.GPS_DISABLED]: `${userName} disabled GPS tracking`,
       [ActivityType.GPS_UPDATED]: `${userName} updated GPS location`,
+
+      // Harris Matrix
+      [ActivityType.HARRIS_MATRIX_UPDATED]: `${userName} updated the Harris Matrix`,
     };
 
     return descriptions[activity.activity_type] || `${userName} performed an action`;

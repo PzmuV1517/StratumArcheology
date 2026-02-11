@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Platform,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "../../config/config";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import api from "../../services/api";
+import { showAlert } from "../../utils/alert";
 
 interface FileVersion {
   id: string;
@@ -62,6 +62,7 @@ const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string
   };
 
 export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState<TimeMachineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,29 +74,15 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const loadTimeMachineData = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
       const url = selectedCategory
-        ? `${apiBaseUrl}/api/files/project/${projectId}/time-machine?category=${selectedCategory}`
-        : `${apiBaseUrl}/api/files/project/${projectId}/time-machine`;
+        ? `/files/project/${projectId}/time-machine?category=${selectedCategory}`
+        : `/files/project/${projectId}/time-machine`;
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to load version history");
-      }
-
-      const result = await response.json();
-      setData(result);
+      const response = await api.get(url);
+      setData(response.data);
     } catch (error) {
       console.error("Error loading time machine data:", error);
-      Alert.alert("Error", "Failed to load version history");
+      showAlert("Error", "Failed to load version history");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -186,7 +173,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       if (Platform.OS === "web") {
         window.open(url, "_blank");
       } else {
-        Alert.alert("Download Version", `Download ${fileName} version ${version}?`, [
+        showAlert("Download Version", `Download ${fileName} version ${version}?`, [
           { text: "Cancel", style: "cancel" },
           {
             text: "Download",
@@ -201,7 +188,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       }
     } catch (error) {
       console.error("Error downloading version:", error);
-      Alert.alert("Error", "Failed to download version");
+      showAlert("Error", "Failed to download version");
     }
   };
 
@@ -210,7 +197,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
     version: number,
     fileName: string,
   ) => {
-    Alert.alert(
+    showAlert(
       "Restore Version",
       `Restore ${fileName} to version ${version}? This will create a new version with the old content.`,
       [
@@ -238,11 +225,11 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                 throw new Error("Failed to restore version");
               }
 
-              Alert.alert("Success", `Restored ${fileName} to version ${version}`);
+              showAlert("Success", `Restored ${fileName} to version ${version}`);
               loadTimeMachineData();
             } catch (error) {
               console.error("Error restoring version:", error);
-              Alert.alert("Error", "Failed to restore version");
+              showAlert("Error", "Failed to restore version");
             }
           },
         },
@@ -451,6 +438,11 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
 
   const categories = Object.entries(data.categories);
 
+  // Project screen uses an absolute bottom tab bar on Android (height 84).
+  // Add enough padding so the last items don't end up behind it.
+  const bottomPadding =
+    (Platform.OS === "android" ? 84 : 0) + (insets.bottom || 0) + 16;
+
   return (
     <View style={styles.container}>
       {/* Header Stats */}
@@ -477,7 +469,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       {/* Content */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -569,20 +561,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderBottomWidth: 1,
     borderBottomColor: "#2A2A2A",
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 56,
   },
   filterContent: {
-    padding: 12,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
     flexDirection: "row",
+    alignItems: "center",
   },
   filterChip: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#2A2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    height: 36,
     borderRadius: 20,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: "#3A3A3A",
   },

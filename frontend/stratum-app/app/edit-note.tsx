@@ -5,14 +5,86 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Modal,
+  Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
+import { showAlert } from "../src/utils/alert";
+
+const isIOS = Platform.OS === "ios";
+
+// ---------------------------------------------------------------------------
+// Shared UI components (matching create-note / new-project)
+// ---------------------------------------------------------------------------
+function GlassCard({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) {
+  return <View style={[styles.solidCard, style]}>{children}</View>;
+}
+
+function GlassButton({
+  onPress,
+  title,
+  variant = "primary",
+  icon,
+  disabled,
+  loading: isLoading,
+}: {
+  onPress: () => void;
+  title: string;
+  variant?: "primary" | "secondary";
+  icon?: string;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  const isPrimary = variant === "primary";
+  const content = (
+    <>
+      {icon && (
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={20}
+          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          style={{ marginRight: 8 }}
+        />
+      )}
+      {isLoading ? (
+        <ActivityIndicator color="#FFFFFF" />
+      ) : (
+        <Text
+          style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
+        >
+          {title}
+        </Text>
+      )}
+    </>
+  );
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || isLoading}
+      activeOpacity={0.7}
+      style={[
+        isPrimary ? styles.primaryButton : styles.secondaryBtn,
+        disabled && styles.disabledButton,
+      ]}
+    >
+      {content}
+    </TouchableOpacity>
+  );
+}
 
 interface Note {
   id: string;
@@ -26,6 +98,10 @@ interface Note {
 
 export default function EditNoteScreen() {
   const { noteId, projectId } = useLocalSearchParams();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const iosHeaderPad =
+    isIOS ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8 : 0;
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -43,7 +119,7 @@ export default function EditNoteScreen() {
     saveStatus,
     hasDraft,
     saveDraft,
-    restoreDraft,
+    getDraft,
     clearDraft,
     markSubmitted,
   } = useAutoSave<{
@@ -61,9 +137,13 @@ export default function EditNoteScreen() {
 
   // Check for draft after original data loads
   useEffect(() => {
-    if (originalDataLoaded && hasDraft()) {
-      setShowDraftModal(true);
-    }
+    const checkDraft = async () => {
+      if (originalDataLoaded) {
+        const exists = await hasDraft();
+        if (exists) setShowDraftModal(true);
+      }
+    };
+    checkDraft();
   }, [originalDataLoaded]);
 
   // Auto-save when form data changes (only after original data loaded)
@@ -73,13 +153,17 @@ export default function EditNoteScreen() {
     }
   }, [formData, originalDataLoaded]);
 
-  const handleRestoreDraft = () => {
-    restoreDraft();
+  const handleRestoreDraft = async () => {
+    const draft = await getDraft();
+    if (draft) {
+      setTitle(draft.title);
+      setContent(draft.content);
+    }
     setShowDraftModal(false);
   };
 
-  const handleDiscardDraft = () => {
-    clearDraft();
+  const handleDiscardDraft = async () => {
+    await clearDraft();
     setShowDraftModal(false);
   };
 
@@ -100,7 +184,7 @@ export default function EditNoteScreen() {
         error?.detail ||
         error?.message ||
         "Failed to load note. It may have been deleted.";
-      Alert.alert("Error", message, [{ text: "OK", onPress: () => router.back() }]);
+      showAlert("Error", message, [{ text: "OK", onPress: () => router.back() }]);
     } finally {
       setLoading(false);
     }
@@ -108,7 +192,7 @@ export default function EditNoteScreen() {
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
-      Alert.alert(
+      showAlert(
         "Missing Fields",
         "Please enter both a title and content for the note.",
       );
@@ -122,7 +206,7 @@ export default function EditNoteScreen() {
         content: content.trim(),
       });
       markSubmitted(); // Clear draft on successful save
-      Alert.alert("Saved", "Your changes have been saved.", [
+      showAlert("Saved", "Your changes have been saved.", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error: any) {
@@ -131,31 +215,30 @@ export default function EditNoteScreen() {
         error?.detail ||
         error?.message ||
         "Failed to save changes. Please try again.";
-      Alert.alert("Error", message);
+      showAlert("Error", message);
     } finally {
       setSaving(false);
     }
   };
 
+  const stackScreenOpts = {
+    headerTransparent: isIOS,
+    headerBlurEffect: isIOS ? ("systemChromeMaterial" as const) : undefined,
+    headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+    headerTintColor: "#FF2A2A",
+    headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" as const },
+    headerBackTitle: "Note",
+    headerShown: true,
+  };
+
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Stack.Screen
-          options={{
-            title: "Edit Note",
-            headerStyle: { backgroundColor: "#111111" },
-            headerTintColor: "#FF2A2A",
-            headerTitleStyle: {
-              color: "#F5F5F5",
-              fontSize: 18,
-              fontWeight: "600",
-            },
-            headerBackTitle: "Note",
-            headerShown: true,
-          }}
-        />
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading note...</Text>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: "Edit Note", ...stackScreenOpts }} />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#FF2A2A" />
+          <Text style={styles.loadingText}>Loading note...</Text>
+        </View>
       </View>
     );
   }
@@ -170,100 +253,115 @@ export default function EditNoteScreen() {
         onRequestClose={() => setShowDraftModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <GlassCard style={styles.modalContent}>
             <Text style={styles.modalTitle}>Unsaved Draft Found</Text>
             <Text style={styles.modalText}>
-              You have an unsaved draft from a previous editing session. Would you
-              like to restore it or discard it?
+              You have an unsaved draft from a previous editing session. Would
+              you like to restore it or discard it?
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonSecondary}
+              <GlassButton
                 onPress={handleDiscardDraft}
-              >
-                <Text style={styles.modalButtonSecondaryText}>Discard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButtonPrimary}
+                title="Discard"
+                variant="secondary"
+              />
+              <GlassButton
                 onPress={handleRestoreDraft}
-              >
-                <Text style={styles.modalButtonPrimaryText}>Restore</Text>
-              </TouchableOpacity>
+                title="Restore"
+                variant="primary"
+                icon="refresh"
+              />
             </View>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
 
-      <Stack.Screen
-        options={{
-          title: "Edit Note",
-          headerStyle: { backgroundColor: "#111111" },
-          headerTintColor: "#FF2A2A",
-          headerTitleStyle: {
-            color: "#F5F5F5",
-            fontSize: 18,
-            fontWeight: "600",
-          },
-          headerBackTitle: "Note",
-          headerShown: true,
-        }}
-      />
+      <Stack.Screen options={{ title: "Edit Note", ...stackScreenOpts }} />
 
       {/* Save Status Indicator */}
       {saveStatus !== "idle" && (
-        <View style={styles.saveStatusBar}>
+        <View
+          style={[
+            styles.saveStatusBar,
+            isIOS
+              ? { top: Math.max(headerHeight || 0, (insets.top || 0) + 44) }
+              : null,
+          ]}
+        >
           <Text style={styles.saveStatusText}>
-            {saveStatus === "saving" && "⏳ Saving draft..."}
-            {saveStatus === "saved" && "✓ Draft saved"}
-            {saveStatus === "error" && "⚠ Failed to save draft"}
+            {saveStatus === "saving"
+              ? "Saving draft..."
+              : saveStatus === "saved"
+                ? "Draft saved"
+                : saveStatus === "error"
+                  ? "Save failed"
+                  : ""}
           </Text>
         </View>
       )}
 
-      <ScrollView style={styles.content}>
-        <View style={styles.form}>
-          <Text style={styles.pageTitle}>Edit Note</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header icon */}
+        <View style={styles.headerIcon}>
+          <Ionicons name="create" size={48} color="#FF2A2A" />
+        </View>
+        <Text style={styles.title}>Edit Note</Text>
+        <Text style={styles.subtitle}>
+          Update your note details and content
+        </Text>
 
-          <Text style={styles.label}>Title *</Text>
+        {/* Title card */}
+        <GlassCard style={styles.card}>
+          <Text style={styles.label}>
+            <Ionicons name="text" size={14} color="#9A9A9A" /> Title
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="Enter note title"
-            placeholderTextColor="#666"
+            placeholderTextColor="#555"
             value={title}
             onChangeText={setTitle}
           />
+        </GlassCard>
 
-          <Text style={styles.label}>Content *</Text>
+        {/* Content card */}
+        <GlassCard style={styles.card}>
+          <Text style={styles.label}>
+            <Ionicons name="document-text" size={14} color="#9A9A9A" /> Content
+          </Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Describe your archaeological findings, observations, or thoughts..."
-            placeholderTextColor="#666"
+            placeholderTextColor="#555"
             value={content}
             onChangeText={setContent}
             multiline
             numberOfLines={10}
             textAlignVertical="top"
           />
+        </GlassCard>
 
-          <TouchableOpacity
-            style={[styles.button, saving && styles.buttonDisabled]}
+        {/* Action buttons */}
+        <View style={styles.buttonContainer}>
+          <GlassButton
             onPress={handleSave}
+            title={saving ? "Saving..." : "Save Changes"}
+            variant="primary"
+            icon="checkmark-circle"
             disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#F5F5F5" />
-            ) : (
-              <Text style={styles.buttonText}>Save Changes</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.cancelButton}
+            loading={saving}
+          />
+          <GlassButton
             onPress={() => router.back()}
+            title="Cancel"
+            variant="secondary"
             disabled={saving}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          />
         </View>
       </ScrollView>
     </View>
@@ -281,94 +379,126 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#111111",
     padding: 24,
+    gap: 16,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+    paddingTop: 24,
+    paddingBottom: 48,
   },
   loadingText: {
     fontSize: 16,
     color: "#9A9A9A",
     marginTop: 16,
-    letterSpacing: 0.5,
   },
-  form: {
-    padding: 24,
-  },
-  pageTitle: {
+  // Header
+  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+  title: {
     fontSize: 28,
-    fontWeight: "700",
-    color: "#F5F5F5",
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    textAlign: "center",
     marginBottom: 32,
-    letterSpacing: 0.5,
+    lineHeight: 22,
+  },
+  // Cards
+  card: { marginBottom: 16 },
+  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+  blurCard: {
+    borderRadius: 20,
+    padding: 20,
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  solidCard: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.3,
+    color: "#9A9A9A",
+    marginBottom: 12,
   },
   input: {
-    backgroundColor: "#1E1E1E",
-    color: "#F5F5F5",
-    padding: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderRadius: 12,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#333",
+    padding: 16,
     fontSize: 16,
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   textArea: {
     height: 200,
     textAlignVertical: "top",
   },
-  button: {
+  // Buttons
+  buttonContainer: { gap: 12, marginTop: 8 },
+  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+  primaryButtonGlass: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.4)",
+  },
+  primaryButtonBlur: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.3)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  primaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  secondaryBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 12,
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  cancelButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  cancelButtonText: {
-    color: "#9A9A9A",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  // Auto-save modal styles
+  disabledButton: { opacity: 0.5 },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  secondaryButtonText: { color: "#9A9A9A" },
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   modalContent: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 24,
-    maxWidth: 400,
+    maxWidth: 420,
     width: "100%",
-    borderWidth: 1,
-    borderColor: "#333",
   },
   modalTitle: {
     color: "#F5F5F5",
@@ -387,31 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 12,
   },
-  modalButtonPrimary: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  modalButtonPrimaryText: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  modalButtonSecondary: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#444",
-  },
-  modalButtonSecondaryText: {
-    color: "#9A9A9A",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  // Save status bar - absolutely positioned to avoid layout shift
+  // Save status bar
   saveStatusBar: {
     position: "absolute",
     top: 0,
@@ -422,7 +528,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#333",
+    borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
   saveStatusText: {
     color: "#9A9A9A",

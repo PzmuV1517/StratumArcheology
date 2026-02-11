@@ -1,3 +1,8 @@
+/**
+ * Artefact Detail Screen
+ * Restyled to match new-project / join-project design language
+ * with iOS Liquid Glass support.
+ */
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -8,20 +13,111 @@ import {
   TouchableOpacity,
   Image,
   Platform,
-  Alert,
   Modal,
   TextInput,
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
 import { fileService } from "../../src/services/fileService";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { showAlert } from "../../src/utils/alert";
 import {
   buildManifestFromChildren,
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
 
+const isIOS = Platform.OS === "ios";
+
+// ---------------------------------------------------------------------------
+// Shared UI components (matching new-project / join-project)
+// ---------------------------------------------------------------------------
+function GlassCard({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) {
+  return <View style={[s.solidCard, style]}>{children}</View>;
+}
+
+function GlassButton({
+  onPress,
+  title,
+  variant = "primary",
+  icon,
+  disabled,
+  loading: isLoading,
+}: {
+  onPress: () => void;
+  title: string;
+  variant?: "primary" | "secondary" | "destructive";
+  icon?: string;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  const isPrimary = variant === "primary";
+  const isDestructive = variant === "destructive";
+  const content = (
+    <>
+      {icon && (
+        <Ionicons
+          name={icon as keyof typeof Ionicons.glyphMap}
+          size={20}
+          color={isDestructive ? "#FF4444" : isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          style={{ marginRight: 8 }}
+        />
+      )}
+      {isLoading ? (
+        <ActivityIndicator color={isDestructive ? "#FF4444" : "#FFFFFF"} />
+      ) : (
+        <Text
+          style={[
+            s.buttonText,
+            !isPrimary && !isDestructive && s.secondaryButtonText,
+            isDestructive && s.destructiveButtonText,
+          ]}
+        >
+          {title}
+        </Text>
+      )}
+    </>
+  );
+
+  if (isDestructive) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || isLoading}
+        activeOpacity={0.7}
+        style={[s.destructiveButton, disabled && s.disabledButton]}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || isLoading}
+      activeOpacity={0.7}
+      style={[
+        isPrimary ? s.primaryButton : s.secondaryBtn,
+        disabled && s.disabledButton,
+      ]}
+    >
+      {content}
+    </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 interface FileNode {
   id: string;
   name: string;
@@ -36,11 +132,15 @@ interface ArtefactMeta {
   createdAt?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
 export default function ArtefactDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>(); // folder id
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [children, setChildren] = useState<FileNode[]>([]);
   const [meta, setMeta] = useState<ArtefactMeta | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -57,9 +157,15 @@ export default function ArtefactDetail() {
   const load = async () => {
     try {
       setLoading(true);
+      // Get the folder info to extract the project_id
+      try {
+        const nodeInfo = await fileService.getNodeInfo(id as string);
+        if (nodeInfo?.project_id) setProjectId(nodeInfo.project_id);
+      } catch (e) {
+        console.warn("Could not fetch node info", e);
+      }
       const ch = await fileService.listChildren(id as string);
       setChildren(ch);
-      // meta
       const metaFile = ch.find(
         (c: any) =>
           c.type === "file" &&
@@ -73,17 +179,14 @@ export default function ArtefactDetail() {
           if (text) setMeta(JSON.parse(text));
         } catch {}
       }
-      // preview
       const pv = ch.find(
         (c: any) =>
           c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
       );
       if (pv && Platform.OS === "web") {
         const blobRes = await fileService.downloadFile(pv.id);
-        const blob = blobRes.data;
-        setPreviewUrl(URL.createObjectURL(blob));
+        setPreviewUrl(URL.createObjectURL(blobRes.data));
       }
-      // qr
       if (Platform.OS === "web" && typeof window !== "undefined") {
         setQrUrl(`${window.location.origin}/artefact/${id}`);
       }
@@ -122,9 +225,8 @@ export default function ArtefactDetail() {
           type: asset.mimeType || "application/octet-stream",
         } as any);
       }
-      await fileService.uploadFile(meta?.id || ("" as any), fd);
+      await fileService.uploadFile(projectId || ("" as any), fd);
     }
-    // After upload, refresh children and update artefact.json manifest
     try {
       const ch = await fileService.listChildren(id as string);
       setChildren(ch);
@@ -159,7 +261,9 @@ export default function ArtefactDetail() {
           type: "application/json",
         });
         const fd = new FormData();
-        const file = new File([blob], "artefact.json", { type: "application/json" });
+        const file = new File([blob], "artefact.json", {
+          type: "application/json",
+        });
         fd.append("file", file, "artefact.json");
         await fileService.replaceFile(existingMetaFile.id, fd);
       }
@@ -169,7 +273,9 @@ export default function ArtefactDetail() {
     await load();
   };
 
-  const notes = children.filter((c) => c.type === "file" && /\.txt$/i.test(c.name));
+  const noteFiles = children.filter(
+    (c) => c.type === "file" && /\.txt$/i.test(c.name),
+  );
   const images = children.filter(
     (c) =>
       c.type === "file" &&
@@ -177,147 +283,193 @@ export default function ArtefactDetail() {
         /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(c.name)),
   );
 
+  // ---- Loading / Error ----
+  if (loading) {
+    return (
+      <View style={s.container}>
+        <Stack.Screen
+          options={{
+            title: "Artefact",
+            headerTransparent: isIOS,
+            headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
+            headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+            headerTintColor: "#FF2A2A",
+            headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
+            headerShown: true,
+          }}
+        />
+        <View style={s.centerContainer}>
+          <ActivityIndicator size="large" color="#FF2A2A" />
+          <Text style={s.loadingText}>Loading artefact...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // ---- Main render ----
   return (
-    <View style={{ flex: 1, backgroundColor: "#111" }}>
+    <View style={s.container}>
       <Stack.Screen
         options={{
-          title: meta?.name ? `${meta.name} #${meta.number ?? "—"}` : "Artefact",
-          headerStyle: { backgroundColor: "#111111" },
+          title: meta?.name
+            ? `${meta.name} #${meta.number ?? "—"}`
+            : "Artefact",
+          headerTransparent: isIOS,
+          headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
+          headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: {
-            color: "#F5F5F5",
-            fontSize: 18,
-            fontWeight: "600",
-          },
+          headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
           headerBackTitle: "Project",
           headerShown: true,
           presentation: "card",
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={onDeleteArtefact}
-              style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-            >
-              <Text style={{ color: "#FF4444", fontWeight: "700" }}>Delete</Text>
-            </TouchableOpacity>
-          ),
         }}
       />
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color="#FF2A2A" />
-          <Text style={{ color: "#9A9A9A", marginTop: 8 }}>Loading…</Text>
+
+      <ScrollView
+        style={s.scrollView}
+        contentContainerStyle={s.content}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header icon */}
+        <View style={s.headerIcon}>
+          {previewUrl ? (
+            <Image
+              source={{ uri: previewUrl }}
+              style={s.heroPreview}
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name="cube" size={48} color="#FF2A2A" />
+          )}
         </View>
-      ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 16 }}
-        >
-          {/* Hero section with preview */}
-          <View style={styles.hero}>
-            {previewUrl ? (
-              <Image
-                source={{ uri: previewUrl }}
-                style={styles.heroImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.heroImage,
-                  {
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#0A0A0A",
-                  },
-                ]}
-              >
-                <Text style={{ color: "#9A9A9A" }}>No preview</Text>
+
+        <Text style={s.title}>{meta?.name || "Artefact"}</Text>
+        <Text style={s.subtitle}>
+          {meta?.number ? `Artefact #${meta.number}` : "Artefact detail"}
+          {meta?.createdAt &&
+            `  ·  Created ${new Date(meta.createdAt).toLocaleDateString()}`}
+        </Text>
+
+        {/* ── QR Code card ── */}
+        <GlassCard style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.label}>
+              <Ionicons name="qr-code" size={14} color="#9A9A9A" /> QR Code
+            </Text>
+            {Platform.OS === "web" && qrDataUrl && (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={s.inlineBtn}
+                  onPress={() =>
+                    printQr(
+                      qrDataUrl,
+                      `${meta?.name || "artefact"}-qr.png`,
+                      `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
+                    )
+                  }
+                >
+                  <Ionicons name="print" size={16} color="#FF2A2A" />
+                  <Text style={s.inlineBtnText}>Print</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.inlineBtn}
+                  onPress={() =>
+                    downloadDataUrl(
+                      qrDataUrl,
+                      `${meta?.name || "artefact"}-qr.png`,
+                    )
+                  }
+                >
+                  <Ionicons name="download" size={16} color="#FF2A2A" />
+                  <Text style={s.inlineBtnText}>Save</Text>
+                </TouchableOpacity>
               </View>
             )}
-            <View style={styles.heroOverlay} />
           </View>
+          <View style={{ alignItems: "center", marginTop: 8 }}>
+            <QRCodeView
+              value={qrUrl || ""}
+              label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
+              onReadyDataUrl={setQrDataUrl}
+            />
+          </View>
+        </GlassCard>
 
-          <View style={styles.contentPad}>
-            {/* QR Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>QR Code</Text>
-              {Platform.OS === "web" && qrDataUrl ? (
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() =>
-                      printQr(
-                        qrDataUrl!,
-                        `${meta?.name || "artefact"}-qr.png`,
-                        `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
-                      )
-                    }
-                  >
-                    <Text style={styles.addButtonText}>Print</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() =>
-                      downloadDataUrl(
-                        qrDataUrl!,
-                        `${meta?.name || "artefact"}-qr.png`,
-                      )
-                    }
-                  >
-                    <Text style={styles.addButtonText}>Save</Text>
-                  </TouchableOpacity>
+        {/* ── Images card ── */}
+        <GlassCard style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.label}>
+              <Ionicons name="images" size={14} color="#9A9A9A" /> Images
+              <Text style={s.countBadge}> ({images.length})</Text>
+            </Text>
+            <TouchableOpacity style={s.inlineBtn} onPress={uploadMoreFiles}>
+              <Ionicons name="cloud-upload" size={16} color="#FF2A2A" />
+              <Text style={s.inlineBtnText}>Upload</Text>
+            </TouchableOpacity>
+          </View>
+          {images.length === 0 ? (
+            <View style={s.emptyInCard}>
+              <Ionicons name="image-outline" size={32} color="#555" />
+              <Text style={s.emptyText}>No images yet</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 8, marginTop: 4 }}>
+              {images.map((img) => (
+                <View key={img.id} style={s.fileRow}>
+                  <Ionicons name="image" size={18} color="#FF2A2A" />
+                  <Text style={s.fileRowText} numberOfLines={1}>
+                    {img.name}
+                  </Text>
                 </View>
-              ) : null}
+              ))}
             </View>
-            <View style={[styles.card, { alignItems: "center" }]}>
-              <QRCodeView
-                value={qrUrl || ""}
-                label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
-                onReadyDataUrl={setQrDataUrl}
-              />
-            </View>
+          )}
+        </GlassCard>
 
-            {/* Files Section */}
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Files</Text>
-              <TouchableOpacity style={styles.addButton} onPress={uploadMoreFiles}>
-                <Text style={styles.addButtonText}>Upload Files</Text>
-              </TouchableOpacity>
-            </View>
-            {images.length === 0 && notes.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No files yet</Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Upload images or add notes
-                </Text>
-              </View>
-            ) : (
-              <View>
-                {images.length > 0 ? (
-                  <View style={[styles.grid, { marginBottom: 8 }]}>
-                    {images.map((img) => (
-                      <View key={img.id} style={styles.fileCard}>
-                        <Text style={styles.fileText}>{img.name}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-                {notes.length > 0 ? (
-                  <View style={{ gap: 8 }}>
-                    {notes.map((n) => (
-                      <View key={n.id} style={styles.noteRow}>
-                        <Text style={styles.fileText}>{n.name}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            )}
-
-            <View style={{ height: 16 }} />
+        {/* ── Notes card ── */}
+        <GlassCard style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.label}>
+              <Ionicons name="document-text" size={14} color="#9A9A9A" /> Notes
+              <Text style={s.countBadge}> ({noteFiles.length})</Text>
+            </Text>
           </View>
-        </ScrollView>
-      )}
+          {noteFiles.length === 0 ? (
+            <View style={s.emptyInCard}>
+              <Ionicons name="document-text-outline" size={32} color="#555" />
+              <Text style={s.emptyText}>No notes yet</Text>
+            </View>
+          ) : (
+            <View style={{ gap: 8, marginTop: 4 }}>
+              {noteFiles.map((n) => (
+                <View key={n.id} style={s.fileRow}>
+                  <Ionicons name="document-text" size={18} color="#9A9A9A" />
+                  <Text style={s.fileRowText} numberOfLines={1}>
+                    {n.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </GlassCard>
+
+        {/* ── Actions ── */}
+        <View style={s.buttonContainer}>
+          <GlassButton
+            onPress={uploadMoreFiles}
+            title="Upload More Files"
+            variant="primary"
+            icon="cloud-upload"
+          />
+          <GlassButton
+            onPress={onDeleteArtefact}
+            title="Delete Artefact"
+            variant="destructive"
+            icon="trash"
+          />
+        </View>
+      </ScrollView>
 
       {/* Delete confirmation modal */}
       <Modal
@@ -326,14 +478,14 @@ export default function ArtefactDetail() {
         animationType="fade"
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Delete artefact</Text>
-            <Text style={styles.modalText}>
-              This will permanently delete this artefact and all its files and notes.
-              Type the artefact name to confirm.
+        <View style={s.modalBackdrop}>
+          <GlassCard style={s.modalContent}>
+            <Text style={s.modalTitle}>Delete Artefact</Text>
+            <Text style={s.modalText}>
+              This will permanently delete this artefact and all its files and
+              notes. Type the artefact name to confirm.
             </Text>
-            <Text style={[styles.modalText, { marginTop: 8 }]}>
+            <Text style={[s.modalText, { marginTop: 8 }]}>
               Artefact name:{" "}
               <Text style={{ color: "#F5F5F5", fontWeight: "700" }}>
                 {meta?.name || "—"}
@@ -343,26 +495,27 @@ export default function ArtefactDetail() {
               value={confirmName}
               onChangeText={setConfirmName}
               placeholder="Type the artefact name"
-              placeholderTextColor="#777"
-              style={styles.input}
+              placeholderTextColor="#555"
+              style={s.input}
               autoCapitalize="none"
               autoCorrect={false}
             />
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { flex: 1 }]}
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+              <GlassButton
                 onPress={() => setShowDeleteModal(false)}
+                title="Cancel"
+                variant="secondary"
                 disabled={deleting}
-              >
-                <Text style={styles.secondaryBtnText}>Cancel</Text>
-              </TouchableOpacity>
+              />
               <TouchableOpacity
                 style={[
-                  styles.deleteBtn,
+                  s.destructiveButton,
                   {
                     flex: 1,
                     opacity:
-                      deleting || confirmName !== (meta?.name || "") ? 0.6 : 1,
+                      deleting || confirmName !== (meta?.name || "")
+                        ? 0.5
+                        : 1,
                   },
                 ]}
                 disabled={deleting || confirmName !== (meta?.name || "")}
@@ -374,162 +527,198 @@ export default function ArtefactDetail() {
                     router.back();
                   } catch (e) {
                     console.error("Failed to delete artefact", e);
-                    Alert.alert("Error", "Failed to delete artefact");
+                    showAlert("Error", "Failed to delete artefact");
                   } finally {
                     setDeleting(false);
                   }
                 }}
               >
-                <Text style={styles.deleteBtnText}>
-                  {deleting ? "Deleting…" : "Delete"}
-                </Text>
+                {deleting ? (
+                  <ActivityIndicator color="#FF4444" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="trash"
+                      size={20}
+                      color="#FF4444"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={s.destructiveButtonText}>Delete</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+// ---------------------------------------------------------------------------
+// Styles — matching new-project / join-project design language
+// ---------------------------------------------------------------------------
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#111111" },
+  scrollView: { flex: 1 },
+  content: { padding: 24, paddingTop: 24, paddingBottom: 48 },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  loadingText: { fontSize: 16, color: "#9A9A9A", marginTop: 16 },
+  // Header
+  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+  heroPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 20,
+    backgroundColor: "#0A0A0A",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  // Cards
+  card: { marginBottom: 16 },
+  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+  blurCard: {
+    borderRadius: 20,
+    padding: 20,
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  solidCard: {
+    borderRadius: 20,
+    padding: 20,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  // Section
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 16,
     marginBottom: 8,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#F5F5F5" },
-  addButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  addButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 12 },
-  card: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  cardRow: {
+  label: { fontSize: 14, fontWeight: "600", color: "#9A9A9A" },
+  countBadge: { fontWeight: "400", color: "#666" },
+  inlineBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+  inlineBtnText: { color: "#FF2A2A", fontWeight: "600", fontSize: 13 },
+  // File rows
+  fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  fileRowText: { flex: 1, color: "#F5F5F5", fontSize: 14 },
+  emptyInCard: {
+    alignItems: "center",
+    paddingVertical: 20,
+    gap: 8,
+  },
+  emptyText: { fontSize: 14, color: "#666" },
+  // Input
+  input: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
     marginTop: 8,
   },
-  title: { color: "#F5F5F5", fontWeight: "700", fontSize: 16 },
-  subtle: { color: "#9A9A9A", fontSize: 12 },
-  preview: {
-    width: "100%",
-    aspectRatio: 1.6,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#0A0A0A",
+  // Buttons
+  buttonContainer: { gap: 12, marginTop: 8 },
+  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+  primaryButtonGlass: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.4)",
   },
-  previewEmpty: { borderWidth: 1, borderColor: "#2A2A2A" },
-  thumbSmall: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#0A0A0A",
+  primaryButtonBlur: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(255, 42, 42, 0.3)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  hero: { width: "100%", aspectRatio: 3.4, position: "relative" },
-  heroImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
-  heroOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.25)",
+  primaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FF2A2A",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
-  heroContent: { position: "absolute", left: 16, right: 16, bottom: 12 },
-  heroTitle: { color: "#F5F5F5", fontSize: 22, fontWeight: "700" },
-  heroSubtitle: { color: "#CFCFCF", fontSize: 14, marginTop: 2 },
-  contentPad: { paddingHorizontal: 16 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  fileCard: {
-    padding: 10,
-    borderRadius: 12,
+  secondaryBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  destructiveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 68, 68, 0.1)",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#1A1A1A",
+    borderColor: "rgba(255, 68, 68, 0.3)",
   },
-  noteRow: {
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#1A1A1A",
-  },
-  fileText: { color: "#F5F5F5" },
-  emptyState: { alignItems: "center", paddingVertical: 24 },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 4,
-  },
-  emptyStateSubtext: { fontSize: 14, color: "#9A9A9A" },
+  disabledButton: { opacity: 0.5 },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  secondaryButtonText: { color: "#9A9A9A" },
+  destructiveButtonText: { color: "#FF4444", fontSize: 16, fontWeight: "600" },
+  // Modal
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
     justifyContent: "center",
-    padding: 16,
+    alignItems: "center",
+    padding: 24,
   },
-  modalCard: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: "#111",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 16,
-  },
-  modalTitle: { color: "#F5F5F5", fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  modalText: { color: "#CFCFCF" },
-  input: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  modalContent: { width: "100%", maxWidth: 420 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
     color: "#F5F5F5",
-    marginTop: 8,
+    marginBottom: 8,
   },
-  deleteBtn: {
-    backgroundColor: "#3a0f0f",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#5a1a1a",
-    alignItems: "center",
-  },
-  deleteBtnText: { color: "#FF4444", fontWeight: "700" },
-  secondaryBtn: {
-    backgroundColor: "#222222",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    alignItems: "center",
-  },
-  secondaryBtnText: { color: "#F5F5F5", fontWeight: "600" },
+  modalText: { fontSize: 14, color: "#9A9A9A", lineHeight: 20 },
 });
 
 function downloadDataUrl(dataUrl: string, filename: string) {
@@ -541,7 +730,7 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   a.remove();
 }
 
-function printQr(dataUrl: string, filename: string, label?: string) {
+function printQr(dataUrl: string, _filename: string, label?: string) {
   const win = window.open("", "_blank");
   if (!win) return;
   const html = `<!doctype html><html><head><title>QR</title><style>body{font-family:system-ui;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0} img{width:320px;height:320px} h1{font-size:18px;margin-top:8px}</style></head><body><img src="${dataUrl}" alt="QR"/>${label ? `<h1>${label}</h1>` : ""}<script>setTimeout(()=>{window.print();},300);</script></body></html>`;

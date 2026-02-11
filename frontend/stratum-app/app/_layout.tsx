@@ -4,11 +4,13 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { useEffect } from "react";
 import { View, Platform, StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AuthRedirector from "./AuthRedirector";
 
 import { AuthProvider } from "../src/contexts/AuthContext";
 import { WebSocketProvider } from "../src/contexts/WebSocketContext";
 import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
+import CustomAlertOverride from "../src/components/common/AndroidAlertOverride";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -87,10 +89,13 @@ const styles = StyleSheet.create({
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <RootLayoutNav />
-      </WebSocketProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <WebSocketProvider>
+          <RootLayoutNav />
+          <CustomAlertOverride />
+        </WebSocketProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

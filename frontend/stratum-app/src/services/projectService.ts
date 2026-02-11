@@ -86,12 +86,14 @@ export const projectService = {
   createInvite: async (
     projectId: string,
     role: string,
-    ttlHours: number = 168,
+    ttlHours: number = 336,
+    maxUses: number | null = null,
   ): Promise<InviteResponse> => {
     try {
       const response = await api.post(`/projects/${projectId}/invites`, {
         role,
         ttl_hours: ttlHours,
+        max_uses: maxUses,
       });
       return response.data;
     } catch (error: any) {

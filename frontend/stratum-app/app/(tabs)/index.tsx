@@ -13,20 +13,17 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { Project } from "../../src/services/projectService.types";
+import type { ProjectActivity } from "../../src/services/activityService.types";
 
-interface Activity {
-  id: string;
-  description: string;
-  created_at: string;
-  project_id: string;
+type MyActivity = ProjectActivity & {
   project_name?: string;
-  user_name?: string;
-}
+};
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<MyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
@@ -90,7 +87,12 @@ export default function ProjectsScreen() {
   const renderProject = ({ item }: any) => (
     <TouchableOpacity
       style={styles.projectCard}
-      onPress={() => router.push(`/project/${item.id}`)}
+      onPress={() =>
+        router.push({
+          pathname: "/project/[id]",
+          params: { id: String(item.id) },
+        })
+      }
     >
       <Text style={styles.projectName}>{item.name}</Text>
       <Text style={styles.projectDescription}>
@@ -104,23 +106,27 @@ export default function ProjectsScreen() {
     </TouchableOpacity>
   );
 
-  const renderActivity = ({ item }: { item: Activity }) => (
+  const renderActivity = ({ item }: { item: MyActivity }) => (
     <TouchableOpacity
       style={styles.activityCard}
-      onPress={() => router.push(`/project/${item.project_id}`)}
+      onPress={() =>
+        router.push({
+          pathname: "/project/[id]",
+          params: { id: String(item.project_id) },
+        })
+      }
     >
       <View style={styles.activityHeader}>
-        <Text style={styles.activityProjectName}>{item.project_name}</Text>
+        <Text style={styles.activityProjectName}>
+          {item.project_name || "Project"}
+        </Text>
         <Text style={styles.activityDate}>
-          {new Date(item.created_at).toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {activityService.formatTimestamp(item.created_at)}
         </Text>
       </View>
-      <Text style={styles.activityDescription}>{item.description}</Text>
+      <Text style={styles.activityDescription}>
+        {activityService.getActivityDescription(item)}
+      </Text>
       {item.user_name && (
         <Text style={styles.activityUser}>by {item.user_name}</Text>
       )}
@@ -216,8 +222,8 @@ export default function ProjectsScreen() {
                   style={styles.myFolderButton}
                   onPress={() =>
                     router.push({
-                      pathname: `/project/${project.id}`,
-                      params: { openFiles: "myFolder" },
+                      pathname: "/project/[id]",
+                      params: { id: String(project.id), openFiles: "myFolder" },
                     })
                   }
                 >
@@ -248,7 +254,7 @@ export default function ProjectsScreen() {
               <FlatList
                 data={activities}
                 renderItem={renderActivity}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => String(item.id)}
                 scrollEnabled={false}
               />
             )}
@@ -257,7 +263,7 @@ export default function ProjectsScreen() {
       )}
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
-        <Text style={styles.fabText}>+</Text>
+        <IconSymbol name="plus" size={28} color="#F5F5F5" />
       </TouchableOpacity>
 
       <ProjectActionModal
@@ -279,9 +285,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     padding: 24,
     paddingTop: 60,
     backgroundColor: "#111111",
@@ -294,7 +297,6 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     letterSpacing: 0.5,
   },
-
   // Sub-tab styles
   subTabContainer: {
     flexDirection: "row",
@@ -388,7 +390,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 24,
-    bottom: Platform.OS === "ios" ? 100 : 24,
+    bottom: Platform.OS === "android" ? 110 : 100,
     width: 64,
     height: 64,
     borderRadius: 32,
@@ -399,9 +401,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
-    elevation: 8,
+    elevation: 12,
+    zIndex: 999,
   },
-  fabText: { fontSize: 32, color: "#F5F5F5", lineHeight: 36, fontWeight: "300" },
 
   // My Stuff styles
   myStuffContainer: {

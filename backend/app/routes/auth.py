@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import firebase_admin.auth as firebase_auth
+import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -21,16 +22,48 @@ from app.schemas import (
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+# Firebase Auth REST API endpoint for email/password sign-in
+FIREBASE_SIGN_IN_URL = (
+    "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
+)
+
+
+async def verify_password_with_firebase(email: str, password: str) -> dict:
+    """Verify email/password credentials against Firebase Auth via REST API.
+
+    Returns the Firebase response dict on success.
+    Raises HTTPException(401) on invalid credentials.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            FIREBASE_SIGN_IN_URL,
+            params={"key": settings.FIREBASE_WEB_API_KEY},
+            json={
+                "email": email,
+                "password": password,
+                "returnSecureToken": True,
+            },
+            timeout=10.0,
+        )
+
+    if response.status_code != 200:
+        # Firebase returns 400 for invalid credentials
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    return response.json()
+
 
 @router.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Login with email and password using Firebase authentication"""
+    """Login with email and password — verified against Firebase Auth."""
     try:
-        # Authenticate with Firebase using email and password
-        # Note: This requires Firebase Admin SDK with appropriate permissions
-        # For production, you might want to use Firebase Auth REST API
+        # 1. Verify password against Firebase Auth REST API
+        await verify_password_with_firebase(request.email, request.password)
 
-        # Try to get user by email first to check if they exist
+        # 2. Look up the local user record
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
             raise HTTPException(
@@ -38,40 +71,26 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 detail="Invalid email or password",
             )
 
-        # For now, we'll create a Firebase custom token and verify the user exists
-        # In a real implementation, you'd verify the password with Firebase
-        # This is a simplified version - you should use Firebase Auth REST API
+        # 3. Update last login
+        user.last_login = datetime.utcnow()
+        db.commit()
 
-        try:
-            # Create a custom token for the user
-            custom_token = firebase_auth.create_custom_token(user.firebase_uid)
+        # 4. Issue our API JWT
+        jwt_payload = {
+            "user_id": user.id,
+            "firebase_uid": user.firebase_uid,
+            "email": user.email,
+            "exp": datetime.utcnow()
+            + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
+        }
 
-            # Update last login
-            user.last_login = datetime.utcnow()
-            db.commit()
+        jwt_token = jwt.encode(
+            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+        )
 
-            # Generate JWT token for our API
-            jwt_payload = {
-                "user_id": user.id,
-                "firebase_uid": user.firebase_uid,
-                "email": user.email,
-                "exp": datetime.utcnow()
-                + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
-            }
-
-            jwt_token = jwt.encode(
-                jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
-            )
-
-            return AuthResponse(
-                access_token=jwt_token, user=UserResponse.model_validate(user)
-            )
-
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password",
-            )
+        return AuthResponse(
+            access_token=jwt_token, user=UserResponse.model_validate(user)
+        )
 
     except HTTPException:
         raise
@@ -224,10 +243,28 @@ async def update_profile(
         current_user.display_name = request.display_name
     if request.photo_url is not None:
         current_user.photo_url = request.photo_url
+    if request.bio is not None:
+        current_user.bio = request.bio
 
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a user's public profile by ID"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
 
 
 @router.get("/users/search")
