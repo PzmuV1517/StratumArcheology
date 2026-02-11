@@ -62,6 +62,12 @@ dist/
 .expo/
 web-build/
 
+# Allow specific exported web files to be tracked
+!frontend/stratum-app/dist/assets
+!frontend/stratum-app/dist/project
+!frontend/stratum-app/dist/create-artefact.html
+!frontend/stratum-app/dist/scan-qr.html
+
 # MinIO/Storage
 minio-data/
 storage/
