@@ -348,7 +348,6 @@ export default function CreateArtefactScreen() {
           headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
-          presentation: "modal",
         }}
       />
 
@@ -357,6 +356,27 @@ export default function CreateArtefactScreen() {
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
       >
+        {Platform.OS === "web" ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }}
+            style={{ width: "100%" }}
+          >
+            {renderFormContent()}
+          </form>
+        ) : (
+          renderFormContent()
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+
+  function renderFormContent() {
+    return (
+      <>
         {/* Header icon */}
         <View style={s.headerIcon}>
           <Ionicons name="cube" size={48} color="#FF2A2A" />
@@ -380,7 +400,11 @@ export default function CreateArtefactScreen() {
               placeholderTextColor="#555"
               value={name}
               onChangeText={setName}
-              autoFocus
+              autoFocus={Platform.OS !== "ios"}
+              editable={!creating}
+              onSubmitEditing={(e) => e.preventDefault?.()}
+              returnKeyType="done"
+              blurOnSubmit={true}
             />
           </View>
         </GlassCard>
@@ -487,6 +511,8 @@ export default function CreateArtefactScreen() {
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
+                editable={!creating}
+                blurOnSubmit={false}
               />
             </View>
           ))}
@@ -558,9 +584,9 @@ export default function CreateArtefactScreen() {
             variant="secondary"
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+      </>
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
