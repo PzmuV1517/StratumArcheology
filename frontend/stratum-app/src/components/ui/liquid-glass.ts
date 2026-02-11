@@ -41,9 +41,6 @@ export type { ActionSheetAction } from "./LiquidGlassActionSheet";
 export { LiquidGlassCard } from "./LiquidGlassCard";
 export type { LiquidGlassCardProps } from "./LiquidGlassCard";
 
-// --- Core ---
-export {
-  LiquidGlassView,
-  LiquidGlassContainerView,
-  isLiquidGlassSupported,
-} from "@/src/utils/liquidGlass";
+// --- Core (from liquid-react native module) ---
+export { NativeMaterialView } from "liquid-react";
+export type { NativeMaterialViewProps } from "liquid-react";

@@ -9,7 +9,7 @@ import {
   Platform,
   TextInput,
 } from "react-native";
-import { LiquidGlassView, isLiquidGlassSupported } from "../../utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // liquid-react native toolbar (iOS only)
@@ -683,8 +683,8 @@ export default function FilesOverlay({
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
 
-  const HeaderWrapper = Platform.OS === "ios" && isLiquidGlassSupported ? LiquidGlassView : View;
-  const headerStyle = Platform.OS === "ios" && isLiquidGlassSupported ? styles.headerGlass : styles.header;
+  const HeaderWrapper = Platform.OS === "ios" ? NativeMaterialView : View;
+  const headerStyle = Platform.OS === "ios" ? styles.headerGlass : styles.header;
 
   return (
     <View
@@ -707,7 +707,7 @@ export default function FilesOverlay({
           />
         </NativeToolbar>
       ) : (
-        <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" && isLiquidGlassSupported ? { effect: "regular" } : {})}>
+        <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" ? { material: "systemMaterial" } : {})}>
           <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
             <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
           </TouchableOpacity>

@@ -5,11 +5,11 @@
  * - iOS <26: Standard UITabBarController
  */
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
-import { DynamicColorIOS } from "react-native";
-import { isLiquidGlassSupported } from "@/src/utils/liquidGlass";
+import { DynamicColorIOS, Platform } from "react-native";
 
 // Active color for tab items
 const ACTIVE_COLOR = "#FF2A2A";
+const isLiquidGlass = parseInt(String(Platform.Version), 10) >= 26;
 
 export default function TabLayout() {
   return (
@@ -22,7 +22,7 @@ export default function TabLayout() {
       // On iOS 26+ with Liquid Glass, let the system handle the bar appearance
       // (no explicit background → native glass effect, no white flash on swipe).
       // Older iOS gets a semi-transparent dark background.
-      {...(!isLiquidGlassSupported && {
+      {...(!isLiquidGlass && {
         barStyle: {
           backgroundColor: DynamicColorIOS({
             dark: "rgba(17, 17, 17, 0.85)",

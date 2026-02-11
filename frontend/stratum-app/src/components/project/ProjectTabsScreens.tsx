@@ -3,7 +3,7 @@ import { ScrollView, View, Text, Platform, TouchableOpacity, StyleSheet as RNSty
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 import NotesSection from "@/src/components/project/NotesSection";
 import FileGallery from "@/src/components/project/FileGallery";
 import ArtefactsTab from "@/src/components/project/ArtefactsTab";
@@ -52,92 +52,47 @@ export function ProjectOverviewScreen() {
         <View style={styles.overviewContainer}>
           <View style={styles.overviewHero}>
             <Text style={styles.overviewTitle}>{project?.name}</Text>
-            {!!project?.ran_lmi_id &&
-              (Platform.OS === "ios" && isLiquidGlassSupported ? (
-                <LiquidGlassView style={styles.overviewBadgeGlass} effect="regular">
-                  <Text style={styles.overviewBadgeText}>RAN/LMI: {project?.ran_lmi_id}</Text>
-                </LiquidGlassView>
-              ) : (
-                <View style={styles.overviewBadge}>
-                  <Text style={styles.overviewBadgeText}>RAN/LMI: {project?.ran_lmi_id}</Text>
-                </View>
-              ))}
-          </View>
-
-          <View style={styles.overviewStatsGrid}>
-            {Platform.OS === "ios" && isLiquidGlassSupported ? (
-              <>
-                <LiquidGlassView style={styles.overviewStatCardGlass} effect="regular">
-                  <Text style={styles.overviewStatValue}>{members.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Team Members</Text>
-                </LiquidGlassView>
-                <LiquidGlassView style={styles.overviewStatCardGlass} effect="regular">
-                  <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Notes</Text>
-                </LiquidGlassView>
-              </>
-            ) : (
-              <>
-                <View style={styles.overviewStatCard}>
-                  <Text style={styles.overviewStatValue}>{members.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Team Members</Text>
-                </View>
-                <View style={styles.overviewStatCard}>
-                  <Text style={styles.overviewStatValue}>{notes.length}</Text>
-                  <Text style={styles.overviewStatLabel}>Notes</Text>
-                </View>
-              </>
+            {!!project?.ran_lmi_id && (
+              <View style={styles.overviewBadge}>
+                <Text style={styles.overviewBadgeText}>RAN/LMI: {project?.ran_lmi_id}</Text>
+              </View>
             )}
           </View>
 
-          {!!project?.description &&
-            (Platform.OS === "ios" && isLiquidGlassSupported ? (
-              <LiquidGlassView style={styles.overviewCardGlass} effect="regular">
-                <View style={styles.overviewCardHeader}>
-                  <View style={styles.overviewIconCircle}>
-                    <Text style={styles.overviewIcon}>📝</Text>
-                  </View>
-                  <Text style={styles.overviewCardTitle}>About</Text>
-                </View>
-                <Text style={styles.overviewDescription}>{project?.description}</Text>
-              </LiquidGlassView>
-            ) : (
-              <View style={styles.overviewCard}>
-                <View style={styles.overviewCardHeader}>
-                  <View style={styles.overviewIconCircle}>
-                    <Text style={styles.overviewIcon}>📝</Text>
-                  </View>
-                  <Text style={styles.overviewCardTitle}>About</Text>
-                </View>
-                <Text style={styles.overviewDescription}>{project?.description}</Text>
-              </View>
-            ))}
+          <View style={styles.overviewStatsGrid}>
+            <View style={styles.overviewStatCard}>
+              <Text style={styles.overviewStatValue}>{members.length}</Text>
+              <Text style={styles.overviewStatLabel}>Team Members</Text>
+            </View>
+            <View style={styles.overviewStatCard}>
+              <Text style={styles.overviewStatValue}>{notes.length}</Text>
+              <Text style={styles.overviewStatLabel}>Notes</Text>
+            </View>
+          </View>
 
-          {Platform.OS === "ios" && isLiquidGlassSupported ? (
-            <LiquidGlassView style={styles.overviewCardGlass} effect="regular">
-              <View style={styles.overviewCardHeader}>
-                <View style={styles.overviewIconCircle}>
-                  <Text style={styles.overviewIcon}>📅</Text>
-                </View>
-                <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
-              </View>
-              <View style={{ height: 400, marginTop: 12 }}>
-                <Timeline projectId={project?.id as string} maxHeight={400} />
-              </View>
-            </LiquidGlassView>
-          ) : (
+          {!!project?.description && (
             <View style={styles.overviewCard}>
               <View style={styles.overviewCardHeader}>
                 <View style={styles.overviewIconCircle}>
-                  <Text style={styles.overviewIcon}>📅</Text>
+                  <Text style={styles.overviewIcon}>📝</Text>
                 </View>
-                <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
+                <Text style={styles.overviewCardTitle}>About</Text>
               </View>
-              <View style={{ height: 400, marginTop: 12 }}>
-                <Timeline projectId={project?.id as string} maxHeight={400} />
-              </View>
+              <Text style={styles.overviewDescription}>{project?.description}</Text>
             </View>
           )}
+
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewCardHeader}>
+              <View style={styles.overviewIconCircle}>
+                <Text style={styles.overviewIcon}>📅</Text>
+              </View>
+              <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
+            </View>
+            <View style={{ height: 400, marginTop: 12 }}>
+              <Timeline projectId={project?.id as string} maxHeight={400} />
+            </View>
+          </View>
         </View>
       </ScrollView>
     </ProjectTabGuard>
@@ -336,7 +291,7 @@ export function ProjectHistoryScreen() {
 
   return (
     <ProjectTabGuard>
-      {Platform.OS === "ios" && isLiquidGlassSupported ? (
+      {Platform.OS === "ios" ? (
         <View
           style={{
             flex: 1,
@@ -345,17 +300,17 @@ export function ProjectHistoryScreen() {
             paddingBottom: 0,
           }}
         >
-          <LiquidGlassView
+          <NativeMaterialView
+            material="systemMaterial"
             style={{
               flex: 1,
               borderRadius: 16,
               overflow: "hidden",
               margin: 16,
             }}
-            effect="regular"
           >
             <TimeMachineTab projectId={project?.id as string} />
-          </LiquidGlassView>
+          </NativeMaterialView>
         </View>
       ) : (
         <View
@@ -396,7 +351,7 @@ export function ProjectToolsScreen() {
 
   return (
     <ProjectTabGuard>
-      {Platform.OS === "ios" && isLiquidGlassSupported ? (
+      {Platform.OS === "ios" ? (
         <ScrollView
           style={styles.content}
           contentContainerStyle={{
@@ -407,16 +362,16 @@ export function ProjectToolsScreen() {
           contentInsetAdjustmentBehavior="automatic"
           refreshControl={maybeRefreshControl}
         >
-          <LiquidGlassView
+          <NativeMaterialView
+            material="systemMaterial"
             style={{
               borderRadius: 16,
               overflow: "hidden",
               minHeight: 500,
             }}
-            effect="regular"
           >
             <ToolsTab projectId={project?.id as string} />
-          </LiquidGlassView>
+          </NativeMaterialView>
         </ScrollView>
       ) : (
         <ScrollView

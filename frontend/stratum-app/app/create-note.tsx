@@ -18,10 +18,8 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave } from "../src/hooks/useAutoSave";
-import { LiquidGlassView, isLiquidGlassSupported } from "../src/utils/liquidGlass";
 
 const isIOS = Platform.OS === "ios";
-const useGlass = isIOS && isLiquidGlassSupported;
 
 // ---------------------------------------------------------------------------
 // Shared UI components (matching new-project / join-project)
@@ -33,20 +31,6 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (useGlass) {
-    return (
-      <LiquidGlassView style={[styles.glassCard, style]} effect="regular">
-        {children}
-      </LiquidGlassView>
-    );
-  }
-  if (isIOS) {
-    return (
-      <BlurView intensity={30} tint="dark" style={[styles.blurCard, style]}>
-        {children}
-      </BlurView>
-    );
-  }
   return <View style={[styles.solidCard, style]}>{children}</View>;
 }
 
@@ -86,34 +70,6 @@ function GlassButton({
     </>
   );
 
-  if (useGlass && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-      >
-        <LiquidGlassView style={styles.primaryButtonGlass} effect="regular">
-          {content}
-        </LiquidGlassView>
-      </TouchableOpacity>
-    );
-  }
-  if (isIOS && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.primaryButtonBlur}>
-          {content}
-        </BlurView>
-      </TouchableOpacity>
-    );
-  }
   return (
     <TouchableOpacity
       onPress={onPress}

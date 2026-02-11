@@ -8,7 +8,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 
 export default function NewFolderModal({
   visible,
@@ -31,8 +31,8 @@ export default function NewFolderModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "ios" && isLiquidGlassSupported ? (
-          <LiquidGlassView style={styles.modalCardGlass} effect="regular">
+        {Platform.OS === "ios" ? (
+          <NativeMaterialView material="systemMaterial" style={styles.modalCardGlass}>
             <Text style={styles.modalTitle}>New Folder</Text>
             <Text style={styles.modalText}>Enter a name for the new folder</Text>
             <TextInput
@@ -53,7 +53,7 @@ export default function NewFolderModal({
                 <Text style={styles.buttonText}>Create</Text>
               </TouchableOpacity>
             </View>
-          </LiquidGlassView>
+          </NativeMaterialView>
         ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>New Folder</Text>

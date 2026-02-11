@@ -8,7 +8,7 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import { LiquidGlassView, isLiquidGlassSupported } from "../../../utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 
 // ─── Main Burger Menu ───────────────────────────────────────────────
 
@@ -74,8 +74,8 @@ export default function ProjectMenuModal({
         <View style={styles.menuBackdrop}>
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          {Platform.OS === "ios" && isLiquidGlassSupported ? (
-            <LiquidGlassView style={styles.menuCardGlass} effect="regular">
+          {Platform.OS === "ios" ? (
+            <NativeMaterialView material="systemMaterial" style={styles.menuCardGlass}>
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
@@ -122,7 +122,7 @@ export default function ProjectMenuModal({
               >
                 <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
               </TouchableOpacity>
-            </LiquidGlassView>
+            </NativeMaterialView>
           ) : (
           <View style={styles.menuCard}>
             <TouchableOpacity

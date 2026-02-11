@@ -10,7 +10,6 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -18,13 +17,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
 import { showAlert } from "../src/utils/alert";
-import {
-  LiquidGlassView,
-  isLiquidGlassSupported,
-} from "../src/utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
-const useGlass = isIOS && isLiquidGlassSupported;
 
 // ---------------------------------------------------------------------------
 // Shared UI components (matching create-note / new-project)
@@ -36,18 +31,11 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (useGlass) {
-    return (
-      <LiquidGlassView style={[styles.glassCard, style]} effect="regular">
-        {children}
-      </LiquidGlassView>
-    );
-  }
   if (isIOS) {
     return (
-      <BlurView intensity={30} tint="dark" style={[styles.blurCard, style]}>
+      <NativeMaterialView material="systemMaterial" style={[styles.glassCard, style]}>
         {children}
-      </BlurView>
+      </NativeMaterialView>
     );
   }
   return <View style={[styles.solidCard, style]}>{children}</View>;
@@ -91,20 +79,6 @@ function GlassButton({
     </>
   );
 
-  if (useGlass && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-      >
-        <LiquidGlassView style={styles.primaryButtonGlass} effect="regular">
-          {content}
-        </LiquidGlassView>
-      </TouchableOpacity>
-    );
-  }
   if (isIOS && isPrimary) {
     return (
       <TouchableOpacity
@@ -113,9 +87,9 @@ function GlassButton({
         activeOpacity={0.7}
         style={[styles.buttonTouchable, disabled && styles.disabledButton]}
       >
-        <BlurView intensity={40} tint="dark" style={styles.primaryButtonBlur}>
+        <NativeMaterialView material="systemMaterial" style={styles.primaryButtonGlass}>
           {content}
-        </BlurView>
+        </NativeMaterialView>
       </TouchableOpacity>
     );
   }

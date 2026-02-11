@@ -16,7 +16,6 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -25,10 +24,8 @@ import { useAuth } from "../src/contexts/AuthContext";
 import { buildManifestFromChildren } from "../src/utils/artefactManifest";
 import { showAlert } from "../src/utils/alert";
 import QRCodeView from "../src/components/common/QRCodeView";
-import { LiquidGlassView, isLiquidGlassSupported } from "../src/utils/liquidGlass";
 
 const isIOS = Platform.OS === "ios";
-const useGlass = isIOS && isLiquidGlassSupported;
 
 // ---------------------------------------------------------------------------
 // Shared UI helpers (same pattern as modal.tsx / join-project.tsx)
@@ -40,20 +37,6 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (useGlass) {
-    return (
-      <LiquidGlassView style={[s.glassCard, style]} effect="regular">
-        {children}
-      </LiquidGlassView>
-    );
-  }
-  if (isIOS) {
-    return (
-      <BlurView intensity={30} tint="dark" style={[s.blurCard, style]}>
-        {children}
-      </BlurView>
-    );
-  }
   return <View style={[s.solidCard, style]}>{children}</View>;
 }
 
@@ -93,34 +76,6 @@ function GlassButton({
     </>
   );
 
-  if (useGlass && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.buttonTouchable, disabled && s.disabledButton]}
-      >
-        <LiquidGlassView style={s.primaryButtonGlass} effect="regular">
-          {content}
-        </LiquidGlassView>
-      </TouchableOpacity>
-    );
-  }
-  if (isIOS && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.buttonTouchable, disabled && s.disabledButton]}
-      >
-        <BlurView intensity={40} tint="dark" style={s.primaryButtonBlur}>
-          {content}
-        </BlurView>
-      </TouchableOpacity>
-    );
-  }
   return (
     <TouchableOpacity
       onPress={onPress}

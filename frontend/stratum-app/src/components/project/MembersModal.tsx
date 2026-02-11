@@ -11,7 +11,7 @@ import {
   Clipboard,
   ActivityIndicator,
 } from "react-native";
-import { LiquidGlassView, isLiquidGlassSupported } from "../../utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 import { projectService } from "../../services/projectService";
 import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
@@ -353,14 +353,14 @@ export default function MembersModal({
   // GlassCard wrapper for iOS 26+ Liquid Glass effect
   const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
     // Use native Liquid Glass on iOS 26+ if available
-    if (Platform.OS === "ios" && isLiquidGlassSupported) {
+    if (Platform.OS === "ios") {
       return (
-        <LiquidGlassView
+        <NativeMaterialView
+          material="systemMaterial"
           style={[styles.modalCard, styles.glassCard, style]}
-          effect="regular"
         >
           {children}
-        </LiquidGlassView>
+        </NativeMaterialView>
       );
     }
     // Fallback to regular View on other platforms

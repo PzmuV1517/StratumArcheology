@@ -29,8 +29,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { runOnJS } from "react-native-reanimated";
-import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
-import { BlurView } from "expo-blur";
+import { NativeMaterialView } from "liquid-react";
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -155,23 +154,11 @@ export function LiquidPillTabBar({
 
   // ---- Background renderer ----
   const renderBackground = () => {
-    if (Platform.OS === "ios" && isLiquidGlassSupported) {
-      return (
-        <LiquidGlassView
-          style={[StyleSheet.absoluteFill, { borderRadius: pillRadius }]}
-          effect="regular"
-        />
-      );
-    }
     if (Platform.OS === "ios") {
       return (
-        <BlurView
-          intensity={60}
-          tint="systemChromeMaterialDark"
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: pillRadius, overflow: "hidden" },
-          ]}
+        <NativeMaterialView
+          material="systemMaterial"
+          style={[StyleSheet.absoluteFill, { borderRadius: pillRadius }]}
         />
       );
     }

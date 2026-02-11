@@ -16,14 +16,12 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../src/services/projectService";
 import { showAlert } from "../src/utils/alert";
-import { LiquidGlassView, isLiquidGlassSupported } from "../src/utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
-const useGlass = isIOS && isLiquidGlassSupported;
 
 type JoinMethod = "link" | "code";
 
@@ -142,18 +140,11 @@ export default function JoinProjectScreen() {
     children: React.ReactNode;
     style?: object;
   }) => {
-    if (useGlass) {
-      return (
-        <LiquidGlassView style={[styles.glassCard, style]} effect="regular">
-          {children}
-        </LiquidGlassView>
-      );
-    }
     if (isIOS) {
       return (
-        <BlurView intensity={30} tint="dark" style={[styles.blurCard, style]}>
+        <NativeMaterialView material="systemMaterial" style={[styles.glassCard, style]}>
           {children}
-        </BlurView>
+        </NativeMaterialView>
       );
     }
     return <View style={[styles.solidCard, style]}>{children}</View>;
@@ -192,18 +183,11 @@ export default function JoinProjectScreen() {
       </View>
     );
 
-    if (useGlass) {
-      return (
-        <LiquidGlassView style={styles.tabContainerGlass} effect="regular">
-          {tabContent}
-        </LiquidGlassView>
-      );
-    }
     if (isIOS) {
       return (
-        <BlurView intensity={25} tint="dark" style={styles.tabContainerBlur}>
+        <NativeMaterialView material="systemMaterial" style={styles.tabContainerGlass}>
           {tabContent}
-        </BlurView>
+        </NativeMaterialView>
       );
     }
     return <View style={styles.tabContainer}>{tabContent}</View>;
@@ -241,21 +225,6 @@ export default function JoinProjectScreen() {
       </>
     );
 
-    if (useGlass) {
-      return (
-        <TouchableOpacity
-          onPress={onPress}
-          disabled={disabled || loading}
-          activeOpacity={0.7}
-          style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-        >
-          <LiquidGlassView style={styles.buttonGlass} effect="regular">
-            {buttonContent}
-          </LiquidGlassView>
-        </TouchableOpacity>
-      );
-    }
-
     if (isIOS) {
       return (
         <TouchableOpacity
@@ -264,9 +233,9 @@ export default function JoinProjectScreen() {
           activeOpacity={0.7}
           style={[styles.buttonTouchable, disabled && styles.disabledButton]}
         >
-          <BlurView intensity={40} tint="dark" style={styles.buttonBlur}>
+          <NativeMaterialView material="systemMaterial" style={styles.buttonGlass}>
             {buttonContent}
-          </BlurView>
+          </NativeMaterialView>
         </TouchableOpacity>
       );
     }

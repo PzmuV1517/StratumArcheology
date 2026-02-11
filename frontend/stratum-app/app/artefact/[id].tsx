@@ -28,13 +28,9 @@ import {
   buildManifestFromChildren,
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
-import {
-  LiquidGlassView,
-  isLiquidGlassSupported,
-} from "../../src/utils/liquidGlass";
+import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
-const useGlass = isIOS && isLiquidGlassSupported;
 
 // ---------------------------------------------------------------------------
 // Shared UI components (matching new-project / join-project)
@@ -46,18 +42,11 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (useGlass) {
-    return (
-      <LiquidGlassView style={[s.glassCard, style]} effect="regular">
-        {children}
-      </LiquidGlassView>
-    );
-  }
   if (isIOS) {
     return (
-      <BlurView intensity={30} tint="dark" style={[s.blurCard, style]}>
+      <NativeMaterialView material="systemMaterial" style={[s.glassCard, style]}>
         {children}
-      </BlurView>
+      </NativeMaterialView>
     );
   }
   return <View style={[s.solidCard, style]}>{children}</View>;
@@ -119,20 +108,6 @@ function GlassButton({
     );
   }
 
-  if (useGlass && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.buttonTouchable, disabled && s.disabledButton]}
-      >
-        <LiquidGlassView style={s.primaryButtonGlass} effect="regular">
-          {content}
-        </LiquidGlassView>
-      </TouchableOpacity>
-    );
-  }
   if (isIOS && isPrimary) {
     return (
       <TouchableOpacity
@@ -141,12 +116,13 @@ function GlassButton({
         activeOpacity={0.7}
         style={[s.buttonTouchable, disabled && s.disabledButton]}
       >
-        <BlurView intensity={40} tint="dark" style={s.primaryButtonBlur}>
+        <NativeMaterialView material="systemMaterial" style={s.primaryButtonGlass}>
           {content}
-        </BlurView>
+        </NativeMaterialView>
       </TouchableOpacity>
     );
   }
+
   return (
     <TouchableOpacity
       onPress={onPress}
