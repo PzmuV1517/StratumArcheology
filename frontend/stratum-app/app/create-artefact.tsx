@@ -13,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  KeyboardAvoidingView,
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
@@ -336,10 +335,7 @@ export default function CreateArtefactScreen() {
 
   // ------ Render ------
   return (
-    <KeyboardAvoidingView
-      style={s.container}
-      behavior={isIOS ? "padding" : "height"}
-    >
+    <View style={s.container}>
       <Stack.Screen
         options={{
           title: "New Artefact",
@@ -347,36 +343,21 @@ export default function CreateArtefactScreen() {
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
           headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
+          headerTitleStyle: {
+            color: "#F5F5F5",
+            fontWeight: "600",
+          },
+          headerBackTitle: "Project",
+          headerShown: true,
         }}
       />
 
       <ScrollView
         style={s.scrollView}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
       >
-        {Platform.OS === "web" ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              return false;
-            }}
-            style={{ width: "100%" }}
-          >
-            {renderFormContent()}
-          </form>
-        ) : (
-          renderFormContent()
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-
-  function renderFormContent() {
-    return (
-      <>
         {/* Header icon */}
         <View style={s.headerIcon}>
           <Ionicons name="cube" size={48} color="#FF2A2A" />
@@ -569,6 +550,7 @@ export default function CreateArtefactScreen() {
         </GlassCard>
 
         {/* ── Buttons ── */}
+        {/* ── Buttons ── */}
         <View style={s.buttonContainer}>
           <GlassButton
             onPress={createArtefact}
@@ -584,9 +566,9 @@ export default function CreateArtefactScreen() {
             variant="secondary"
           />
         </View>
-      </>
-    );
-  }
+      </ScrollView>
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------------------
