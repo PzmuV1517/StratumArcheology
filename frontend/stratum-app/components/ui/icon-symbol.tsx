@@ -29,6 +29,7 @@ const MAPPING = {
   "note.text": "description",
   "cube.fill": "category",
   "chart.bar.fill": "bar-chart",
+  "ellipsis.circle": "more-horiz",
   "ellipsis.circle.fill": "more-horiz",
 } as IconMapping;
 

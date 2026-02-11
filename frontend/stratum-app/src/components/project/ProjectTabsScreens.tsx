@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
-import { ScrollView, View, Text, Platform } from "react-native";
+import { ScrollView, View, Text, Platform, TouchableOpacity, StyleSheet as RNStyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 import { LiquidGlassView, isLiquidGlassSupported } from "@/src/utils/liquidGlass";
 import NotesSection from "@/src/components/project/NotesSection";
@@ -445,3 +446,123 @@ export function ProjectToolsScreen() {
     </ProjectTabGuard>
   );
 }
+
+// ---------------------------------------------------------------------------
+// More Hub Screen (iOS)
+// ---------------------------------------------------------------------------
+const MORE_ITEMS: {
+  key: "gallery" | "gps" | "history" | "tools";
+  label: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { key: "gallery", label: "Gallery", subtitle: "Browse project photos & files", icon: "images" },
+  { key: "gps", label: "GPS Map", subtitle: "View and edit site locations", icon: "map" },
+  { key: "history", label: "Time Machine", subtitle: "Browse file version history", icon: "time" },
+  { key: "tools", label: "Tools", subtitle: "Compass, GPS coordinates & more", icon: "construct" },
+];
+
+export function ProjectMoreScreen({
+  onNavigate,
+}: {
+  onNavigate: (screen: "gallery" | "gps" | "history" | "tools") => void;
+}) {
+  const { setCurrentTabName } = useProjectDetail();
+
+  useEffect(() => {
+    setCurrentTabName("gallery");
+  }, [setCurrentTabName]);
+
+  const handlePress = (key: "gallery" | "gps" | "history" | "tools") => {
+    onNavigate(key);
+  };
+
+  return (
+    <ProjectTabGuard>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 28,
+          paddingBottom: 120,
+        }}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <Text style={moreStyles.title}>More</Text>
+        <Text style={moreStyles.subtitle}>
+          Additional project tools and views
+        </Text>
+
+        <View style={moreStyles.grid}>
+          {MORE_ITEMS.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={moreStyles.card}
+              activeOpacity={0.7}
+              onPress={() => handlePress(item.key)}
+            >
+              <View style={moreStyles.iconCircle}>
+                <Ionicons name={item.icon} size={28} color="#FF2A2A" />
+              </View>
+              <Text style={moreStyles.cardLabel}>{item.label}</Text>
+              <Text style={moreStyles.cardSub}>{item.subtitle}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </ProjectTabGuard>
+  );
+}
+
+const moreStyles = RNStyleSheet.create({
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#F5F5F5",
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginBottom: 24,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  card: {
+    width: "47%",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    padding: 20,
+    alignItems: "center",
+    minHeight: 140,
+    justifyContent: "center",
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 42, 42, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  cardLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  cardSub: {
+    fontSize: 12,
+    color: "#9A9A9A",
+    textAlign: "center",
+    lineHeight: 16,
+  },
+});
