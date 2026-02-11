@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
 import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
 import { showAlert } from "../src/utils/alert";
-import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
 
@@ -31,13 +30,6 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (isIOS) {
-    return (
-      <NativeMaterialView material="systemMaterial" style={[styles.glassCard, style]}>
-        {children}
-      </NativeMaterialView>
-    );
-  }
   return <View style={[styles.solidCard, style]}>{children}</View>;
 }
 
@@ -79,20 +71,6 @@ function GlassButton({
     </>
   );
 
-  if (isIOS && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-      >
-        <NativeMaterialView material="systemMaterial" style={styles.primaryButtonGlass}>
-          {content}
-        </NativeMaterialView>
-      </TouchableOpacity>
-    );
-  }
   return (
     <TouchableOpacity
       onPress={onPress}

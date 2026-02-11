@@ -9,23 +9,9 @@ import {
   Platform,
   TextInput,
 } from "react-native";
-import { NativeMaterialView } from "liquid-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
-// liquid-react native toolbar (iOS only)
-let NativeToolbar: React.ComponentType<any> | null = null;
-let NativeToolbarButton: React.ComponentType<any> | null = null;
-if (Platform.OS === "ios") {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const lr = require("liquid-react");
-    NativeToolbar = lr.NativeToolbar;
-    NativeToolbarButton = lr.NativeToolbarButton;
-  } catch {
-    // fallback
-  }
-}
-const useNativeToolbar = Platform.OS === "ios" && NativeToolbar != null;
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
 import { offlineFilesStorage } from "../../services/offlineService";
@@ -683,42 +669,25 @@ export default function FilesOverlay({
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
 
-  const HeaderWrapper = Platform.OS === "ios" ? NativeMaterialView : View;
-  const headerStyle = Platform.OS === "ios" ? styles.headerGlass : styles.header;
-
   return (
     <View
       ref={rootRef}
-      style={[styles.root, { paddingTop: Platform.OS === "ios" ? insets.top : 0 }]}
+      style={styles.root}
     >
-      {useNativeToolbar && NativeToolbar && NativeToolbarButton ? (
-        <NativeToolbar
-          translucent
-          style={[styles.headerGlass, { height: 44 }]}
+      {/* Notes-style header */}
+      <View style={styles.modalHeader}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={styles.modalBackButton}
+          activeOpacity={0.6}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <NativeToolbarButton
-            icon="chevron.backward"
-            title="Back"
-            onPress={onClose}
-          />
-          <NativeToolbarButton
-            title={title}
-            disabled
-          />
-        </NativeToolbar>
-      ) : (
-        <HeaderWrapper style={headerStyle} {...(Platform.OS === "ios" ? { material: "systemMaterial" } : {})}>
-          <TouchableOpacity onPress={onClose} style={{ padding: 8, marginRight: 8 }}>
-            <Text style={{ color: "#FF2A2A", fontSize: 18 }}>‹ Back</Text>
-          </TouchableOpacity>
-          <Text
-            style={{ color: "#F5F5F5", fontSize: 18, fontWeight: "700", flex: 1 }}
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-        </HeaderWrapper>
-      )}
+          <IconSymbol name="chevron.backward" size={20} color="#FF2A2A" />
+          <Text style={styles.modalBackText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.modalHeaderTitle}>{title}</Text>
+        <View style={styles.modalHeaderSpacer} />
+      </View>
       {/* Bulk actions bar - separate row when selections exist */}
       {multiSelect && selectedIds.size > 0 && (
         <ScrollView
@@ -1377,6 +1346,35 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
     flexDirection: "row",
     alignItems: "center",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: "#111111",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#333333",
+  },
+  modalBackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 70,
+  },
+  modalBackText: {
+    color: "#FF2A2A",
+    fontSize: 17,
+    marginLeft: 4,
+  },
+  modalHeaderTitle: {
+    color: "#F5F5F5",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  modalHeaderSpacer: {
+    minWidth: 70,
   },
   bulkBarContainer: {
     borderBottomWidth: 1,

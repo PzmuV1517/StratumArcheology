@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { NativeMaterialView } from "liquid-react";
+
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface MoreToolsItem {
@@ -69,11 +69,7 @@ export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) 
     >
       <View style={s.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        {Platform.OS === "ios" ? (
-          <NativeMaterialView material="systemMaterial" style={s.sheetGlass}>{content}</NativeMaterialView>
-        ) : (
-          <View style={s.sheet}>{content}</View>
-        )}
+        <View style={s.sheet}>{content}</View>
       </View>
     </Modal>
   );

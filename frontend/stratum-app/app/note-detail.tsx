@@ -18,7 +18,6 @@ import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-rou
 import { Ionicons } from "@expo/vector-icons";
 import { noteService } from "../src/services/noteService";
 import { showAlert } from "../src/utils/alert";
-import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
 
@@ -32,13 +31,6 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (isIOS) {
-    return (
-      <NativeMaterialView material="systemMaterial" style={[s.glassCard, style]}>
-        {children}
-      </NativeMaterialView>
-    );
-  }
   return <View style={[s.solidCard, style]}>{children}</View>;
 }
 
@@ -98,20 +90,6 @@ function GlassButton({
     );
   }
 
-  if (isIOS && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.buttonTouchable, disabled && s.disabledButton]}
-      >
-        <NativeMaterialView material="systemMaterial" style={s.primaryButtonGlass}>
-          {content}
-        </NativeMaterialView>
-      </TouchableOpacity>
-    );
-  }
   return (
     <TouchableOpacity
       onPress={onPress}

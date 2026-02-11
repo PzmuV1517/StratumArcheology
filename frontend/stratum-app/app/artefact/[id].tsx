@@ -28,7 +28,6 @@ import {
   buildManifestFromChildren,
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
-import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
 
@@ -42,13 +41,6 @@ function GlassCard({
   children: React.ReactNode;
   style?: object;
 }) {
-  if (isIOS) {
-    return (
-      <NativeMaterialView material="systemMaterial" style={[s.glassCard, style]}>
-        {children}
-      </NativeMaterialView>
-    );
-  }
   return <View style={[s.solidCard, style]}>{children}</View>;
 }
 
@@ -104,21 +96,6 @@ function GlassButton({
         style={[s.destructiveButton, disabled && s.disabledButton]}
       >
         {content}
-      </TouchableOpacity>
-    );
-  }
-
-  if (isIOS && isPrimary) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.buttonTouchable, disabled && s.disabledButton]}
-      >
-        <NativeMaterialView material="systemMaterial" style={s.primaryButtonGlass}>
-          {content}
-        </NativeMaterialView>
       </TouchableOpacity>
     );
   }

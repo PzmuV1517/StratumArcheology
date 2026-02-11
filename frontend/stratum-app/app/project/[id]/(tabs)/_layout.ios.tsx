@@ -7,7 +7,6 @@ const ACTIVE_COLOR = "#FF2A2A";
 export default function ProjectTabsLayout() {
   return (
     <NativeTabs
-      minimizeBehavior="onScrollDown"
       tintColor={DynamicColorIOS({ dark: ACTIVE_COLOR, light: ACTIVE_COLOR })}
       labelStyle={{
         color: DynamicColorIOS({ dark: "#9A9A9A", light: "#666666" }),
@@ -33,11 +32,9 @@ export default function ProjectTabsLayout() {
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="gallery">
-        <Label>More</Label>
-        <Icon sf={{ default: "ellipsis.circle", selected: "ellipsis.circle.fill" }} />
+      <NativeTabs.Trigger name="gallery" hidden>
+        <Label>Gallery</Label>
       </NativeTabs.Trigger>
-
       <NativeTabs.Trigger name="gps" hidden>
         <Label>Map</Label>
       </NativeTabs.Trigger>

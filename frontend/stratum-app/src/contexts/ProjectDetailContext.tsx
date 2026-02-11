@@ -961,16 +961,16 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     ) : undefined;
 
   const navigateToTab = (tab: ProjectTabName) => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     const projectId = Array.isArray(id) ? id[0] : id;
     setCurrentTabName(tab);
     const tabRoute = tab === "overview" ? "index" : tab;
     // Delay slightly so the modal finishes closing before navigating
     setTimeout(() => {
-      router.push({
-        pathname: `/project/[id]/(tabs)/${tabRoute}` as any,
-        params: { id: projectId },
-      });
+      const fullPath = `/project/${projectId}/${tabRoute}`;
+      router.replace(fullPath as any);
     }, 150);
   };
 

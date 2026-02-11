@@ -8,7 +8,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { NativeMaterialView } from "liquid-react";
+
 
 export default function RenameModal({
   visible,
@@ -35,30 +35,6 @@ export default function RenameModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "ios" ? (
-          <NativeMaterialView material="systemMaterial" style={styles.modalCardGlass}>
-            <Text style={styles.modalTitle}>Rename</Text>
-            <Text style={styles.modalText}>Enter a new name for "{currentName}"</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="New name"
-              placeholderTextColor="#666"
-              value={name}
-              onChangeText={setName}
-            />
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.button} onPress={onCancel}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.primary]}
-                onPress={() => onRename(name.trim())}
-              >
-                <Text style={styles.buttonText}>Rename</Text>
-              </TouchableOpacity>
-            </View>
-          </NativeMaterialView>
-        ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>Rename</Text>
           <Text style={styles.modalText}>Enter a new name for "{currentName}"</Text>
@@ -81,7 +57,6 @@ export default function RenameModal({
             </TouchableOpacity>
           </View>
         </View>
-        )}
       </View>
     </Modal>
   );

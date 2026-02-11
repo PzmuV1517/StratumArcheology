@@ -18,7 +18,6 @@ import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../src/services/projectService";
 import { showAlert } from "../src/utils/alert";
-import { NativeMaterialView } from "liquid-react";
 
 const isIOS = Platform.OS === "ios";
 
@@ -74,13 +73,6 @@ export default function CreateProjectModal() {
     children: React.ReactNode;
     style?: object;
   }) => {
-    if (isIOS) {
-      return (
-        <NativeMaterialView material="systemMaterial" style={[styles.glassCard, style]}>
-          {children}
-        </NativeMaterialView>
-      );
-    }
     return <View style={[styles.solidCard, style]}>{children}</View>;
   };
 
@@ -119,21 +111,6 @@ export default function CreateProjectModal() {
         )}
       </>
     );
-
-    if (isIOS && isPrimary) {
-      return (
-        <TouchableOpacity
-          onPress={onPress}
-          disabled={disabled || loading}
-          activeOpacity={0.7}
-          style={[styles.buttonTouchable, disabled && styles.disabledButton]}
-        >
-          <NativeMaterialView material="systemMaterial" style={styles.primaryButtonGlass}>
-            {buttonContent}
-          </NativeMaterialView>
-        </TouchableOpacity>
-      );
-    }
 
     return (
       <TouchableOpacity

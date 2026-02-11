@@ -29,7 +29,7 @@ import {
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Reanimated, { runOnJS } from "react-native-reanimated";
-import { NativeMaterialView } from "liquid-react";
+
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -154,14 +154,6 @@ export function LiquidPillTabBar({
 
   // ---- Background renderer ----
   const renderBackground = () => {
-    if (Platform.OS === "ios") {
-      return (
-        <NativeMaterialView
-          material="systemMaterial"
-          style={[StyleSheet.absoluteFill, { borderRadius: pillRadius }]}
-        />
-      );
-    }
     // Android / web
     return (
       <View

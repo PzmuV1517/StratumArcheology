@@ -304,6 +304,26 @@ export default function CreateArtefactScreen() {
           },
           headerBackTitle: "Project",
           headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingLeft: Platform.OS === "ios" ? 0 : 8,
+                paddingRight: 16,
+              }}
+              activeOpacity={0.6}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="chevron-back" size={22} color="#FF2A2A" />
+              {Platform.OS === "ios" && (
+                <Text style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 4 }}>
+                  Project
+                </Text>
+              )}
+            </TouchableOpacity>
+          ),
         }}
       />
 

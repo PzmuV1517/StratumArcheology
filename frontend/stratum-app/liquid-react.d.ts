@@ -117,4 +117,25 @@ declare module "liquid-react" {
   export const NativeGroupedContainer: React.FC<any>;
   export const NativeCardContainer: React.FC<any>;
   export const NativeStackView: React.FC<any>;
+
+  export interface NativeMenuButtonProps extends ViewProps {
+    icon?: string;
+    tintColorHex?: string;
+    menuItems?: Array<{
+      id?: string;
+      title: string;
+      icon?: string;
+      destructive?: boolean;
+      disabled?: boolean;
+      children?: Array<{
+        id?: string;
+        title: string;
+        icon?: string;
+        destructive?: boolean;
+        disabled?: boolean;
+      }>;
+    }>;
+    onMenuAction?: (event: { nativeEvent: { id: string; title: string } }) => void;
+  }
+  export const NativeMenuButton: React.FC<NativeMenuButtonProps>;
 }

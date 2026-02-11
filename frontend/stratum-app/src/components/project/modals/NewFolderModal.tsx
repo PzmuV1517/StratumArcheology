@@ -8,7 +8,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
-import { NativeMaterialView } from "liquid-react";
+
 
 export default function NewFolderModal({
   visible,
@@ -31,30 +31,6 @@ export default function NewFolderModal({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "ios" ? (
-          <NativeMaterialView material="systemMaterial" style={styles.modalCardGlass}>
-            <Text style={styles.modalTitle}>New Folder</Text>
-            <Text style={styles.modalText}>Enter a name for the new folder</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Folder name"
-              placeholderTextColor="#666"
-              value={name}
-              onChangeText={setName}
-            />
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.button} onPress={onCancel}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.primary]}
-                onPress={() => onCreate(name.trim())}
-              >
-                <Text style={styles.buttonText}>Create</Text>
-              </TouchableOpacity>
-            </View>
-          </NativeMaterialView>
-        ) : (
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>New Folder</Text>
           <Text style={styles.modalText}>Enter a name for the new folder</Text>
@@ -77,7 +53,6 @@ export default function NewFolderModal({
             </TouchableOpacity>
           </View>
         </View>
-        )}
       </View>
     </Modal>
   );

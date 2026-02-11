@@ -3,7 +3,6 @@ import { ScrollView, View, Text, Platform, TouchableOpacity, StyleSheet as RNSty
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { NativeMaterialView } from "liquid-react";
 import NotesSection from "@/src/components/project/NotesSection";
 import FileGallery from "@/src/components/project/FileGallery";
 import ArtefactsTab from "@/src/components/project/ArtefactsTab";
@@ -300,8 +299,7 @@ export function ProjectHistoryScreen() {
             paddingBottom: 0,
           }}
         >
-          <NativeMaterialView
-            material="systemMaterial"
+          <View
             style={{
               flex: 1,
               borderRadius: 16,
@@ -310,7 +308,7 @@ export function ProjectHistoryScreen() {
             }}
           >
             <TimeMachineTab projectId={project?.id as string} />
-          </NativeMaterialView>
+          </View>
         </View>
       ) : (
         <View
@@ -362,8 +360,7 @@ export function ProjectToolsScreen() {
           contentInsetAdjustmentBehavior="automatic"
           refreshControl={maybeRefreshControl}
         >
-          <NativeMaterialView
-            material="systemMaterial"
+          <View
             style={{
               borderRadius: 16,
               overflow: "hidden",
@@ -371,7 +368,7 @@ export function ProjectToolsScreen() {
             }}
           >
             <ToolsTab projectId={project?.id as string} />
-          </NativeMaterialView>
+          </View>
         </ScrollView>
       ) : (
         <ScrollView

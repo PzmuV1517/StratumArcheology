@@ -8,7 +8,6 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import { NativeMaterialView } from "liquid-react";
 
 // ─── Main Burger Menu ───────────────────────────────────────────────
 
@@ -74,8 +73,7 @@ export default function ProjectMenuModal({
         <View style={styles.menuBackdrop}>
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          {Platform.OS === "ios" ? (
-            <NativeMaterialView material="systemMaterial" style={styles.menuCardGlass}>
+          <View style={styles.menuCard}>
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
@@ -122,60 +120,8 @@ export default function ProjectMenuModal({
               >
                 <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
               </TouchableOpacity>
-            </NativeMaterialView>
-          ) : (
-          <View style={styles.menuCard}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                onClose();
-                onOpenMembers();
-              }}
-            >
-              <Text style={styles.menuItemText}>Members ({membersCount})</Text>
-            </TouchableOpacity>
-            {canChangeSettings ? (
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  onClose();
-                  onOpenSettings();
-                }}
-              >
-                <Text style={styles.menuItemText}>Settings</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={[styles.menuItem, styles.disabledMenuItem]}>
-                <Text style={[styles.menuItemText, styles.disabledText]}>
-                  Settings
-                </Text>
-                <Text style={styles.permissionHint}>
-                  Only the leader can change settings
-                </Text>
-              </View>
-            )}
-            {onExitProject && (
-              <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
-                <Text style={[styles.menuItemText, styles.exitButtonText]}>
-                  Exit Project
-                </Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.menuItem,
-                styles.closeButton,
-                { justifyContent: "center" },
-              ]}
-              onPress={onClose}
-            >
-              <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
-            </TouchableOpacity>
-          </View>
-          )}
-        </View>
+          </View>        </View>
       </Modal>
-
       {/* Exit confirmation modal */}
       <Modal
         visible={showExitConfirm}

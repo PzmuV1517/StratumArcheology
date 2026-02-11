@@ -114,6 +114,7 @@ export default function ProjectOverlays() {
         visible={showFilesOverlay}
         transparent={false}
         animationType="slide"
+        presentationStyle="pageSheet"
         onRequestClose={() => setShowFilesOverlay(false)}
       >
         <FilesOverlay

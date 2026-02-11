@@ -13,6 +13,7 @@ import type {
   NativeGroupedContainerProps,
   NativeCardContainerProps,
   NativeStackViewProps,
+  NativeMenuButtonProps,
 } from './types';
 
 // On web, requireNativeComponent doesn't exist — fall back to View.
@@ -34,3 +35,4 @@ export const RNNativeTabBar = req<NativeTabBarProps>('LRNativeTabBar');
 export const RNNativeGroupedContainer = req<NativeGroupedContainerProps>('LRNativeGroupedContainer');
 export const RNNativeCardContainer = req<NativeCardContainerProps>('LRNativeCardContainer');
 export const RNNativeStackView = req<NativeStackViewProps>('LRNativeStackView');
+export const RNNativeMenuButton = req<NativeMenuButtonProps>('LRNativeMenuButton');
