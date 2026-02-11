@@ -79,14 +79,26 @@ function ProjectStack() {
               <TouchableOpacity
                 onPress={() => router.back()}
                 style={{
+                  flexDirection: "row",
+                  alignItems: "center",
                   height: 44,
-                  justifyContent: "center",
                   paddingRight: 16,
+                  paddingLeft: 8,
                 }}
                 activeOpacity={0.6}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <IconSymbol name="chevron.backward" size={22} color="#FF2A2A" />
+                <Text
+                  style={{
+                    color: "#FF2A2A",
+                    fontSize: 16,
+                    marginLeft: 4,
+                    fontWeight: "500",
+                  }}
+                >
+                  Projects
+                </Text>
               </TouchableOpacity>
             );
           },
