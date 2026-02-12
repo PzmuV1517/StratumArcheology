@@ -1,83 +1,51 @@
-# Tracepatch configuration for STRATUM backend
-# https://github.com/levinismynameirl/tracepatch
+# Tracepatch Configuration
+# See: https://github.com/levinismynameirl/tracepatch
 
-# Tracing options
-ignore_modules = ["urllib3", "httpx", "sqlalchemy", "firebase_admin"]
-max_depth = 50
-max_calls = 20000
-max_repr = 200
-cache = true
-cache_dir = ".tracepatch_cache"
-default_label = "stratum-backend"
-show_args = true
-show_return = true
-tree_style = "ascii"
+# Tracing behavior
+ignore_modules = ["unittest.mock", "logging", "slowapi", "starlette"]  # Module prefixes to exclude
+# include_modules = ["myapp"]  # Allowlist mode: only trace these modules
+max_depth = 30  # Maximum call nesting depth
+max_calls = 10000  # Stop tracing after this many calls
+max_repr = 120  # Max length for repr() of args/returns
 
-# Test setup configuration for rate_limiter.py
+# Cache settings
+cache = true  # Auto-save traces to .tracepatch_cache/
+# cache_dir = ".custom_cache"  # Custom cache directory
+auto_save = true  # Automatically save traces on exit
+
+# Display settings
+show_args = false  # Show function arguments in tree (disabled to avoid MagicMock repr errors)
+show_return = true  # Show return values in tree
+tree_style = "ascii"  # "ascii" or "unicode"
+# default_label = "my-trace"  # Default label for traces
+
+# Test configuration (for `tph setup`)
 [[test.files]]
 path = "app/rate_limiter.py"
 functions = ["_get_client_key", "rate_limit_exceeded_handler"]
 
-# Custom test script (overrides auto-generated test)
+# Custom test script since these functions need mock Request objects
 [test.custom]
 enabled = true
 script = """
-from tracepatch import trace, load_config
 from unittest.mock import MagicMock
 from slowapi.errors import RateLimitExceeded
-
-# Import functions to test
 from app.rate_limiter import _get_client_key, rate_limit_exceeded_handler
 
-def main():
-    config, config_path = load_config()
-    trace_kwargs = config.to_trace_kwargs()
-    trace_kwargs['label'] = 'rate-limiter-test'
-    
-    # Create mock Request
-    mock_request = MagicMock()
-    mock_request.state = MagicMock()
-    mock_request.state.current_user = None
-    mock_request.url.path = "/api/test"
-    mock_request.client.host = "127.0.0.1"
-    
-    # Create mock RateLimitExceeded
-    mock_exc = MagicMock(spec=RateLimitExceeded)
-    mock_exc.detail = "5 per 1 minute"
-    
-    print("Running rate_limiter tests with tracing...")
-    print("=" * 70)
-    
-    with trace(**trace_kwargs) as t:
-        # Test _get_client_key with IP fallback
-        try:
-            key = _get_client_key(mock_request)
-            print(f"✓ _get_client_key returned: {key}")
-        except Exception as e:
-            print(f"✗ _get_client_key: {e}")
-        
-        # Test _get_client_key with authenticated user
-        mock_request.state.current_user = MagicMock()
-        mock_request.state.current_user.id = "user-123"
-        try:
-            key = _get_client_key(mock_request)
-            print(f"✓ _get_client_key (authed): {key}")
-        except Exception as e:
-            print(f"✗ _get_client_key (authed): {e}")
-        
-        # Test rate_limit_exceeded_handler
-        try:
-            response = rate_limit_exceeded_handler(mock_request, mock_exc)
-            print(f"✓ rate_limit_exceeded_handler returned: {response.status_code}")
-        except Exception as e:
-            print(f"✗ rate_limit_exceeded_handler: {e}")
-    
-    print("\\n" + "=" * 70)
-    print(f"Total calls traced: {t.call_count}")
-    if t.cache_path:
-        print(f"Trace saved: {t.cache_path}")
-    print("\\n" + t.tree())
+# Test 1: Unauthenticated request (IP-based key)
+mock_request = MagicMock()
+mock_request.state.current_user = None
+mock_request.client.host = "192.168.1.100"
+print(f"Test 1 - IP key: {_get_client_key(mock_request)}")
 
-if __name__ == "__main__":
-    main()
+# Test 2: Authenticated request (user-based key)
+mock_request2 = MagicMock()
+mock_request2.state.current_user = MagicMock(id="user-abc-123")
+print(f"Test 2 - User key: {_get_client_key(mock_request2)}")
+
+# Test 3: Rate limit exceeded handler
+mock_exc = MagicMock(spec=RateLimitExceeded)
+mock_exc.detail = "Rate limit exceeded: 5 per 1 minute"
+response = rate_limit_exceeded_handler(mock_request, mock_exc)
+print(f"Test 3 - 429 response status: {response.status_code}")
 """

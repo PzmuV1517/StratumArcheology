@@ -34,6 +34,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Key function: identifies the caller
 # ---------------------------------------------------------------------------
+@trace()
 def _get_client_key(request: Request) -> str:
     """
     Extracts a rate-limit key from the request.
@@ -85,6 +86,7 @@ limit_health  = limiter.limit("120/minute")
 # ---------------------------------------------------------------------------
 # Custom 429 handler – returns JSON the frontend can display in a modal
 # ---------------------------------------------------------------------------
+@trace()
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     """
     Called automatically by SlowAPI when a rate limit is exceeded.
@@ -117,9 +119,3 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSO
             "Retry-After": retry_after,
         },
     )
-
-# tracepatch def function:
-if __name__ == "__main__":
-    with trace() as t:
-        _get_client_key(Request(...))
-        rate_limit_exceeded_handler(Request(...), RateLimitExceeded(...))
