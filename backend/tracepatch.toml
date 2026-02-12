@@ -18,9 +18,66 @@ tree_style = "ascii"
 path = "app/rate_limiter.py"
 functions = ["_get_client_key", "rate_limit_exceeded_handler"]
 
-# Test input for _get_client_key (mock request)
-[[test.inputs]]
-function = "_get_client_key"
-args = []
-kwargs = {}
-# Note: Requires a mock Request object to test properly
+# Custom test script (overrides auto-generated test)
+[test.custom]
+enabled = true
+script = """
+from tracepatch import trace, load_config
+from unittest.mock import MagicMock
+from slowapi.errors import RateLimitExceeded
+
+# Import functions to test
+from app.rate_limiter import _get_client_key, rate_limit_exceeded_handler
+
+def main():
+    config, config_path = load_config()
+    trace_kwargs = config.to_trace_kwargs()
+    trace_kwargs['label'] = 'rate-limiter-test'
+    
+    # Create mock Request
+    mock_request = MagicMock()
+    mock_request.state = MagicMock()
+    mock_request.state.current_user = None
+    mock_request.url.path = "/api/test"
+    mock_request.client.host = "127.0.0.1"
+    
+    # Create mock RateLimitExceeded
+    mock_exc = MagicMock(spec=RateLimitExceeded)
+    mock_exc.detail = "5 per 1 minute"
+    
+    print("Running rate_limiter tests with tracing...")
+    print("=" * 70)
+    
+    with trace(**trace_kwargs) as t:
+        # Test _get_client_key with IP fallback
+        try:
+            key = _get_client_key(mock_request)
+            print(f"✓ _get_client_key returned: {key}")
+        except Exception as e:
+            print(f"✗ _get_client_key: {e}")
+        
+        # Test _get_client_key with authenticated user
+        mock_request.state.current_user = MagicMock()
+        mock_request.state.current_user.id = "user-123"
+        try:
+            key = _get_client_key(mock_request)
+            print(f"✓ _get_client_key (authed): {key}")
+        except Exception as e:
+            print(f"✗ _get_client_key (authed): {e}")
+        
+        # Test rate_limit_exceeded_handler
+        try:
+            response = rate_limit_exceeded_handler(mock_request, mock_exc)
+            print(f"✓ rate_limit_exceeded_handler returned: {response.status_code}")
+        except Exception as e:
+            print(f"✗ rate_limit_exceeded_handler: {e}")
+    
+    print("\\n" + "=" * 70)
+    print(f"Total calls traced: {t.call_count}")
+    if t.cache_path:
+        print(f"Trace saved: {t.cache_path}")
+    print("\\n" + t.tree())
+
+if __name__ == "__main__":
+    main()
+"""
