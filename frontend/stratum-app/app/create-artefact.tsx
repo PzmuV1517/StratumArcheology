@@ -183,7 +183,7 @@ export default function CreateArtefactScreen() {
             type: img.mime,
           } as any);
         }
-        await fileService.uploadFile(projectId, fd);
+        await fileService.uploadFormData(projectId, fd);
       }
 
       // Generate preview (web only)
@@ -202,7 +202,7 @@ export default function CreateArtefactScreen() {
             type: "image/jpeg",
           });
           fd.append("file", file, "preview.jpg");
-          const up = await fileService.uploadFile(projectId, fd);
+          const up = await fileService.uploadFormData(projectId, fd);
           previewFileId = up.id || up.file_id || up.node_id || up?.file?.id;
         } catch (e) {
           console.warn("Preview generation failed", e);
@@ -233,7 +233,7 @@ export default function CreateArtefactScreen() {
             type: "text/plain",
           } as any);
         }
-        await fileService.uploadFile(projectId, fd);
+        await fileService.uploadFormData(projectId, fd);
       }
 
       // Build artefact.json manifest
@@ -273,7 +273,7 @@ export default function CreateArtefactScreen() {
           type: "application/json",
         } as any);
       }
-      await fileService.uploadFile(projectId, manifestFd);
+      await fileService.uploadFormData(projectId, manifestFd);
 
       showAlert("Success", "Artefact created successfully!");
       router.back();

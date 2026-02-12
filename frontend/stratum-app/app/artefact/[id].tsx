@@ -225,7 +225,7 @@ export default function ArtefactDetail() {
           type: asset.mimeType || "application/octet-stream",
         } as any);
       }
-      await fileService.uploadFile(projectId || ("" as any), fd);
+      await fileService.uploadFormData(projectId || ("" as any), fd);
     }
     try {
       const ch = await fileService.listChildren(id as string);
