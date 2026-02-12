@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../config/config";
+import { showAlert } from "../utils/alert";
 
 // Simple event system for auth events (React Native compatible)
 export const AUTH_SESSION_EXPIRED = "auth:session_expired";
@@ -223,6 +224,29 @@ api.interceptors.response.use(
 
       // For other errors without a response, provide the original message
       console.log("[API] Unknown error without response:", error.message);
+    }
+
+    // -----------------------------------------------------------------------
+    // 429 Too Many Requests — show rate-limit modal
+    // -----------------------------------------------------------------------
+    if (error.response?.status === 429) {
+      const data = error.response.data;
+      const message =
+        data?.message || "Slow down, there. You are being Rate Limited";
+
+      console.log("[API] Rate limited:", {
+        url: error.config?.url,
+        retryAfter: data?.retry_after,
+      });
+
+      showAlert("Rate Limited", message, [{ text: "OK" }]);
+
+      // Still reject so the caller can handle it if needed
+      const rateLimitError = new Error(message);
+      (rateLimitError as any).isRateLimited = true;
+      (rateLimitError as any).retryAfter = data?.retry_after;
+      (rateLimitError as any).originalError = error;
+      return Promise.reject(rateLimitError);
     }
 
     if (error.response?.status === 401) {

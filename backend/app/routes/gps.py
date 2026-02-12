@@ -1,12 +1,13 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import Project, ProjectGPS, User
+from app.rate_limiter import limit_read, limit_write
 from app.websocket import log_activity
 
 router = APIRouter()
@@ -28,7 +29,8 @@ class GPSState(BaseModel):
 
 
 @router.get("/projects/{project_id}/gps", response_model=GPSState)
-def get_project_gps(project_id: str, db: Session = Depends(get_db)):
+@limit_read
+def get_project_gps(project_id: str, request: Request, db: Session = Depends(get_db)):
     # Validate project exists
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -46,9 +48,11 @@ def get_project_gps(project_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/projects/{project_id}/gps", response_model=GPSState)
+@limit_write
 async def put_project_gps(
     project_id: str,
     state: GPSState,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

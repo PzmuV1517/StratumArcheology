@@ -1,0 +1,26 @@
+# Tracepatch configuration for STRATUM backend
+# https://github.com/levinismynameirl/tracepatch
+
+# Tracing options
+ignore_modules = ["urllib3", "httpx", "sqlalchemy", "firebase_admin"]
+max_depth = 50
+max_calls = 20000
+max_repr = 200
+cache = true
+cache_dir = ".tracepatch_cache"
+default_label = "stratum-backend"
+show_args = true
+show_return = true
+tree_style = "ascii"
+
+# Test setup configuration for rate_limiter.py
+[[test.files]]
+path = "app/rate_limiter.py"
+functions = ["_get_client_key", "rate_limit_exceeded_handler"]
+
+# Test input for _get_client_key (mock request)
+[[test.inputs]]
+function = "_get_client_key"
+args = []
+kwargs = {}
+# Note: Requires a mock Request object to test properly

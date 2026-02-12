@@ -11,13 +11,16 @@ IMPORTANT: Database migrations are handled by Alembic, NOT create_all().
 Run migrations with: alembic upgrade head
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
 from app.firebase_config import initialize_firebase
 from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
 from app.minio_client import minio_client
+from app.rate_limiter import limiter, rate_limit_exceeded_handler, limit_health
 from app.routes import (
     activities,
     auth,
@@ -30,6 +33,9 @@ from app.routes import (
     projects,
 )
 from app.websocket import sio_app
+
+from tracepatch import trace # For better debugging. NOTE: While tracepatch does not have overhead if disabled, it's safe to comment this out in prod build.
+
 
 # Configure structured logging based on environment
 configure_logging(debug=settings.APP_DEBUG)
@@ -64,6 +70,17 @@ app = FastAPI(
     description="Archaeological site management and collaboration platform",
     version="1.0.0",
 )
+
+# ---------------------------------------------------------------------------
+# SlowAPI rate limiting
+# ---------------------------------------------------------------------------
+# Attach the limiter to app state (required by SlowAPI)
+app.state.limiter = limiter
+# Register the custom 429 handler that returns JSON for the frontend modal
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+# Middleware applies default_limits to ALL routes; per-endpoint @limit_*
+# decorators override the default where needed.
+app.add_middleware(SlowAPIMiddleware)
 
 # Add error handling middleware (must be first to catch all errors)
 # This provides:
@@ -103,14 +120,16 @@ logger.info(
 
 
 @app.get("/")
-async def root():
+@limit_health
+async def root(request: Request):
     """Root endpoint"""
     return {"message": "STRATUM API", "version": "1.0.0", "status": "operational"}
 
 
 @app.get("/health")
 @app.get("/api/health")
-async def health_check():
+@limit_health
+async def health_check(request: Request):
     """Health check endpoint (available at both /health and /api/health)"""
     return {"status": "healthy", "database": "connected", "storage": "connected"}
 

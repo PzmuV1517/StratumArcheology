@@ -5,10 +5,11 @@ import hashlib
 from io import BytesIO
 
 import aiohttp
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.minio_client import minio_client
+from app.rate_limiter import limit_convert
 
 router = APIRouter(prefix="/convert", tags=["convert"])
 
@@ -502,7 +503,9 @@ def parse_laz_laspy(
 
 
 @router.get("/pointcloud")
+@limit_convert
 async def convert_pointcloud(
+    request: Request,
     src: str = Query(..., description="Source URL to point cloud"),
     name: str | None = None,
 ):
@@ -578,7 +581,9 @@ async def convert_pointcloud(
 
 
 @router.post("/pointcloud")
+@limit_convert
 async def convert_pointcloud_upload(
+    request: Request,
     file: UploadFile = File(..., description="Point cloud file to convert"),
     name: str | None = Form(None),
 ):

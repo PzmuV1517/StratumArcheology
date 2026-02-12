@@ -6,13 +6,14 @@ import secrets
 import string
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
 from app.models import Project, ProjectInvite, User, project_members
+from app.rate_limiter import limit_write
 from app.schemas import (
     InviteAcceptRequest,
     InviteAcceptResponse,
@@ -53,9 +54,11 @@ def generate_unique_code(
     response_model=InviteResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limit_write
 async def create_invite(
     project_id: str,
     body: InviteCreateRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -107,8 +110,10 @@ async def create_invite(
 
 
 @router.post("/invites/accept", response_model=InviteAcceptResponse)
+@limit_write
 async def accept_invite(
     body: InviteAcceptRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -194,8 +199,10 @@ async def accept_invite(
 
 
 @router.post("/invites/join-by-code", response_model=InviteAcceptResponse)
+@limit_write
 async def join_by_code(
     body: InviteJoinByCodeRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

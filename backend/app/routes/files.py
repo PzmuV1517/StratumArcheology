@@ -33,6 +33,7 @@ from app.models import (
     Project,
     User,
 )
+from app.rate_limiter import limit_read, limit_upload, limit_write
 from app.schemas import (
     FileNodeBase,
     FileNodeCreateFolder,
@@ -52,7 +53,9 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 
 @router.post("/profile-picture")
+@limit_upload
 async def upload_profile_picture(
+    request: Request,
     file: UploadFile,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -924,6 +927,7 @@ async def delete_node(
     response_model=FileNodeBase,
     status_code=status.HTTP_201_CREATED,
 )
+@limit_upload
 async def upload_file(
     project_id: str,
     request: Request,
@@ -1169,6 +1173,7 @@ async def download_file(
 
 
 @router.put("/{node_id}/content", response_model=FileNodeBase)
+@limit_upload
 async def replace_file_content(
     node_id: str,
     request: Request,

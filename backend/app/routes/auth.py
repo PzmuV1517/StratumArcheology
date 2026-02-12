@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import firebase_admin.auth as firebase_auth
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -12,6 +12,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.middleware import get_logger
 from app.models import User
+from app.rate_limiter import limit_auth, limit_read, limit_write
 from app.schemas import (
     AuthResponse,
     FirebaseTokenRequest,
@@ -59,14 +60,15 @@ async def verify_password_with_firebase(email: str, password: str) -> dict:
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
+@limit_auth
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """Login with email and password — verified against Firebase Auth."""
     try:
         # 1. Verify password against Firebase Auth REST API
-        await verify_password_with_firebase(request.email, request.password)
+        await verify_password_with_firebase(login_data.email, login_data.password)
 
         # 2. Look up the local user record
-        user = db.query(User).filter(User.email == request.email).first()
+        user = db.query(User).filter(User.email == login_data.email).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -97,7 +99,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Login failed with unexpected error", email=request.email, error=str(e))
+        logger.exception("Login failed with unexpected error", email=login_data.email, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Authentication failed: {str(e)}",
@@ -105,11 +107,12 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+@limit_auth
+async def register(request: Request, reg_data: RegisterRequest, db: Session = Depends(get_db)):
     """Register new user with email and password"""
     try:
         # Check if user already exists
-        existing_user = db.query(User).filter(User.email == request.email).first()
+        existing_user = db.query(User).filter(User.email == reg_data.email).first()
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -118,17 +121,17 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
-            email=request.email,
-            password=request.password,
-            display_name=request.display_name,
+            email=reg_data.email,
+            password=reg_data.password,
+            display_name=reg_data.display_name,
         )
 
         # Create user in our database
         user = User(
             id=str(uuid.uuid4()),
             firebase_uid=firebase_user.uid,
-            email=request.email,
-            display_name=request.display_name,
+            email=reg_data.email,
+            display_name=reg_data.display_name,
             created_at=datetime.utcnow(),
             last_login=datetime.utcnow(),
         )
@@ -161,7 +164,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Registration failed with unexpected error", email=request.email, error=str(e))
+        logger.exception("Registration failed with unexpected error", email=reg_data.email, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}",
@@ -169,16 +172,17 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/verify-token", response_model=AuthResponse)
+@limit_auth
 async def verify_firebase_token(
-    request: FirebaseTokenRequest, db: Session = Depends(get_db)
+    request: Request, token_data: FirebaseTokenRequest, db: Session = Depends(get_db)
 ):
     """Verify Firebase ID token and return user data"""
     try:
         # Verify the Firebase ID token
-        decoded_token = firebase_auth.verify_id_token(request.firebase_token)
+        decoded_token = firebase_auth.verify_id_token(token_data.firebase_token)
         firebase_uid = decoded_token["uid"]
         email = decoded_token.get("email")
-        display_name = request.display_name or decoded_token.get("name", "")
+        display_name = token_data.display_name or decoded_token.get("name", "")
 
         if not email:
             raise HTTPException(
@@ -233,24 +237,27 @@ async def verify_firebase_token(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+@limit_read
+async def get_current_user_info(request: Request, current_user: User = Depends(get_current_user)):
     """Get current authenticated user information"""
     return current_user
 
 
 @router.patch("/me", response_model=UserResponse)
+@limit_write
 async def update_profile(
-    request: ProfileUpdateRequest,
+    request: Request,
+    profile_data: ProfileUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Update current user's profile information"""
-    if request.display_name is not None:
-        current_user.display_name = request.display_name
-    if request.photo_url is not None:
-        current_user.photo_url = request.photo_url
-    if request.bio is not None:
-        current_user.bio = request.bio
+    if profile_data.display_name is not None:
+        current_user.display_name = profile_data.display_name
+    if profile_data.photo_url is not None:
+        current_user.photo_url = profile_data.photo_url
+    if profile_data.bio is not None:
+        current_user.bio = profile_data.bio
 
     db.commit()
     db.refresh(current_user)
@@ -258,8 +265,10 @@ async def update_profile(
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
+@limit_read
 async def get_user_profile(
     user_id: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -274,8 +283,10 @@ async def get_user_profile(
 
 
 @router.get("/users/search")
+@limit_read
 async def search_users(
     query: str,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
