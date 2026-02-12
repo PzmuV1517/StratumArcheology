@@ -321,7 +321,10 @@ export default function SettingsScreen() {
         );
       } else {
         setConnectionStatus("disconnected");
-        showAlert("Connection Failed", "Could not reach STRATUM backend.");
+        showAlert(
+          "Connection Failed",
+          "Could not reach STRATUM backend. You can try again as it may just be a caching issue or rate limit from previous checks.",
+        );
       }
     } catch {
       setConnectionStatus("disconnected");
