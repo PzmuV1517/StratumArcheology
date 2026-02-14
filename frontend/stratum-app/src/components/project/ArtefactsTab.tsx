@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Image,
   TextInput,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
@@ -57,6 +57,15 @@ export default function ArtefactsTab({
     if (projectId) load();
   }, [projectId]);
 
+  // Reload artefacts when screen comes into focus (e.g., after creating a new artefact)
+  useFocusEffect(
+    useCallback(() => {
+      if (projectId) {
+        load();
+      }
+    }, [projectId])
+  );
+
   const load = async () => {
     try {
       setLoading(true);
@@ -87,10 +96,7 @@ export default function ArtefactsTab({
           );
           if (metaFile) {
             const res = await fileService.downloadFile(metaFile.id);
-            const text = await (res.data?.text?.() ||
-              res.data
-                ?.arrayBuffer?.()
-                .then((b: any) => new TextDecoder().decode(b)));
+            const text = await res.blob.text();
             if (text) meta = JSON.parse(text);
           }
           const pv = grand.find(
@@ -99,8 +105,7 @@ export default function ArtefactsTab({
           );
           if (pv && Platform.OS === "web") {
             const blobRes = await fileService.downloadFile(pv.id);
-            const blob = blobRes.data;
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blobRes.blob);
             previewUrl = url;
           }
         } catch {}

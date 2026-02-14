@@ -124,6 +124,11 @@ export default function QRCodeView({
     let mounted = true;
     (async () => {
       if (Platform.OS === "web") {
+        // Don't generate QR code if value is empty
+        if (!value || value.trim() === "") {
+          setDataUrl(null);
+          return;
+        }
         try {
           const QR = await import("qrcode");
           const url = await QR.toDataURL(value, {

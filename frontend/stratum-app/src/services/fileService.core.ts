@@ -102,7 +102,7 @@ export const fileServiceCore = {
   },
 
   getNodeInfo: async (nodeId: string): Promise<FileNode> => {
-    const res = await api.get(`/files/${nodeId}`);
+    const res = await api.get(`/files/info/${nodeId}`);
     return res.data;
   },
 
