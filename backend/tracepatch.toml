@@ -31,6 +31,10 @@ script = """
 from unittest.mock import MagicMock
 from slowapi.errors import RateLimitExceeded
 from app.rate_limiter import _get_client_key, rate_limit_exceeded_handler
+import subprocess
+import sys
+import glob
+import os
 
 # Test 1: Unauthenticated request (IP-based key)
 mock_request = MagicMock()
@@ -48,4 +52,18 @@ mock_exc = MagicMock(spec=RateLimitExceeded)
 mock_exc.detail = "Rate limit exceeded: 5 per 1 minute"
 response = rate_limit_exceeded_handler(mock_request, mock_exc)
 print(f"Test 3 - 429 response status: {response.status_code}")
+
+# Show the visualization tree
+print("\\n" + "="*60)
+print("TRACEPATCH VISUALIZATION")
+print("="*60 + "\\n")
+sys.stdout.flush()
+
+# Find the most recent trace file
+trace_files = glob.glob(".tracepatch_cache/trace_*.json")
+if trace_files:
+    latest_trace = max(trace_files, key=os.path.getmtime)
+    subprocess.run(["tph", "tree", latest_trace], check=False)
+else:
+    print("No trace files found!")
 """
