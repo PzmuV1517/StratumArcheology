@@ -257,6 +257,19 @@ async def update_profile(
     return current_user
 
 
+@router.patch("/me/onboarding", response_model=UserResponse)
+async def update_onboarding_status(
+    has_completed: bool,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update user's onboarding completion status"""
+    current_user.has_completed_onboarding = has_completed
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user_profile(
     user_id: str,

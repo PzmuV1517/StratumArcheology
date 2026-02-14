@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAuth } from "../../src/contexts/AuthContext";
+import { useOnboarding, DEV_ALWAYS_SHOW_ONBOARDING } from "../../src/contexts/OnboardingContext";
 import type { Project } from "../../src/services/projectService.types";
 import type { ProjectActivity } from "../../src/services/activityService.types";
 
@@ -31,6 +33,24 @@ export default function ProjectsScreen() {
     "projects",
   );
   const router = useRouter();
+  const { user } = useAuth();
+  const { triggerPrompt, showPrompt, showOnboarding } = useOnboarding();
+  const hasTriggeredPrompt = useRef(false);
+
+  // Show onboarding prompt once for new users (or always in dev mode)
+  useEffect(() => {
+    if (!user) return;
+    // Don't retrigger if already triggered this session (unless dev mode forces it)
+    if (!DEV_ALWAYS_SHOW_ONBOARDING && hasTriggeredPrompt.current) return;
+    // Don't retrigger if prompt/onboarding is already showing
+    if (showPrompt || showOnboarding) return;
+    
+    if (DEV_ALWAYS_SHOW_ONBOARDING || !user.has_completed_onboarding) {
+      hasTriggeredPrompt.current = true;
+      const timer = setTimeout(() => triggerPrompt(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProjects = useCallback(async () => {
     try {
@@ -84,27 +104,30 @@ export default function ProjectsScreen() {
     }
   };
 
-  const renderProject = ({ item }: any) => (
-    <TouchableOpacity
-      style={styles.projectCard}
-      onPress={() =>
-        router.push({
-          pathname: "/project/[id]",
-          params: { id: String(item.id) },
-        })
-      }
-    >
-      <Text style={styles.projectName}>{item.name}</Text>
-      <Text style={styles.projectDescription}>
-        {item.description || "No description"}
-      </Text>
-      <View style={styles.projectMeta}>
-        <Text style={styles.dateText}>
-          Created: {new Date(item.created_at).toLocaleDateString()}
+  const renderProject = ({ item, index }: any) => {
+    // During onboarding, tag the demo project card (or first card as fallback)
+    return (
+      <TouchableOpacity
+        style={styles.projectCard}
+        onPress={() =>
+          router.push({
+            pathname: "/project/[id]",
+            params: { id: String(item.id) },
+          })
+        }
+      >
+        <Text style={styles.projectName}>{item.name}</Text>
+        <Text style={styles.projectDescription}>
+          {item.description || "No description"}
         </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.projectMeta}>
+          <Text style={styles.dateText}>
+            Created: {new Date(item.created_at).toLocaleDateString()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderActivity = ({ item }: { item: MyActivity }) => (
     <TouchableOpacity
@@ -262,7 +285,10 @@ export default function ProjectsScreen() {
         </ScrollView>
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => setShowActionModal(true)}
+      >
         <IconSymbol name="plus" size={28} color="#F5F5F5" />
       </TouchableOpacity>
 
