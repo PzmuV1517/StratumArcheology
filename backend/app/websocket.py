@@ -12,11 +12,12 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Create Socket.IO server instance with CORS support
-# Use the same allowed origins as FastAPI to avoid duplicate headers
+# Create Socket.IO server instance
+# CORS is handled by FastAPI's CORSMiddleware, so we don't configure it here
+# to avoid duplicate Access-Control-Allow-Origin headers
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins=settings.allowed_origins_list,
+    cors_allowed_origins=[],  # Empty list - CORS handled by FastAPI middleware
     logger=False,  # Disable verbose Socket.IO logging
     engineio_logger=False,  # Disable verbose Engine.IO logging
 )
