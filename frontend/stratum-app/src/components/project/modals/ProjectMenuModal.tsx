@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
-  Platform,
 } from "react-native";
 
 // ─── Main Burger Menu ───────────────────────────────────────────────
@@ -104,7 +103,10 @@ export default function ProjectMenuModal({
                 </View>
               )}
               {onExitProject && (
-                <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
+                <TouchableOpacity
+                  style={[styles.menuItem]}
+                  onPress={handleExitPress}
+                >
                   <Text style={[styles.menuItemText, styles.exitButtonText]}>
                     Exit Project
                   </Text>

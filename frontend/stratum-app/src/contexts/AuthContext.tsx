@@ -16,6 +16,7 @@ interface User {
   display_name: string;
   photo_url?: string;
   bio?: string;
+  has_completed_onboarding?: boolean;
 }
 
 interface AuthContextType {
@@ -105,6 +106,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: response.data.email,
             display_name: response.data.display_name,
             photo_url: response.data.photo_url,
+            bio: response.data.bio,
+            has_completed_onboarding: response.data.has_completed_onboarding,
           };
           await authService.updateUserData(freshUser);
           setUser(freshUser);
@@ -173,6 +176,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: response.data.email,
           display_name: response.data.display_name,
           photo_url: response.data.photo_url,
+          bio: response.data.bio,
+          has_completed_onboarding: response.data.has_completed_onboarding,
         };
         await authService.updateUserData(freshUser);
         setUser(freshUser);

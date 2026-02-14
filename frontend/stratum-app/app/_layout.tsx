@@ -5,12 +5,15 @@ import "react-native-reanimated";
 import { useEffect } from "react";
 import { View, Platform, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import AuthRedirector from "./AuthRedirector";
 
 import { AuthProvider } from "../src/contexts/AuthContext";
 import { WebSocketProvider } from "../src/contexts/WebSocketContext";
+import { OnboardingProvider } from "../src/contexts/OnboardingContext";
 import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
 import CustomAlertOverride from "../src/components/common/AndroidAlertOverride";
+import { OnboardingOverlay } from "../src/components/onboarding/OnboardingOverlay";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
@@ -89,13 +92,18 @@ const styles = StyleSheet.create({
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <WebSocketProvider>
-          <RootLayoutNav />
-          <CustomAlertOverride />
-        </WebSocketProvider>
-      </AuthProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AuthProvider>
+          <WebSocketProvider>
+            <OnboardingProvider>
+              <RootLayoutNav />
+              <OnboardingOverlay />
+              <CustomAlertOverride />
+            </OnboardingProvider>
+          </WebSocketProvider>
+        </AuthProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

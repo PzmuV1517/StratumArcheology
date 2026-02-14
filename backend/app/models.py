@@ -98,6 +98,7 @@ class User(Base):
     display_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
     bio = Column(Text, nullable=True)  # User bio/about me
+    has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)

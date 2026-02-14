@@ -54,6 +54,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     firebase_uid: str
+    has_completed_onboarding: bool = False
     created_at: datetime
     last_login: datetime | None = None
 
