@@ -46,3 +46,7 @@ export type {
 
 // WebSocket
 export { socketService } from "./socketService";
+
+// QR Codes
+export { qrService } from "./qrService";
+export type { QRCodeEntry, QRCodeResolved } from "./qrService";

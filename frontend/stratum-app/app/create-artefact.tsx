@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { fileService } from "../src/services/fileService";
+import { qrService } from "../src/services/qrService";
 import { useAuth } from "../src/contexts/AuthContext";
 import { buildManifestFromChildren } from "../src/utils/artefactManifest";
 import { showAlert } from "../src/utils/alert";
@@ -107,11 +108,10 @@ export default function CreateArtefactScreen() {
   const [notes, setNotes] = useState<string[]>([""]);
   const [creating, setCreating] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
-  const qrValue = (folderId: string) => {
-    // Encode artefact identity as a unique code string (not a link)
-    return `stratum:artefact:${projectId}:${folderId}`;
-  };
+  // Preview QR shows a placeholder; the real unique code is generated on create
+  const qrPreviewValue = "STR-PREVIEW";
 
   // ------ Pick images ------
   const pickImages = async () => {
@@ -238,6 +238,20 @@ export default function CreateArtefactScreen() {
 
       // Build artefact.json manifest
       const freshChildren = await fileService.listChildren(folder.id);
+
+      // Register a unique QR code via backend
+      let artefactQrCode = "";
+      try {
+        const qrEntry = await qrService.create("artefact", folder.id, projectId, {
+          name: name.trim(),
+          number,
+        });
+        artefactQrCode = qrEntry.code;
+        setQrCode(artefactQrCode);
+      } catch (e) {
+        console.warn("QR code registration failed", e);
+      }
+
       const manifest = buildManifestFromChildren(
         folder.id,
         name.trim(),
@@ -248,7 +262,7 @@ export default function CreateArtefactScreen() {
           createdBy: user || undefined,
           previewFileId,
         },
-        { user: user || undefined, qrUrl: qrValue(folder.id) },
+        { user: user || undefined, qrUrl: artefactQrCode || undefined },
       );
       // Upload artefact.json manifest
       const manifestJson = JSON.stringify(manifest, null, 2);
@@ -484,7 +498,7 @@ export default function CreateArtefactScreen() {
           </Text>
           <View style={{ alignItems: "center", marginTop: 8 }}>
             <QRCodeView
-              value={qrValue("new")}
+              value={qrCode || qrPreviewValue}
               label={`${name || "Artefact"} #—`}
               onReadyDataUrl={setQrDataUrl}
             />

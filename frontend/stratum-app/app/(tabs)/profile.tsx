@@ -17,6 +17,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../../src/services/api";
 import { config } from "../../src/config/config";
 import { showAlert } from "../../src/utils/alert";
+import { ConflictResolutionModal } from "../../src/components/sync/ConflictResolutionModal";
+import type { FileConflict } from "../../src/services/offlineQueueService";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -27,6 +29,39 @@ export default function ProfileScreen() {
   const [apiInput, setApiInput] = useState<string>("");
   const [effectiveApi, setEffectiveApi] = useState<string>("");
   const [savingApi, setSavingApi] = useState(false);
+  const [showConflictTest, setShowConflictTest] = useState(false);
+
+  const demoConflict: FileConflict = {
+    id: "demo-conflict-1",
+    nodeId: "node-abc-123",
+    projectId: "project-xyz",
+    fileName: "field-notes-sector-B.txt",
+    localVersion: {
+      nodeId: "node-abc-123",
+      projectId: "project-xyz",
+      name: "field-notes-sector-B.txt",
+      localVersion: 3,
+      remoteVersion: 4,
+      localUpdatedAt: new Date(Date.now() - 3600000).toISOString(),
+      remoteUpdatedAt: new Date(Date.now() - 1800000).toISOString(),
+      hasLocalEdits: true,
+      localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
+    },
+    remoteVersion: {
+      version: 4,
+      updatedAt: new Date(Date.now() - 1800000).toISOString(),
+      updatedBy: "Dr. Petrova",
+    },
+    localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
+    createdAt: new Date().toISOString(),
+    resolved: false,
+  };
+
+  const demoLocalContent =
+    "Excavation notes – Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.";
+
+  const demoRemoteContent =
+    "Excavation notes – Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.\n\nUpdate: Fragment catalogued as SB-L4-0042. Cross-ref with GPS marker B-17.";
 
   useEffect(() => {
     (async () => {
@@ -198,6 +233,13 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowConflictTest(true)}
+          >
+            <Text style={styles.menuItemText}>Test Conflict Resolution</Text>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
@@ -324,6 +366,18 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <ConflictResolutionModal
+        visible={showConflictTest}
+        conflict={demoConflict}
+        onResolve={(resolution) => {
+          setShowConflictTest(false);
+          showAlert("Resolution", `You chose: ${resolution}`);
+        }}
+        onCancel={() => setShowConflictTest(false)}
+        localContent={demoLocalContent}
+        remoteContent={demoRemoteContent}
+      />
     </View>
   );
 }

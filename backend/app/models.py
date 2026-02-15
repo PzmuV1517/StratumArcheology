@@ -411,3 +411,32 @@ class ProjectActivity(Base):
     __table_args__ = (
         Index("ix_project_activities_project_created", "project_id", "created_at"),
     )
+
+
+class QRCode(Base):
+    """
+    Unified QR-code registry.
+
+    Every QR code in the app encodes a short unique identifier (e.g. STR-X7K9M2P4).
+    This table maps that code to the resource it represents.
+    """
+
+    __tablename__ = "qr_codes"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    code = Column(String, unique=True, nullable=False, index=True)
+    type = Column(String, nullable=False)  # "artefact", "invite", …
+    resource_id = Column(String, nullable=False)  # target entity id
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    metadata_json = Column(JSON, nullable=True)
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project", backref=backref("qr_codes", cascade="all, delete-orphan"))

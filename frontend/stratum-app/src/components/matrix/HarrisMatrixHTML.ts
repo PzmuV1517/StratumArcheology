@@ -11,6 +11,8 @@
  * - Data persistence through AsyncStorage (via RN bridge)
  */
 
+// NOTE: This is a deprecated file. Harris Matrix feature for React Native is now implemented via the HarrisMatrix.native.tsx component, which removes the need for a WebView and allows for a more native experience. This HTML generator is retained for reference.
+
 interface HarrisMatrixHTMLOptions {
   projectId: string;
   canEdit: boolean;
