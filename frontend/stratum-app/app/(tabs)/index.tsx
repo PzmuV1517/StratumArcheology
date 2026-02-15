@@ -15,7 +15,10 @@ import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "../../src/contexts/AuthContext";
-import { useOnboarding, DEV_ALWAYS_SHOW_ONBOARDING } from "../../src/contexts/OnboardingContext";
+import {
+  useOnboarding,
+  DEV_ALWAYS_SHOW_ONBOARDING,
+} from "../../src/contexts/OnboardingContext";
 import type { Project } from "../../src/services/projectService.types";
 import type { ProjectActivity } from "../../src/services/activityService.types";
 
@@ -44,7 +47,7 @@ export default function ProjectsScreen() {
     if (!DEV_ALWAYS_SHOW_ONBOARDING && hasTriggeredPrompt.current) return;
     // Don't retrigger if prompt/onboarding is already showing
     if (showPrompt || showOnboarding) return;
-    
+
     if (DEV_ALWAYS_SHOW_ONBOARDING || !user.has_completed_onboarding) {
       hasTriggeredPrompt.current = true;
       const timer = setTimeout(() => triggerPrompt(), 600);
@@ -285,10 +288,7 @@ export default function ProjectsScreen() {
         </ScrollView>
       )}
 
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={() => setShowActionModal(true)}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
         <IconSymbol name="plus" size={28} color="#F5F5F5" />
       </TouchableOpacity>
 
