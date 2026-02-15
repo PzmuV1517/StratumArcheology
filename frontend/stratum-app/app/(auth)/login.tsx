@@ -505,13 +505,6 @@ export default function LoginScreen() {
                 <Text style={styles.linkText}>Register</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.docsLink}
-              onPress={() => Linking.openURL("https://stratumapp.readthedocs.io")}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.docsLinkText}>Begin Now →</Text>
-            </TouchableOpacity>
           </ScrollView>
         </RAnimated.View>
 
