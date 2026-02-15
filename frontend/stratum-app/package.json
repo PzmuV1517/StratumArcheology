@@ -14,7 +14,8 @@
     "format:check": "prettier --check .",
     "fix": "npm run lint:fix && npm run format",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "postinstall": "bash scripts/patch-onboarding.sh"
   },
   "dependencies": {
     "@blazejkustra/react-native-onboarding": "^1.0.0",
