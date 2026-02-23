@@ -14,6 +14,7 @@ import {
   Modal,
   Platform,
 } from "react-native";
+import { NoteDetailSkeleton } from "../src/components/common/Skeleton";
 import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { noteService } from "../src/services/noteService";
@@ -217,10 +218,7 @@ export default function NoteDetailScreen() {
     return (
       <View style={s.container}>
         <Stack.Screen options={{ title: "Note Details", ...stackScreenOpts }} />
-        <View style={s.centerContainer}>
-          <ActivityIndicator size="large" color="#FF2A2A" />
-          <Text style={s.loadingText}>Loading note...</Text>
-        </View>
+        <NoteDetailSkeleton />
       </View>
     );
   }

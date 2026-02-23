@@ -5,10 +5,10 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Platform,
 } from "react-native";
+import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
@@ -161,8 +161,11 @@ export default function ProjectsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Projects</Text>
+        </View>
+        <ProjectListSkeleton count={4} />
       </View>
     );
   }
