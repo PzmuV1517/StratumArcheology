@@ -5,10 +5,11 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Platform,
 } from "react-native";
+import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
+import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
@@ -31,6 +32,7 @@ export default function ProjectsScreen() {
   const [activities, setActivities] = useState<MyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
   const [showActionModal, setShowActionModal] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"projects" | "mystuff">(
     "projects",
@@ -159,10 +161,13 @@ export default function ProjectsScreen() {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (showSkeleton) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Projects</Text>
+        </View>
+        <ProjectListSkeleton count={4} />
       </View>
     );
   }

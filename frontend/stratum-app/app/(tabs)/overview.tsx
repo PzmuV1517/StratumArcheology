@@ -5,10 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Platform,
   Modal,
 } from "react-native";
+import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
+import { OverviewSkeleton, Skeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { projectService } from "../../src/services/projectService";
@@ -100,6 +101,8 @@ export default function OverviewScreen() {
   >({});
   const [loading, setLoading] = useState(true);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
+  const showActivitiesSkeleton = useDelayedLoading(activitiesLoading);
 
   // Quick actions customization
   const [selectedActionIds, setSelectedActionIds] =
@@ -297,12 +300,12 @@ export default function OverviewScreen() {
         {/* Interactive Timeline */}
         <View style={styles.timelineContainer}>
           <Text style={styles.timelineTitle}>Recent Activity</Text>
-          {activitiesLoading ? (
-            <ActivityIndicator
-              size="small"
-              color="#FF2A2A"
-              style={{ marginVertical: 8 }}
-            />
+          {showActivitiesSkeleton ? (
+            <View style={{ flexDirection: "row", gap: 8, marginVertical: 4 }}>
+              <Skeleton width={100} height={60} borderRadius={10} />
+              <Skeleton width={100} height={60} borderRadius={10} />
+              <Skeleton width={100} height={60} borderRadius={10} />
+            </View>
           ) : activities.length > 0 ? (
             <ScrollView
               horizontal
@@ -336,13 +339,8 @@ export default function OverviewScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading your workspace...</Text>
-      </View>
-    );
+  if (showSkeleton) {
+    return <OverviewSkeleton />;
   }
 
   return (

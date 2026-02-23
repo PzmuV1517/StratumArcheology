@@ -4,11 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   Image,
   TextInput,
 } from "react-native";
+import { useDelayedLoading } from "../../hooks/useDelayedLoading";
+import { ArtefactGridSkeleton } from "../../components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
@@ -37,6 +38,7 @@ export default function ArtefactsTab({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
   const [searchQuery, setSearchQuery] = useState("");
   const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
@@ -184,11 +186,8 @@ export default function ArtefactsTab({
         </View>
       )}
 
-      {loading ? (
-        <View style={{ paddingVertical: 24, alignItems: "center" }}>
-          <ActivityIndicator color="#FF2A2A" />
-          <Text style={{ color: "#9A9A9A", marginTop: 8 }}>Loading artefacts…</Text>
-        </View>
+      {showSkeleton ? (
+        <ArtefactGridSkeleton count={4} />
       ) : artefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
           <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>

@@ -21,6 +21,8 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
+import { ArtefactDetailSkeleton } from "../../src/components/common/Skeleton";
+import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
 import { fileService } from "../../src/services/fileService";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { showAlert } from "../../src/utils/alert";
@@ -140,6 +142,7 @@ export default function ArtefactDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const showSkeleton = useDelayedLoading(loading);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [children, setChildren] = useState<FileNode[]>([]);
   const [meta, setMeta] = useState<ArtefactMeta | null>(null);
@@ -344,7 +347,7 @@ export default function ArtefactDetail() {
   );
 
   // ---- Loading / Error ----
-  if (loading) {
+  if (showSkeleton) {
     return (
       <View style={s.container}>
         <Stack.Screen
@@ -358,10 +361,7 @@ export default function ArtefactDetail() {
             headerShown: true,
           }}
         />
-        <View style={s.centerContainer}>
-          <ActivityIndicator size="large" color="#FF2A2A" />
-          <Text style={s.loadingText}>Loading artefact...</Text>
-        </View>
+        <ArtefactDetailSkeleton />
       </View>
     );
   }
