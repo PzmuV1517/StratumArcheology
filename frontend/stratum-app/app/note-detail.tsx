@@ -14,6 +14,8 @@ import {
   Modal,
   Platform,
 } from "react-native";
+import { useDelayedLoading } from "../src/hooks/useDelayedLoading";
+import { NoteDetailSkeleton } from "../src/components/common/Skeleton";
 import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { noteService } from "../src/services/noteService";
@@ -134,6 +136,7 @@ export default function NoteDetailScreen() {
   const [note, setNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
@@ -213,14 +216,11 @@ export default function NoteDetailScreen() {
     presentation: "card" as const,
   };
 
-  if (loading) {
+  if (showSkeleton) {
     return (
       <View style={s.container}>
         <Stack.Screen options={{ title: "Note Details", ...stackScreenOpts }} />
-        <View style={s.centerContainer}>
-          <ActivityIndicator size="large" color="#FF2A2A" />
-          <Text style={s.loadingText}>Loading note...</Text>
-        </View>
+        <NoteDetailSkeleton />
       </View>
     );
   }
