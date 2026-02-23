@@ -158,19 +158,18 @@ export default function NotesSection({
         const data = new Uint8Array(analyser.fftSize);
         const g = canvasRef.current.getContext("2d")!;
         const draw = () => {
-          if (!mounted || !canvasRef.current) return;
+          if (!mounted) return;
           rafRef.current = requestAnimationFrame(draw);
           analyser!.getByteTimeDomainData(data);
-          const cw = canvasRef.current.width;
-          const ch = canvasRef.current.height;
-          g.clearRect(0, 0, cw, ch);
+          g.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
           g.strokeStyle = "#FF2A2A";
           g.lineWidth = 2;
           g.beginPath();
-          const slice = cw / data.length;
+          const slice = canvasRef.current!.width / data.length;
           for (let i = 0; i < data.length; i++) {
             const v = data[i] / 128 - 1;
-            const y = (v * ch) / 2 + ch / 2;
+            const y =
+              (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
             if (i === 0) g.moveTo(0, y);
             else g.lineTo(i * slice, y);
           }

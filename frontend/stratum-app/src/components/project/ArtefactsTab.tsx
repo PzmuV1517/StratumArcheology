@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
   Platform,
   Image,
   TextInput,
 } from "react-native";
-import { ArtefactGridSkeleton } from "../common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
@@ -185,7 +185,10 @@ export default function ArtefactsTab({
       )}
 
       {loading ? (
-        <ArtefactGridSkeleton count={4} />
+        <View style={{ paddingVertical: 24, alignItems: "center" }}>
+          <ActivityIndicator color="#FF2A2A" />
+          <Text style={{ color: "#9A9A9A", marginTop: 8 }}>Loading artefacts…</Text>
+        </View>
       ) : artefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
           <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>
