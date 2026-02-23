@@ -6,6 +6,7 @@ import { useGlobalSearchParams, useLocalSearchParams, useRouter, useNavigation }
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
+import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
 import { projectService } from "@/src/services/projectService";
 import { noteService } from "@/src/services/noteService";
 import { showAlert } from "@/src/utils/alert";
@@ -1089,14 +1090,7 @@ export function useProjectDetail() {
 }
 
 export function ProjectLoadingState() {
-  return (
-    <View style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading project details...</Text>
-      </View>
-    </View>
-  );
+  return <ProjectDetailSkeleton />;
 }
 
 export function ProjectNotFoundState({ onReturn }: { onReturn: () => void }) {
