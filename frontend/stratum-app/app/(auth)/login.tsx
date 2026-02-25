@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
   ScrollView,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
@@ -524,6 +525,13 @@ export default function LoginScreen() {
                 <Text style={styles.linkText}>Login</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity
+              style={styles.docsLink}
+              onPress={() => Linking.openURL("https://stratumapp.readthedocs.io")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.docsLinkText}>Begin Now →</Text>
+            </TouchableOpacity>
           </ScrollView>
         </RAnimated.View>
       </RAnimated.View>
@@ -746,6 +754,17 @@ const styles: any = StyleSheet.create({
   devButtonText: {
     color: "#F5F5F5",
     fontWeight: "600",
+  },
+  docsLink: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  docsLinkText: {
+    color: "#FF2A2A",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+    opacity: 0.8,
   },
   modalBackdrop: {
     flex: 1,

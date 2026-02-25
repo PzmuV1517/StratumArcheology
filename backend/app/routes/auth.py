@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.middleware import get_logger
 from app.models import User
 from app.schemas import (
     AuthResponse,
@@ -20,6 +21,7 @@ from app.schemas import (
     UserResponse,
 )
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # Firebase Auth REST API endpoint for email/password sign-in
@@ -94,10 +96,11 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
+        logger.exception("Login failed with unexpected error", email=request.email, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication failed",
+            detail=f"Authentication failed: {str(e)}",
         )
 
 
@@ -155,10 +158,13 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    except Exception:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Registration failed with unexpected error", email=request.email, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed",
+            detail=f"Registration failed: {str(e)}",
         )
 
 
@@ -246,6 +252,19 @@ async def update_profile(
     if request.bio is not None:
         current_user.bio = request.bio
 
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.patch("/me/onboarding", response_model=UserResponse)
+async def update_onboarding_status(
+    has_completed: bool,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update user's onboarding completion status"""
+    current_user.has_completed_onboarding = has_completed
     db.commit()
     db.refresh(current_user)
     return current_user

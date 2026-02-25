@@ -8,15 +8,18 @@ import logging
 
 import socketio
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
-# Create Socket.IO server instance with CORS support
-# Socket.IO requires '*' or explicit origins list
+# Create Socket.IO server instance
+# CORS is handled by FastAPI's CORSMiddleware, so we don't configure it here
+# to avoid duplicate Access-Control-Allow-Origin headers
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*",  # Allow all origins for development
-    logger=True,
-    engineio_logger=True,
+    cors_allowed_origins=[],  # Empty list - CORS handled by FastAPI middleware
+    logger=False,  # Disable verbose Socket.IO logging
+    engineio_logger=False,  # Disable verbose Engine.IO logging
 )
 
 # Track which users are in which project rooms

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Platform, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, Platform, useWindowDimensions, Linking, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 
 // Only import these on web to avoid native compilation issues
@@ -173,6 +173,10 @@ export default function LandingPage() {
                 </Text>
               </View>
             </View>
+            <TouchableOpacity style={styles.docsCard} onPress={() => Linking.openURL("https://stratumapp.readthedocs.io")}>
+              <Text style={styles.cardTitle}>📖 Documentation</Text>
+              <Text style={styles.docsLink}>stratumapp.readthedocs.io</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Mosaic highlights (visual variety) */}
@@ -459,6 +463,22 @@ const styles = StyleSheet.create({
   cards: {
     width: "100%",
     maxWidth: 1040,
+  },
+  docsCard: {
+    backgroundColor: "#0A0A0A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 12,
+    width: "100%",
+    maxWidth: 1040,
+  },
+  docsLink: {
+    color: "#8bb4f0",
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: "underline",
   },
   mosaicRow: {
     flexDirection: "row",

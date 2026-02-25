@@ -28,6 +28,7 @@ from app.routes import (
     invites,
     notes,
     projects,
+    qrcodes,
 )
 from app.websocket import sio_app
 
@@ -91,6 +92,7 @@ app.include_router(convert.router, prefix="/api")
 app.include_router(gps.router, prefix="/api")
 app.include_router(forms.router, prefix="/api")
 app.include_router(invites.router, prefix="/api")
+app.include_router(qrcodes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
 
 logger.info(

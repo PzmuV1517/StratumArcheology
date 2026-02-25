@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface MoreToolsItem {
   key: string;

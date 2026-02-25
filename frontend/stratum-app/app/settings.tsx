@@ -14,6 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/contexts/AuthContext";
+import { useOnboarding } from "../src/contexts/OnboardingContext";
 import api from "../src/services/api";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -121,6 +122,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
+  const { replayOnboarding } = useOnboarding();
 
   // Storage stats
   const [stratumUsed, setStratumUsed] = useState(0);
@@ -511,6 +513,22 @@ export default function SettingsScreen() {
     setShowProfileModal(true);
   };
 
+  const handleReplayTutorial = () => {
+    showAlert(
+      "Replay Tutorial?",
+      "This will show you the STRATUM onboarding walkthrough again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Start Tutorial",
+          onPress: () => {
+            replayOnboarding();
+          },
+        },
+      ]
+    );
+  };
+
   // Group offline files by project
   const groupedOfflineFiles = offlineFiles.reduce(
     (acc, file) => {
@@ -565,6 +583,16 @@ export default function SettingsScreen() {
                   Change photo and display name
                 </Text>
               </View>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleReplayTutorial}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>Replay Tutorial</Text>
+              <Text style={styles.menuItemSubtext}>
+                Learn how to use STRATUM again
+              </Text>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>

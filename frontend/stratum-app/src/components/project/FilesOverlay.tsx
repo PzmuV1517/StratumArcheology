@@ -516,7 +516,7 @@ export default function FilesOverlay({
         const fd = new FormData();
         fd.append("file", f);
         if (currentFolder?.id) fd.append("parent_id", currentFolder.id);
-        return fileService.uploadFile(projectId, fd).catch((err: any) => {
+        return fileService.uploadFormData(projectId, fd).catch((err: any) => {
           console.error("Upload failed for", f.name, err);
           showAlert("Upload failed", f.name);
         });

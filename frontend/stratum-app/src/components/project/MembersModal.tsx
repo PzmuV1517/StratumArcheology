@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { projectService } from "../../services/projectService";
+import { qrService } from "../../services/qrService";
 import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
 import QRCodeView from "../common/QRCodeView";
@@ -82,6 +83,7 @@ export default function MembersModal({
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [generatedExpiresAt, setGeneratedExpiresAt] = useState<string | null>(null);
   const [generatedMaxUses, setGeneratedMaxUses] = useState<number | null>(null);
+  const [qrUniqueCode, setQrUniqueCode] = useState<string | null>(null);
   const [isManaging, setIsManaging] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [showTransferConfirm, setShowTransferConfirm] = useState<string | null>(
@@ -289,6 +291,20 @@ export default function MembersModal({
       setGeneratedCode(resp.code || null);
       setGeneratedExpiresAt(resp.expires_at || (null as any));
       setGeneratedMaxUses(resp.max_uses ?? null);
+
+      // Register a unique QR code for this invite
+      try {
+        const qrEntry = await qrService.create(
+          "invite",
+          resp.token,
+          projectId,
+          { code: resp.code, role: inviteRole },
+        );
+        setQrUniqueCode(qrEntry.code);
+      } catch (e) {
+        console.warn("QR code registration failed, falling back to invite code", e);
+        setQrUniqueCode(null);
+      }
     } catch (e: any) {
       setManageError(e?.detail || e?.message || "Failed to generate invite");
     } finally {
@@ -810,7 +826,7 @@ export default function MembersModal({
                   {Platform.OS === "web" && (
                     <Image
                       source={{
-                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(generatedCode ? `stratum:invite:${generatedCode}` : generatedLink)}`,
+                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUniqueCode || generatedCode || "")}`,
                       }}
                       style={styles.qrCode}
                     />
@@ -818,7 +834,7 @@ export default function MembersModal({
                   {Platform.OS !== "web" && (
                     <View style={{ alignItems: "center", marginTop: 12 }}>
                       <QRCodeView
-                        value={generatedCode ? `stratum:invite:${generatedCode}` : generatedLink}
+                        value={qrUniqueCode || generatedCode || ""}
                         size={180}
                         label="Scan to join"
                       />

@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   Image,
   TextInput,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useDelayedLoading } from "../../hooks/useDelayedLoading";
+import { ArtefactGridSkeleton } from "../../components/common/Skeleton";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
@@ -37,6 +38,7 @@ export default function ArtefactsTab({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
   const [searchQuery, setSearchQuery] = useState("");
   const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
@@ -56,6 +58,15 @@ export default function ArtefactsTab({
   useEffect(() => {
     if (projectId) load();
   }, [projectId]);
+
+  // Reload artefacts when screen comes into focus (e.g., after creating a new artefact)
+  useFocusEffect(
+    useCallback(() => {
+      if (projectId) {
+        load();
+      }
+    }, [projectId])
+  );
 
   const load = async () => {
     try {
@@ -87,10 +98,7 @@ export default function ArtefactsTab({
           );
           if (metaFile) {
             const res = await fileService.downloadFile(metaFile.id);
-            const text = await (res.data?.text?.() ||
-              res.data
-                ?.arrayBuffer?.()
-                .then((b: any) => new TextDecoder().decode(b)));
+            const text = await res.blob.text();
             if (text) meta = JSON.parse(text);
           }
           const pv = grand.find(
@@ -99,8 +107,7 @@ export default function ArtefactsTab({
           );
           if (pv && Platform.OS === "web") {
             const blobRes = await fileService.downloadFile(pv.id);
-            const blob = blobRes.data;
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(blobRes.blob);
             previewUrl = url;
           }
         } catch {}
@@ -179,11 +186,8 @@ export default function ArtefactsTab({
         </View>
       )}
 
-      {loading ? (
-        <View style={{ paddingVertical: 24, alignItems: "center" }}>
-          <ActivityIndicator color="#FF2A2A" />
-          <Text style={{ color: "#9A9A9A", marginTop: 8 }}>Loading artefacts…</Text>
-        </View>
+      {showSkeleton ? (
+        <ArtefactGridSkeleton count={4} />
       ) : artefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
           <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>

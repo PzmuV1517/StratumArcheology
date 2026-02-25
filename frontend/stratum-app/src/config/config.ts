@@ -61,9 +61,17 @@ const getApiBaseUrl = (): string => {
   );
 
   if (Platform.OS === "web") {
-    // Web runs in browser, localhost works
+    // In production (served from a domain), use relative URLs so it works on any domain
+    // In development (localhost), explicitly use localhost
+    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+      // Production: use relative URL (e.g., /api on https://stratum.andreibanu.com)
+      const url = `/api`;
+      console.log("[Config] Web production, using relative URL:", url);
+      return url;
+    }
+    // Development: use localhost
     const url = `http://localhost:${port}/api`;
-    console.log("[Config] Web platform, using:", url);
+    console.log("[Config] Web development, using:", url);
     return url;
   }
 

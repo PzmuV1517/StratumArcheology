@@ -119,6 +119,7 @@ export default function MapEditor({
         saveNow();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Load Leaflet dynamically on the client and initialize the map

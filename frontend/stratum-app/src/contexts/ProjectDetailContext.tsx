@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform, RefreshControl, View, Text, ActivityIndicator } from "react-native";
+import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGlobalSearchParams, useLocalSearchParams, useRouter, useNavigation } from "expo-router";
@@ -1089,14 +1090,14 @@ export function useProjectDetail() {
 }
 
 export function ProjectLoadingState() {
-  return (
-    <View style={styles.safeArea}>
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading project details...</Text>
-      </View>
-    </View>
-  );
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!show) return null;
+  return <ProjectDetailSkeleton />;
 }
 
 export function ProjectNotFoundState({ onReturn }: { onReturn: () => void }) {

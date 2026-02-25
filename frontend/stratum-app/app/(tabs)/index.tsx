@@ -1,19 +1,25 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Platform,
 } from "react-native";
+import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
+import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
 import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAuth } from "../../src/contexts/AuthContext";
+import {
+  useOnboarding,
+  DEV_ALWAYS_SHOW_ONBOARDING,
+} from "../../src/contexts/OnboardingContext";
 import type { Project } from "../../src/services/projectService.types";
 import type { ProjectActivity } from "../../src/services/activityService.types";
 
@@ -26,11 +32,30 @@ export default function ProjectsScreen() {
   const [activities, setActivities] = useState<MyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
   const [showActionModal, setShowActionModal] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"projects" | "mystuff">(
     "projects",
   );
   const router = useRouter();
+  const { user } = useAuth();
+  const { triggerPrompt, showPrompt, showOnboarding } = useOnboarding();
+  const hasTriggeredPrompt = useRef(false);
+
+  // Show onboarding prompt once for new users (or always in dev mode)
+  useEffect(() => {
+    if (!user) return;
+    // Don't retrigger if already triggered this session (unless dev mode forces it)
+    if (!DEV_ALWAYS_SHOW_ONBOARDING && hasTriggeredPrompt.current) return;
+    // Don't retrigger if prompt/onboarding is already showing
+    if (showPrompt || showOnboarding) return;
+
+    if (DEV_ALWAYS_SHOW_ONBOARDING || !user.has_completed_onboarding) {
+      hasTriggeredPrompt.current = true;
+      const timer = setTimeout(() => triggerPrompt(), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProjects = useCallback(async () => {
     try {
@@ -84,27 +109,30 @@ export default function ProjectsScreen() {
     }
   };
 
-  const renderProject = ({ item }: any) => (
-    <TouchableOpacity
-      style={styles.projectCard}
-      onPress={() =>
-        router.push({
-          pathname: "/project/[id]",
-          params: { id: String(item.id) },
-        })
-      }
-    >
-      <Text style={styles.projectName}>{item.name}</Text>
-      <Text style={styles.projectDescription}>
-        {item.description || "No description"}
-      </Text>
-      <View style={styles.projectMeta}>
-        <Text style={styles.dateText}>
-          Created: {new Date(item.created_at).toLocaleDateString()}
+  const renderProject = ({ item, index }: any) => {
+    // During onboarding, tag the demo project card (or first card as fallback)
+    return (
+      <TouchableOpacity
+        style={styles.projectCard}
+        onPress={() =>
+          router.push({
+            pathname: "/project/[id]",
+            params: { id: String(item.id) },
+          })
+        }
+      >
+        <Text style={styles.projectName}>{item.name}</Text>
+        <Text style={styles.projectDescription}>
+          {item.description || "No description"}
         </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={styles.projectMeta}>
+          <Text style={styles.dateText}>
+            Created: {new Date(item.created_at).toLocaleDateString()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderActivity = ({ item }: { item: MyActivity }) => (
     <TouchableOpacity
@@ -133,10 +161,13 @@ export default function ProjectsScreen() {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (showSkeleton) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Projects</Text>
+        </View>
+        <ProjectListSkeleton count={4} />
       </View>
     );
   }

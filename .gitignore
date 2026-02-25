@@ -58,9 +58,11 @@ Thumbs.db
 
 # Build outputs
 build/
-dist/
 .expo/
 web-build/
+
+# Track the exported web app dist folder
+!frontend/stratum-app/dist/
 
 # MinIO/Storage
 minio-data/

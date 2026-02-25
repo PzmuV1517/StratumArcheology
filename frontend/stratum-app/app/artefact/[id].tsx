@@ -21,6 +21,8 @@ import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
+import { ArtefactDetailSkeleton } from "../../src/components/common/Skeleton";
+import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
 import { fileService } from "../../src/services/fileService";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { showAlert } from "../../src/utils/alert";
@@ -140,6 +142,7 @@ export default function ArtefactDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const showSkeleton = useDelayedLoading(loading);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [children, setChildren] = useState<FileNode[]>([]);
   const [meta, setMeta] = useState<ArtefactMeta | null>(null);
@@ -149,6 +152,10 @@ export default function ArtefactDetail() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [noteContents, setNoteContents] = useState<Map<string, string>>(new Map());
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [qrExpanded, setQrExpanded] = useState(false);
 
   useEffect(() => {
     if (id) load();
@@ -174,8 +181,7 @@ export default function ArtefactDetail() {
       if (metaFile) {
         try {
           const res = await fileService.downloadFile(metaFile.id);
-          const text = await (res.data?.text?.() ||
-            res.data?.arrayBuffer?.().then((b: any) => new TextDecoder().decode(b)));
+          const text = await res.blob.text();
           if (text) setMeta(JSON.parse(text));
         } catch {}
       }
@@ -185,7 +191,7 @@ export default function ArtefactDetail() {
       );
       if (pv && Platform.OS === "web") {
         const blobRes = await fileService.downloadFile(pv.id);
-        setPreviewUrl(URL.createObjectURL(blobRes.data));
+        setPreviewUrl(URL.createObjectURL(blobRes.blob));
       }
       if (Platform.OS === "web" && typeof window !== "undefined") {
         setQrUrl(`${window.location.origin}/artefact/${id}`);
@@ -201,6 +207,66 @@ export default function ArtefactDetail() {
     setConfirmName("");
     setShowDeleteModal(true);
   }, []);
+
+  const toggleNote = async (noteId: string) => {
+    if (expandedNotes.has(noteId)) {
+      setExpandedNotes((prev) => {
+        const next = new Set(prev);
+        next.delete(noteId);
+        return next;
+      });
+    } else {
+      if (!noteContents.has(noteId)) {
+        try {
+          const res = await fileService.downloadFile(noteId);
+          const text = await res.blob.text();
+          setNoteContents((prev) => new Map(prev).set(noteId, text));
+        } catch (e) {
+          console.error("Failed to load note", e);
+        }
+      }
+      setExpandedNotes((prev) => new Set(prev).add(noteId));
+    }
+  };
+
+  const uploadNewPreview = async () => {
+    const res = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      type: "image/*",
+    });
+    if (res.canceled) return;
+    const asset = res.assets[0];
+    const fd = new FormData();
+    fd.append("parent_id", String(id));
+    if (Platform.OS === "web") {
+      const blob = await fetch(asset.uri).then((r) => r.blob());
+      const file = new File([blob], "preview.png", {
+        type: asset.mimeType || blob.type || "image/png",
+      });
+      fd.append("file", file, "preview.png");
+    } else {
+      fd.append("file", {
+        uri: asset.uri,
+        name: "preview.png",
+        type: asset.mimeType || "image/png",
+      } as any);
+    }
+    await fileService.uploadFormData(projectId || ("" as any), fd);
+    setShowPreviewModal(false);
+    await load();
+  };
+
+  const deletePreview = async () => {
+    const pv = children.find(
+      (c: any) =>
+        c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
+    );
+    if (pv) {
+      await fileService.deleteNode(pv.id);
+      setShowPreviewModal(false);
+      await load();
+    }
+  };
 
   const uploadMoreFiles = async () => {
     const res = await DocumentPicker.getDocumentAsync({
@@ -225,7 +291,7 @@ export default function ArtefactDetail() {
           type: asset.mimeType || "application/octet-stream",
         } as any);
       }
-      await fileService.uploadFile(projectId || ("" as any), fd);
+      await fileService.uploadFormData(projectId || ("" as any), fd);
     }
     try {
       const ch = await fileService.listChildren(id as string);
@@ -239,8 +305,7 @@ export default function ArtefactDetail() {
       if (existingMetaFile) {
         try {
           const res = await fileService.downloadFile(existingMetaFile.id);
-          const text = await (res.data?.text?.() ||
-            res.data?.arrayBuffer?.().then((b: any) => new TextDecoder().decode(b)));
+          const text = await res.blob.text();
           if (text) existing = JSON.parse(text);
         } catch {}
       }
@@ -260,12 +325,10 @@ export default function ArtefactDetail() {
         const blob = new Blob([JSON.stringify(manifest, null, 2)], {
           type: "application/json",
         });
-        const fd = new FormData();
         const file = new File([blob], "artefact.json", {
           type: "application/json",
         });
-        fd.append("file", file, "artefact.json");
-        await fileService.replaceFile(existingMetaFile.id, fd);
+        await fileService.replaceFile(existingMetaFile.id, file);
       }
     } catch (e) {
       console.error("Failed updating artefact.json after upload", e);
@@ -284,7 +347,7 @@ export default function ArtefactDetail() {
   );
 
   // ---- Loading / Error ----
-  if (loading) {
+  if (showSkeleton) {
     return (
       <View style={s.container}>
         <Stack.Screen
@@ -298,10 +361,7 @@ export default function ArtefactDetail() {
             headerShown: true,
           }}
         />
-        <View style={s.centerContainer}>
-          <ActivityIndicator size="large" color="#FF2A2A" />
-          <Text style={s.loadingText}>Loading artefact...</Text>
-        </View>
+        <ArtefactDetailSkeleton />
       </View>
     );
   }
@@ -334,13 +394,17 @@ export default function ArtefactDetail() {
         {/* Header icon */}
         <View style={s.headerIcon}>
           {previewUrl ? (
-            <Image
-              source={{ uri: previewUrl }}
-              style={s.heroPreview}
-              resizeMode="cover"
-            />
+            <TouchableOpacity onPress={() => setShowPreviewModal(true)}>
+              <Image
+                source={{ uri: previewUrl }}
+                style={s.heroPreview}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ) : (
-            <Ionicons name="cube" size={48} color="#FF2A2A" />
+            <TouchableOpacity onPress={() => setShowPreviewModal(true)}>
+              <Ionicons name="cube" size={48} color="#FF2A2A" />
+            </TouchableOpacity>
           )}
         </View>
 
@@ -350,51 +414,6 @@ export default function ArtefactDetail() {
           {meta?.createdAt &&
             `  ·  Created ${new Date(meta.createdAt).toLocaleDateString()}`}
         </Text>
-
-        {/* ── QR Code card ── */}
-        <GlassCard style={s.card}>
-          <View style={s.sectionHeader}>
-            <Text style={s.label}>
-              <Ionicons name="qr-code" size={14} color="#9A9A9A" /> QR Code
-            </Text>
-            {Platform.OS === "web" && qrDataUrl && (
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity
-                  style={s.inlineBtn}
-                  onPress={() =>
-                    printQr(
-                      qrDataUrl,
-                      `${meta?.name || "artefact"}-qr.png`,
-                      `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
-                    )
-                  }
-                >
-                  <Ionicons name="print" size={16} color="#FF2A2A" />
-                  <Text style={s.inlineBtnText}>Print</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={s.inlineBtn}
-                  onPress={() =>
-                    downloadDataUrl(
-                      qrDataUrl,
-                      `${meta?.name || "artefact"}-qr.png`,
-                    )
-                  }
-                >
-                  <Ionicons name="download" size={16} color="#FF2A2A" />
-                  <Text style={s.inlineBtnText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-          <View style={{ alignItems: "center", marginTop: 8 }}>
-            <QRCodeView
-              value={qrUrl || ""}
-              label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
-              onReadyDataUrl={setQrDataUrl}
-            />
-          </View>
-        </GlassCard>
 
         {/* ── Images card ── */}
         <GlassCard style={s.card}>
@@ -441,16 +460,94 @@ export default function ArtefactDetail() {
               <Text style={s.emptyText}>No notes yet</Text>
             </View>
           ) : (
-            <View style={{ gap: 8, marginTop: 4 }}>
-              {noteFiles.map((n) => (
-                <View key={n.id} style={s.fileRow}>
-                  <Ionicons name="document-text" size={18} color="#9A9A9A" />
-                  <Text style={s.fileRowText} numberOfLines={1}>
-                    {n.name}
-                  </Text>
-                </View>
-              ))}
+            <View style={{ gap: 12, marginTop: 4 }}>
+              {noteFiles.map((n) => {
+                const isExpanded = expandedNotes.has(n.id);
+                const content = noteContents.get(n.id) || "";
+                const preview = content.substring(0, 100);
+                return (
+                  <TouchableOpacity
+                    key={n.id}
+                    onPress={() => toggleNote(n.id)}
+                    style={s.noteCard}
+                  >
+                    <View style={s.noteHeader}>
+                      <Ionicons name="document-text" size={18} color="#9A9A9A" />
+                      <Text style={s.noteTitle} numberOfLines={1}>
+                        {n.name}
+                      </Text>
+                      <Ionicons
+                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        size={16}
+                        color="#9A9A9A"
+                      />
+                    </View>
+                    {isExpanded && content && (
+                      <Text style={s.noteBodyText}>
+                        {content}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+          )}
+        </GlassCard>
+
+        {/* ── QR Code card ── */}
+        <GlassCard style={s.card}>
+          <TouchableOpacity
+            style={s.sectionHeader}
+            onPress={() => setQrExpanded(!qrExpanded)}
+          >
+            <Text style={s.label}>
+              <Ionicons name="qr-code" size={14} color="#9A9A9A" /> QR Code
+            </Text>
+            <Ionicons
+              name={qrExpanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color="#9A9A9A"
+            />
+          </TouchableOpacity>
+          {qrExpanded && (
+            <>
+              {Platform.OS === "web" && qrDataUrl && (
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={s.inlineBtn}
+                    onPress={() =>
+                      printQr(
+                        qrDataUrl,
+                        `${meta?.name || "artefact"}-qr.png`,
+                        `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
+                      )
+                    }
+                  >
+                    <Ionicons name="print" size={16} color="#FF2A2A" />
+                    <Text style={s.inlineBtnText}>Print</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={s.inlineBtn}
+                    onPress={() =>
+                      downloadDataUrl(
+                        qrDataUrl,
+                        `${meta?.name || "artefact"}-qr.png`,
+                      )
+                    }
+                  >
+                    <Ionicons name="download" size={16} color="#FF2A2A" />
+                    <Text style={s.inlineBtnText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <View style={{ alignItems: "center", marginTop: 12 }}>
+                <QRCodeView
+                  value={qrUrl || ""}
+                  label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
+                  onReadyDataUrl={setQrDataUrl}
+                />
+              </View>
+            </>
           )}
         </GlassCard>
 
@@ -547,6 +644,56 @@ export default function ArtefactDetail() {
                   </>
                 )}
               </TouchableOpacity>
+            </View>
+          </GlassCard>
+        </View>
+      </Modal>
+
+      {/* Preview management modal */}
+      <Modal
+        visible={showPreviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPreviewModal(false)}
+      >
+        <View style={s.modalBackdrop}>
+          <GlassCard style={s.modalContent}>
+            <Text style={s.modalTitle}>Manage Preview Image</Text>
+            <Text style={s.modalText}>
+              Change or remove the preview image for this artefact.
+            </Text>
+            {previewUrl && (
+              <Image
+                source={{ uri: previewUrl }}
+                style={{
+                  width: "100%",
+                  aspectRatio: 1,
+                  borderRadius: 8,
+                  marginTop: 12,
+                }}
+                resizeMode="cover"
+              />
+            )}
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+              <GlassButton
+                onPress={() => setShowPreviewModal(false)}
+                title="Cancel"
+                variant="secondary"
+              />
+              <GlassButton
+                onPress={uploadNewPreview}
+                title={previewUrl ? "Change" : "Upload"}
+                variant="primary"
+                icon="image"
+              />
+              {previewUrl && (
+                <GlassButton
+                  onPress={deletePreview}
+                  title="Delete"
+                  variant="destructive"
+                  icon="trash"
+                />
+              )}
             </View>
           </GlassCard>
         </View>
@@ -719,6 +866,32 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   modalText: { fontSize: 14, color: "#9A9A9A", lineHeight: 20 },
+  // Note card styles
+  noteCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  noteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
+  },
+  noteTitle: {
+    flex: 1,
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  noteBodyText: {
+    color: "#D0D0D0",
+    fontSize: 13,
+    lineHeight: 20,
+    paddingLeft: 28,
+  },
 });
 
 function downloadDataUrl(dataUrl: string, filename: string) {

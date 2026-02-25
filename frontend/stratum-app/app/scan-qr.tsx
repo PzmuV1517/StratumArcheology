@@ -19,6 +19,7 @@ import {
 import { useRouter, Stack, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../src/services/projectService";
+import { qrService } from "../src/services/qrService";
 
 const isIOS = Platform.OS === "ios";
 const VIEWPORT_SIZE = 250;
@@ -250,7 +251,66 @@ function ScannerContent() {
       await runScanAnimation();
 
       try {
-        // Handle Stratum artefact QR codes: stratum:artefact:{projectId}:{folderId}
+        // ── 1. Try resolving via the unified QR-code registry ──────────
+        try {
+          const resolved = await qrService.resolve(data);
+
+          if (resolved.type === "artefact" && resolved.resource_id) {
+            router.replace({
+              pathname: "/artefact/[id]" as any,
+              params: { id: resolved.resource_id },
+            });
+            return;
+          }
+
+          if (resolved.type === "invite" && resolved.resource_id) {
+            // resource_id is the invite token
+            try {
+              const joinResult = await projectService.acceptInvite(
+                resolved.resource_id,
+              );
+              setResultModal({
+                title: "Joined!",
+                message: `You've joined the project as ${joinResult.role}.`,
+                buttons: [
+                  {
+                    text: "Open Project",
+                    onPress: () =>
+                      router.replace({
+                        pathname: "/project/[id]",
+                        params: { id: joinResult.project_id },
+                      }),
+                  },
+                ],
+              });
+            } catch (err: any) {
+              const msg =
+                err?.detail ||
+                err?.message ||
+                "Failed to join project. The invite may have expired.";
+              setResultModal({
+                title: "Error",
+                message: msg,
+                buttons: [{ text: "OK", onPress: resetScanner }],
+              });
+            }
+            setProcessing(false);
+            return;
+          }
+
+          // Unknown type from registry – show what we got
+          setResultModal({
+            title: `QR: ${resolved.type}`,
+            message: `Resource: ${resolved.resource_id}`,
+            buttons: [{ text: "OK", onPress: resetScanner }],
+          });
+          setProcessing(false);
+          return;
+        } catch {
+          // Code not found in registry – fall through to legacy handling
+        }
+
+        // ── 2. Legacy: stratum:artefact: prefix ────────────────────────
         if (data.startsWith("stratum:artefact:")) {
           const parts = data.split(":");
           const folderId = parts[3];
@@ -263,7 +323,7 @@ function ScannerContent() {
           }
         }
 
-        // Handle Stratum invite QR codes: stratum:invite:{code}
+        // ── 3. Legacy: stratum:invite: prefix ──────────────────────────
         if (data.startsWith("stratum:invite:")) {
           const code = data.substring("stratum:invite:".length);
           if (code) {
@@ -299,7 +359,7 @@ function ScannerContent() {
           }
         }
 
-        // Plain invite code (not prefixed) — try joining by code
+        // ── 4. Plain invite code fallback ───────────────────────────────
         if (data.length >= 6 && !data.includes("://") && !data.includes(" ")) {
           try {
             const joinResult = await projectService.joinByCode(data);
