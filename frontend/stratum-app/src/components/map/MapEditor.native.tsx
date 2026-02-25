@@ -83,6 +83,7 @@ export const MapEditorMobile: React.FC<{
   const [sites, _setSites] = useState<Shape[]>([]);
   const [activeSite, _setActiveSite] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
 
   // Refs to avoid stale closures in callbacks
   const workRef = useRef<Shape | null>(null);
@@ -317,6 +318,10 @@ export const MapEditorMobile: React.FC<{
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={SITE_COLOR} />
+          <Text style={styles.loadingHint}>Se încarcă harta…</Text>
+          <Text style={styles.loadingSubHint}>
+            Dacă vezi un ecran alb, așteaptă puțin — încărcarea depinde de conexiune.
+          </Text>
         </View>
       ) : (
         <MapView
@@ -325,6 +330,7 @@ export const MapEditorMobile: React.FC<{
           initialRegion={ROMANIA_REGION}
           mapType="hybrid"
           onPress={handleMapPress}
+          onMapReady={() => setMapReady(true)}
           showsUserLocation
           showsMyLocationButton
         >
@@ -438,6 +444,15 @@ export const MapEditorMobile: React.FC<{
         </View>
       )}
 
+      {/* ── Map-tiles loading overlay ── */}
+      {!loading && !mapReady && (
+        <View style={styles.tilesOverlay} pointerEvents="none">
+          <Text style={styles.tilesHint}>
+            {"Ecranul alb dispare în câteva secunde pe măsură ce se încarcă harta."}
+          </Text>
+        </View>
+      )}
+
       {/* ── Hint label ── */}
       {canEdit && !loading && (
         <View style={styles.hint}>
@@ -473,6 +488,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#111111",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  loadingHint: {
+    color: "#999999",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  loadingSubHint: {
+    color: "#555555",
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  tilesOverlay: {
+    position: "absolute",
+    bottom: 72,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(17,17,17,0.75)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  tilesHint: {
+    color: "#555555",
+    fontSize: 11,
+    textAlign: "center",
+    lineHeight: 16,
   },
   toolbox: {
     position: "absolute",
@@ -530,3 +579,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+export default MapEditorMobile;
