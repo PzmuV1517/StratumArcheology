@@ -1,6 +1,8 @@
 """
-Rate limiter setup. Currently deprecated — the old Flask-based limiter
-doesn't work with FastAPI, so this is commented out for now.
+Rate limiter setup using slowapi (FastAPI-compatible port of Flask-Limiter).
+
+Provides per-IP rate limiting for API endpoints to prevent abuse.
+The default limit is configured via RATE_LIMIT_DEFAULT in settings.
 
 MIT License
 
@@ -24,19 +26,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-# Deprecated and won't work with FastAPI
-"""
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from backend.app import app
-from backend.app.config import Config
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-# Initialize the rate limiter with default settings
+from app.config import settings
+
+# Initialize the rate limiter with the remote IP as the key
 limiter = Limiter(
-    app,
     key_func=get_remote_address,
-    default_limits=[Config.RATE_LIMIT_DEFAULT],
+    default_limits=[settings.RATE_LIMIT_DEFAULT],
 )
-
-# NOTE: Removed endpoint exemptions for simplicity
-"""

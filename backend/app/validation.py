@@ -328,7 +328,8 @@ def sanitize_filename(filename: str) -> str:
         Safe filename
     """
     # Remove any path components (prevent directory traversal)
-    filename = os.path.basename(filename)
+    # Normalize both Unix and Windows path separators before extracting basename
+    filename = os.path.basename(filename.replace("\\", "/"))
 
     # Remove null bytes
     filename = filename.replace("\x00", "")
