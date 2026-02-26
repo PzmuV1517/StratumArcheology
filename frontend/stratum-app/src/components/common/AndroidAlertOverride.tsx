@@ -1,18 +1,32 @@
 /**
- * Custom Alert Override
+ * @file
+ * Android alert override component.
  *
- * Self-contained component that shows styled in-app modals instead of
- * the native/browser alert dialog.
+ * Provides custom alert dialogs for Android that match
+ * the application's design language.
  *
- * - Android: monkey-patches Alert.alert so all callers get the custom modal.
- * - Web:     listens for "stratum-alert" DOM events dispatched by showAlert().
- *            This avoids React Native Web's Alert.alert → window.alert() fallback.
- * - iOS:     renders nothing (keeps native alerts).
+ * MIT License
  *
- * Usage: Just render <CustomAlertOverride /> anywhere in your app tree.
- * No Provider wrapper needed.
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Alert,
@@ -39,7 +53,7 @@ interface QueuedAlert {
 }
 
 // ── Module-level plumbing (runs once on import) ────────────────────────
-const originalAlertFn = Alert.alert.bind(Alert);
+const _originalAlertFn = Alert.alert.bind(Alert);
 
 let showCustomAlert: ((a: QueuedAlert) => void) | null = null;
 const pendingQueue: QueuedAlert[] = [];
@@ -69,6 +83,10 @@ if (Platform.OS === "android") {
 }
 
 // ── Component ──────────────────────────────────────────────────────────
+/**
+ * Custom alert dialog override for Android and web platforms.
+ * @returns The rendered component
+ */
 export default function CustomAlertOverride() {
   const [current, setCurrent] = useState<QueuedAlert | null>(null);
   const queue = useRef<QueuedAlert[]>([]);
@@ -162,10 +180,7 @@ export default function CustomAlertOverride() {
         activeOpacity={1}
         onPress={handleDismiss}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
+        <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
           <View style={styles.alertContainer}>
             <Text style={styles.title}>{title}</Text>
 

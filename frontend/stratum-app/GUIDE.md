@@ -13,12 +13,14 @@ Before you begin, ensure you have the following installed:
 ### Platform-Specific Requirements
 
 #### For iOS Development (macOS only)
+
 - **Xcode** 15+ (from Mac App Store)
 - **Xcode Command Line Tools**: `xcode-select --install`
 - **CocoaPods**: `sudo gem install cocoapods`
 - **iOS Simulator** or physical iPhone/iPad
 
 #### For Android Development
+
 - **Android Studio** with:
   - Android SDK
   - Android SDK Platform-Tools
@@ -26,6 +28,7 @@ Before you begin, ensure you have the following installed:
 - **Java Development Kit (JDK)** 17+
 
 #### For Web Development
+
 - Any modern browser (Chrome, Firefox, Safari, Edge)
 
 ---
@@ -86,6 +89,7 @@ npx expo start
 ```
 
 This opens Expo Dev Tools. From here you can:
+
 - Press `w` to open in web browser
 - Press `i` to open iOS Simulator
 - Press `a` to open Android Emulator
@@ -122,6 +126,7 @@ Or press `a` after running `npx expo start`.
 For testing native features (camera, GPS, etc.) on a real iPhone/iPad:
 
 #### Prerequisites
+
 1. **Apple Developer Account** (free or paid)
 2. **Physical iPhone/iPad** connected via USB or on same WiFi
 3. **Device trusted** on your Mac
@@ -142,6 +147,7 @@ open ios/stratumapp.xcworkspace
 ```
 
 In Xcode:
+
 1. Select the project in the navigator (left panel)
 2. Select the "stratumapp" target
 3. Go to "Signing & Capabilities" tab
@@ -166,6 +172,7 @@ npx expo run:ios --device "John's iPhone"
 ##### 4. Trust the Developer Certificate (First Time Only)
 
 On your iOS device:
+
 1. Go to **Settings → General → VPN & Device Management**
 2. Find your developer certificate
 3. Tap **Trust**
@@ -180,13 +187,13 @@ npx expo run:ios --device
 
 #### Troubleshooting iOS Physical Device
 
-| Issue | Solution |
-|-------|----------|
-| "Could not find device" | Reconnect USB, unlock device, trust computer |
-| "Signing requires a development team" | Configure team in Xcode |
-| "Untrusted Developer" | Trust certificate in Settings |
-| "Failed to prepare device" | Update iOS to latest version |
-| "Unable to install app" | Free accounts expire after 7 days, rebuild |
+| Issue                                 | Solution                                     |
+| ------------------------------------- | -------------------------------------------- |
+| "Could not find device"               | Reconnect USB, unlock device, trust computer |
+| "Signing requires a development team" | Configure team in Xcode                      |
+| "Untrusted Developer"                 | Trust certificate in Settings                |
+| "Failed to prepare device"            | Update iOS to latest version                 |
+| "Unable to install app"               | Free accounts expire after 7 days, rebuild   |
 
 ---
 
@@ -230,6 +237,7 @@ make run
 ```
 
 The app auto-detects the backend URL based on platform:
+
 - **Web**: `http://localhost:8000/api`
 - **iOS Simulator**: `http://127.0.0.1:8000/api`
 - **Android Emulator**: `http://10.0.2.2:8000/api`
@@ -253,20 +261,20 @@ npx expo start --tunnel
 
 ## Common Commands
 
-| Command | Description |
-|---------|-------------|
-| `npx expo start` | Start development server |
-| `npx expo start --web` | Start for web only |
-| `npx expo start --ios` | Start and open iOS simulator |
-| `npx expo start --android` | Start and open Android emulator |
-| `npx expo run:ios` | Build and run on iOS simulator |
-| `npx expo run:ios --device` | Build and run on physical iOS device |
-| `npx expo run:android` | Build and run on Android emulator |
-| `npx expo run:android --device` | Build and run on physical Android device |
-| `npx expo prebuild` | Generate native projects (ios/, android/) |
-| `npx expo prebuild --clean` | Regenerate native projects from scratch |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run Jest tests |
+| Command                         | Description                               |
+| ------------------------------- | ----------------------------------------- |
+| `npx expo start`                | Start development server                  |
+| `npx expo start --web`          | Start for web only                        |
+| `npx expo start --ios`          | Start and open iOS simulator              |
+| `npx expo start --android`      | Start and open Android emulator           |
+| `npx expo run:ios`              | Build and run on iOS simulator            |
+| `npx expo run:ios --device`     | Build and run on physical iOS device      |
+| `npx expo run:android`          | Build and run on Android emulator         |
+| `npx expo run:android --device` | Build and run on physical Android device  |
+| `npx expo prebuild`             | Generate native projects (ios/, android/) |
+| `npx expo prebuild --clean`     | Regenerate native projects from scratch   |
+| `npm run lint`                  | Run ESLint                                |
+| `npm run test`                  | Run Jest tests                            |
 
 ---
 
@@ -327,6 +335,7 @@ Press `j` in the terminal to open Chrome DevTools debugger.
 ### Expo Dev Tools
 
 After running `npx expo start`, access dev menu:
+
 - **Shake device** (physical)
 - Press `m` in terminal
 - Cmd+D (iOS Simulator)
@@ -335,6 +344,7 @@ After running `npx expo start`, access dev menu:
 ### Console Logs
 
 View logs in:
+
 - Terminal running Expo
 - Browser DevTools (web)
 - Xcode Console (iOS)

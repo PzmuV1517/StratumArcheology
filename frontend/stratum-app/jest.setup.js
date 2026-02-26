@@ -1,3 +1,4 @@
+/* global jest */
 // Jest setup file
 // Configure testing environment
 

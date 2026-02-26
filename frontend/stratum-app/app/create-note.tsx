@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Note creation screen.
+ *
+ * Provides a form for creating new text or voice notes
+ * within an archaeological project.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
@@ -10,7 +39,6 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { showAlert } from "../src/utils/alert";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
@@ -86,12 +114,13 @@ function GlassButton({
 }
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
-let Sound: any = null;
+let _Sound: any = null;
 if (Platform.OS !== "web") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const av = require("expo-av");
     Audio = av.Audio;
-    Sound = av.Audio?.Sound;
+    _Sound = av.Audio?.Sound;
   } catch {}
 }
 
@@ -99,7 +128,7 @@ export default function CreateNoteScreen() {
   const { projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-  const iosHeaderPad =
+  const _iosHeaderPad =
     Platform.OS === "ios"
       ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
       : 0;
@@ -121,8 +150,8 @@ export default function CreateNoteScreen() {
   // Auto-save hook for draft recovery
   const {
     saveStatus,
-    wasRestored,
-    saveDraft,
+    wasRestored: _wasRestored,
+    saveDraft: _saveDraft,
     clearDraft,
     hasDraft,
     getDraft,
@@ -148,6 +177,7 @@ export default function CreateNoteScreen() {
       }
     };
     checkDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save when form data changes
@@ -155,6 +185,7 @@ export default function CreateNoteScreen() {
     if (title || content) {
       scheduleAutoSave({ title, content, isVoiceNote });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, content, isVoiceNote]);
 
   const handleRestoreDraft = async () => {
@@ -220,7 +251,7 @@ export default function CreateNoteScreen() {
             if (status.isRecording && status.metering !== undefined) {
               setMeterLevel(status.metering);
             }
-          } catch (err) {
+          } catch (_err) {
             // Recording may have stopped
           }
         }, 100);
@@ -303,6 +334,7 @@ export default function CreateNoteScreen() {
         router.push(dest as any);
       } catch {}
     }, 10);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const handleCreate = async () => {
@@ -782,7 +814,7 @@ function NativeAudioPreview({ uri }: { uri: string }) {
         soundRef.current = null;
       }
       // Create and play new sound from local file URI
-      const { sound, status } = await Audio.Sound.createAsync(
+      const { sound, status: _status } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: true },
         (playbackStatus: any) => {

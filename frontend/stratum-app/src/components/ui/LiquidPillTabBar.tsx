@@ -1,21 +1,31 @@
 /**
- * LiquidPillTabBar – Pill-shaped floating tab bar with Liquid Glass / Blur / Solid background.
+ * @file
+ * Liquid pill tab bar component.
  *
- * Drop-in replacement for the default React-Navigation bottom tab bar.
- * Supports swipe gestures on the pill to navigate between visible tabs and
- * an animated indicator that tracks the active tab.
+ * A segmented tab bar with pill-shaped active indicator
+ * and smooth animation.
  *
- * Usage:
- *   <Tabs tabBar={(props) => <LiquidPillTabBar {...props} />} … />
+ * MIT License
  *
- * Props (all optional besides BottomTabBarProps):
- *   hiddenRouteNames – route names to hide from the bar (default: [])
- *   activeColor      – tint for the active tab (default: "#FF2A2A")
- *   inactiveColor    – tint for inactive tabs  (default: "#9A9A9A")
- *   pillHeight       – bar height              (default: 64)
- *   pillMarginH      – horizontal margin       (default: 20)
- *   pillRadius       – border-radius           (default: 32)
- *   bottomOffset     – min distance from bottom(default: 24)
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useEffect, useRef, useCallback } from "react";
 import {
@@ -38,6 +48,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // Types
 // ---------------------------------------------------------------------------
 
+/** Props for the LiquidPillTabBar component. */
 export interface LiquidPillTabBarProps extends BottomTabBarProps {
   /** Route names that should be hidden from the tab bar */
   hiddenRouteNames?: string[];
@@ -65,6 +76,11 @@ export interface LiquidPillTabBarProps extends BottomTabBarProps {
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * Animated pill-shaped bottom tab bar with swipe gesture support.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidPillTabBar({
   state,
   descriptors,

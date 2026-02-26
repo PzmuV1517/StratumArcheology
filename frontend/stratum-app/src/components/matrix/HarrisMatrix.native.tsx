@@ -1,14 +1,32 @@
 /**
- * Harris Matrix Native Component
+ * @file
+ * Harris Matrix component for React Native.
  *
- * Fully native React Native implementation — no WebView.
- * Uses react-native-svg for graph rendering with pan/zoom
- * via react-native-gesture-handler + Reanimated.
+ * Renders the Harris Matrix visualization in a WebView
+ * on native platforms.
  *
- * Data is persisted via AsyncStorage (offline-first) and synced
- * with the server when online.
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
@@ -279,6 +297,7 @@ export default function HarrisMatrix({
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   /* ── persist to AsyncStorage ── */
@@ -325,6 +344,7 @@ export default function HarrisMatrix({
   // Auto-sync when coming online
   useEffect(() => {
     if (isOnline && hasPending) syncToServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, hasPending]);
 
   /* ── computed layout ── */
@@ -609,6 +629,7 @@ export default function HarrisMatrix({
     scale.value = 1;
     savedScale.value = 1;
     hasInitializedView.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     canvasDimensions.width,
     canvasDimensions.height,
@@ -625,12 +646,14 @@ export default function HarrisMatrix({
     savedTranslateY.value = 0;
     scale.value = 1;
     savedScale.value = 1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contexts.size]);
 
   const resetView = useCallback(() => {
     translateX.value = withTiming(defaultView.x);
     translateY.value = withTiming(defaultView.y);
     scale.value = withTiming(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultView.x, defaultView.y]);
 
   /* ── node colour ── */

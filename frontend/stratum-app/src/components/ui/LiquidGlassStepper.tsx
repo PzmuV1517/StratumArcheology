@@ -1,12 +1,30 @@
 /**
- * LiquidGlassStepper
+ * @file
+ * Liquid Glass stepper component.
  *
- * Native UIStepper is not exposed in React Native, so this is a custom
- * implementation with +/− buttons. No callstack wrapping — just clean
- * native Pressable components. On iOS 26+ the pressable hit-states and
- * system colours will blend with the Liquid Glass environment naturally.
+ * An increment/decrement stepper styled with Liquid Glass.
  *
- * Apple reference: UIStepper — automatic glass on iOS 26+.
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useCallback } from "react";
 import {
@@ -20,6 +38,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 
+/** Props for the LiquidGlassStepper component. */
 export interface LiquidGlassStepperProps {
   value: number;
   onValueChange: (newValue: number) => void;
@@ -33,6 +52,11 @@ export interface LiquidGlassStepperProps {
   disabled?: boolean;
 }
 
+/**
+ * Increment/decrement stepper styled with Liquid Glass design.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidGlassStepper({
   value,
   onValueChange,
@@ -49,17 +73,20 @@ export function LiquidGlassStepper({
 
   const handleDecrement = useCallback(() => {
     if (!canDecrement || disabled) return;
-    if (haptic && Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (haptic && Platform.OS === "ios")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onValueChange(Math.max(min, value - step));
   }, [value, step, min, canDecrement, haptic, disabled, onValueChange]);
 
   const handleIncrement = useCallback(() => {
     if (!canIncrement || disabled) return;
-    if (haptic && Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (haptic && Platform.OS === "ios")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onValueChange(Math.min(max, value + step));
   }, [value, step, max, canIncrement, haptic, disabled, onValueChange]);
 
-  const displayLabel = typeof label === "function" ? label(value) : label ?? String(value);
+  const displayLabel =
+    typeof label === "function" ? label(value) : (label ?? String(value));
 
   return (
     <View style={[styles.container, disabled && styles.disabled, style]}>
@@ -76,12 +103,21 @@ export function LiquidGlassStepper({
         accessibilityRole="button"
         accessibilityLabel="Decrement"
       >
-        <Text style={[styles.buttonText, (!canDecrement || disabled) && styles.textDisabled]}>−</Text>
+        <Text
+          style={[
+            styles.buttonText,
+            (!canDecrement || disabled) && styles.textDisabled,
+          ]}
+        >
+          −
+        </Text>
       </Pressable>
 
       {/* Value / label */}
       <View style={styles.labelContainer}>
-        <Text style={[styles.labelText, disabled && styles.textDisabled]}>{displayLabel}</Text>
+        <Text style={[styles.labelText, disabled && styles.textDisabled]}>
+          {displayLabel}
+        </Text>
       </View>
 
       {/* Plus */}
@@ -97,7 +133,14 @@ export function LiquidGlassStepper({
         accessibilityRole="button"
         accessibilityLabel="Increment"
       >
-        <Text style={[styles.buttonText, (!canIncrement || disabled) && styles.textDisabled]}>+</Text>
+        <Text
+          style={[
+            styles.buttonText,
+            (!canIncrement || disabled) && styles.textDisabled,
+          ]}
+        >
+          +
+        </Text>
       </Pressable>
     </View>
   );

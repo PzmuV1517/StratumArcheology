@@ -1,3 +1,33 @@
+"""
+File management API routes.
+
+Handles file uploads, downloads, folder creation, file versioning (Time Machine),
+privacy controls, profile pictures, personal folders, and streaming with
+HTTP Range support.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import hashlib
 import uuid
 from collections import defaultdict
@@ -97,6 +127,7 @@ async def upload_profile_picture(
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def __compute_checksum(file: UploadFile) -> str:
     """Compute SHA256 checksum of an uploaded file"""
     hash_sha256 = hashlib.sha256()
@@ -105,6 +136,7 @@ def __compute_checksum(file: UploadFile) -> str:
     # Reset file pointer to the beginning after reading
     file.file.seek(0)
     return hash_sha256.hexdigest()
+
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
     """Check if a user can access a file based on privacy settings"""
@@ -161,7 +193,14 @@ class FileWithVersionsResponse(BaseModel):
 
 
 class TimeMachineResponse(BaseModel):
-    """Project files grouped by category with versions"""
+    """Project files grouped by category with versions.
+
+    Attributes:
+        project_id: The project UUID.
+        total_files: Count of files in the project (or filtered subset).
+        total_versions: Aggregate count of all file versions.
+        categories: Files grouped by their detected category.
+    """
 
     project_id: str
     total_files: int
@@ -424,6 +463,14 @@ async def create_my_folder(
 
 # Request model for folder permission settings
 class FolderPermissionSettings(BaseModel):
+    """Request body for updating personal folder permission settings.
+
+    Attributes:
+        default_can_view: Whether all project members can view the folder by default.
+        default_can_edit: Whether all project members can edit the folder by default.
+        member_permissions: Per-member permission overrides with user_id, can_view, and can_edit.
+    """
+
     default_can_view: bool = True
     default_can_edit: bool = False
     member_permissions: list[dict[str, Any]] = []  # [{user_id, can_view, can_edit}]
@@ -643,6 +690,19 @@ async def list_children(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """List child file nodes of a folder, filtered by privacy settings.
+
+    Args:
+        node_id: The parent folder's UUID.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        List of accessible child file nodes ordered by type then name.
+
+    Raises:
+        HTTPException: 404 if folder not found, 403 if access denied.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Folder not found")
@@ -678,6 +738,22 @@ async def create_folder(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Create a new folder in a project.
+
+    Handles duplicate folder names by appending (1), (2), etc.
+
+    Args:
+        project_id: The project UUID.
+        folder: Folder creation data including name and optional parent_id.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The newly created FileNode folder.
+
+    Raises:
+        HTTPException: 404 if parent folder not found, 400 if parent is not a folder.
+    """
     check_project_permission(project_id, current_user, db)
     parent = None
     if folder.parent_id:
@@ -759,6 +835,21 @@ async def move_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Move a file or folder to a new parent folder.
+
+    Args:
+        node_id: The UUID of the node to move.
+        move: Request body containing the new parent folder ID.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The updated FileNode.
+
+    Raises:
+        HTTPException: 404 if node or new parent not found, 400 if node is
+            locked or new parent is not a folder.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -811,6 +902,24 @@ async def rename_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Rename a file or folder.
+
+    For files, the original extension is preserved regardless of what the
+    user supplies. If the node is linked to a Note, the note title is
+    updated to match the new filename.
+
+    Args:
+        node_id: The UUID of the node to rename.
+        payload: Request body containing the new name.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The updated FileNode.
+
+    Raises:
+        HTTPException: 404 if node not found, 400 if node is locked.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -877,6 +986,19 @@ async def delete_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Delete a file or folder and all its descendants.
+
+    Recursively removes child nodes and their associated storage objects
+    from MinIO before deleting the database records.
+
+    Args:
+        node_id: The UUID of the node to delete.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Raises:
+        HTTPException: 404 if node not found, 400 if node is locked.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -930,6 +1052,25 @@ async def upload_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Upload a file to a project.
+
+    Parses multipart form data tolerantly, stores the file in MinIO, and
+    creates a corresponding FileNode. Duplicate filenames are handled by
+    appending (1), (2), etc.
+
+    Args:
+        project_id: The project UUID.
+        request: The incoming HTTP request containing multipart form data.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The newly created FileNode.
+
+    Raises:
+        HTTPException: 422 if no file found in form, 404 if parent folder
+            not found, 400 if parent is not a folder.
+    """
     check_project_permission(project_id, current_user, db)
 
     # Parse form manually to be more tolerant
@@ -1627,4 +1768,3 @@ async def get_files_info_batch(
     accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
 
     return accessible_nodes
-

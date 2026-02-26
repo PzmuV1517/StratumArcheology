@@ -1,13 +1,44 @@
+/**
+ * @file
+ * Axios HTTP client configuration with authentication interceptors.
+ *
+ * Provides a pre-configured API client that automatically attaches
+ * JWT tokens and handles token refresh for all backend requests.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../config/config";
 
 // Simple event system for auth events (React Native compatible)
+/** Event name emitted when an authenticated session expires. */
 export const AUTH_SESSION_EXPIRED = "auth:session_expired";
 
 type AuthEventCallback = () => void;
 const sessionExpiredListeners: AuthEventCallback[] = [];
 
+/** Simple event emitter for authentication lifecycle events. */
 export const authEvents = {
   on: (event: string, callback: AuthEventCallback) => {
     if (event === AUTH_SESSION_EXPIRED) {
@@ -231,15 +262,17 @@ api.interceptors.response.use(
       // — that's NOT a session expiry.
       const requestUrl = error.config?.url || "";
       const isAuthRoute =
-        requestUrl.includes("/auth/login") ||
-        requestUrl.includes("/auth/register");
+        requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
 
       if (!isAuthRoute) {
         // Guard against race condition: if a login just succeeded and stored a
         // new token, the stale /auth/me request from checkAuthStatus will come
         // back 401 — but we should NOT wipe the brand-new token.
         // Only clear if the failed request's token matches what's currently stored.
-        const failedToken = error.config?.headers?.Authorization?.replace("Bearer ", "");
+        const failedToken = error.config?.headers?.Authorization?.replace(
+          "Bearer ",
+          "",
+        );
         const currentToken = await AsyncStorage.getItem("authToken");
 
         if (!currentToken || currentToken === failedToken) {

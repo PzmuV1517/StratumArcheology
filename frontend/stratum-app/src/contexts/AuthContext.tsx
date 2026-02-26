@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Authentication context provider.
+ *
+ * Provides authentication state (user, token, loading) and actions
+ * (login, register, logout) to all child components via React Context.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, {
   createContext,
   useState,
@@ -48,6 +77,11 @@ const AuthContext = createContext<AuthContextType>({
   clearSessionExpired: () => {},
 });
 
+/**
+ * Provides authentication state and actions to all child components.
+ * @param props - Component props containing children to wrap
+ * @returns A context provider wrapping children with auth state
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,11 +92,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("[AuthContext] Session expired event received");
     setUser(null);
     setSessionExpired(true);
-    showAlert(
-      "Session Expired",
-      "Your session has expired. Please log in again.",
-      [{ text: "OK" }],
-    );
+    showAlert("Session Expired", "Your session has expired. Please log in again.", [
+      { text: "OK" },
+    ]);
   }, []);
 
   // Clear session expired flag (after user acknowledges or logs in)
@@ -112,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await authService.updateUserData(freshUser);
           setUser(freshUser);
         }
-      } catch (apiError: any) {
+      } catch (_apiError: any) {
         // Token is invalid or expired (401), already cleared by api interceptor
         console.log("[AuthContext] Token validation failed, clearing session");
         setUser(null);
@@ -205,4 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * Consumes the AuthContext to access authentication state and actions.
+ * @returns The current authentication context value
+ */
 export const useAuth = () => useContext(AuthContext);

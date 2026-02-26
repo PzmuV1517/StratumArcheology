@@ -14,7 +14,7 @@ Liquid-React is a React Native iOS-only module that provides direct access to Ap
 
 - ✅ **Real Native UIKit** - Uses `UIVisualEffectView`, `UIButton`, `UINavigationBar`, etc.
 - ✅ **Public APIs Only** - 100% App Store safe
-- ✅ **True Liquid Glass** - Unlike other “liquid glass” libraries that rely on blur effects or shader-based imitations, LiquidReact renders *real, native* iOS Liquid Glass components. The components are implemented using UIKit and participate directly in the system’s material compositing pipeline. **All visual rendering is handled by iOS itself**, ensuring authentic appearance, behavior, and performance **consistent with Apple’s native UI.**
+- ✅ **True Liquid Glass** - Unlike other “liquid glass” libraries that rely on blur effects or shader-based imitations, LiquidReact renders _real, native_ iOS Liquid Glass components. The components are implemented using UIKit and participate directly in the system’s material compositing pipeline. **All visual rendering is handled by iOS itself**, ensuring authentic appearance, behavior, and performance **consistent with Apple’s native UI.**
 - ✅ **Zero Custom Rendering** - No Skia, no Metal, no shaders
 - ✅ **iOS Minimum Version:** 13.0
 - ✅ **iOS Minimum Version for Liquid Glass:** iOS 26.0+ (iOS 13-18 will render in different styles based on the iOS version, but all are still real, native system materials)
@@ -39,18 +39,18 @@ cd ios && pod install
 ### Basic Material View
 
 ```jsx
-import { NativeMaterialView, NativeButton } from 'liquid-react';
+import { NativeMaterialView, NativeButton } from "liquid-react";
 
 function App() {
   return (
-    <NativeMaterialView 
+    <NativeMaterialView
       material="systemUltraThinMaterial"
       style={{ flex: 1, padding: 20 }}
     >
-      <NativeButton 
-        title="Continue" 
+      <NativeButton
+        title="Continue"
         buttonStyle="filled"
-        onPress={() => console.log('Pressed')}
+        onPress={() => console.log("Pressed")}
       />
     </NativeMaterialView>
   );
@@ -60,30 +60,26 @@ function App() {
 ### Native Controls
 
 ```jsx
-import { 
-  NativeSwitch, 
-  NativeSegmentedControl,
-  NativeSearchBar 
-} from 'liquid-react';
+import { NativeSwitch, NativeSegmentedControl, NativeSearchBar } from "liquid-react";
 
 function ControlsExample() {
   const [enabled, setEnabled] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   return (
     <>
-      <NativeSwitch 
+      <NativeSwitch
         value={enabled}
         onValueChange={(e) => setEnabled(e.nativeEvent.value)}
       />
-      
+
       <NativeSegmentedControl
-        segments={['First', 'Second', 'Third']}
+        segments={["First", "Second", "Third"]}
         selectedIndex={selectedIndex}
         onValueChange={(e) => setSelectedIndex(e.nativeEvent.selectedIndex)}
       />
-      
+
       <NativeSearchBar
         placeholder="Search..."
         text={searchText}
@@ -97,37 +93,33 @@ function ControlsExample() {
 ### Navigation and Toolbars
 
 ```jsx
-import { 
-  NativeNavigationBar,
-  NativeToolbar,
-  NativeTabBar 
-} from 'liquid-react';
+import { NativeNavigationBar, NativeToolbar, NativeTabBar } from "liquid-react";
 
 function NavigationExample() {
   return (
     <>
-      <NativeNavigationBar 
+      <NativeNavigationBar
         title="My App"
         translucent={true}
-        style={{ width: '100%' }}
+        style={{ width: "100%" }}
       />
-      
+
       <NativeToolbar
         items={[
-          { systemItem: 'add' },
-          { systemItem: 'flexibleSpace' },
-          { title: 'Custom' },
-          { systemItem: 'flexibleSpace' },
-          { systemItem: 'done' }
+          { systemItem: "add" },
+          { systemItem: "flexibleSpace" },
+          { title: "Custom" },
+          { systemItem: "flexibleSpace" },
+          { systemItem: "done" },
         ]}
         translucent={true}
       />
-      
+
       <NativeTabBar
         items={[
-          { title: 'Home', icon: 'house' },
-          { title: 'Search', icon: 'magnifyingglass' },
-          { title: 'Profile', icon: 'person' }
+          { title: "Home", icon: "house" },
+          { title: "Search", icon: "magnifyingglass" },
+          { title: "Profile", icon: "person" },
         ]}
         selectedIndex={0}
         onTabPress={(e) => console.log(e.nativeEvent.index)}
@@ -140,10 +132,7 @@ function NavigationExample() {
 ### Containers
 
 ```jsx
-import { 
-  NativeGroupedContainer,
-  NativeCardContainer 
-} from 'liquid-react';
+import { NativeGroupedContainer, NativeCardContainer } from "liquid-react";
 
 function ContainerExample() {
   return (
@@ -163,9 +152,9 @@ function ContainerExample() {
 ```jsx
 <NativeTabBar
   items={[
-    { title: 'Home', icon: 'house' },
-    { title: 'Search', icon: 'magnifyingglass' },
-    { title: 'Settings', icon: 'gearshape' },
+    { title: "Home", icon: "house" },
+    { title: "Search", icon: "magnifyingglass" },
+    { title: "Settings", icon: "gearshape" },
   ]}
   selectedIndex={selectedTab}
   onTabPress={(e) => setSelectedTab(e.nativeEvent.index)}
@@ -180,16 +169,19 @@ function ContainerExample() {
 ## Available Components
 
 ### Materials & Containers
+
 - `NativeMaterialView` → `UIVisualEffectView`
 - `NativeGroupedContainer` → `UIView` + system background
 - `NativeCardContainer` → `UIView` with continuous corners
 
 ### Navigation & Structure
+
 - `NativeNavigationBar` → `UINavigationBar`
 - `NativeToolbar` → `UIToolbar`
 - `NativeTabBar` → `UITabBar`
 
 ### Controls
+
 - `NativeButton` → `UIButton`
 - `NativeSwitch` → `UISwitch`
 - `NativeSegmentedControl` → `UISegmentedControl`
@@ -201,34 +193,34 @@ All UIKit system materials are supported:
 
 ```typescript
 type MaterialType =
-  | 'systemUltraThinMaterial'
-  | 'systemThinMaterial'
-  | 'systemMaterial'
-  | 'systemThickMaterial'
-  | 'systemChromeMaterial'
-  | 'systemUltraThinMaterialLight'
-  | 'systemThinMaterialLight'
-  | 'systemMaterialLight'
-  | 'systemThickMaterialLight'
-  | 'systemChromeMaterialLight'
-  | 'systemUltraThinMaterialDark'
-  | 'systemThinMaterialDark'
-  | 'systemMaterialDark'
-  | 'systemThickMaterialDark'
-  | 'systemChromeMaterialDark';
+  | "systemUltraThinMaterial"
+  | "systemThinMaterial"
+  | "systemMaterial"
+  | "systemThickMaterial"
+  | "systemChromeMaterial"
+  | "systemUltraThinMaterialLight"
+  | "systemThinMaterialLight"
+  | "systemMaterialLight"
+  | "systemThickMaterialLight"
+  | "systemChromeMaterialLight"
+  | "systemUltraThinMaterialDark"
+  | "systemThinMaterialDark"
+  | "systemMaterialDark"
+  | "systemThickMaterialDark"
+  | "systemChromeMaterialDark";
 ```
 
 ## Button Styles
 
 ```typescript
 type ButtonStyle =
-  | 'filled'      // Default filled button
-  | 'gray'        // Gray background
-  | 'tinted'      // Tinted background
-  | 'plain'       // Plain text
-  | 'bordered'    // Bordered outline
-  | 'borderedTinted'     // Tinted border
-  | 'borderedProminent'; // Prominent border
+  | "filled" // Default filled button
+  | "gray" // Gray background
+  | "tinted" // Tinted background
+  | "plain" // Plain text
+  | "bordered" // Bordered outline
+  | "borderedTinted" // Tinted border
+  | "borderedProminent"; // Prominent border
 ```
 
 ## Explicit Non-Goals
@@ -238,7 +230,7 @@ type ButtonStyle =
 ❌ Private API usage  
 ❌ SwiftUI components  
 ❌ Custom animations  
-❌ Pixel-perfect Control Center imitation  
+❌ Pixel-perfect Control Center imitation
 
 ## Known Limitations
 
@@ -254,7 +246,7 @@ type ButtonStyle =
 ✅ No private frameworks  
 ✅ No runtime injection  
 ✅ No reverse-engineered behaviors  
-✅ Safe for App Store submission  
+✅ Safe for App Store submission
 
 ## License
 
@@ -266,9 +258,11 @@ See [docs/](./docs/) for detailed architecture and API reference.
 Make sure the component you are using supports the props you are passing, and refer to the documentation for more details on available props and their usage.
 
 ## Contributing
+
 We welcome contributions to Liquid-React! We try to regularly update the library with new components Apple releases, but because we are also students, we might not always be able to keep up with the pace of Apple's updates. If you want to contribute, please check out our [contributing guidelines](CONTRIBUTING.md) for more information on how to get started.
 
 ## Notes
+
 They said it can't be done. We proved them wrong.
 
 ---
@@ -280,6 +274,7 @@ UISegmentedControl is functionally correct, but its native material (Liquid Glas
 
 **Root Cause:**
 UIKit requires:
+
 - No custom styling (backgroundColor, tintColor, selectedSegmentTintColor must be nil)
 - Segments must be added before setting selectedSegmentIndex
 - Layout must be forced after selection and frame changes
@@ -287,6 +282,7 @@ UIKit requires:
 - Frame must be stable before selection settles
 
 **Minimal Correct Implementation:**
+
 ```swift
 final class NativeSegmentedControlView: UIView {
   private let materialView = UIVisualEffectView(
@@ -310,6 +306,7 @@ final class NativeSegmentedControlView: UIView {
 ```
 
 **What NOT to Do:**
+
 - Do not style the control
 - Do not override draw methods
 - Do not use Auto Layout

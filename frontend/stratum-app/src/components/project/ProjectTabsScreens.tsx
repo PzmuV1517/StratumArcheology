@@ -1,5 +1,41 @@
+/**
+ * @file
+ * Project detail tab screens container.
+ *
+ * Organizes project detail content into tab views for
+ * notes, files, tools, and timeline.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect } from "react";
-import { ScrollView, View, Text, Platform, TouchableOpacity, StyleSheet as RNStyleSheet } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  Platform,
+  TouchableOpacity,
+  StyleSheet as RNStyleSheet,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -33,8 +69,14 @@ function ProjectTabGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function ProjectOverviewScreen() {
-  const { project, members, notes, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    members,
+    notes,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("overview");
@@ -53,7 +95,9 @@ export function ProjectOverviewScreen() {
             <Text style={styles.overviewTitle}>{project?.name}</Text>
             {!!project?.ran_lmi_id && (
               <View style={styles.overviewBadge}>
-                <Text style={styles.overviewBadgeText}>RAN/LMI: {project?.ran_lmi_id}</Text>
+                <Text style={styles.overviewBadgeText}>
+                  RAN/LMI: {project?.ran_lmi_id}
+                </Text>
               </View>
             )}
           </View>
@@ -139,8 +183,13 @@ export function ProjectNotesScreen() {
 }
 
 export function ProjectArtefactsScreen() {
-  const { project, canEditFiles, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    canEditFiles,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("artefacts");
@@ -165,8 +214,13 @@ export function ProjectArtefactsScreen() {
 }
 
 export function ProjectMatrixScreen() {
-  const { project, HarrisMatrixComponent, canEditMatrix, iosHeaderPad, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    HarrisMatrixComponent,
+    canEditMatrix,
+    iosHeaderPad,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("matrix");
@@ -223,8 +277,13 @@ export function ProjectMatrixScreen() {
 }
 
 export function ProjectGalleryScreen() {
-  const { project, openGalleryItem, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    openGalleryItem,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gallery");
@@ -242,14 +301,18 @@ export function ProjectGalleryScreen() {
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={maybeRefreshControl}
       >
-        <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
+        <FileGallery
+          projectId={project?.id as string}
+          onOpenItem={openGalleryItem}
+        />
       </ScrollView>
     </ProjectTabGuard>
   );
 }
 
 export function ProjectMapScreen() {
-  const { project, canEditMap, iosHeaderPad, setCurrentTabName } = useProjectDetail();
+  const { project, canEditMap, iosHeaderPad, setCurrentTabName } =
+    useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gps");
@@ -341,7 +404,8 @@ export function ProjectHistoryScreen() {
 }
 
 export function ProjectToolsScreen() {
-  const { project, bottomContentPad, maybeRefreshControl, setCurrentTabName } = useProjectDetail();
+  const { project, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
+    useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("tools");
@@ -408,10 +472,30 @@ const MORE_ITEMS: {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { key: "gallery", label: "Gallery", subtitle: "Browse project photos & files", icon: "images" },
-  { key: "gps", label: "GPS Map", subtitle: "View and edit site locations", icon: "map" },
-  { key: "history", label: "Time Machine", subtitle: "Browse file version history", icon: "time" },
-  { key: "tools", label: "Tools", subtitle: "Compass, GPS coordinates & more", icon: "construct" },
+  {
+    key: "gallery",
+    label: "Gallery",
+    subtitle: "Browse project photos & files",
+    icon: "images",
+  },
+  {
+    key: "gps",
+    label: "GPS Map",
+    subtitle: "View and edit site locations",
+    icon: "map",
+  },
+  {
+    key: "history",
+    label: "Time Machine",
+    subtitle: "Browse file version history",
+    icon: "time",
+  },
+  {
+    key: "tools",
+    label: "Tools",
+    subtitle: "Compass, GPS coordinates & more",
+    icon: "construct",
+  },
 ];
 
 export function ProjectMoreScreen({
@@ -441,9 +525,7 @@ export function ProjectMoreScreen({
         contentInsetAdjustmentBehavior="automatic"
       >
         <Text style={moreStyles.title}>More</Text>
-        <Text style={moreStyles.subtitle}>
-          Additional project tools and views
-        </Text>
+        <Text style={moreStyles.subtitle}>Additional project tools and views</Text>
 
         <View style={moreStyles.grid}>
           {MORE_ITEMS.map((item) => (

@@ -1,17 +1,33 @@
 /**
- * Lightweight native terminal-style animated background for mobile.
- * Mimics the red-tinted FaultyTerminal WebGL look using React Native Animated API.
- * Shows columns of scrolling characters with random glitch flickers.
+ * @file
+ * Native terminal background component.
+ *
+ * Renders a terminal-style animated background effect.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useEffect, useMemo, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Easing,
-  Dimensions,
-} from "react-native";
+import { View, Text, StyleSheet, Animated, Easing, Dimensions } from "react-native";
 
 const CHARS = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρστυφχψω⟁⏃⏅☥⊿∑∏≡⌬⏣";
 const COL_WIDTH = 18;
@@ -25,81 +41,82 @@ interface ColumnProps {
   chars: string[];
 }
 
-const Column = React.memo(({ index, screenHeight, delay, speed, chars }: ColumnProps) => {
-  // The strip is 2x the char list: when the first copy scrolls away the second
-  // is already visible, so the loop reset is invisible.
-  const stripHeight = chars.length * CHAR_HEIGHT;
-  const translateY = useRef(new Animated.Value(-stripHeight)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+const Column = React.memo(
+  ({ index, screenHeight: _screenHeight, delay, speed, chars }: ColumnProps) => {
+    // The strip is 2x the char list: when the first copy scrolls away the second
+    // is already visible, so the loop reset is invisible.
+    const stripHeight = chars.length * CHAR_HEIGHT;
+    const translateY = useRef(new Animated.Value(-stripHeight)).current;
+    const opacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    const fadeIn = Animated.timing(opacity, {
-      toValue: 1,
-      duration: 800,
-      delay,
-      useNativeDriver: true,
-    });
-
-    // Scroll exactly one strip-height downward so the loop is seamless
-    const scroll = Animated.loop(
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: speed,
-        easing: Easing.linear,
+    useEffect(() => {
+      const fadeIn = Animated.timing(opacity, {
+        toValue: 1,
+        duration: 800,
+        delay,
         useNativeDriver: true,
-      }),
-    );
+      });
 
-    fadeIn.start();
-    const t = setTimeout(() => scroll.start(), delay);
-    return () => {
-      clearTimeout(t);
-      fadeIn.stop();
-      scroll.stop();
-    };
-  }, [delay, speed, stripHeight, translateY, opacity]);
+      // Scroll exactly one strip-height downward so the loop is seamless
+      const scroll = Animated.loop(
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: speed,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
 
-  // Render chars twice so scrolling wraps seamlessly
-  const charElements = useMemo(() => {
-    const doubled = [...chars, ...chars];
-    const opacities = doubled.map(() => 0.15 + Math.random() * 0.35);
-    return doubled.map((char, i) => (
-      <Text
-        key={i}
+      fadeIn.start();
+      const t = setTimeout(() => scroll.start(), delay);
+      return () => {
+        clearTimeout(t);
+        fadeIn.stop();
+        scroll.stop();
+      };
+    }, [delay, speed, stripHeight, translateY, opacity]);
+
+    // Render chars twice so scrolling wraps seamlessly
+    const charElements = useMemo(() => {
+      const doubled = [...chars, ...chars];
+      const opacities = doubled.map(() => 0.15 + Math.random() * 0.35);
+      return doubled.map((char, i) => (
+        <Text key={i} style={[styles.char, { opacity: opacities[i] }]}>
+          {char}
+        </Text>
+      ));
+    }, [chars]);
+
+    return (
+      <Animated.View
         style={[
-          styles.char,
-          { opacity: opacities[i] },
+          styles.column,
+          {
+            left: index * COL_WIDTH,
+            opacity,
+            transform: [{ translateY }],
+          },
         ]}
       >
-        {char}
-      </Text>
-    ));
-  }, [chars]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.column,
-        {
-          left: index * COL_WIDTH,
-          opacity,
-          transform: [{ translateY }],
-        },
-      ]}
-    >
-      {charElements}
-    </Animated.View>
-  );
-});
+        {charElements}
+      </Animated.View>
+    );
+  },
+);
+Column.displayName = "Column";
 
 // Scanline overlay
 const Scanlines = React.memo(() => (
-  <View style={[StyleSheet.absoluteFill, styles.scanlineContainer]} pointerEvents="none">
+  <View
+    style={[StyleSheet.absoluteFill, styles.scanlineContainer]}
+    pointerEvents="none"
+  >
     {Array.from({ length: 60 }).map((_, i) => (
       <View key={i} style={styles.scanline} />
     ))}
   </View>
 ));
+Scanlines.displayName = "Scanlines";
 
 // Pure-View gradient fade (no native module needed)
 const FADE_STEPS = 8;
@@ -110,9 +127,8 @@ const FadeOverlay = React.memo(({ position }: { position: "top" | "bottom" }) =>
     return Array.from({ length: FADE_STEPS }).map((_, i) => {
       // top: fully opaque at i=0, transparent at i=FADE_STEPS-1
       // bottom: transparent at i=0, fully opaque at i=FADE_STEPS-1
-      const alpha = position === "top"
-        ? 1 - i / (FADE_STEPS - 1)
-        : i / (FADE_STEPS - 1);
+      const alpha =
+        position === "top" ? 1 - i / (FADE_STEPS - 1) : i / (FADE_STEPS - 1);
       return (
         <View
           key={i}
@@ -126,16 +142,19 @@ const FadeOverlay = React.memo(({ position }: { position: "top" | "bottom" }) =>
   }, [position]);
   return (
     <View
-      style={[
-        position === "top" ? styles.fadeTop : styles.fadeBottom,
-      ]}
+      style={[position === "top" ? styles.fadeTop : styles.fadeBottom]}
       pointerEvents="none"
     >
       {strips}
     </View>
   );
 });
+FadeOverlay.displayName = "FadeOverlay";
 
+/**
+ * Terminal-style animated background with scrolling Greek characters.
+ * @returns The rendered component
+ */
 export default function NativeTerminalBg() {
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
   const numCols = Math.ceil(screenWidth / COL_WIDTH);
@@ -172,7 +191,10 @@ export default function NativeTerminalBg() {
       <FadeOverlay position="top" />
       <FadeOverlay position="bottom" />
       {/* Dark vignette overlay */}
-      <View style={[StyleSheet.absoluteFill, styles.vignette]} pointerEvents="none" />
+      <View
+        style={[StyleSheet.absoluteFill, styles.vignette]}
+        pointerEvents="none"
+      />
     </View>
   );
 }

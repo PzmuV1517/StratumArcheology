@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Note management hook.
+ *
+ * Provides note data, loading states, and CRUD actions
+ * for project notes.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { noteService, Note, socketService } from "../services";
 
@@ -15,6 +44,7 @@ interface NotesActions {
   refresh: () => Promise<void>;
 }
 
+/** Combined notes state and action methods returned by {@link useNotes}. */
 export type UseNotesReturn = NotesState & NotesActions;
 
 /**
@@ -44,6 +74,7 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
         unsubscribeRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Load notes when projectId changes
@@ -51,6 +82,7 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
     if (projectId) {
       loadNotes();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadNotes = useCallback(async (): Promise<void> => {

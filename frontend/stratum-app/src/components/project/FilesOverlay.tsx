@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project files overlay component.
+ *
+ * Full-screen overlay for browsing and managing project
+ * files and folders.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
@@ -40,7 +69,10 @@ interface Props {
   onNavigateBreadcrumb?: (index: number) => void;
   onClose: () => void;
   onLoadRoot: () => void;
-  onOpenFolder: (node: FileNode, customBreadcrumbs?: { id: string | null; name: string }[]) => void;
+  onOpenFolder: (
+    node: FileNode,
+    customBreadcrumbs?: { id: string | null; name: string }[],
+  ) => void;
   onUpload: () => void;
   onFileSelected?: (file: SelectedFile) => void; // New: callback for file selection from menu
   onCreateFolder: () => void;
@@ -97,10 +129,10 @@ export default function FilesOverlay({
   currentUserId,
 }: Props) {
   // Get safe area insets for proper header spacing on iOS
-  const insets = useSafeAreaInsets();
+  const _insets = useSafeAreaInsets();
   const { socket } = useWebSocket();
   const [isDragging, setIsDragging] = useState(false);
-  const [dragDepth, setDragDepth] = useState(0);
+  const [_dragDepth, setDragDepth] = useState(0);
   const lastDragEvent = useRef<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
@@ -286,7 +318,7 @@ export default function FilesOverlay({
       if (myFolder) {
         // Store the folder ID so we can detect if we're already there
         setMyFolderId(myFolder.id);
-        
+
         // Build correct breadcrumb path: Root > users > {user's folder}
         // The myFolder.parent_id is the "users" folder
         const usersFolderId = myFolder.parent_id;
@@ -295,7 +327,7 @@ export default function FilesOverlay({
           { id: usersFolderId, name: "users" },
           { id: myFolder.id, name: myFolder.name },
         ];
-        
+
         // Navigate to the folder with correct breadcrumb path
         onOpenFolder(
           {
@@ -303,7 +335,7 @@ export default function FilesOverlay({
             name: myFolder.name,
             type: "folder",
           },
-          customBreadcrumbs
+          customBreadcrumbs,
         );
       }
     } catch (error: any) {
@@ -670,10 +702,7 @@ export default function FilesOverlay({
   if (!visible) return null;
 
   return (
-    <View
-      ref={rootRef}
-      style={styles.root}
-    >
+    <View ref={rootRef} style={styles.root}>
       {/* Notes-style header */}
       <View style={styles.modalHeader}>
         <TouchableOpacity

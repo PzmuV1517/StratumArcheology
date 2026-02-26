@@ -8,6 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { Platform, View } from "react-native";
+
 import gsap from "gsap";
 import "./CardSwap.css";
 
