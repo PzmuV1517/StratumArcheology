@@ -119,8 +119,11 @@ const IconDoc = () => (
     />
   </svg>
 );
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const IconFlask = () => (
+  // disabled for now since the demo button was removed for presentation
+  // can re-enable if we add the demo button back or we could use it
+  // for an export function in the future
   <svg
     width={11}
     height={13}
@@ -687,6 +690,12 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   // Conflict resolution modal
   const [showConflictModal, setShowConflictModal] = useState(false);
 
+  // Mode switcher expand-on-hover
+  const [modeSwitcherOpen, setModeSwitcherOpen] = useState(false);
+
+  // Collapse the edit toolbar buttons
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+
   // Check for server updates on mount
   useEffect(() => {
     checkForUpdates();
@@ -822,6 +831,9 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   ]);
 
   // ── Debug helper: fill diagram with realistic sample data ──────────────
+  // eslint disabled for this function since its just a dev helper
+  // NOTE: delete this in production
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleLoadDemo = useCallback(() => {
     const demoTrenches = [
       { id: "T1", label: "Trench I", order: 0 },
@@ -1615,54 +1627,181 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           Wheeler Diagram
         </span>
 
-        {/* ─── View mode tabs ─── */}
+        {/* ─── View mode tabs (hover-to-expand animated pill) ─── */}
+        {(() => {
+          const PILL_W = 108;
+          const PILL_PAD = 3;
+          const modes = ["edit", "visual", "publication"] as const;
+          const modeIdx = modes.indexOf(viewMode);
+          const trackOffset = modeSwitcherOpen ? 0 : -(modeIdx * PILL_W);
+          const wrapperW = modeSwitcherOpen
+            ? modes.length * PILL_W + PILL_PAD * 2
+            : PILL_W + PILL_PAD * 2;
+          return (
+            <div
+              onMouseEnter={() => setModeSwitcherOpen(true)}
+              onMouseLeave={() => setModeSwitcherOpen(false)}
+              style={{
+                position: "relative",
+                flexShrink: 0,
+                borderRadius: 8,
+                backgroundColor: "#111",
+                overflow: "hidden",
+                width: wrapperW,
+                transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)",
+                padding: PILL_PAD,
+              }}
+            >
+              {/* Sliding active indicator */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: PILL_PAD,
+                  left: modeSwitcherOpen ? PILL_PAD + modeIdx * PILL_W : PILL_PAD,
+                  width: PILL_W,
+                  height: `calc(100% - ${PILL_PAD * 2}px)`,
+                  backgroundColor: "#FF2A2A",
+                  borderRadius: 6,
+                  transition: "left 0.2s cubic-bezier(0.4,0,0.2,1)",
+                  pointerEvents: "none",
+                }}
+              />
+              {/* Track */}
+              <div
+                style={{
+                  display: "flex",
+                  transform: `translateX(${trackOffset}px)`,
+                  transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
+                }}
+              >
+                {modes.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setViewMode(mode)}
+                    style={{
+                      width: PILL_W,
+                      flexShrink: 0,
+                      padding: "5px 0",
+                      background: "transparent",
+                      border: "none",
+                      borderRadius: 6,
+                      color: viewMode === mode ? "#fff" : "#aaa",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 5,
+                      position: "relative",
+                      transition: "color 0.15s",
+                    }}
+                  >
+                    {mode === "edit" && (
+                      <>
+                        <IconEdit /> Edit
+                      </>
+                    )}
+                    {mode === "visual" && (
+                      <>
+                        <IconVisual /> Visual
+                      </>
+                    )}
+                    {mode === "publication" && (
+                      <>
+                        <IconDoc /> Publication
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ─── Spacer: fills space between mode switcher and action buttons ─── */}
         <div
           style={{
+            flex: 1,
+            minWidth: 16,
             display: "flex",
-            gap: 2,
-            backgroundColor: "#111",
-            borderRadius: 8,
-            padding: 2,
-            flexShrink: 0,
+            alignItems: "center",
+            paddingLeft: 12,
+            overflow: "hidden",
           }}
         >
-          {(["edit", "visual", "publication"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
+          {dirty && (
+            <span
               style={{
-                ...buttonStyle,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                backgroundColor: viewMode === mode ? "#FF2A2A" : "transparent",
-                borderColor: viewMode === mode ? "#FF2A2A" : "transparent",
-                color: viewMode === mode ? "#fff" : "#999",
-                borderRadius: 6,
-                padding: "5px 12px",
+                fontSize: 11,
+                color: "#666",
+                whiteSpace: "nowrap",
+                userSelect: "none",
               }}
-              onClick={() => setViewMode(mode)}
             >
-              {mode === "edit" && (
-                <>
-                  <IconEdit /> Edit
-                </>
-              )}
-              {mode === "visual" && (
-                <>
-                  <IconVisual /> Visual
-                </>
-              )}
-              {mode === "publication" && (
-                <>
-                  <IconDoc /> Publication
-                </>
-              )}
-            </button>
-          ))}
+              ● unsaved
+            </span>
+          )}
         </div>
+
+        {/* Collapse / expand the edit toolbar */}
         {canEdit && viewMode === "edit" && (
-          <>
+          <button
+            type="button"
+            onClick={() => setToolbarCollapsed((c) => !c)}
+            title={
+              toolbarCollapsed ? "Show toolbar buttons" : "Hide toolbar buttons"
+            }
+            style={{
+              ...buttonStyle,
+              width: 26,
+              height: 26,
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 6,
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              style={{
+                transform: toolbarCollapsed ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)",
+                display: "block",
+              }}
+            >
+              <polyline
+                points="4,2 9,6 4,10"
+                stroke="#888"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </svg>
+          </button>
+        )}
+
+        {canEdit && viewMode === "edit" && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              overflow: "hidden",
+              maxWidth: toolbarCollapsed ? 0 : 1000,
+              opacity: toolbarCollapsed ? 0 : 1,
+              transition:
+                "max-width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s cubic-bezier(0.4,0,0.2,1)",
+              flexShrink: 0,
+            }}
+          >
             <button
               type="button"
               style={buttonStyle}
@@ -1687,44 +1826,15 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             </button>
             <button
               type="button"
-              style={{
-                ...buttonStyle,
-                borderColor: "rgba(255,193,7,0.35)",
-                color: "#ffc107",
-              }}
+              style={buttonStyle}
               onClick={openLacunaModal}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "#2a2200")
-              }
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
               onMouseLeave={(e) =>
                 (e.currentTarget.style.backgroundColor = "#222222")
               }
               title="Mark a missing interval (lacuna) within a sequence"
             >
               + Lacuna
-            </button>
-            {/* ── Debug helper ── */}
-            <button
-              type="button"
-              style={{
-                ...buttonStyle,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                borderColor: "rgba(255,193,7,0.4)",
-                color: "#ffc107",
-                fontSize: 11,
-              }}
-              onClick={handleLoadDemo}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "#2a2200")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "#222222")
-              }
-              title="Fill with sample archaeological data for testing"
-            >
-              <IconFlask /> Demo
             </button>
             <button
               type="button"
@@ -1741,7 +1851,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             >
               {dirty ? "● Save" : "Save"}
             </button>
-            {/* Pull – always visible */}
             <button
               type="button"
               style={{
@@ -1779,7 +1888,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             >
               <IconDownload /> Pull
             </button>
-            {/* Discard – only when dirty */}
             {dirty && (
               <button
                 type="button"
@@ -1808,7 +1916,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 Discard
               </button>
             )}
-          </>
+          </div>
         )}
 
         {/* Help button */}
