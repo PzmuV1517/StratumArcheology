@@ -88,4 +88,4 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-settings = Settings() # type: ignore
+settings = Settings()

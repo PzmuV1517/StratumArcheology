@@ -1,6 +1,9 @@
 """
-Pydantic schemas for request/response validation across all API endpoints.
-Covers auth, users, projects, notes, files, invites, GPS, and sync.
+
+Pydantic schemas for request validation and response models.
+This file defines the data structures used across the application for users, projects,
+notes, files, invites, and more.
+>>>>>>> da4d94a (Add docstrings to schemas.py and create py.typed file; clean up config.py)
 
 MIT License
 
