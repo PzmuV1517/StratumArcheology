@@ -1,7 +1,45 @@
+"""
+Note management API routes.
+
+Handles CRUD operations for project notes, note-to-file synchronization,
+note attachments (photos, audio), and content streaming with HTTP Range
+support for mobile clients.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -387,7 +425,8 @@ async def add_note_attachment(
     content_type = (file.content_type or "").lower()
     if content_type not in allowed:
         raise HTTPException(
-            status_code=400, detail=f"File type {file.content_type} not allowed. Allowed: {', '.join(sorted(allowed))}"
+            status_code=400,
+            detail=f"File type {file.content_type} not allowed. Allowed: {', '.join(sorted(allowed))}",
         )
 
     # Upload to MinIO
@@ -564,8 +603,8 @@ async def stream_note_attachment(
     needing direct MinIO connectivity.
     Supports HTTP Range requests required by iOS AVFoundation (AVPlayer).
     """
-    from fastapi.responses import Response, StreamingResponse
-    from io import BytesIO
+
+    from fastapi.responses import Response
 
     note = db.query(Note).filter(Note.id == note_id).first()
 

@@ -1,7 +1,31 @@
 /**
- * Note Detail Screen
- * Restyled to match new-project / join-project design language
- * with iOS Liquid Glass support.
+ * @file
+ * Note detail screen.
+ *
+ * Displays full note content with attachments and
+ * provides edit and delete actions.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useState, useEffect } from "react";
 import {
@@ -141,11 +165,13 @@ export default function NoteDetailScreen() {
 
   useEffect(() => {
     loadNote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
   useFocusEffect(
     React.useCallback(() => {
       if (noteId) loadNote();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [noteId]),
   );
 
@@ -296,9 +322,7 @@ export default function NoteDetailScreen() {
               <Ionicons name="mic" size={14} color="#9A9A9A" /> Voice Note
             </Text>
             {(note?.attachments || [])
-              .filter((a: any) =>
-                (a.mime_type || a.file_type)?.startsWith("audio/"),
-              )
+              .filter((a: any) => (a.mime_type || a.file_type)?.startsWith("audio/"))
               .map((att: any) => (
                 <View key={att.id} style={{ marginTop: 8 }}>
                   <AudioAttachmentPlayer url={att.url} />
@@ -308,8 +332,7 @@ export default function NoteDetailScreen() {
         ) : (
           <GlassCard style={s.card}>
             <Text style={s.label}>
-              <Ionicons name="document-text" size={14} color="#9A9A9A" />{" "}
-              Content
+              <Ionicons name="document-text" size={14} color="#9A9A9A" /> Content
             </Text>
             <Text style={s.noteContent}>{note.content}</Text>
           </GlassCard>
@@ -326,8 +349,7 @@ export default function NoteDetailScreen() {
             return (
               <GlassCard style={s.card}>
                 <Text style={s.label}>
-                  <Ionicons name="attach" size={14} color="#9A9A9A" />{" "}
-                  Attachments
+                  <Ionicons name="attach" size={14} color="#9A9A9A" /> Attachments
                   <Text style={s.countBadge}> ({nonAudio.length})</Text>
                 </Text>
                 <View style={{ gap: 8, marginTop: 4 }}>
@@ -372,8 +394,8 @@ export default function NoteDetailScreen() {
           <GlassCard style={s.modalContent}>
             <Text style={s.modalTitle}>Delete Note</Text>
             <Text style={s.modalText}>
-              This will permanently delete this note and its attachments. This
-              action cannot be undone.
+              This will permanently delete this note and its attachments. This action
+              cannot be undone.
             </Text>
             <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
               <GlassButton
@@ -478,6 +500,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
       el.removeEventListener("play", onFirstPlay);
       cleanup();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
   const needsResume = ctxRef.current && ctxRef.current.state === "suspended";
@@ -485,6 +508,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   return (
     <View style={{ gap: 8, position: "relative" }}>
       {/* @ts-ignore */}
+      {/* eslint-disable react/no-unknown-property */}
       <audio
         ref={audioRef as any}
         src={url}
@@ -493,6 +517,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
         preload="metadata"
         playsInline
       />
+      {/* eslint-enable react/no-unknown-property */}
       {(!ready || needsResume) && (
         <TouchableOpacity
           style={{

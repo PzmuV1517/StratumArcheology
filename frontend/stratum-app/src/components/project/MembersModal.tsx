@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project members management modal.
+ *
+ * Displays project members with their roles and provides
+ * options to add, remove, or change member roles.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useMemo, useState } from "react";
 import {
   Modal,
@@ -119,7 +148,7 @@ export default function MembersModal({
       bio: member.bio,
       role: getMemberRole(member),
     });
-    
+
     // Try to fetch the full profile with bio if not already present
     if (!member.bio && !member.photo_url) {
       try {
@@ -294,12 +323,10 @@ export default function MembersModal({
 
       // Register a unique QR code for this invite
       try {
-        const qrEntry = await qrService.create(
-          "invite",
-          resp.token,
-          projectId,
-          { code: resp.code, role: inviteRole },
-        );
+        const qrEntry = await qrService.create("invite", resp.token, projectId, {
+          code: resp.code,
+          role: inviteRole,
+        });
         setQrUniqueCode(qrEntry.code);
       } catch (e) {
         console.warn("QR code registration failed, falling back to invite code", e);
@@ -367,7 +394,13 @@ export default function MembersModal({
   };
 
   // GlassCard wrapper for iOS 26+ Liquid Glass effect
-  const GlassCard = ({ children, style }: { children: React.ReactNode; style?: any }) => {
+  const GlassCard = ({
+    children,
+    style,
+  }: {
+    children: React.ReactNode;
+    style?: any;
+  }) => {
     // Use consistent styling across platforms
     // Fallback to regular View on other platforms
     return <View style={[styles.modalCard, style]}>{children}</View>;
@@ -496,368 +529,387 @@ export default function MembersModal({
               </View>
             )}
 
-          {/* Transfer ownership confirmation modal */}
-          {showTransferConfirm && (
-            <View style={styles.confirmOverlay}>
-              <View style={styles.confirmCard}>
-                <Text style={styles.confirmTitle}>⚠️ Transfer Ownership</Text>
-                <Text style={styles.confirmText}>
-                  Are you sure you want to transfer project leadership to{" "}
-                  <Text style={styles.confirmHighlight}>
-                    {members.find((m) => m.id === showTransferConfirm)
-                      ?.display_name || "this member"}
+            {/* Transfer ownership confirmation modal */}
+            {showTransferConfirm && (
+              <View style={styles.confirmOverlay}>
+                <View style={styles.confirmCard}>
+                  <Text style={styles.confirmTitle}>⚠️ Transfer Ownership</Text>
+                  <Text style={styles.confirmText}>
+                    Are you sure you want to transfer project leadership to{" "}
+                    <Text style={styles.confirmHighlight}>
+                      {members.find((m) => m.id === showTransferConfirm)
+                        ?.display_name || "this member"}
+                    </Text>
+                    ?
                   </Text>
-                  ?
-                </Text>
-                <Text style={styles.confirmWarning}>
-                  You will become a researcher and lose owner permissions.
-                </Text>
-                <View style={styles.confirmButtons}>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, styles.cancelBtn]}
-                    onPress={() => setShowTransferConfirm(null)}
-                  >
-                    <Text style={styles.confirmBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, styles.dangerBtn]}
-                    onPress={() => handleTransferOwnership(showTransferConfirm)}
-                  >
-                    <Text style={styles.confirmBtnText}>Confirm Transfer</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.confirmWarning}>
+                    You will become a researcher and lose owner permissions.
+                  </Text>
+                  <View style={styles.confirmButtons}>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, styles.cancelBtn]}
+                      onPress={() => setShowTransferConfirm(null)}
+                    >
+                      <Text style={styles.confirmBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, styles.dangerBtn]}
+                      onPress={() => handleTransferOwnership(showTransferConfirm)}
+                    >
+                      <Text style={styles.confirmBtnText}>Confirm Transfer</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Remove member confirmation modal */}
-          {showRemoveConfirm && (
-            <View style={styles.confirmOverlay}>
-              <View style={styles.confirmCard}>
-                <Text style={styles.confirmTitle}>⚠️ Remove Member</Text>
-                <Text style={styles.confirmText}>
-                  Are you sure you want to remove{" "}
-                  <Text style={styles.confirmHighlight}>
-                    {members.find((m) => m.id === showRemoveConfirm)?.display_name ||
-                      "this member"}
-                  </Text>{" "}
-                  from the project?
-                </Text>
-                <Text style={styles.confirmWarning}>
-                  They will lose access to all project data.
-                </Text>
-                <View style={styles.confirmButtons}>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, styles.cancelBtn]}
-                    onPress={() => setShowRemoveConfirm(null)}
-                  >
-                    <Text style={styles.confirmBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, styles.dangerBtn]}
-                    onPress={executeRemoveMember}
-                  >
-                    <Text style={styles.confirmBtnText}>Remove</Text>
-                  </TouchableOpacity>
+            {/* Remove member confirmation modal */}
+            {showRemoveConfirm && (
+              <View style={styles.confirmOverlay}>
+                <View style={styles.confirmCard}>
+                  <Text style={styles.confirmTitle}>⚠️ Remove Member</Text>
+                  <Text style={styles.confirmText}>
+                    Are you sure you want to remove{" "}
+                    <Text style={styles.confirmHighlight}>
+                      {members.find((m) => m.id === showRemoveConfirm)
+                        ?.display_name || "this member"}
+                    </Text>{" "}
+                    from the project?
+                  </Text>
+                  <Text style={styles.confirmWarning}>
+                    They will lose access to all project data.
+                  </Text>
+                  <View style={styles.confirmButtons}>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, styles.cancelBtn]}
+                      onPress={() => setShowRemoveConfirm(null)}
+                    >
+                      <Text style={styles.confirmBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, styles.dangerBtn]}
+                      onPress={executeRemoveMember}
+                    >
+                      <Text style={styles.confirmBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Role change confirmation modal */}
-          {showRoleChangeConfirm && (
-            <View style={styles.confirmOverlay}>
-              <View style={styles.confirmCard}>
-                <Text style={styles.confirmTitle}>Change Role</Text>
-                <Text style={styles.confirmText}>
-                  Change{" "}
-                  <Text style={styles.confirmHighlight}>
-                    {members.find((m) => m.id === showRoleChangeConfirm.userId)
-                      ?.display_name || "this member"}
+            {/* Role change confirmation modal */}
+            {showRoleChangeConfirm && (
+              <View style={styles.confirmOverlay}>
+                <View style={styles.confirmCard}>
+                  <Text style={styles.confirmTitle}>Change Role</Text>
+                  <Text style={styles.confirmText}>
+                    Change{" "}
+                    <Text style={styles.confirmHighlight}>
+                      {members.find((m) => m.id === showRoleChangeConfirm.userId)
+                        ?.display_name || "this member"}
+                    </Text>
+                    's role to{" "}
+                    <Text style={styles.confirmHighlight}>
+                      {showRoleChangeConfirm.newRole.charAt(0) +
+                        showRoleChangeConfirm.newRole.slice(1).toLowerCase()}
+                    </Text>
+                    ?
                   </Text>
-                  's role to{" "}
-                  <Text style={styles.confirmHighlight}>
-                    {showRoleChangeConfirm.newRole.charAt(0) +
-                      showRoleChangeConfirm.newRole.slice(1).toLowerCase()}
-                  </Text>
-                  ?
-                </Text>
-                <View style={styles.confirmButtons}>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, styles.cancelBtn]}
-                    onPress={() => setShowRoleChangeConfirm(null)}
-                  >
-                    <Text style={styles.confirmBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.confirmBtn, { backgroundColor: "#2A7FFF" }]}
-                    onPress={executeRoleChange}
-                  >
-                    <Text style={styles.confirmBtnText}>Confirm</Text>
-                  </TouchableOpacity>
+                  <View style={styles.confirmButtons}>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, styles.cancelBtn]}
+                      onPress={() => setShowRoleChangeConfirm(null)}
+                    >
+                      <Text style={styles.confirmBtnText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmBtn, { backgroundColor: "#2A7FFF" }]}
+                      onPress={executeRoleChange}
+                    >
+                      <Text style={styles.confirmBtnText}>Confirm</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Profile view modal */}
-          {viewingProfile && (
-            <View style={styles.confirmOverlay}>
-              <View style={styles.profileCard}>
-                <TouchableOpacity
-                  style={styles.profileCloseBtn}
-                  onPress={() => setViewingProfile(null)}
-                >
-                  <Text style={styles.profileCloseBtnText}>✕</Text>
-                </TouchableOpacity>
-                
-                {loadingProfile ? (
-                  <ActivityIndicator size="large" color="#FF2A2A" style={{ marginVertical: 40 }} />
-                ) : (
-                  <>
-                    {/* Profile picture */}
-                    <View style={styles.profileImageContainer}>
-                      {viewingProfile.photo_url ? (
-                        <Image
-                          source={{ uri: viewingProfile.photo_url }}
-                          style={styles.profileImage}
-                        />
+            {/* Profile view modal */}
+            {viewingProfile && (
+              <View style={styles.confirmOverlay}>
+                <View style={styles.profileCard}>
+                  <TouchableOpacity
+                    style={styles.profileCloseBtn}
+                    onPress={() => setViewingProfile(null)}
+                  >
+                    <Text style={styles.profileCloseBtnText}>✕</Text>
+                  </TouchableOpacity>
+
+                  {loadingProfile ? (
+                    <ActivityIndicator
+                      size="large"
+                      color="#FF2A2A"
+                      style={{ marginVertical: 40 }}
+                    />
+                  ) : (
+                    <>
+                      {/* Profile picture */}
+                      <View style={styles.profileImageContainer}>
+                        {viewingProfile.photo_url ? (
+                          <Image
+                            source={{ uri: viewingProfile.photo_url }}
+                            style={styles.profileImage}
+                          />
+                        ) : (
+                          <View style={styles.profilePlaceholder}>
+                            <Text style={styles.profilePlaceholderText}>
+                              {viewingProfile.display_name
+                                ?.charAt(0)
+                                .toUpperCase() || "U"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Name and role */}
+                      <Text style={styles.profileName}>
+                        {viewingProfile.display_name}
+                      </Text>
+                      <View
+                        style={[
+                          styles.profileRoleBadge,
+                          getRoleBadgeStyle(viewingProfile.role),
+                        ]}
+                      >
+                        <Text style={styles.profileRoleBadgeText}>
+                          {viewingProfile.role}
+                        </Text>
+                      </View>
+
+                      {/* Bio */}
+                      {viewingProfile.bio ? (
+                        <Text style={styles.profileBio}>{viewingProfile.bio}</Text>
                       ) : (
-                        <View style={styles.profilePlaceholder}>
-                          <Text style={styles.profilePlaceholderText}>
-                            {viewingProfile.display_name?.charAt(0).toUpperCase() || "U"}
-                          </Text>
-                        </View>
+                        <Text style={styles.profileBioEmpty}>No bio added</Text>
                       )}
-                    </View>
 
-                    {/* Name and role */}
-                    <Text style={styles.profileName}>{viewingProfile.display_name}</Text>
-                    <View style={[styles.profileRoleBadge, getRoleBadgeStyle(viewingProfile.role)]}>
-                      <Text style={styles.profileRoleBadgeText}>{viewingProfile.role}</Text>
-                    </View>
+                      {/* Email */}
+                      <Text style={styles.profileEmail}>{viewingProfile.email}</Text>
+                    </>
+                  )}
+                </View>
+              </View>
+            )}
 
-                    {/* Bio */}
-                    {viewingProfile.bio ? (
-                      <Text style={styles.profileBio}>{viewingProfile.bio}</Text>
-                    ) : (
-                      <Text style={styles.profileBioEmpty}>No bio added</Text>
+            {/* Invite section (leaders only) */}
+            {isOwner && (
+              <View style={styles.inviteSection}>
+                <Text style={styles.inviteTitle}>Invite to project</Text>
+
+                {/* Role selector */}
+                <Text style={styles.inviteSubtitle}>Role</Text>
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteRole === "GUEST" && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteRole("GUEST")}
+                  >
+                    <Text style={styles.roleBtnText}>Guest</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteRole === "RESEARCHER" && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteRole("RESEARCHER")}
+                  >
+                    <Text style={styles.roleBtnText}>Researcher</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Expiration selector */}
+                <Text style={styles.inviteSubtitle}>Expires after</Text>
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteTtlHours === 24 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteTtlHours(24)}
+                  >
+                    <Text style={styles.roleBtnText}>1 day</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteTtlHours === 168 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteTtlHours(168)}
+                  >
+                    <Text style={styles.roleBtnText}>7 days</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteTtlHours === 336 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteTtlHours(336)}
+                  >
+                    <Text style={styles.roleBtnText}>14 days</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteTtlHours === 720 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteTtlHours(720)}
+                  >
+                    <Text style={styles.roleBtnText}>30 days</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Max uses selector */}
+                <Text style={styles.inviteSubtitle}>Max uses</Text>
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteMaxUses === 1 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteMaxUses(1)}
+                  >
+                    <Text style={styles.roleBtnText}>1</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteMaxUses === 5 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteMaxUses(5)}
+                  >
+                    <Text style={styles.roleBtnText}>5</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteMaxUses === 10 && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteMaxUses(10)}
+                  >
+                    <Text style={styles.roleBtnText}>10</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleBtn,
+                      inviteMaxUses === null && styles.roleBtnActive,
+                    ]}
+                    onPress={() => setInviteMaxUses(null)}
+                  >
+                    <Text style={styles.roleBtnText}>∞</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.generateBtn,
+                    isGenerating && styles.generateBtnDisabled,
+                  ]}
+                  onPress={generateInvite}
+                  disabled={isGenerating}
+                >
+                  <Text style={styles.generateBtnText}>
+                    {isGenerating ? "Generating…" : "Generate Invite Link"}
+                  </Text>
+                </TouchableOpacity>
+
+                {generatedLink && (
+                  <View style={styles.linkContainer}>
+                    {/* Close button */}
+                    <TouchableOpacity
+                      style={styles.inviteCloseBtn}
+                      onPress={() => {
+                        setGeneratedLink(null);
+                        setGeneratedCode(null);
+                        setGeneratedExpiresAt(null);
+                        setGeneratedMaxUses(null);
+                        setCopiedLink(false);
+                        setCopiedCode(false);
+                      }}
+                    >
+                      <Text style={styles.inviteCloseBtnText}>✕</Text>
+                    </TouchableOpacity>
+
+                    {/* Invite Code Section */}
+                    {generatedCode && (
+                      <View style={styles.codeSection}>
+                        <Text style={styles.codeSectionLabel}>Invite Code</Text>
+                        <View style={styles.codeRow}>
+                          <Text selectable style={styles.codeText}>
+                            {generatedCode}
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.copyCodeBtn}
+                            onPress={copyCodeToClipboard}
+                          >
+                            <Text style={styles.copyBtnText}>
+                              {copiedCode ? "✓" : "📋"}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     )}
 
-                    {/* Email */}
-                    <Text style={styles.profileEmail}>{viewingProfile.email}</Text>
-                  </>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Invite section (leaders only) */}
-          {isOwner && (
-            <View style={styles.inviteSection}>
-              <Text style={styles.inviteTitle}>Invite to project</Text>
-              
-              {/* Role selector */}
-              <Text style={styles.inviteSubtitle}>Role</Text>
-              <View style={styles.roleSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteRole === "GUEST" && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteRole("GUEST")}
-                >
-                  <Text style={styles.roleBtnText}>Guest</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteRole === "RESEARCHER" && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteRole("RESEARCHER")}
-                >
-                  <Text style={styles.roleBtnText}>Researcher</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Expiration selector */}
-              <Text style={styles.inviteSubtitle}>Expires after</Text>
-              <View style={styles.roleSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteTtlHours === 24 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteTtlHours(24)}
-                >
-                  <Text style={styles.roleBtnText}>1 day</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteTtlHours === 168 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteTtlHours(168)}
-                >
-                  <Text style={styles.roleBtnText}>7 days</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteTtlHours === 336 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteTtlHours(336)}
-                >
-                  <Text style={styles.roleBtnText}>14 days</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteTtlHours === 720 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteTtlHours(720)}
-                >
-                  <Text style={styles.roleBtnText}>30 days</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Max uses selector */}
-              <Text style={styles.inviteSubtitle}>Max uses</Text>
-              <View style={styles.roleSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteMaxUses === 1 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteMaxUses(1)}
-                >
-                  <Text style={styles.roleBtnText}>1</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteMaxUses === 5 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteMaxUses(5)}
-                >
-                  <Text style={styles.roleBtnText}>5</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteMaxUses === 10 && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteMaxUses(10)}
-                >
-                  <Text style={styles.roleBtnText}>10</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.roleBtn,
-                    inviteMaxUses === null && styles.roleBtnActive,
-                  ]}
-                  onPress={() => setInviteMaxUses(null)}
-                >
-                  <Text style={styles.roleBtnText}>∞</Text>
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.generateBtn,
-                  isGenerating && styles.generateBtnDisabled,
-                ]}
-                onPress={generateInvite}
-                disabled={isGenerating}
-              >
-                <Text style={styles.generateBtnText}>
-                  {isGenerating ? "Generating…" : "Generate Invite Link"}
-                </Text>
-              </TouchableOpacity>
-
-              {generatedLink && (
-                <View style={styles.linkContainer}>
-                  {/* Close button */}
-                  <TouchableOpacity
-                    style={styles.inviteCloseBtn}
-                    onPress={() => {
-                      setGeneratedLink(null);
-                      setGeneratedCode(null);
-                      setGeneratedExpiresAt(null);
-                      setGeneratedMaxUses(null);
-                      setCopiedLink(false);
-                      setCopiedCode(false);
-                    }}
-                  >
-                    <Text style={styles.inviteCloseBtnText}>✕</Text>
-                  </TouchableOpacity>
-
-                  {/* Invite Code Section */}
-                  {generatedCode && (
-                    <View style={styles.codeSection}>
-                      <Text style={styles.codeSectionLabel}>Invite Code</Text>
-                      <View style={styles.codeRow}>
-                        <Text selectable style={styles.codeText}>
-                          {generatedCode}
-                        </Text>
-                        <TouchableOpacity
-                          style={styles.copyCodeBtn}
-                          onPress={copyCodeToClipboard}
-                        >
-                          <Text style={styles.copyBtnText}>
-                            {copiedCode ? "✓" : "📋"}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Invite Link Section */}
-                  <Text style={styles.codeSectionLabel}>Invite Link</Text>
-                  <Text selectable style={styles.linkText} numberOfLines={2}>
-                    {generatedLink}
-                  </Text>
-                  <TouchableOpacity style={styles.copyBtn} onPress={copyToClipboard}>
-                    <Text style={styles.copyBtnText}>
-                      {copiedLink ? "✓ Copied!" : "📋 Copy Link"}
+                    {/* Invite Link Section */}
+                    <Text style={styles.codeSectionLabel}>Invite Link</Text>
+                    <Text selectable style={styles.linkText} numberOfLines={2}>
+                      {generatedLink}
                     </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.copyBtn}
+                      onPress={copyToClipboard}
+                    >
+                      <Text style={styles.copyBtnText}>
+                        {copiedLink ? "✓ Copied!" : "📋 Copy Link"}
+                      </Text>
+                    </TouchableOpacity>
 
-                  {Platform.OS === "web" && (
-                    <Image
-                      source={{
-                        uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUniqueCode || generatedCode || "")}`,
-                      }}
-                      style={styles.qrCode}
-                    />
-                  )}
-                  {Platform.OS !== "web" && (
-                    <View style={{ alignItems: "center", marginTop: 12 }}>
-                      <QRCodeView
-                        value={qrUniqueCode || generatedCode || ""}
-                        size={180}
-                        label="Scan to join"
+                    {Platform.OS === "web" && (
+                      <Image
+                        source={{
+                          uri: `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUniqueCode || generatedCode || "")}`,
+                        }}
+                        style={styles.qrCode}
                       />
-                    </View>
-                  )}
-                  {generatedExpiresAt && (
+                    )}
+                    {Platform.OS !== "web" && (
+                      <View style={{ alignItems: "center", marginTop: 12 }}>
+                        <QRCodeView
+                          value={qrUniqueCode || generatedCode || ""}
+                          size={180}
+                          label="Scan to join"
+                        />
+                      </View>
+                    )}
+                    {generatedExpiresAt && (
+                      <Text style={styles.expiresText}>
+                        Expires: {new Date(generatedExpiresAt).toLocaleString()}
+                      </Text>
+                    )}
                     <Text style={styles.expiresText}>
-                      Expires: {new Date(generatedExpiresAt).toLocaleString()}
+                      Max uses: {generatedMaxUses ?? "Unlimited"}
                     </Text>
-                  )}
-                  <Text style={styles.expiresText}>
-                    Max uses: {generatedMaxUses ?? "Unlimited"}
-                  </Text>
-                </View>
-              )}
+                  </View>
+                )}
 
-              <Text style={styles.inviteHint}>
-                Share the invite code or link. Recipient must be signed in to accept.
-              </Text>
-            </View>
-          )}
+                <Text style={styles.inviteHint}>
+                  Share the invite code or link. Recipient must be signed in to
+                  accept.
+                </Text>
+              </View>
+            )}
 
-          {manageError && <Text style={styles.errorText}>{manageError}</Text>}
+            {manageError && <Text style={styles.errorText}>{manageError}</Text>}
           </ScrollView>
 
           <View style={styles.footer}>

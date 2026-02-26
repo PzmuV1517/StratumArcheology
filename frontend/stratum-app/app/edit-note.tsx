@@ -1,3 +1,31 @@
+/**
+ * @file
+ * Note editing screen.
+ *
+ * Allows editing of existing project note content and title.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -15,7 +43,7 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
-import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
+import { useAutoSave } from "../src/hooks/useAutoSave";
 import { showAlert } from "../src/utils/alert";
 
 const isIOS = Platform.OS === "ios";
@@ -62,9 +90,7 @@ function GlassButton({
       {isLoading ? (
         <ActivityIndicator color="#FFFFFF" />
       ) : (
-        <Text
-          style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}
-        >
+        <Text style={[styles.buttonText, !isPrimary && styles.secondaryButtonText]}>
           {title}
         </Text>
       )}
@@ -97,11 +123,12 @@ interface Note {
 }
 
 export default function EditNoteScreen() {
-  const { noteId, projectId } = useLocalSearchParams();
+  const { noteId, projectId: _projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-  const iosHeaderPad =
-    isIOS ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8 : 0;
+  const _iosHeaderPad = isIOS
+    ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
+    : 0;
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -115,25 +142,19 @@ export default function EditNoteScreen() {
   const initialData = useMemo(() => ({ title: "", content: "" }), []);
 
   // Auto-save hook
-  const {
-    saveStatus,
-    hasDraft,
-    saveDraft,
-    getDraft,
-    clearDraft,
-    markSubmitted,
-  } = useAutoSave<{
-    title: string;
-    content: string;
-  }>({
-    formId: `edit-note-${noteId}`,
-    initialData,
-    onRestore: (data) => {
-      setTitle(data.title);
-      setContent(data.content);
-    },
-    skipRestore: true, // We handle restoration manually via modal
-  });
+  const { saveStatus, hasDraft, saveDraft, getDraft, clearDraft, markSubmitted } =
+    useAutoSave<{
+      title: string;
+      content: string;
+    }>({
+      formId: `edit-note-${noteId}`,
+      initialData,
+      onRestore: (data) => {
+        setTitle(data.title);
+        setContent(data.content);
+      },
+      skipRestore: true, // We handle restoration manually via modal
+    });
 
   // Check for draft after original data loads
   useEffect(() => {
@@ -144,6 +165,7 @@ export default function EditNoteScreen() {
       }
     };
     checkDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originalDataLoaded]);
 
   // Auto-save when form data changes (only after original data loaded)
@@ -151,6 +173,7 @@ export default function EditNoteScreen() {
     if (originalDataLoaded && (title || content)) {
       saveDraft(formData);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, originalDataLoaded]);
 
   const handleRestoreDraft = async () => {
@@ -169,6 +192,7 @@ export default function EditNoteScreen() {
 
   useEffect(() => {
     loadNote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
   const loadNote = async () => {
@@ -256,8 +280,8 @@ export default function EditNoteScreen() {
           <GlassCard style={styles.modalContent}>
             <Text style={styles.modalTitle}>Unsaved Draft Found</Text>
             <Text style={styles.modalText}>
-              You have an unsaved draft from a previous editing session. Would
-              you like to restore it or discard it?
+              You have an unsaved draft from a previous editing session. Would you
+              like to restore it or discard it?
             </Text>
             <View style={styles.modalButtons}>
               <GlassButton
@@ -311,9 +335,7 @@ export default function EditNoteScreen() {
           <Ionicons name="create" size={48} color="#FF2A2A" />
         </View>
         <Text style={styles.title}>Edit Note</Text>
-        <Text style={styles.subtitle}>
-          Update your note details and content
-        </Text>
+        <Text style={styles.subtitle}>Update your note details and content</Text>
 
         {/* Title card */}
         <GlassCard style={styles.card}>

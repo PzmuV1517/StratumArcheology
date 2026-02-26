@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Harris Matrix component for web.
+ *
+ * Renders the Harris Matrix visualization directly in
+ * the DOM using an iframe.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FaWrench, FaArrowLeft } from "react-icons/fa";
@@ -1362,7 +1391,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
         (window as any).__hm_deleteArtefact = (id: string) => {
           let removed = false;
           (Object.entries(artefactRegistries) as any).forEach(
-            ([cat, arr]: [string, any[]]) => {
+            ([_cat, arr]: [string, any[]]) => {
               if (removed) return;
               const idx = (arr || []).findIndex((r: any) => r.id === id);
               if (idx >= 0) {
@@ -1730,7 +1759,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             // Persist to backend CSV (best-effort)
             try {
               await formsService.saveContextFeature(projectId, rec as any);
-            } catch (e) {
+            } catch (_e) {
               /* network errors ignored for now */
             }
             alert("Context feature record saved.");
@@ -1947,7 +1976,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             updateRecordsDisplay();
             try {
               await formsService.saveStratigraphicUnit(projectId, rec as any);
-            } catch (e) {
+            } catch (_e) {
               /* ignore */
             }
             alert("SU record saved.");
@@ -2089,7 +2118,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 category,
                 ...record,
               } as any);
-            } catch (e) {
+            } catch (_e) {
               /* ignore */
             }
           };
@@ -2547,7 +2576,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               .map((r) => r.split(","));
             const headers = rows.shift() || [];
             showImportModal(rows, headers);
-          } catch (err) {
+          } catch (_err) {
             alert("Failed to parse CSV");
           }
         };
@@ -2786,7 +2815,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           results.push(suExists ? "SU save: PASS" : "SU save: FAIL");
 
           alert(results.join("\n"));
-        } catch (e) {
+        } catch (_e) {
           alert("Self-test failed to run");
         }
       }
@@ -3217,6 +3246,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       (window as any).__hm_editGroupEntity = undefined;
       openGroupModalRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   useEffect(() => {

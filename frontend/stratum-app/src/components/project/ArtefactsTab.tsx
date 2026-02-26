@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project artefacts tab component.
+ *
+ * Displays a list of archaeological artefacts with QR codes
+ * and metadata.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
@@ -40,7 +69,7 @@ export default function ArtefactsTab({
   const [loading, setLoading] = useState(false);
   const showSkeleton = useDelayedLoading(loading);
   const [searchQuery, setSearchQuery] = useState("");
-  const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
+  const [_artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
     { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[]
   >([]);
@@ -57,6 +86,7 @@ export default function ArtefactsTab({
 
   useEffect(() => {
     if (projectId) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Reload artefacts when screen comes into focus (e.g., after creating a new artefact)
@@ -65,7 +95,8 @@ export default function ArtefactsTab({
       if (projectId) {
         load();
       }
-    }, [projectId])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId]),
   );
 
   const load = async () => {
@@ -155,11 +186,13 @@ export default function ArtefactsTab({
           Artefacts
         </Text>
         {canEdit && (
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={handleNewArtefact}
-          >
-            <Ionicons name="add" size={16} color="#F5F5F5" style={{ marginRight: 4 }} />
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleNewArtefact}>
+            <Ionicons
+              name="add"
+              size={16}
+              color="#F5F5F5"
+              style={{ marginRight: 4 }}
+            />
             <Text style={styles.primaryBtnText}>New Artefact</Text>
           </TouchableOpacity>
         )}
@@ -168,7 +201,12 @@ export default function ArtefactsTab({
       {/* Search bar */}
       {artefacts.length > 0 && (
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={16} color="#9A9A9A" style={{ marginRight: 8 }} />
+          <Ionicons
+            name="search"
+            size={16}
+            color="#9A9A9A"
+            style={{ marginRight: 8 }}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search artefacts..."
@@ -194,7 +232,9 @@ export default function ArtefactsTab({
         </View>
       ) : filteredArtefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
-          <Text style={{ color: "#9A9A9A" }}>No artefacts match "{searchQuery}"</Text>
+          <Text style={{ color: "#9A9A9A" }}>
+            No artefacts match "{searchQuery}"
+          </Text>
         </View>
       ) : (
         <View style={styles.grid}>
@@ -228,7 +268,6 @@ export default function ArtefactsTab({
           ))}
         </View>
       )}
-
     </View>
   );
 }

@@ -1,6 +1,36 @@
+/**
+ * @file
+ * Core note management business logic.
+ *
+ * Provides shared functions for creating, reading, updating, and deleting
+ * project notes via the backend API.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 // Shared note service types and API calls
 import api from "./api";
 
+/** A project note with optional attachments. */
 export interface Note {
   id: string;
   title: string;
@@ -13,6 +43,7 @@ export interface Note {
   attachments?: Attachment[];
 }
 
+/** A file attachment belonging to a note. */
 export interface Attachment {
   id: string;
   filename: string;
@@ -21,6 +52,7 @@ export interface Attachment {
   url?: string;
 }
 
+/** Payload for creating a new note. */
 export interface CreateNoteData {
   title: string;
   content: string;
@@ -29,6 +61,7 @@ export interface CreateNoteData {
 }
 
 // Shared API methods (work on both platforms)
+/** Core note service providing CRUD operations shared across platforms. */
 export const noteServiceCore = {
   getNotes: async (projectId: string): Promise<Note[]> => {
     const response = await api.get(`/notes/project/${projectId}`);

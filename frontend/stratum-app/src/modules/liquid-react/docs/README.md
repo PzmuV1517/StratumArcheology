@@ -31,17 +31,20 @@ Liquid-React is a production-ready React Native iOS module that exposes Apple's 
 ## Component Guide
 
 ### Materials & Containers
+
 - `NativeMaterialView` - UIVisualEffectView with system blur materials
 - `NativeGroupedContainer` - System grouped background containers
 - `NativeCardContainer` - Cards with continuous corner radius
 
 ### Controls
+
 - `NativeButton` - UIButton with system configurations
 - `NativeSwitch` - UISwitch toggle control
 - `NativeSegmentedControl` - UISegmentedControl picker
 - `NativeSearchBar` - UISearchBar for search input
 
 ### Navigation
+
 - `NativeNavigationBar` - UINavigationBar for top navigation
 - `NativeToolbar` - UIToolbar for bottom toolbars
 - `NativeTabBar` - UITabBar for tab navigation
@@ -72,15 +75,15 @@ cd ios && pod install
 ## Basic Usage
 
 ```jsx
-import { NativeMaterialView, NativeButton } from 'liquid-react';
+import { NativeMaterialView, NativeButton } from "liquid-react";
 
 function App() {
   return (
     <NativeMaterialView material="systemUltraThinMaterial">
-      <NativeButton 
-        title="Continue" 
+      <NativeButton
+        title="Continue"
         buttonStyle="filled"
-        onPress={() => console.log('Pressed')}
+        onPress={() => console.log("Pressed")}
       />
     </NativeMaterialView>
   );

@@ -1,13 +1,31 @@
 /**
- * Skeleton Loading Components
+ * @file
+ * Skeleton loading placeholder component.
  *
- * Animated shimmer skeleton placeholders that match the app's dark theme.
- * Built on react-native-reanimated + expo-linear-gradient (both already installed).
+ * Displays animated placeholder shapes while content
+ * is loading.
  *
- * Usage:
- *   <Skeleton width={120} height={16} />
- *   <Skeleton width="100%" height={180} borderRadius={12} />
- *   <Skeleton circle size={48} />
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useEffect } from "react";
 import { DimensionValue, StyleSheet, View, ViewStyle } from "react-native";
@@ -42,6 +60,11 @@ interface SkeletonProps {
   style?: ViewStyle;
 }
 
+/**
+ * Animated skeleton loading placeholder element.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function Skeleton({
   width = "100%",
   height = 16,
@@ -97,6 +120,10 @@ export function Skeleton({
 }
 
 // ─── Preset: Project Card ───────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for a project card.
+ * @returns The rendered component
+ */
 export function ProjectCardSkeleton() {
   return (
     <View style={presets.projectCard}>
@@ -110,6 +137,11 @@ export function ProjectCardSkeleton() {
   );
 }
 
+/**
+ * Skeleton placeholder for a list of project cards.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function ProjectListSkeleton({ count = 3 }: { count?: number }) {
   return (
     <View style={{ padding: 16 }}>
@@ -121,6 +153,10 @@ export function ProjectListSkeleton({ count = 3 }: { count?: number }) {
 }
 
 // ─── Preset: Overview Screen ────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for the overview screen layout.
+ * @returns The rendered component
+ */
 export function OverviewSkeleton() {
   return (
     <View style={presets.overviewContainer}>
@@ -172,6 +208,10 @@ export function OverviewSkeleton() {
 }
 
 // ─── Preset: Note Detail ────────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for the note detail view.
+ * @returns The rendered component
+ */
 export function NoteDetailSkeleton() {
   return (
     <View style={presets.noteDetailContainer}>
@@ -204,6 +244,11 @@ export function NoteDetailSkeleton() {
 }
 
 // ─── Preset: Artefact Grid ──────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for an artefact image grid.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function ArtefactGridSkeleton({ count = 4 }: { count?: number }) {
   return (
     <View style={presets.artefactGrid}>
@@ -224,6 +269,10 @@ export function ArtefactGridSkeleton({ count = 4 }: { count?: number }) {
 }
 
 // ─── Preset: Artefact Detail ────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for the artefact detail view.
+ * @returns The rendered component
+ */
 export function ArtefactDetailSkeleton() {
   return (
     <View style={presets.noteDetailContainer}>
@@ -278,6 +327,10 @@ export function ArtefactDetailSkeleton() {
 }
 
 // ─── Preset: Project Detail (tabs guard) ────────────────────────────────────
+/**
+ * Skeleton placeholder for the project detail view with tabs.
+ * @returns The rendered component
+ */
 export function ProjectDetailSkeleton() {
   return (
     <View style={presets.projectDetailContainer}>
@@ -309,6 +362,10 @@ export function ProjectDetailSkeleton() {
 }
 
 // ─── Preset: Activity Cards ──────────────────────────────────────────────────
+/**
+ * Skeleton placeholder for a single activity card.
+ * @returns The rendered component
+ */
 export function ActivityCardSkeleton() {
   return (
     <View style={presets.activityCard}>
@@ -322,6 +379,11 @@ export function ActivityCardSkeleton() {
   );
 }
 
+/**
+ * Skeleton placeholder for a list of activity cards.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function ActivityListSkeleton({ count = 4 }: { count?: number }) {
   return (
     <View>

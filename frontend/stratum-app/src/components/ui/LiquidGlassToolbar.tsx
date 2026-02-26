@@ -1,14 +1,30 @@
 /**
- * LiquidGlassToolbar
+ * @file
+ * Liquid Glass toolbar component.
  *
- * Maps to UIToolbar on iOS — toolbar items automatically adopt Liquid Glass
- * grouping on iOS 26+. Since React Native doesn't expose UIToolbar directly,
- * we use BlurView (UIVisualEffectView) to approximate the native glass
- * bar appearance.
+ * A toolbar with frosted glass visual effect.
  *
- * No @callstack/liquid-glass dependency — uses native UIKit rendering.
+ * MIT License
  *
- * Apple reference: UIToolbar — automatic glass grouping on iOS 26+.
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React from "react";
 import {
@@ -27,6 +43,7 @@ const isIOS = Platform.OS === "ios";
 
 /* ------------------------------------------------------------------ */
 
+/** Configuration for a single toolbar item. */
 export interface ToolbarItem {
   key: string;
   icon?: React.ReactNode;
@@ -35,6 +52,7 @@ export interface ToolbarItem {
   disabled?: boolean;
 }
 
+/** Props for the LiquidGlassToolbar component. */
 export interface LiquidGlassToolbarProps {
   items: ToolbarItem[];
   style?: StyleProp<ViewStyle>;
@@ -43,22 +61,40 @@ export interface LiquidGlassToolbarProps {
   showLabels?: boolean;
 }
 
-export function LiquidGlassToolbar({ items, style, haptic = true, showLabels = false }: LiquidGlassToolbarProps) {
+/**
+ * Toolbar with frosted glass visual effect.
+ * @param props - Component props
+ * @returns The rendered component
+ */
+export function LiquidGlassToolbar({
+  items,
+  style,
+  haptic = true,
+  showLabels = false,
+}: LiquidGlassToolbarProps) {
   const inner = (
     <View style={styles.row}>
       {items.map((item) => (
         <Pressable
           key={item.key}
           onPress={() => {
-            if (haptic && isIOS) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            if (haptic && isIOS)
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             item.onPress?.();
           }}
           disabled={item.disabled}
-          style={({ pressed }) => [styles.item, pressed && styles.itemPressed, item.disabled && styles.itemDisabled]}
+          style={({ pressed }) => [
+            styles.item,
+            pressed && styles.itemPressed,
+            item.disabled && styles.itemDisabled,
+          ]}
         >
           {item.icon}
           {showLabels && item.label && (
-            <Text style={[styles.label, item.disabled && styles.labelDisabled]} numberOfLines={1}>
+            <Text
+              style={[styles.label, item.disabled && styles.labelDisabled]}
+              numberOfLines={1}
+            >
               {item.label}
             </Text>
           )}
@@ -69,13 +105,19 @@ export function LiquidGlassToolbar({ items, style, haptic = true, showLabels = f
 
   if (isIOS) {
     return (
-      <BlurView intensity={30} tint="dark" style={[styles.container, styles.blurContainer, style]}>
+      <BlurView
+        intensity={30}
+        tint="dark"
+        style={[styles.container, styles.blurContainer, style]}
+      >
         {inner}
       </BlurView>
     );
   }
 
-  return <View style={[styles.container, styles.fallbackContainer, style]}>{inner}</View>;
+  return (
+    <View style={[styles.container, styles.fallbackContainer, style]}>{inner}</View>
+  );
 }
 
 /* ------------------------------------------------------------------ */

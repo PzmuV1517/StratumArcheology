@@ -1,7 +1,31 @@
 /**
- * Artefact Detail Screen
- * Restyled to match new-project / join-project design language
- * with iOS Liquid Glass support.
+ * @file
+ * Artefact detail screen.
+ *
+ * Displays detailed artefact information with QR code
+ * and associated media.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useEffect, useState, useCallback } from "react";
 import {
@@ -17,7 +41,6 @@ import {
   TextInput,
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
@@ -159,6 +182,7 @@ export default function ArtefactDetail() {
 
   useEffect(() => {
     if (id) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const load = async () => {
@@ -371,9 +395,7 @@ export default function ArtefactDetail() {
     <View style={s.container}>
       <Stack.Screen
         options={{
-          title: meta?.name
-            ? `${meta.name} #${meta.number ?? "—"}`
-            : "Artefact",
+          title: meta?.name ? `${meta.name} #${meta.number ?? "—"}` : "Artefact",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
           headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
@@ -464,7 +486,7 @@ export default function ArtefactDetail() {
               {noteFiles.map((n) => {
                 const isExpanded = expandedNotes.has(n.id);
                 const content = noteContents.get(n.id) || "";
-                const preview = content.substring(0, 100);
+                const _preview = content.substring(0, 100);
                 return (
                   <TouchableOpacity
                     key={n.id}
@@ -483,9 +505,7 @@ export default function ArtefactDetail() {
                       />
                     </View>
                     {isExpanded && content && (
-                      <Text style={s.noteBodyText}>
-                        {content}
-                      </Text>
+                      <Text style={s.noteBodyText}>{content}</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -579,8 +599,8 @@ export default function ArtefactDetail() {
           <GlassCard style={s.modalContent}>
             <Text style={s.modalTitle}>Delete Artefact</Text>
             <Text style={s.modalText}>
-              This will permanently delete this artefact and all its files and
-              notes. Type the artefact name to confirm.
+              This will permanently delete this artefact and all its files and notes.
+              Type the artefact name to confirm.
             </Text>
             <Text style={[s.modalText, { marginTop: 8 }]}>
               Artefact name:{" "}
@@ -610,9 +630,7 @@ export default function ArtefactDetail() {
                   {
                     flex: 1,
                     opacity:
-                      deleting || confirmName !== (meta?.name || "")
-                        ? 0.5
-                        : 1,
+                      deleting || confirmName !== (meta?.name || "") ? 0.5 : 1,
                   },
                 ]}
                 disabled={deleting || confirmName !== (meta?.name || "")}

@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project file gallery component.
+ *
+ * Displays project files in a grid or list layout with
+ * thumbnails and metadata.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
@@ -29,7 +58,7 @@ export default function FileGallery({
   projectId: string;
   onOpenItem: (node: FileNode) => void;
 }) {
-  const { width } = useWindowDimensions();
+  const { width: _width } = useWindowDimensions();
   const [mode, setMode] = useState<Mode>("day");
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -248,7 +277,7 @@ async function fetchAllProjectFiles(projectId: string): Promise<FileNode[]> {
         if (c.type === "folder") queue.push(c);
         else files.push(c);
       }
-    } catch (e) {
+    } catch (_e) {
       console.warn("Failed to list children for folder", folder?.id);
     }
   }

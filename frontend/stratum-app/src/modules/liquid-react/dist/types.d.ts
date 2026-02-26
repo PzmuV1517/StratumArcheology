@@ -39,11 +39,13 @@ export interface TabBarPressEvent {
 }
 export interface NativeMaterialViewProps extends ViewProps {
     material?: MaterialType;
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
     onPress?: BubblingEventHandler<{}>;
 }
 export interface NativeButtonProps extends ViewProps {
     title: string;
     buttonStyle?: ButtonStyle;
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
     onPress?: BubblingEventHandler<{}>;
 }
 export interface NativeSwitchProps extends ViewProps {
@@ -63,6 +65,7 @@ export interface NativeSearchBarProps extends ViewProps {
     text?: string;
     onChangeText?: BubblingEventHandler<SearchBarChangeEvent>;
     onSearchPress?: BubblingEventHandler<SearchBarChangeEvent>;
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
     onCancelPress?: BubblingEventHandler<{}>;
 }
 export interface NativeNavigationBarProps extends ViewProps {
@@ -78,6 +81,7 @@ export interface NativeToolbarButtonProps extends ViewProps {
     title?: string;
     systemItem?: ToolbarSystemItem;
     disabled?: boolean;
+    /* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
     onPress?: BubblingEventHandler<{}>;
 }
 export interface NativeToolbarMenuProps extends ViewProps {

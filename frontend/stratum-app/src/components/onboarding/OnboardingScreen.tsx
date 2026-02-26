@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Onboarding screen component.
+ *
+ * Full-screen onboarding tutorial page with illustrations
+ * and descriptive text.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React from "react";
 import { Platform, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Onboarding from "@blazejkustra/react-native-onboarding";
@@ -72,8 +101,8 @@ export const OnboardingScreen: React.FC<Props> = ({
           title: <Text style={introStyles.title}>Welcome to STRATUM</Text>,
           subtitle: (
             <Text style={introStyles.subtitle}>
-              Your all-in-one platform for archaeological excavation
-              management. Let&apos;s take a quick tour!
+              Your all-in-one platform for archaeological excavation management.
+              Let&apos;s take a quick tour!
             </Text>
           ),
           button: ({ onPressStart }) => (
@@ -90,8 +119,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           {
             label: "Step 1",
             title: "Getting Started",
-            description:
-              "Let's get you all caught up with STRATUM.",
+            description: "Let's get you all caught up with STRATUM.",
             buttonLabel: "Next",
             image: require("../../../assets/onboarding/1ProjectsPage.png"),
             position: "top",
@@ -108,8 +136,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           {
             label: "Step 3",
             title: "New Project",
-            description:
-              "For now we'll make a new project.",
+            description: "For now we'll make a new project.",
             buttonLabel: "Next",
             image: require("../../../assets/onboarding/3NewProjectModal.png"),
             position: "top",
@@ -207,8 +234,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           {
             label: "Step 14",
             title: "Map",
-            description:
-              "The map view lets you define the bounds of your app.",
+            description: "The map view lets you define the bounds of your app.",
             buttonLabel: "Next",
             image: require("../../../assets/onboarding/14Map.png"),
             position: "top",
@@ -234,8 +260,7 @@ export const OnboardingScreen: React.FC<Props> = ({
           {
             label: "Step 17",
             title: "File Button",
-            description:
-              "The file button lets you access the file menu.",
+            description: "The file button lets you access the file menu.",
             buttonLabel: "Next",
             image: require("../../../assets/onboarding/17FileButton.png"),
             position: "top",

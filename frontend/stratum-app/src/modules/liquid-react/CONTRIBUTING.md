@@ -13,6 +13,7 @@ If you want to contribute to Liquid-React, there are a few ways you can get invo
 ## Working on Issues
 
 To start work on an issue, you can follow these steps:
+
 1. Fork the repository and create a new branch for your work.
 2. Make a draft pull request to the main branch of the repository. This allows us to see your changes and provide feedback before you finalize your pull request.
 3. Commit your changes and push them to your forked repository.
@@ -22,16 +23,20 @@ To start work on an issue, you can follow these steps:
 
 When contributing to Liquid-React, please follow our style guidelines to ensure that your code is consistent with the rest of the library. This includes using clear and descriptive variable names, writing comments where necessary, and following the existing code structure.
 Style guide:
+
 - Use camelCase for variable and function names.
 - Use PascalCase for component names.
 - Write clear and concise comments to explain the purpose of your code.
 - All commits should be prefixed with the type of change in this format:
+
 ```txt
 [fix/feat/refactor/docs] Short description of the change
 ```
+
 - Use the present tense in commit messages (e.g., "Add new feature" instead of "Added new feature").
 - Keep commit messages concise and to the point, ideally under 50 characters for the subject line and 72 characters for the body.
 - Use eslint and prettier to ensure that your code is properly formatted and follows our style guidelines.
 
 ## Code of Conduct
+
 We expect all contributors to follow our code of conduct, which can be found in the CODE_OF_CONDUCT.md file in our repository. This code of conduct outlines our expectations for behavior when contributing to the project, and we take it very seriously. We want to create a welcoming and inclusive environment for all contributors, and we will not tolerate any form of harassment or discrimination.
