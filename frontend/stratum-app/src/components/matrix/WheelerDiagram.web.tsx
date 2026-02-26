@@ -264,64 +264,6 @@ function buildOccupancy(
   return grid;
 }
 
-/** Create placeholder data matching Wheeler (1964) style diagram. */
-function createPlaceholderData(): {
-  trenches: WheelerTrench[];
-  placements: WheelerContextPlacement[];
-  contexts: Map<string, WheelerGridContext>;
-} {
-  const trenches: WheelerTrench[] = [
-    { id: "A", label: "Section A", order: 0 },
-    { id: "B", label: "Section B", order: 1 },
-    { id: "C", label: "Section C", order: 2 },
-    { id: "K", label: "Sequence K", order: 3 },
-  ];
-  const placements: WheelerContextPlacement[] = [
-    { contextId: "K1", trenchIds: ["K"], rowStart: 0, rowEnd: 0 },
-    { contextId: "A1", trenchIds: ["A", "B"], rowStart: 1, rowEnd: 1 },
-    { contextId: "K2", trenchIds: ["K"], rowStart: 1, rowEnd: 1 },
-    { contextId: "A2", trenchIds: ["A", "B"], rowStart: 2, rowEnd: 2 },
-    { contextId: "K3", trenchIds: ["K"], rowStart: 2, rowEnd: 2 },
-    { contextId: "A3", trenchIds: ["A", "B", "C"], rowStart: 3, rowEnd: 3 },
-    { contextId: "K4", trenchIds: ["K"], rowStart: 3, rowEnd: 3 },
-    { contextId: "A4", trenchIds: ["B", "C"], rowStart: 4, rowEnd: 4 },
-    { contextId: "K5", trenchIds: ["K"], rowStart: 4, rowEnd: 4 },
-    { contextId: "A5", trenchIds: ["C"], rowStart: 5, rowEnd: 5 },
-    { contextId: "K6", trenchIds: ["K"], rowStart: 5, rowEnd: 5 },
-    { contextId: "B1", trenchIds: ["A", "B", "C", "K"], rowStart: 6, rowEnd: 6 },
-    { contextId: "B2", trenchIds: ["A", "B"], rowStart: 7, rowEnd: 7 },
-    { contextId: "K8", trenchIds: ["K"], rowStart: 7, rowEnd: 7 },
-    { contextId: "B3", trenchIds: ["A"], rowStart: 8, rowEnd: 8 },
-    { contextId: "K9", trenchIds: ["K"], rowStart: 8, rowEnd: 8 },
-  ];
-  const contexts = new Map<string, WheelerGridContext>([
-    ["K1", { id: "K1", type: "layer", description: "Basal unit" }],
-    ["A1", { id: "A1", type: "deposit", description: "Sequence A – Unit 1" }],
-    ["K2", { id: "K2", type: "layer", description: "Continuity surface" }],
-    ["A2", { id: "A2", type: "deposit", description: "Sequence A – Unit 2" }],
-    ["K3", { id: "K3", type: "layer", description: "Continuity surface" }],
-    ["A3", { id: "A3", type: "deposit", description: "Sequence A – Unit 3" }],
-    ["K4", { id: "K4", type: "layer", description: "Continuity surface" }],
-    ["A4", { id: "A4", type: "deposit", description: "Sequence A – Unit 4" }],
-    ["K5", { id: "K5", type: "layer", description: "Continuity surface" }],
-    ["A5", { id: "A5", type: "fill", description: "Sequence A – Unit 5" }],
-    ["K6", { id: "K6", type: "layer", description: "Continuity surface" }],
-    [
-      "B1",
-      {
-        id: "B1",
-        type: "structure",
-        description: "Sequence B – Unit 1 (unconformity)",
-      },
-    ],
-    ["B2", { id: "B2", type: "deposit", description: "Sequence B – Unit 2" }],
-    ["K8", { id: "K8", type: "layer", description: "Continuity surface" }],
-    ["B3", { id: "B3", type: "deposit", description: "Sequence B – Unit 3" }],
-    ["K9", { id: "K9", type: "layer", description: "Continuity surface" }],
-  ]);
-  return { trenches, placements, contexts };
-}
-
 /* ────────────── Help walkthrough steps ────────────── */
 
 interface HelpStep {
@@ -428,28 +370,22 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   // Ref for scrollable SVG container
   const svgContainerRef = useRef<HTMLDivElement>(null);
 
-  // Effective data
-  const isPlaceholder = data.trenches.length === 0 && data.placements.length === 0;
-  const placeholder = useMemo(() => createPlaceholderData(), []);
-  const effectiveTrenches = isPlaceholder ? placeholder.trenches : data.trenches;
-  const effectivePlacements = isPlaceholder
-    ? placeholder.placements
-    : data.placements;
-  const effectiveContexts = isPlaceholder ? placeholder.contexts : contexts;
+  // View mode toggle: edit (grid) vs visual (Wheeler diagram)
+  const [viewMode, setViewMode] = useState<"edit" | "visual">("edit");
 
   const totalRows = useMemo(() => {
-    if (effectivePlacements.length === 0) return 6;
-    return Math.max(...effectivePlacements.map((p) => p.rowEnd)) + 1;
-  }, [effectivePlacements]);
+    if (data.placements.length === 0) return 6;
+    return Math.max(...data.placements.map((p) => p.rowEnd)) + 1;
+  }, [data.placements]);
 
   const sortedTrenches = useMemo(
-    () => [...effectiveTrenches].sort((a, b) => a.order - b.order),
-    [effectiveTrenches],
+    () => [...data.trenches].sort((a, b) => a.order - b.order),
+    [data.trenches],
   );
 
   const occupancy = useMemo(
-    () => buildOccupancy(sortedTrenches, effectivePlacements, totalRows),
-    [sortedTrenches, effectivePlacements, totalRows],
+    () => buildOccupancy(sortedTrenches, data.placements, totalRows),
+    [sortedTrenches, data.placements, totalRows],
   );
 
   const svgWidth = AXIS_LABEL_W + sortedTrenches.length * CELL_W + 20;
@@ -569,10 +505,10 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   const getColor = useCallback(
     (contextId: string): string => {
-      const ctx = effectiveContexts.get(contextId);
+      const ctx = contexts.get(contextId);
       return TYPE_COLORS[ctx?.type ?? "layer"] ?? TYPE_COLORS.layer;
     },
-    [effectiveContexts],
+    [contexts],
   );
 
   /* ── Help walkthrough ── */
@@ -628,6 +564,569 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     return result;
   }, [occupancy, totalRows]);
 
+  /* ──────────── Visual Mode: Wheeler 1964-style Renderer ──────────── */
+
+  const renderVisualView = () => {
+    const cols = sortedTrenches.length;
+    if (cols === 0) return null;
+
+    // Layout constants — the diagram spans a continuous coordinate space
+    const PAD_L = 100; // left margin for Y-axis labels
+    const PAD_R = 60;
+    const PAD_T = 56; // top margin for X-axis labels
+    const PAD_B = 50;
+    // Each trench column = a proportional slice of B (horizontal distance)
+    const COL_W = 160;
+    const graphW = cols * COL_W;
+    // Each row = a proportional time slice
+    const ROW_H = 70;
+    const graphH = totalRows * ROW_H;
+    const totalW = PAD_L + graphW + PAD_R;
+    const totalH = PAD_T + graphH + PAD_B;
+
+    // Helpers: map (col, row) to SVG coordinates
+    // row 0 = oldest → bottom; row N-1 = youngest → top (inverted Y)
+    const xOf = (col: number) => PAD_L + col * COL_W;
+    const yOf = (row: number) => PAD_T + (totalRows - 1 - row) * ROW_H;
+
+    /* ── Build row extents: per-row leftmost/rightmost occupied column ── */
+    interface RowExtent {
+      left: number;
+      right: number;
+    }
+    const rowExts: RowExtent[] = [];
+    for (let r = 0; r < totalRows; r++) {
+      let left = -1;
+      let right = -1;
+      for (let c = 0; c < cols; c++) {
+        if (occupancy[r][c] !== null) {
+          if (left === -1) left = c;
+          right = c;
+        }
+      }
+      rowExts.push({ left, right });
+    }
+
+    /* ── Group contiguous occupied rows into "sequences" ──
+     * A sequence is a run of rows where at least one column is occupied,
+     * separated by empty rows (hiatuses). */
+    interface Sequence {
+      rowStart: number; // oldest row (inclusive)
+      rowEnd: number; // youngest row (inclusive)
+      extents: RowExtent[]; // per-row left/right within this sequence
+    }
+    const sequences: Sequence[] = [];
+    let seqStart = -1;
+    for (let r = 0; r < totalRows; r++) {
+      if (rowExts[r].left >= 0) {
+        if (seqStart < 0) seqStart = r;
+      } else if (seqStart >= 0) {
+        sequences.push({
+          rowStart: seqStart,
+          rowEnd: r - 1,
+          extents: rowExts.slice(seqStart, r),
+        });
+        seqStart = -1;
+      }
+    }
+    if (seqStart >= 0) {
+      sequences.push({
+        rowStart: seqStart,
+        rowEnd: totalRows - 1,
+        extents: rowExts.slice(seqStart, totalRows),
+      });
+    }
+
+    /* ── Build a closed polygon for each sequence ──
+     * Walk left boundary bottom→top, then right boundary top→bottom.
+     * Where the extent changes between rows, the boundary is DIAGONAL
+     * (the characteristic Wheeler sloping line). */
+    const buildSequencePolygon = (seq: Sequence): string => {
+      const pts: string[] = [];
+      // Left boundary: bottom to top
+      for (let i = 0; i < seq.extents.length; i++) {
+        const r = seq.rowStart + i;
+        const ext = seq.extents[i];
+        const x = xOf(ext.left);
+        // bottom edge of this row
+        pts.push(`${x},${yOf(r) + ROW_H}`);
+        // top edge of this row (if different from next row's bottom)
+        pts.push(`${x},${yOf(r)}`);
+      }
+      // Right boundary: top to bottom
+      for (let i = seq.extents.length - 1; i >= 0; i--) {
+        const r = seq.rowStart + i;
+        const ext = seq.extents[i];
+        const x = xOf(ext.right + 1);
+        pts.push(`${x},${yOf(r)}`);
+        pts.push(`${x},${yOf(r) + ROW_H}`);
+      }
+      return pts.join(" ");
+    };
+
+    /* ── Identify hiatus rows (empty rows between sequences) ── */
+    const hiatusRanges: { start: number; end: number }[] = [];
+    for (let i = 0; i < sequences.length - 1; i++) {
+      const gapStart = sequences[i].rowEnd + 1;
+      const gapEnd = sequences[i + 1].rowStart - 1;
+      if (gapStart <= gapEnd) {
+        hiatusRanges.push({ start: gapStart, end: gapEnd });
+      }
+    }
+
+    /* ── Degradation vacuity: within a sequence, areas where deposition
+     * stopped laterally (left side contracts upward). We detect this
+     * when leftExtent increases going up, forming a triangular void. ── */
+    interface VacuityPoly {
+      points: string;
+      seqIdx: number;
+    }
+    const vacuityPolys: VacuityPoly[] = [];
+    sequences.forEach((seq, si) => {
+      for (let i = 1; i < seq.extents.length; i++) {
+        const prev = seq.extents[i - 1];
+        const curr = seq.extents[i];
+        const rPrev = seq.rowStart + i - 1;
+        const rCurr = seq.rowStart + i;
+        // Left vacuity: deposition retreated from left
+        if (curr.left > prev.left) {
+          const pts = [
+            `${xOf(prev.left)},${yOf(rPrev)}`,
+            `${xOf(curr.left)},${yOf(rCurr)}`,
+            `${xOf(curr.left)},${yOf(rCurr) + ROW_H}`,
+            `${xOf(prev.left)},${yOf(rPrev)}`,
+          ].join(" ");
+          vacuityPolys.push({ points: pts, seqIdx: si });
+        }
+        // Right vacuity: deposition retreated from right
+        if (curr.right < prev.right) {
+          const pts = [
+            `${xOf(prev.right + 1)},${yOf(rPrev)}`,
+            `${xOf(curr.right + 1)},${yOf(rCurr)}`,
+            `${xOf(curr.right + 1)},${yOf(rCurr) + ROW_H}`,
+            `${xOf(prev.right + 1)},${yOf(rPrev)}`,
+          ].join(" ");
+          vacuityPolys.push({ points: pts, seqIdx: si });
+        }
+      }
+    });
+
+    /* ── Collect diagonal boundary line segments ── */
+    interface BoundaryLine {
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      dashed?: boolean;
+    }
+    const boundaryLines: BoundaryLine[] = [];
+    sequences.forEach((seq) => {
+      for (let i = 1; i < seq.extents.length; i++) {
+        const prev = seq.extents[i - 1];
+        const curr = seq.extents[i];
+        const rPrev = seq.rowStart + i - 1;
+        const rCurr = seq.rowStart + i;
+        if (curr.left !== prev.left) {
+          boundaryLines.push({
+            x1: xOf(prev.left),
+            y1: yOf(rPrev),
+            x2: xOf(curr.left),
+            y2: yOf(rCurr),
+          });
+        }
+        if (curr.right !== prev.right) {
+          boundaryLines.push({
+            x1: xOf(prev.right + 1),
+            y1: yOf(rPrev),
+            x2: xOf(curr.right + 1),
+            y2: yOf(rCurr),
+          });
+        }
+      }
+    });
+
+    // Sequence colors (cycle through Stratum palette)
+    const SEQ_COLORS = [
+      "rgba(255,42,42,0.35)",
+      "rgba(42,130,255,0.35)",
+      "rgba(42,255,130,0.30)",
+      "rgba(200,130,255,0.30)",
+      "rgba(255,200,42,0.30)",
+    ];
+
+    return (
+      <svg
+        width={totalW}
+        height={totalH}
+        style={{ minWidth: totalW, minHeight: totalH }}
+      >
+        <defs>
+          {/* Cross-hatch for degradation vacuity */}
+          <pattern
+            id="w-vacuity-hatch"
+            patternUnits="userSpaceOnUse"
+            width={8}
+            height={8}
+            patternTransform="rotate(45)"
+          >
+            <line
+              x1={0}
+              y1={0}
+              x2={0}
+              y2={8}
+              stroke="rgba(255,255,255,0.10)"
+              strokeWidth={1}
+            />
+          </pattern>
+          {/* Diagonal hatch for lacuna/hiatus areas */}
+          <pattern
+            id="w-hiatus-hatch"
+            patternUnits="userSpaceOnUse"
+            width={10}
+            height={10}
+          >
+            <path
+              d="M0,10 L10,0 M-2,2 L2,-2 M8,12 L12,8"
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth={1}
+            />
+          </pattern>
+        </defs>
+
+        {/* ── Background ── */}
+        <rect x={PAD_L} y={PAD_T} width={graphW} height={graphH} fill="#0A0A0A" />
+
+        {/* Subtle horizontal time-lines */}
+        {Array.from({ length: totalRows + 1 }, (_, r) => (
+          <line
+            key={`tl-${r}`}
+            x1={PAD_L}
+            y1={PAD_T + r * ROW_H}
+            x2={PAD_L + graphW}
+            y2={PAD_T + r * ROW_H}
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth={0.5}
+            strokeDasharray="4,6"
+          />
+        ))}
+
+        {/* ── Sequence polygons (filled deposit areas) ── */}
+        {sequences.map((seq, si) => (
+          <polygon
+            key={`seq-${si}`}
+            points={buildSequencePolygon(seq)}
+            fill={SEQ_COLORS[si % SEQ_COLORS.length]}
+            stroke="rgba(255,255,255,0.18)"
+            strokeWidth={1}
+          />
+        ))}
+
+        {/* ── Hiatus zones ── */}
+        {hiatusRanges.map((h, hi) => {
+          const y1 = yOf(h.end);
+          const y2 = yOf(h.start) + ROW_H;
+          return (
+            <g key={`hz-${hi}`}>
+              <rect
+                x={PAD_L}
+                y={y1}
+                width={graphW}
+                height={y2 - y1}
+                fill="url(#w-hiatus-hatch)"
+              />
+              <line
+                x1={PAD_L}
+                y1={y1}
+                x2={PAD_L + graphW}
+                y2={y1}
+                stroke="#ffc107"
+                strokeWidth={1.5}
+                strokeDasharray="8,4"
+                opacity={0.5}
+              />
+              <line
+                x1={PAD_L}
+                y1={y2}
+                x2={PAD_L + graphW}
+                y2={y2}
+                stroke="#ffc107"
+                strokeWidth={1.5}
+                strokeDasharray="8,4"
+                opacity={0.5}
+              />
+              <text
+                x={PAD_L + 20}
+                y={(y1 + y2) / 2 + 4}
+                fill="#ffc107"
+                fontSize={12}
+                fontWeight={700}
+                fontFamily="'Inter', system-ui, sans-serif"
+                opacity={0.8}
+                letterSpacing={2}
+              >
+                HIATUS
+              </text>
+              <text
+                x={PAD_L + 20}
+                y={(y1 + y2) / 2 + 18}
+                fill="#ffc107"
+                fontSize={9}
+                fontFamily="'Inter', system-ui, sans-serif"
+                opacity={0.5}
+              >
+                (Nondeposition-erosion cyclic phase)
+              </text>
+            </g>
+          );
+        })}
+
+        {/* ── Degradation vacuity cross-hatch ── */}
+        {vacuityPolys.map((vp, vi) => (
+          <g key={`vac-${vi}`}>
+            <polygon points={vp.points} fill="url(#w-vacuity-hatch)" stroke="none" />
+            {/* Dashed outline for the vacuity */}
+            <polygon
+              points={vp.points}
+              fill="none"
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1}
+              strokeDasharray="4,4"
+            />
+          </g>
+        ))}
+
+        {/* ── Diagonal boundary lines ── */}
+        {boundaryLines.map((bl, i) => (
+          <line
+            key={`bl-${i}`}
+            x1={bl.x1}
+            y1={bl.y1}
+            x2={bl.x2}
+            y2={bl.y2}
+            stroke="#FF2A2A"
+            strokeWidth={2}
+            opacity={0.7}
+          />
+        ))}
+
+        {/* ── Context labels inside the deposit areas ── */}
+        {data.placements.map((p) => {
+          const indices = p.trenchIds
+            .map((tid) => sortedTrenches.findIndex((t) => t.id === tid))
+            .filter((i) => i >= 0)
+            .sort((a, b) => a - b);
+          if (indices.length === 0) return null;
+          const leftCol = indices[0];
+          const rightCol = indices[indices.length - 1];
+          const cx = (xOf(leftCol) + xOf(rightCol + 1)) / 2;
+          const cy = (yOf(p.rowEnd) + yOf(p.rowStart) + ROW_H) / 2;
+          const ctx = contexts.get(p.contextId);
+          return (
+            <g
+              key={`cl-${p.contextId}`}
+              onMouseMove={(e) => handleCellHover(e, p)}
+              onMouseLeave={handleCellLeave}
+              style={{ cursor: "pointer" }}
+            >
+              <text
+                x={cx}
+                y={cy}
+                textAnchor="middle"
+                fill="#F5F5F5"
+                fontSize={13}
+                fontWeight={700}
+                fontFamily="'Inter', system-ui, sans-serif"
+              >
+                {p.contextId}
+              </text>
+              {ctx && (
+                <text
+                  x={cx}
+                  y={cy + 14}
+                  textAnchor="middle"
+                  fill="rgba(255,255,255,0.5)"
+                  fontSize={9}
+                  fontFamily="'Inter', system-ui, sans-serif"
+                >
+                  {ctx.type}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* ── Sequence labels ── */}
+        {sequences.map((seq, si) => {
+          // Place label near the widest row of the sequence
+          let widest = 0;
+          let widestRow = 0;
+          seq.extents.forEach((ext, i) => {
+            const w = ext.right - ext.left;
+            if (w > widest) {
+              widest = w;
+              widestRow = i;
+            }
+          });
+          const r = seq.rowStart + widestRow;
+          const ext = seq.extents[widestRow];
+          const cx = (xOf(ext.left) + xOf(ext.right + 1)) / 2;
+          const cy = yOf(r) + ROW_H / 2;
+          return (
+            <g key={`sl-${si}`}>
+              <text
+                x={cx}
+                y={cy + 28}
+                textAnchor="middle"
+                fill="rgba(255,255,255,0.25)"
+                fontSize={10}
+                fontWeight={600}
+                fontFamily="'Inter', system-ui, sans-serif"
+                letterSpacing={1.5}
+              >
+                SEQUENCE {String.fromCharCode(65 + si)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* ── Lacuna annotation on empty areas outside deposit polygons ── */}
+        {sequences.map((seq, si) => {
+          // Find max extent of the sequence
+          let maxRight = 0;
+          let minLeft = cols;
+          seq.extents.forEach((ext) => {
+            if (ext.left < minLeft) minLeft = ext.left;
+            if (ext.right > maxRight) maxRight = ext.right;
+          });
+          const annotations: React.ReactNode[] = [];
+          seq.extents.forEach((ext, i) => {
+            const r = seq.rowStart + i;
+            // Left lacuna
+            if (ext.left > minLeft) {
+              annotations.push(
+                <text
+                  key={`lac-l-${si}-${i}`}
+                  x={xOf(minLeft) + 12}
+                  y={yOf(r) + ROW_H / 2 + 4}
+                  fill="rgba(255,255,255,0.15)"
+                  fontSize={8}
+                  fontWeight={600}
+                  fontFamily="'Inter', system-ui, sans-serif"
+                  letterSpacing={1}
+                >
+                  LACUNA
+                </text>,
+              );
+            }
+          });
+          if (annotations.length === 0) return null;
+          return <g key={`lac-grp-${si}`}>{annotations}</g>;
+        })}
+
+        {/* ── Arrows along baselevel transit (left diagonal boundaries) ── */}
+        {boundaryLines.length > 0 && (
+          <defs>
+            <marker
+              id="w-arrow"
+              markerWidth={8}
+              markerHeight={6}
+              refX={8}
+              refY={3}
+              orient="auto"
+            >
+              <path d="M0,0 L8,3 L0,6" fill="#FF2A2A" opacity={0.6} />
+            </marker>
+          </defs>
+        )}
+
+        {/* ── X-axis: section/trench labels ── */}
+        {sortedTrenches.map((trench, i) => (
+          <g key={`xl-${trench.id}`}>
+            <text
+              x={xOf(i) + COL_W / 2}
+              y={PAD_T - 18}
+              textAnchor="middle"
+              fill="#EAEAEA"
+              fontSize={13}
+              fontWeight={600}
+              fontFamily="'Inter', system-ui, sans-serif"
+            >
+              {trench.label}
+            </text>
+            <line
+              x1={xOf(i) + COL_W / 2}
+              y1={PAD_T - 10}
+              x2={xOf(i) + COL_W / 2}
+              y2={PAD_T}
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1}
+            />
+          </g>
+        ))}
+
+        {/* ── Y-axis: time labels ── */}
+        {Array.from({ length: totalRows }, (_, r) => (
+          <g key={`yl-${r}`}>
+            <text
+              x={PAD_L - 16}
+              y={yOf(r) + ROW_H / 2 + 4}
+              textAnchor="end"
+              fill="#888"
+              fontSize={11}
+              fontFamily="'Inter', system-ui, sans-serif"
+            >
+              t{r + 1}
+            </text>
+            <line
+              x1={PAD_L - 6}
+              y1={yOf(r) + ROW_H / 2}
+              x2={PAD_L}
+              y2={yOf(r) + ROW_H / 2}
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1}
+            />
+          </g>
+        ))}
+
+        {/* ── Axis titles ── */}
+        <text
+          x={20}
+          y={PAD_T + graphH / 2}
+          textAnchor="middle"
+          fill="#666"
+          fontSize={11}
+          fontWeight={600}
+          fontFamily="'Inter', system-ui, sans-serif"
+          transform={`rotate(-90, 20, ${PAD_T + graphH / 2})`}
+        >
+          Time →
+        </text>
+        <text
+          x={PAD_L + graphW / 2}
+          y={totalH - 12}
+          textAnchor="middle"
+          fill="#666"
+          fontSize={11}
+          fontWeight={600}
+          fontFamily="'Inter', system-ui, sans-serif"
+        >
+          B (Horizontal Distance)
+        </text>
+
+        {/* ── Graph border ── */}
+        <rect
+          x={PAD_L}
+          y={PAD_T}
+          width={graphW}
+          height={graphH}
+          fill="none"
+          stroke="rgba(255,255,255,0.15)"
+          strokeWidth={1}
+        />
+      </svg>
+    );
+  };
+
   /* ──────────────────── Rendering ──────────────────── */
 
   if (loading) {
@@ -659,20 +1158,19 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
         <span style={{ fontWeight: 700, fontSize: 14, color: "#F5F5F5" }}>
           Wheeler Diagram
         </span>
-        {isPlaceholder && (
-          <span
-            style={{
-              fontSize: 11,
-              color: "#ffc107",
-              backgroundColor: "rgba(255,193,7,0.12)",
-              padding: "2px 8px",
-              borderRadius: 4,
-            }}
-          >
-            Sample Data (Wheeler 1964)
-          </span>
-        )}
-        {canEdit && (
+        <button
+          type="button"
+          style={{
+            ...buttonStyle,
+            backgroundColor: viewMode === "visual" ? "#FF2A2A" : "#222222",
+            borderColor:
+              viewMode === "visual" ? "#FF2A2A" : "rgba(255,255,255,0.15)",
+          }}
+          onClick={() => setViewMode((m) => (m === "edit" ? "visual" : "edit"))}
+        >
+          {viewMode === "visual" ? "◀ Edit" : "📊 Visual"}
+        </button>
+        {canEdit && viewMode === "edit" && (
           <>
             <button
               type="button"
@@ -753,261 +1251,293 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
         <div style={statusBarStyle}>
           {dirty && <span style={{ color: "#ffc107" }}>Unsaved changes</span>}
           <span>
-            {sortedTrenches.length} trenches · {effectivePlacements.length} contexts
-            · {totalRows} rows
+            {sortedTrenches.length} trenches · {data.placements.length} contexts ·{" "}
+            {totalRows} rows
           </span>
         </div>
       </div>
 
-      {/* ─── SVG Grid ─── */}
-      <div style={svgContainerStyle} ref={svgContainerRef}>
-        <svg
-          width={svgWidth}
-          height={svgHeight}
-          style={{ minWidth: svgWidth, minHeight: svgHeight }}
-        >
-          <defs>
-            {/* Hiatus cross-hatch pattern */}
-            <pattern
-              id="hiatus-pattern"
-              patternUnits="userSpaceOnUse"
-              width={8}
-              height={8}
-            >
-              <path
-                d="M0,8 L8,0 M-2,2 L2,-2 M6,10 L10,6"
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth={1}
-              />
-            </pattern>
-            {/* Unconformity wavy pattern */}
-            <pattern
-              id="unconformity-pattern"
-              patternUnits="userSpaceOnUse"
-              width={24}
-              height={8}
-            >
-              <path
-                d="M0,4 Q6,0 12,4 T24,4"
-                stroke="#ffc107"
-                strokeWidth={2}
-                fill="none"
-                opacity={0.6}
-              />
-            </pattern>
-          </defs>
+      {/* ─── Diagram Content ─── */}
+      {viewMode === "visual" ? (
+        <div style={svgContainerStyle} ref={svgContainerRef}>
+          {data.trenches.length === 0 ? (
+            <div style={emptyStateStyle}>
+              <span style={{ fontSize: 40 }}>📊</span>
+              <span>No data to visualize yet</span>
+              <span style={{ fontSize: 12, color: "#666" }}>
+                Switch to Edit mode and add trenches & contexts first
+              </span>
+            </div>
+          ) : (
+            renderVisualView()
+          )}
+        </div>
+      ) : data.trenches.length === 0 ? (
+        <div style={{ ...emptyStateStyle, flex: 1 }}>
+          <span style={{ fontSize: 40 }}>📐</span>
+          <span>Add a trench to get started</span>
+          <span style={{ fontSize: 12, color: "#666" }}>
+            Use the + Trench button above, then add contexts
+          </span>
+        </div>
+      ) : (
+        <div style={svgContainerStyle} ref={svgContainerRef}>
+          <svg
+            width={svgWidth}
+            height={svgHeight}
+            style={{ minWidth: svgWidth, minHeight: svgHeight }}
+          >
+            <defs>
+              {/* Hiatus cross-hatch pattern */}
+              <pattern
+                id="hiatus-pattern"
+                patternUnits="userSpaceOnUse"
+                width={8}
+                height={8}
+              >
+                <path
+                  d="M0,8 L8,0 M-2,2 L2,-2 M6,10 L10,6"
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth={1}
+                />
+              </pattern>
+              {/* Unconformity wavy pattern */}
+              <pattern
+                id="unconformity-pattern"
+                patternUnits="userSpaceOnUse"
+                width={24}
+                height={8}
+              >
+                <path
+                  d="M0,4 Q6,0 12,4 T24,4"
+                  stroke="#ffc107"
+                  strokeWidth={2}
+                  fill="none"
+                  opacity={0.6}
+                />
+              </pattern>
+            </defs>
 
-          {/* X-axis labels (trench IDs) with optional delete button */}
-          {sortedTrenches.map((trench, colIdx) => {
-            const tx = AXIS_LABEL_W + colIdx * CELL_W + CELL_W / 2;
-            return (
-              <g key={`x-${trench.id}`}>
+            {/* X-axis labels (trench IDs) with optional delete button */}
+            {sortedTrenches.map((trench, colIdx) => {
+              const tx = AXIS_LABEL_W + colIdx * CELL_W + CELL_W / 2;
+              return (
+                <g key={`x-${trench.id}`}>
+                  <text
+                    x={tx}
+                    y={AXIS_LABEL_H / 2 + 4}
+                    textAnchor="middle"
+                    fill="#EAEAEA"
+                    fontSize={12}
+                    fontWeight={600}
+                    fontFamily="'Inter', system-ui, sans-serif"
+                  >
+                    {trench.label}
+                  </text>
+                  {canEdit && (
+                    <text
+                      x={tx + CELL_W / 2 - 12}
+                      y={AXIS_LABEL_H / 2 + 5}
+                      textAnchor="middle"
+                      fill="#666"
+                      fontSize={11}
+                      fontFamily="'Inter', system-ui, sans-serif"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Remove trench "${trench.label}"? This will also remove it from all placements.`,
+                          )
+                        ) {
+                          removeTrench(trench.id);
+                        }
+                      }}
+                    >
+                      ✕
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Y-axis labels (time slices, oldest at bottom) */}
+            {Array.from({ length: totalRows }, (_, rowIdx) => {
+              const displayRow = rowIdx + 1;
+              const yCenter =
+                AXIS_LABEL_H +
+                (totalRows - 1 - rowIdx) * CELL_H +
+                CELL_H / 2 +
+                4;
+              return (
                 <text
-                  x={tx}
-                  y={AXIS_LABEL_H / 2 + 4}
-                  textAnchor="middle"
-                  fill="#EAEAEA"
-                  fontSize={12}
-                  fontWeight={600}
+                  key={`y-${rowIdx}`}
+                  x={AXIS_LABEL_W - 10}
+                  y={yCenter}
+                  textAnchor="end"
+                  fill="#888"
+                  fontSize={11}
                   fontFamily="'Inter', system-ui, sans-serif"
                 >
-                  {trench.label}
+                  t{displayRow}
                 </text>
-                {canEdit && !isPlaceholder && (
-                  <text
-                    x={tx + CELL_W / 2 - 12}
-                    y={AXIS_LABEL_H / 2 + 5}
-                    textAnchor="middle"
-                    fill="#666"
-                    fontSize={11}
-                    fontFamily="'Inter', system-ui, sans-serif"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Remove trench "${trench.label}"? This will also remove it from all placements.`,
-                        )
-                      ) {
-                        removeTrench(trench.id);
-                      }
-                    }}
-                  >
-                    ✕
-                  </text>
-                )}
-              </g>
-            );
-          })}
+              );
+            })}
 
-          {/* Y-axis labels (time slices, oldest at bottom) */}
-          {Array.from({ length: totalRows }, (_, rowIdx) => {
-            const displayRow = totalRows - rowIdx;
-            const yCenter = AXIS_LABEL_H + rowIdx * CELL_H + CELL_H / 2 + 4;
-            return (
-              <text
-                key={`y-${rowIdx}`}
-                x={AXIS_LABEL_W - 10}
-                y={yCenter}
-                textAnchor="end"
-                fill="#888"
-                fontSize={11}
-                fontFamily="'Inter', system-ui, sans-serif"
-              >
-                t{displayRow}
-              </text>
-            );
-          })}
+            {/* Grid cells */}
+            {Array.from({ length: totalRows }, (_, rowIdx) =>
+              sortedTrenches.map((trench, colIdx) => {
+                const placement = occupancy[rowIdx][colIdx];
+                const x = AXIS_LABEL_W + colIdx * CELL_W;
+                const y =
+                  AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
 
-          {/* Grid cells */}
-          {Array.from({ length: totalRows }, (_, rowIdx) =>
-            sortedTrenches.map((trench, colIdx) => {
-              const placement = occupancy[rowIdx][colIdx];
-              const x = AXIS_LABEL_W + colIdx * CELL_W;
-              const y = AXIS_LABEL_H + rowIdx * CELL_H;
+                if (placement) {
+                  const isTopLeftCol =
+                    colIdx === 0 ||
+                    !placement.trenchIds.includes(
+                      sortedTrenches[colIdx - 1]?.id ?? "",
+                    );
+                  const isTopRow = rowIdx === placement.rowEnd;
 
-              if (placement) {
-                const isTopLeftCol =
-                  colIdx === 0 ||
-                  !placement.trenchIds.includes(
-                    sortedTrenches[colIdx - 1]?.id ?? "",
+                  const color = getColor(placement.contextId);
+                  const ctx = contexts.get(placement.contextId);
+
+                  return (
+                    <g
+                      key={`cell-${rowIdx}-${colIdx}`}
+                      onMouseMove={(e) => handleCellHover(e, placement)}
+                      onMouseLeave={handleCellLeave}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        if (canEdit) {
+                          if (
+                            window.confirm(
+                              `Remove context "${placement.contextId}"?`,
+                            )
+                          ) {
+                            removePlacement(placement.contextId);
+                          }
+                        }
+                      }}
+                    >
+                      <rect
+                        x={x + 1}
+                        y={y + 1}
+                        width={CELL_W - 2}
+                        height={CELL_H - 2}
+                        rx={4}
+                        fill={color}
+                        opacity={0.85}
+                        stroke="rgba(255,255,255,0.2)"
+                        strokeWidth={1}
+                      />
+                      {isTopLeftCol && isTopRow && (
+                        <>
+                          <text
+                            x={x + CELL_W / 2}
+                            y={y + CELL_H / 2 - 4}
+                            textAnchor="middle"
+                            fill="#FFFFFF"
+                            fontSize={13}
+                            fontWeight={700}
+                            fontFamily="'Inter', system-ui, sans-serif"
+                          >
+                            {placement.contextId}
+                          </text>
+                          {ctx && (
+                            <text
+                              x={x + CELL_W / 2}
+                              y={y + CELL_H / 2 + 12}
+                              textAnchor="middle"
+                              fill="rgba(255,255,255,0.8)"
+                              fontSize={10}
+                              fontFamily="'Inter', system-ui, sans-serif"
+                            >
+                              {ctx.type}
+                            </text>
+                          )}
+                        </>
+                      )}
+                    </g>
                   );
-                const isTopRow = rowIdx === placement.rowStart;
-
-                const color = getColor(placement.contextId);
-                const ctx = effectiveContexts.get(placement.contextId);
+                }
 
                 return (
-                  <g
-                    key={`cell-${rowIdx}-${colIdx}`}
-                    onMouseMove={(e) => handleCellHover(e, placement)}
-                    onMouseLeave={handleCellLeave}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      if (canEdit && !isPlaceholder) {
-                        if (
-                          window.confirm(`Remove context "${placement.contextId}"?`)
-                        ) {
-                          removePlacement(placement.contextId);
-                        }
-                      }
-                    }}
-                  >
+                  <g key={`cell-${rowIdx}-${colIdx}`}>
                     <rect
                       x={x + 1}
                       y={y + 1}
                       width={CELL_W - 2}
                       height={CELL_H - 2}
                       rx={4}
-                      fill={color}
-                      opacity={0.85}
-                      stroke="rgba(255,255,255,0.2)"
+                      fill="url(#hiatus-pattern)"
+                      stroke="rgba(255,255,255,0.05)"
                       strokeWidth={1}
                     />
-                    {isTopLeftCol && isTopRow && (
-                      <>
-                        <text
-                          x={x + CELL_W / 2}
-                          y={y + CELL_H / 2 - 4}
-                          textAnchor="middle"
-                          fill="#FFFFFF"
-                          fontSize={13}
-                          fontWeight={700}
-                          fontFamily="'Inter', system-ui, sans-serif"
-                        >
-                          {placement.contextId}
-                        </text>
-                        {ctx && (
-                          <text
-                            x={x + CELL_W / 2}
-                            y={y + CELL_H / 2 + 12}
-                            textAnchor="middle"
-                            fill="rgba(255,255,255,0.8)"
-                            fontSize={10}
-                            fontFamily="'Inter', system-ui, sans-serif"
-                          >
-                            {ctx.type}
-                          </text>
-                        )}
-                      </>
-                    )}
                   </g>
                 );
-              }
+              }),
+            )}
 
+            {/* Unconformity wavy lines */}
+            {unconformityRows.map((rowIdx) => {
+              const y =
+                AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
+              const width = sortedTrenches.length * CELL_W;
               return (
-                <g key={`cell-${rowIdx}-${colIdx}`}>
+                <g key={`unconf-${rowIdx}`}>
                   <rect
-                    x={x + 1}
-                    y={y + 1}
-                    width={CELL_W - 2}
-                    height={CELL_H - 2}
-                    rx={4}
-                    fill="url(#hiatus-pattern)"
-                    stroke="rgba(255,255,255,0.05)"
-                    strokeWidth={1}
+                    x={AXIS_LABEL_W}
+                    y={y}
+                    width={width}
+                    height={CELL_H}
+                    fill="url(#unconformity-pattern)"
+                    opacity={0.5}
                   />
+                  <text
+                    x={AXIS_LABEL_W + width / 2}
+                    y={y + CELL_H / 2 + 4}
+                    textAnchor="middle"
+                    fill="#ffc107"
+                    fontSize={10}
+                    fontWeight={600}
+                    fontFamily="'Inter', system-ui, sans-serif"
+                    opacity={0.8}
+                  >
+                    Unconformity
+                  </text>
                 </g>
               );
-            }),
-          )}
+            })}
 
-          {/* Unconformity wavy lines */}
-          {unconformityRows.map((rowIdx) => {
-            const y = AXIS_LABEL_H + rowIdx * CELL_H;
-            const width = sortedTrenches.length * CELL_W;
-            return (
-              <g key={`unconf-${rowIdx}`}>
-                <rect
-                  x={AXIS_LABEL_W}
-                  y={y}
-                  width={width}
-                  height={CELL_H}
-                  fill="url(#unconformity-pattern)"
-                  opacity={0.5}
-                />
-                <text
-                  x={AXIS_LABEL_W + width / 2}
-                  y={y + CELL_H / 2 + 4}
-                  textAnchor="middle"
-                  fill="#ffc107"
-                  fontSize={10}
-                  fontWeight={600}
-                  fontFamily="'Inter', system-ui, sans-serif"
-                  opacity={0.8}
-                >
-                  Unconformity
-                </text>
-              </g>
-            );
-          })}
+            {/* Grid outline */}
+            <rect
+              x={AXIS_LABEL_W}
+              y={AXIS_LABEL_H}
+              width={sortedTrenches.length * CELL_W}
+              height={totalRows * CELL_H}
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth={1}
+              rx={4}
+            />
 
-          {/* Grid outline */}
-          <rect
-            x={AXIS_LABEL_W}
-            y={AXIS_LABEL_H}
-            width={sortedTrenches.length * CELL_W}
-            height={totalRows * CELL_H}
-            fill="none"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth={1}
-            rx={4}
-          />
-
-          {/* Y-axis title */}
-          <text
-            x={14}
-            y={AXIS_LABEL_H + (totalRows * CELL_H) / 2}
-            textAnchor="middle"
-            fill="#888"
-            fontSize={11}
-            fontWeight={600}
-            fontFamily="'Inter', system-ui, sans-serif"
-            transform={`rotate(-90, 14, ${AXIS_LABEL_H + (totalRows * CELL_H) / 2})`}
-          >
-            Time →
-          </text>
-        </svg>
-      </div>
+            {/* Y-axis title */}
+            <text
+              x={14}
+              y={AXIS_LABEL_H + (totalRows * CELL_H) / 2}
+              textAnchor="middle"
+              fill="#888"
+              fontSize={11}
+              fontWeight={600}
+              fontFamily="'Inter', system-ui, sans-serif"
+              transform={`rotate(-90, 14, ${AXIS_LABEL_H + (totalRows * CELL_H) / 2})`}
+            >
+              Time →
+            </text>
+          </svg>
+        </div>
+      )}
 
       {/* ─── Legend ─── */}
       <div style={legendStyle}>
@@ -1081,13 +1611,13 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           <div style={{ fontWeight: 700, marginBottom: 4 }}>
             {tooltip.placement.contextId}
           </div>
-          {effectiveContexts.get(tooltip.placement.contextId) && (
+          {contexts.get(tooltip.placement.contextId) && (
             <>
               <div style={{ color: "#EAEAEA", marginBottom: 2 }}>
-                Type: {effectiveContexts.get(tooltip.placement.contextId)?.type}
+                Type: {contexts.get(tooltip.placement.contextId)?.type}
               </div>
               <div style={{ color: "#EAEAEA" }}>
-                {effectiveContexts.get(tooltip.placement.contextId)?.description}
+                {contexts.get(tooltip.placement.contextId)?.description}
               </div>
             </>
           )}
