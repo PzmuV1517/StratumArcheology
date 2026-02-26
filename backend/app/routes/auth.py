@@ -1,3 +1,32 @@
+"""
+Authentication and user management API routes.
+
+Handles user registration, login (Firebase Auth + JWT), token verification,
+profile management, onboarding status, and user search.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import uuid
 from datetime import datetime, timedelta
 
@@ -97,7 +126,9 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Login failed with unexpected error", email=request.email, error=str(e))
+        logger.exception(
+            "Login failed with unexpected error", email=request.email, error=str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Authentication failed: {str(e)}",
@@ -161,7 +192,11 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Registration failed with unexpected error", email=request.email, error=str(e))
+        logger.exception(
+            "Registration failed with unexpected error",
+            email=request.email,
+            error=str(e),
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}",

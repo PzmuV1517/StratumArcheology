@@ -1,3 +1,32 @@
+"""
+Archaeological form management API routes.
+
+Handles appending structured records (context features, stratigraphic units,
+artefacts) to locked CSV files within project Forms folders.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import csv
 import io
 from datetime import datetime
@@ -17,6 +46,17 @@ router = APIRouter(prefix="/forms", tags=["forms"])
 def _find_child_by_name(
     db: Session, project_id: str, parent_id: str | None, name: str
 ) -> FileNode | None:
+    """Find a FileNode by name under a given parent folder.
+
+    Args:
+        db: Database session.
+        project_id: The project UUID to search within.
+        parent_id: Parent folder UUID, or None for root-level nodes.
+        name: Exact filename or folder name to match.
+
+    Returns:
+        The matching FileNode, or None if not found.
+    """
     q = db.query(FileNode).filter(
         FileNode.project_id == project_id, FileNode.name == name
     )
@@ -30,6 +70,19 @@ def _find_child_by_name(
 def _ensure_locked_folder(
     db: Session, project_id: str, name: str, parent_id: str | None = None
 ) -> FileNode:
+    """Ensure a locked folder exists, creating it if necessary.
+
+    If the folder already exists but is not locked, it will be locked.
+
+    Args:
+        db: Database session.
+        project_id: The project UUID.
+        name: Folder name.
+        parent_id: Optional parent folder UUID (None for root level).
+
+    Returns:
+        The existing or newly created locked FileNode folder.
+    """
     node = _find_child_by_name(db, project_id, parent_id, name)
     if node is None:
         node = FileNode(
@@ -129,6 +182,14 @@ def _ensure_locked_csv_file(
 
 
 def _serialize_bool(v: bool | None) -> str:
+    """Serialize a boolean value to '1' or '0' for CSV output.
+
+    Args:
+        v: Boolean value, or None (treated as False).
+
+    Returns:
+        '1' if truthy, '0' otherwise.
+    """
     return "1" if v else "0"
 
 

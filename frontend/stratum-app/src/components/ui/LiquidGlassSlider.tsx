@@ -1,15 +1,30 @@
 /**
- * LiquidGlassSlider
+ * @file
+ * Liquid Glass slider component.
  *
- * Maps to UISlider on iOS — the native slider knob automatically transforms
- * into Liquid Glass during interaction on iOS 26+. Uses
- * @react-native-community/slider for native rendering when available,
- * otherwise falls back to a custom PanResponder implementation with
- * BlurView thumb.
+ * A range slider styled with the Liquid Glass design language.
  *
- * No @callstack/liquid-glass dependency — uses native UIKit rendering.
+ * MIT License
  *
- * Apple reference: UISlider — automatic glass knob on iOS 26+.
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useState, useCallback } from "react";
 import {
@@ -51,6 +66,11 @@ interface LiquidGlassSliderProps {
   haptic?: boolean;
 }
 
+/**
+ * Range slider styled with the Liquid Glass design language.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidGlassSlider({
   value,
   onValueChange,
@@ -69,9 +89,15 @@ export function LiquidGlassSlider({
       <View style={[styles.container, style]}>
         {(label || showValue) && (
           <View style={styles.labelRow}>
-            {label && <Text style={[styles.label, disabled && styles.disabled]}>{label}</Text>}
+            {label && (
+              <Text style={[styles.label, disabled && styles.disabled]}>
+                {label}
+              </Text>
+            )}
             {showValue && (
-              <Text style={[styles.value, disabled && styles.disabled]}>{Math.round(value)}</Text>
+              <Text style={[styles.value, disabled && styles.disabled]}>
+                {Math.round(value)}
+              </Text>
             )}
           </View>
         )}
@@ -95,7 +121,22 @@ export function LiquidGlassSlider({
   }
 
   /* ---------- Custom fallback (PanResponder + BlurView thumb) ---------- */
-  return <FallbackSlider {...{ value, onValueChange, minimumValue, maximumValue, step, label, showValue, disabled, style, haptic }} />;
+  return (
+    <FallbackSlider
+      {...{
+        value,
+        onValueChange,
+        minimumValue,
+        maximumValue,
+        step,
+        label,
+        showValue,
+        disabled,
+        style,
+        haptic,
+      }}
+    />
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,8 +181,12 @@ function FallbackSlider({
       const newValue = calculateValue(evt.nativeEvent.locationX);
       if (newValue !== value) onValueChange(newValue);
     },
-    onPanResponderMove: (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-      const newX = gestureState.moveX - gestureState.x0 + normalizedValue * trackWidth;
+    onPanResponderMove: (
+      _: GestureResponderEvent,
+      gestureState: PanResponderGestureState,
+    ) => {
+      const newX =
+        gestureState.moveX - gestureState.x0 + normalizedValue * trackWidth;
       const newValue = calculateValue(newX);
       if (newValue !== value) onValueChange(newValue);
     },
@@ -163,14 +208,22 @@ function FallbackSlider({
     <View style={[styles.container, style]}>
       {(label || showValue) && (
         <View style={styles.labelRow}>
-          {label && <Text style={[styles.label, disabled && styles.disabled]}>{label}</Text>}
+          {label && (
+            <Text style={[styles.label, disabled && styles.disabled]}>{label}</Text>
+          )}
           {showValue && (
-            <Text style={[styles.value, disabled && styles.disabled]}>{Math.round(value)}</Text>
+            <Text style={[styles.value, disabled && styles.disabled]}>
+              {Math.round(value)}
+            </Text>
           )}
         </View>
       )}
 
-      <View style={[styles.trackContainer, disabled && styles.disabled]} onLayout={onLayout} {...panResponder.panHandlers}>
+      <View
+        style={[styles.trackContainer, disabled && styles.disabled]}
+        onLayout={onLayout}
+        {...panResponder.panHandlers}
+      >
         <View style={styles.trackBackground} />
         <View style={[styles.trackFill, { width: fillWidth }]} />
         <ThumbComponent
@@ -192,16 +245,41 @@ function FallbackSlider({
 
 const styles = StyleSheet.create({
   container: { width: "100%" },
-  labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   label: { fontSize: 16, color: "#F5F5F5" },
   value: { fontSize: 16, color: "#9A9A9A", fontVariant: ["tabular-nums"] },
   nativeSlider: { width: "100%", height: 44 },
   trackContainer: { height: 44, justifyContent: "center" },
-  trackBackground: { height: 6, backgroundColor: "rgba(255, 255, 255, 0.12)", borderRadius: 3 },
-  trackFill: { position: "absolute", height: 6, backgroundColor: "#FF2A2A", borderRadius: 3 },
+  trackBackground: {
+    height: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    borderRadius: 3,
+  },
+  trackFill: {
+    position: "absolute",
+    height: 6,
+    backgroundColor: "#FF2A2A",
+    borderRadius: 3,
+  },
   thumb: { position: "absolute", width: 28, height: 28, borderRadius: 14 },
-  thumbBlur: { overflow: "hidden", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255, 255, 255, 0.3)" },
-  thumbSolid: { backgroundColor: "#F5F5F5", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4 },
+  thumbBlur: {
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  thumbSolid: {
+    backgroundColor: "#F5F5F5",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   thumbActive: { transform: [{ scale: 1.15 }] },
   disabled: { opacity: 0.5 },
 });

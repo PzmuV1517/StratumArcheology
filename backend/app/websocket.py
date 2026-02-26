@@ -30,8 +30,6 @@ import logging
 
 import socketio
 
-from app.config import settings
-
 logger = logging.getLogger(__name__)
 
 # Create Socket.IO server instance
@@ -242,7 +240,7 @@ async def emit_content_update(project_id: str, content_type: str = "general"):
             },
             room=room,
         )
-        
+
         # Also emit specific files_updated event for file changes
         if content_type == "files":
             await sio.emit(
@@ -253,7 +251,7 @@ async def emit_content_update(project_id: str, content_type: str = "general"):
                 },
                 room=room,
             )
-        
+
         logger.info(
             f"Emitted content_updated ({content_type}) for project {project_id}"
         )

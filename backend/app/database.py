@@ -24,6 +24,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -40,7 +41,12 @@ Base = declarative_base()
 
 
 def get_db():
-    """Dependency for database sessions"""
+    """Provide a transactional database session for FastAPI dependencies.
+
+    Yields:
+        Session: A SQLAlchemy session that is automatically closed
+            when the request completes.
+    """
     db = SessionLocal()
     try:
         yield db

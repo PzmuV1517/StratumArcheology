@@ -1,16 +1,32 @@
 /**
- * Harris Matrix HTML Generator for Mobile WebView
+ * @file
+ * Harris Matrix HTML template generator.
  *
- * Generates a self-contained HTML document with the Harris Matrix visualization
- * that can be rendered in a WebView on iOS/Android.
+ * Generates the HTML/JavaScript for rendering an interactive
+ * Harris Matrix visualization using D3.js.
  *
- * Key adaptations for mobile:
- * - Touch-friendly interactions
- * - Viewport scaling for mobile screens
- * - Communication with React Native via postMessage
- * - Data persistence through AsyncStorage (via RN bridge)
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 // NOTE: This is a deprecated file. Harris Matrix feature for React Native is now implemented via the HarrisMatrix.native.tsx component, which removes the need for a WebView and allows for a more native experience. This HTML generator is retained for reference.
 
 interface HarrisMatrixHTMLOptions {

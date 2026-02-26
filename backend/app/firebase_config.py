@@ -25,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import firebase_admin
 from firebase_admin import auth, credentials
 
@@ -63,4 +64,4 @@ async def verify_firebase_token(token: str) -> dict:
         return decoded_token
     except Exception as e:
         print(f"Token verification error: {e}")
-        return None # type: ignore
+        return None  # type: ignore

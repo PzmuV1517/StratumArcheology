@@ -4,11 +4,33 @@ Unified QR code registry.
 Every QR code in the app encodes a short, unique identifier (e.g. STR-X7K9M2P4).
 The scanner resolves the code via GET /api/qr-codes/{code}/resolve to learn what
 it points to (artefact, invite, etc.) and navigate accordingly.
+
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
 import secrets
 import string
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -20,10 +42,9 @@ from app.models import QRCode, User
 router = APIRouter(prefix="/qr-codes", tags=["qr-codes"])
 
 # 32-char alphabet (uppercase letters + digits, minus confusing O/I/0/1)
-_ALPHABET = (
-    string.ascii_uppercase.replace("O", "").replace("I", "")
-    + string.digits.replace("0", "").replace("1", "")
-)
+_ALPHABET = string.ascii_uppercase.replace("O", "").replace(
+    "I", ""
+) + string.digits.replace("0", "").replace("1", "")
 
 
 def _generate_code(length: int = 8) -> str:
@@ -111,9 +132,7 @@ async def resolve_qr_code(
     """
     normalised = code.strip().upper()
 
-    entry: QRCode | None = (
-        db.query(QRCode).filter(QRCode.code == normalised).first()
-    )
+    entry: QRCode | None = db.query(QRCode).filter(QRCode.code == normalised).first()
     if not entry:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

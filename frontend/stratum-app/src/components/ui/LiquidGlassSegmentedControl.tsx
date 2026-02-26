@@ -1,13 +1,30 @@
 /**
- * LiquidGlassSegmentedControl
+ * @file
+ * Liquid Glass segmented control component.
  *
- * iOS: Uses the native SegmentedControl from `@react-native-segmented-control/segmented-control`
- * if available, which auto-renders with Liquid Glass on iOS 26+.
- * Falls back to a custom animated implementation.
+ * A segmented control styled with the Liquid Glass design language.
  *
- * Android: Custom segmented control with dark theme styling.
+ * MIT License
  *
- * Apple reference: UISegmentedControl — native Liquid Glass on iOS 26+.
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
@@ -33,12 +50,14 @@ try {
   // Package not installed — use custom implementation
 }
 
+/** A single segment item definition. */
 export interface SegmentItem {
   key: string;
   label: string;
   icon?: React.ReactNode;
 }
 
+/** Props for the LiquidGlassSegmentedControl component. */
 export interface LiquidGlassSegmentedControlProps {
   segments: SegmentItem[];
   selectedKey: string;
@@ -54,6 +73,11 @@ export interface LiquidGlassSegmentedControlProps {
   disabled?: boolean;
 }
 
+/**
+ * Segmented control using native UISegmentedControl on iOS or custom fallback.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidGlassSegmentedControl({
   segments,
   selectedKey,
@@ -71,7 +95,11 @@ export function LiquidGlassSegmentedControl({
   const selectedIndex = segments.findIndex((s) => s.key === selectedKey);
 
   // iOS with native SegmentedControl — auto Liquid Glass on iOS 26+
-  if (Platform.OS === "ios" && NativeSegmentedControl && !segments.some((s) => s.icon)) {
+  if (
+    Platform.OS === "ios" &&
+    NativeSegmentedControl &&
+    !segments.some((s) => s.icon)
+  ) {
     return (
       <View style={style}>
         <NativeSegmentedControl
@@ -135,10 +163,18 @@ function CustomSegmented({
   const indicatorAnim = useRef(new Animated.Value(clampedIndex)).current;
 
   useEffect(() => {
-    Animated.spring(indicatorAnim, { toValue: clampedIndex, useNativeDriver: true, tension: 300, friction: 30 }).start();
+    Animated.spring(indicatorAnim, {
+      toValue: clampedIndex,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 30,
+    }).start();
   }, [clampedIndex, indicatorAnim]);
 
-  const onLayout = useCallback((e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width), []);
+  const onLayout = useCallback(
+    (e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width),
+    [],
+  );
 
   const translateX = indicatorAnim.interpolate({
     inputRange: segments.map((_, i) => i),
@@ -147,10 +183,28 @@ function CustomSegmented({
   });
 
   return (
-    <View style={[styles.container, { height, borderRadius }, style]} onLayout={onLayout}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.08)", borderRadius }]} />
+    <View
+      style={[styles.container, { height, borderRadius }, style]}
+      onLayout={onLayout}
+    >
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: "rgba(255,255,255,0.08)", borderRadius },
+        ]}
+      />
       {containerWidth > 0 && (
-        <Animated.View style={[styles.indicator, { width: segmentWidth - 6, height: (height ?? 40) - 6, borderRadius: (borderRadius ?? 12) - 3, transform: [{ translateX }] }]} />
+        <Animated.View
+          style={[
+            styles.indicator,
+            {
+              width: segmentWidth - 6,
+              height: (height ?? 40) - 6,
+              borderRadius: (borderRadius ?? 12) - 3,
+              transform: [{ translateX }],
+            },
+          ]}
+        />
       )}
       {segments.map((segment) => {
         const isActive = segment.key === selectedKey;
@@ -163,13 +217,22 @@ function CustomSegmented({
             disabled={disabled}
             onPress={() => {
               if (segment.key !== selectedKey) {
-                if (haptic && Platform.OS === "ios") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (haptic && Platform.OS === "ios")
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 onSelect(segment.key);
               }
             }}
           >
             {segment.icon && <View style={styles.segmentIcon}>{segment.icon}</View>}
-            <Text style={[styles.segmentLabel, { color }, isActive && styles.segmentLabelActive, labelStyle]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.segmentLabel,
+                { color },
+                isActive && styles.segmentLabelActive,
+                labelStyle,
+              ]}
+              numberOfLines={1}
+            >
               {segment.label}
             </Text>
           </TouchableOpacity>
@@ -187,7 +250,14 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: "rgba(255,255,255,0.15)",
   },
-  segment: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 8, zIndex: 1 },
+  segment: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    zIndex: 1,
+  },
   segmentIcon: { marginRight: 6 },
   segmentLabel: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
   segmentLabelActive: { fontWeight: "700" },

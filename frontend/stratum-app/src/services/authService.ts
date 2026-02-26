@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Firebase authentication service.
+ *
+ * Handles user registration, login, token verification, and session
+ * management using Firebase Auth with JWT token integration.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import api from "./api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -141,9 +170,15 @@ export const authService = {
 export type { User, AuthResult } from "./authService.types";
 
 // Standalone exports for convenience
+/** Check if a user is currently authenticated. */
 export const isAuthenticated = authService.isAuthenticated;
+/** Retrieve the stored JWT auth token. */
 export const getToken = authService.getToken;
+/** Get the current user object from local storage. */
 export const getCurrentUser = authService.getCurrentUser;
+/** Log in with email and password credentials. */
 export const login = authService.login;
+/** Register a new user account. */
 export const register = authService.register;
+/** Log out and clear stored credentials. */
 export const logout = authService.logout;

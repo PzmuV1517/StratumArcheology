@@ -1,14 +1,32 @@
 /**
- * STRATUM Offline Queue Service
+ * @file
+ * Offline operation queue service.
  *
- * Comprehensive offline queue system for:
- * - Queueing API requests when offline
- * - Auto-syncing when connection restored
- * - File upload/download management
- * - Conflict detection and resolution
- * - Version tracking for files and notes
+ * Queues API operations performed while offline and replays
+ * them in order when connectivity is restored.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
@@ -32,6 +50,7 @@ const PENDING_EDITS_KEY = "@stratum_pending_edits";
 const CONFLICTS_KEY = "@stratum_conflicts";
 
 // Types
+/** Possible action types that can be queued for offline processing. */
 export type QueueActionType =
   | "CREATE_NOTE"
   | "UPDATE_NOTE"
@@ -44,6 +63,7 @@ export type QueueActionType =
   | "RENAME_FILE"
   | "UPDATE_PROFILE";
 
+/** A single queued offline action awaiting synchronisation. */
 export interface QueuedAction {
   id: string;
   type: QueueActionType;
@@ -59,6 +79,7 @@ export interface QueuedAction {
   priority: number; // Lower = higher priority
 }
 
+/** Tracks local and remote version metadata for a file. */
 export interface FileVersion {
   nodeId: string;
   projectId: string;
@@ -72,6 +93,7 @@ export interface FileVersion {
   localEditPath?: string; // Path to local edited version
 }
 
+/** A pending local file edit awaiting upload. */
 export interface PendingFileEdit {
   id: string;
   nodeId: string;
@@ -85,6 +107,7 @@ export interface PendingFileEdit {
   isDraft: boolean;
 }
 
+/** A detected conflict between local and remote file versions. */
 export interface FileConflict {
   id: string;
   nodeId: string;
@@ -102,7 +125,10 @@ export interface FileConflict {
   resolution?: "keep_local" | "keep_remote" | "keep_both";
 }
 
-// Get the STRATUM offline directory (inside app container)
+/**
+ * Get the STRATUM offline directory inside the app container.
+ * @returns Absolute path to the offline storage directory.
+ */
 export const getStratumOfflineDir = async (): Promise<string> => {
   if (Platform.OS === "web") {
     return "stratum_offline"; // Virtual path for web
@@ -124,7 +150,11 @@ export const getStratumOfflineDir = async (): Promise<string> => {
   return stratumDir;
 };
 
-// Get subdirectories for different content types
+/**
+ * Get a subdirectory within the STRATUM offline directory.
+ * @param subDir - The subdirectory name to resolve.
+ * @returns Absolute path to the requested subdirectory.
+ */
 export const getOfflineSubDir = async (
   subDir: "files" | "edits" | "uploads" | "cache",
 ): Promise<string> => {

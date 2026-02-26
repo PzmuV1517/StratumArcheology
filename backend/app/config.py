@@ -24,6 +24,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import os
 
 from pydantic_settings import BaseSettings
@@ -84,6 +85,8 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
 
     class Config:
+        """Pydantic-settings inner config for env file location."""
+
         env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         case_sensitive = True
 

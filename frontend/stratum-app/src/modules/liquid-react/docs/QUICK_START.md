@@ -40,26 +40,21 @@ That's it! You're ready to use native iOS components.
 Create a simple app with a native material view and button:
 
 ```jsx
-import React from 'react';
-import { SafeAreaView, Text, StyleSheet } from 'react-native';
-import { NativeMaterialView, NativeButton } from 'liquid-react';
+import React from "react";
+import { SafeAreaView, Text, StyleSheet } from "react-native";
+import { NativeMaterialView, NativeButton } from "liquid-react";
 
 export default function App() {
   return (
     <SafeAreaView style={styles.container}>
-      <NativeMaterialView 
-        material="systemUltraThinMaterial"
-        style={styles.material}
-      >
+      <NativeMaterialView material="systemUltraThinMaterial" style={styles.material}>
         <Text style={styles.title}>Welcome to Liquid React</Text>
-        <Text style={styles.subtitle}>
-          Native iOS components in React Native
-        </Text>
-        
+        <Text style={styles.subtitle}>Native iOS components in React Native</Text>
+
         <NativeButton
           title="Get Started"
           buttonStyle="filled"
-          onPress={() => console.log('Button pressed!')}
+          onPress={() => console.log("Button pressed!")}
           style={styles.button}
         />
       </NativeMaterialView>
@@ -70,28 +65,28 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f2f7',
+    backgroundColor: "#f2f2f7",
   },
   material: {
     margin: 20,
     padding: 24,
     borderRadius: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    color: '#000',
+    color: "#000",
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 24,
   },
   button: {
-    width: '100%',
+    width: "100%",
   },
 });
 ```
@@ -109,7 +104,7 @@ const styles = StyleSheet.create({
 ### Form with Native Controls
 
 ```jsx
-import { NativeSwitch, NativeSegmentedControl } from 'liquid-react';
+import { NativeSwitch, NativeSegmentedControl } from "liquid-react";
 
 function SettingsForm() {
   const [enabled, setEnabled] = useState(false);
@@ -121,9 +116,9 @@ function SettingsForm() {
         value={enabled}
         onValueChange={(e) => setEnabled(e.nativeEvent.value)}
       />
-      
+
       <NativeSegmentedControl
-        segments={['Light', 'Dark', 'Auto']}
+        segments={["Light", "Dark", "Auto"]}
         selectedIndex={theme}
         onValueChange={(e) => setTheme(e.nativeEvent.selectedIndex)}
       />
@@ -135,10 +130,10 @@ function SettingsForm() {
 ### Search Interface
 
 ```jsx
-import { NativeSearchBar } from 'liquid-react';
+import { NativeSearchBar } from "liquid-react";
 
 function SearchScreen() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   return (
     <NativeSearchBar
@@ -201,6 +196,7 @@ npm install --save-dev @types/react @types/react-native
 ### Blur not appearing
 
 Make sure:
+
 - Parent has non-zero size
 - iOS 13.0+ deployment target
 - Running on device or simulator (not just TypeScript checks)
@@ -228,19 +224,20 @@ npm run ios -- --reset-cache
 To handle platform-specific code:
 
 ```jsx
-import { Platform } from 'react-native';
-import { NativeMaterialView } from 'liquid-react';
+import { Platform } from "react-native";
+import { NativeMaterialView } from "liquid-react";
 
 function MyComponent() {
-  if (Platform.OS !== 'ios') {
+  if (Platform.OS !== "ios") {
     return <View style={styles.fallback} />;
   }
-  
+
   return <NativeMaterialView material="systemMaterial" />;
 }
 ```
 
 Or use React Native's platform-specific files:
+
 - `MyComponent.ios.tsx` - iOS implementation with Liquid-React
 - `MyComponent.android.tsx` - Android fallback
 - `MyComponent.web.tsx` - Web fallback
@@ -249,7 +246,7 @@ Or use React Native's platform-specific files:
 
 ✅ Liquid-React uses only public APIs  
 ✅ Safe for App Store submission  
-✅ No private frameworks or hacks  
+✅ No private frameworks or hacks
 
 See [App Store Compliance](./APP_STORE_COMPLIANCE.md) for details.
 

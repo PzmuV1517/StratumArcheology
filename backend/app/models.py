@@ -24,6 +24,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+
 import enum
 import uuid
 from datetime import datetime
@@ -48,10 +49,17 @@ from app.database import Base
 
 
 def generate_uuid():
+    """Generate a random UUID4 string for use as a primary key default.
+
+    Returns:
+        str: A new UUID4 string.
+    """
     return str(uuid.uuid4())
 
 
 class UserRole(str, enum.Enum):
+    """Roles a user can hold within a project."""
+
     LEADER = "leader"
     RESEARCHER = "researcher"
     GUEST = "guest"
@@ -67,6 +75,8 @@ class PrivacyLevel(str, enum.Enum):
 
 
 class ActivityType(str, enum.Enum):
+    """Categories of actions recorded in the project activity feed."""
+
     # Project activities
     PROJECT_CREATED = "project_created"
     PROJECT_UPDATED = "project_updated"
@@ -116,6 +126,8 @@ project_members = Table(
 
 
 class User(Base):
+    """Registered user account, linked to a Firebase UID."""
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -142,6 +154,8 @@ class User(Base):
 
 
 class Project(Base):
+    """Archaeological project that groups notes, files, GPS data, and members."""
+
     __tablename__ = "projects"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -154,7 +168,9 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    harris_matrix_data = Column(JSON, nullable=True)  # Harris Matrix visualization data
+    harris_matrix_data = Column(
+        JSON, nullable=True
+    )  # Harris Matrix visualization data
 
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
@@ -170,6 +186,8 @@ class Project(Base):
 
 
 class Note(Base):
+    """User-authored note belonging to a project, with versioning and privacy support."""
+
     __tablename__ = "notes"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -205,12 +223,16 @@ class Note(Base):
 
 
 class FileNodeType(str, enum.Enum):
+    """Discriminator for entries in the file tree (folder, file, or note)."""
+
     FOLDER = "folder"
     FILE = "file"
     NOTE = "note"
 
 
 class FileNode(Base):
+    """Node in the hierarchical file tree (file, folder, or note-backed entry)."""
+
     __tablename__ = "file_nodes"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -317,6 +339,8 @@ class FileVersion(Base):
 
 
 class NoteFileLink(Base):
+    """Association linking a Note to its corresponding FileNode in the file tree."""
+
     __tablename__ = "note_file_links"
 
     note_id = Column(
@@ -341,6 +365,8 @@ class NoteFileLink(Base):
 
 
 class NoteAttachment(Base):
+    """Image or file attached to a note, stored in MinIO."""
+
     __tablename__ = "note_attachments"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -358,6 +384,8 @@ class NoteAttachment(Base):
 
 
 class ProjectGPS(Base):
+    """GPS/GIS polygon data for a project (work area and site boundaries)."""
+
     __tablename__ = "project_gps"
 
     # One row per project
@@ -377,6 +405,8 @@ class ProjectGPS(Base):
 
 
 class ProjectInvite(Base):
+    """Invitation token/code that grants a user membership in a project."""
+
     __tablename__ = "project_invites"
 
     token = Column(String, primary_key=True, default=generate_uuid)
@@ -411,6 +441,8 @@ class ProjectInvite(Base):
 
 
 class ProjectActivity(Base):
+    """Timestamped activity log entry for audit and feed display."""
+
     __tablename__ = "project_activities"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -465,4 +497,6 @@ class QRCode(Base):
     )
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    project = relationship("Project", backref=backref("qr_codes", cascade="all, delete-orphan"))
+    project = relationship(
+        "Project", backref=backref("qr_codes", cascade="all, delete-orphan")
+    )

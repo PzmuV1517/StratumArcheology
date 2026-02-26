@@ -1,5 +1,39 @@
+/**
+ * @file
+ * Audio player panel for React Native.
+ *
+ * Plays audio files using the native audio player.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -46,11 +80,14 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
 
         // Load new sound with auth headers
         const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUrl, headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+          {
+            uri: audioUrl,
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          },
           { shouldPlay: false },
           (newStatus) => {
             if (mounted) setStatus(newStatus);
-          }
+          },
         );
 
         if (mounted) {
@@ -131,7 +168,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
                     {
                       height: 10 + Math.sin(i * 0.5) * 20 + Math.random() * 10,
                       backgroundColor:
-                        duration > 0 && (i / 40) < (position / duration)
+                        duration > 0 && i / 40 < position / duration
                           ? "#FF2A2A"
                           : "#444",
                     },

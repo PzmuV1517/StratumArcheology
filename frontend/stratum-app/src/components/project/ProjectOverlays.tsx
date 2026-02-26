@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project detail overlay container.
+ *
+ * Manages visibility of overlapping panels (files, forms, etc.)
+ * within the project detail view.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React from "react";
 import { Modal } from "react-native";
 
@@ -97,7 +126,10 @@ export default function ProjectOverlays() {
           renderMember({
             item: {
               ...m,
-              role: (m.role || "").toUpperCase() as "LEADER" | "RESEARCHER" | "GUEST",
+              role: (m.role || "").toUpperCase() as
+                | "LEADER"
+                | "RESEARCHER"
+                | "GUEST",
             },
           })
         }
@@ -178,10 +210,12 @@ export default function ProjectOverlays() {
 
             if (!name) return;
             try {
-              const parentId = currentFolder && currentFolder.id ? currentFolder.id : undefined;
+              const parentId =
+                currentFolder && currentFolder.id ? currentFolder.id : undefined;
               await fileService.createFolder(id as string, name, parentId as any);
               setShowNewFolderModal(false);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               showAlert("Error", "Failed to create folder");
@@ -197,7 +231,10 @@ export default function ProjectOverlays() {
           onCancel={() => setDeleteNodeTarget(null)}
           onConfirm={async () => {
             if (!canEditFiles) {
-              showAlert("Permission Denied", "Guests can only view files. Deleting is not permitted.");
+              showAlert(
+                "Permission Denied",
+                "Guests can only view files. Deleting is not permitted.",
+              );
               setDeleteNodeTarget(null);
               return;
             }
@@ -207,7 +244,8 @@ export default function ProjectOverlays() {
               setIsDeleting(true);
               await fileService.deleteNode(deleteNodeTarget.id);
               setDeleteNodeTarget(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               showAlert("Error", "Failed to delete");
@@ -224,7 +262,10 @@ export default function ProjectOverlays() {
           onCancel={() => setRenameNode(null)}
           onRename={async (newBaseName) => {
             if (!canEditFiles) {
-              showAlert("Permission Denied", "Guests can only view files. Renaming is not permitted.");
+              showAlert(
+                "Permission Denied",
+                "Guests can only view files. Renaming is not permitted.",
+              );
               setRenameNode(null);
               return;
             }
@@ -238,12 +279,15 @@ export default function ProjectOverlays() {
                 renameNode.name.includes(".") &&
                 !renameNode.name.startsWith(".")
               ) {
-                const ext = renameNode.name.substring(renameNode.name.lastIndexOf(".") + 1);
+                const ext = renameNode.name.substring(
+                  renameNode.name.lastIndexOf(".") + 1,
+                );
                 finalName = `${finalName}.${ext}`;
               }
               await fileService.renameNode(renameNode.id, finalName);
               setRenameNode(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               showAlert("Error", "Failed to rename");
@@ -256,7 +300,10 @@ export default function ProjectOverlays() {
           itemName={moveMode?.node?.name || ""}
           onMoveHere={async () => {
             if (!canEditFiles) {
-              showAlert("Permission Denied", "Guests can only view files. Moving is not permitted.");
+              showAlert(
+                "Permission Denied",
+                "Guests can only view files. Moving is not permitted.",
+              );
               setMoveMode(null);
               return;
             }
@@ -264,9 +311,13 @@ export default function ProjectOverlays() {
             if (!moveMode?.node) return;
             try {
               const destParentId = currentFolder?.id || null;
-              await fileService.moveNode(moveMode.node.id, (destParentId || undefined) as any);
+              await fileService.moveNode(
+                moveMode.node.id,
+                (destParentId || undefined) as any,
+              );
               setMoveMode(null);
-              if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+              if (currentFolder?.id)
+                await openFolder({ id: currentFolder.id, name: currentFolder.name });
               else await loadRootFiles();
             } catch {
               showAlert("Error", "Failed to move");

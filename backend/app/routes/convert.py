@@ -1,6 +1,30 @@
 """
 Conversion endpoints for point clouds and other large data formats that require server-side processing.
+
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
+
 import hashlib
 from io import BytesIO
 
@@ -14,6 +38,18 @@ router = APIRouter(prefix="/convert", tags=["convert"])
 
 
 def detect_ext(name_or_url: str) -> str:
+    """Extract the lowercase file extension from a filename or URL.
+
+    Strips query parameters and path components before extracting the
+    extension.
+
+    Args:
+        name_or_url: A filename or URL string.
+
+    Returns:
+        The lowercase extension without a leading dot, or an empty string
+        if none is found.
+    """
     path = name_or_url.split("?")[0]
     if "/" in path:
         path = path.rsplit("/", 1)[-1]
@@ -23,6 +59,20 @@ def detect_ext(name_or_url: str) -> str:
 
 
 async def fetch_bytes(url: str) -> bytes:
+    """Download the contents of a URL as bytes.
+
+    Only ``http://`` and ``https://`` schemes are allowed.
+
+    Args:
+        url: The URL to fetch.
+
+    Returns:
+        The raw response body bytes.
+
+    Raises:
+        HTTPException: 400 if the URL scheme is unsupported, 502 if the
+            upstream request fails.
+    """
     timeout = aiohttp.ClientTimeout(total=120)
     # Only allow http/https URLs; browser-only schemes (blob:, data:) can't be fetched server-side
     if not (url.startswith("http://") or url.startswith("https://")):
@@ -41,6 +91,16 @@ async def fetch_bytes(url: str) -> bytes:
 
 
 def write_ply_ascii(positions, colors=None) -> bytes:
+    """Write point cloud data as an ASCII PLY file.
+
+    Args:
+        positions: Flat list of floats ``[x0, y0, z0, x1, y1, z1, ...]``.
+        colors: Optional flat list of floats ``[r0, g0, b0, ...]`` in the
+            0.0–1.0 range. Values are scaled to 0–255 for output.
+
+    Returns:
+        The complete PLY file contents as bytes.
+    """
     count = len(positions) // 3
     has_color = colors is not None and len(colors) == count * 3
     header = [
@@ -81,6 +141,26 @@ def write_ply_ascii(positions, colors=None) -> bytes:
 def parse_las_python(
     buf: bytes, max_points: int = 2_000_000
 ) -> tuple[list, list | None]:
+    """Parse a binary LAS (LiDAR) file into position and color arrays.
+
+    Supports uncompressed point formats 0–3. If the file contains RGB
+    data it is returned directly; otherwise colours are synthesised from
+    point intensity using a blue-to-red colour ramp.
+
+    Args:
+        buf: Raw bytes of the LAS file.
+        max_points: Maximum number of points to return (subsampled evenly
+            when the file exceeds this count).
+
+    Returns:
+        A tuple ``(positions, colors)`` where *positions* is a flat list
+        of floats ``[x, y, z, ...]`` and *colors* is either a flat list
+        of normalised RGB floats or ``None``.
+
+    Raises:
+        ValueError: If the data is compressed, not a valid LAS file, or
+            has an invalid record length.
+    """
     # Minimal LAS parser similar to frontend; supports common formats 0-3 (no compression)
     import struct
 
@@ -506,6 +586,23 @@ async def convert_pointcloud(
     src: str = Query(..., description="Source URL to point cloud"),
     name: str | None = None,
 ):
+    """Convert a remote point cloud file to PLY format.
+
+    Fetches the file from *src*, converts LAS/LAZ to ASCII PLY, stores
+    the result in MinIO, and returns a presigned URL. PLY and PCD files
+    are passed through without conversion.
+
+    Args:
+        src: Source URL of the point cloud file.
+        name: Optional filename hint used for extension detection.
+
+    Returns:
+        JSON with ``ok``, ``format``, and ``url`` fields.
+
+    Raises:
+        HTTPException: 400 for unsupported formats or parse failures,
+            501 for formats requiring external tools (E57, RWI, RWP).
+    """
     ext = detect_ext(name or src)
     extU = ext.upper()
     # Fast-path: pass-through formats
