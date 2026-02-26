@@ -1,3 +1,8 @@
+/**
+ * Main tab layout for the app, using Expo Router's Tabs component.
+ * Implements a custom pill-shaped tab bar on iOS and a standard tab bar on Android/web.
+ * Hides certain routes (GPS, Explore) from the tab bar but keeps them accessible via navigation.
+ */
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";

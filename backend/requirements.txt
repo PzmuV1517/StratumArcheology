@@ -23,7 +23,7 @@ pydantic-settings>=2.1.0
 
 # CORS & Security
 fastapi-cors>=0.0.6
-flask_limiter>=4.1.1
+slowapi>=0.1.9
 
 # WebSocket
 python-socketio>=5.11.0
@@ -48,5 +48,4 @@ flake8==6.1.0
 pydantic[email]
 
 structlog==25.5.0
-?"??
-ruff==0.14.13
+ruff>=0.4.0
