@@ -113,6 +113,9 @@ class ActivityType(str, enum.Enum):
     # Harris Matrix activities
     HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
 
+    # Wheeler Diagram activities
+    WHEELER_DATA_UPDATED = "wheeler_data_updated"
+
 
 # Association table for project members
 project_members = Table(
@@ -171,6 +174,13 @@ class Project(Base):
     harris_matrix_data = Column(
         JSON, nullable=True
     )  # Harris Matrix visualization data
+    wheeler_data = Column(
+        JSON, nullable=True
+    )  # Wheeler Stratigraphic Notation data
+
+    # Version tracking for data snapshots (Time Machine support)
+    harris_matrix_version = Column(Integer, default=0, nullable=False)
+    wheeler_data_version = Column(Integer, default=0, nullable=False)
 
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
@@ -499,4 +509,43 @@ class QRCode(Base):
 
     project = relationship(
         "Project", backref=backref("qr_codes", cascade="all, delete-orphan")
+    )
+
+
+class DataVersion(Base):
+    """Versioned snapshot of project JSON data (Harris Matrix, Wheeler diagram).
+
+    Each time the harris_matrix_data or wheeler_data JSON column is updated,
+    the previous value is stored here, enabling the Time Machine to browse
+    and restore earlier revisions.
+    """
+
+    __tablename__ = "data_versions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    data_type = Column(
+        String, nullable=False
+    )  # "harris_matrix" or "wheeler"
+    version = Column(Integer, nullable=False)
+    data = Column(JSON, nullable=True)  # The snapshot payload
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("data_versions", cascade="all, delete-orphan")
+    )
+    user = relationship("User", foreign_keys=[created_by])
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "data_type", "version", name="uq_data_version"),
+        Index("ix_data_versions_project_type", "project_id", "data_type"),
     )

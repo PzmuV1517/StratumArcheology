@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
-from app.models import FileNode, FileNodeType, Project, User, project_members
+from app.models import DataVersion, FileNode, FileNodeType, Project, User, project_members
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -609,8 +609,23 @@ async def update_harris_matrix(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    # Store the Harris Matrix data
-    project.harris_matrix_data = payload.get("data", {})
+    # Store the Harris Matrix data with version tracking
+    old_data = project.harris_matrix_data
+    new_data = payload.get("data", {})
+    project.harris_matrix_data = new_data
+
+    # Bump version and snapshot old data for Time Machine
+    project.harris_matrix_version = (project.harris_matrix_version or 0) + 1
+    if old_data:
+        snapshot = DataVersion(
+            project_id=project_id,
+            data_type="harris_matrix",
+            version=project.harris_matrix_version - 1,
+            data=old_data,
+            created_by=str(current_user.id),
+        )
+        db.add(snapshot)
+
     db.commit()
 
     # Log activity for timeline
@@ -626,4 +641,243 @@ async def update_harris_matrix(
     return {
         "message": "Harris Matrix data updated successfully",
         "project_id": project_id,
+        "version": project.harris_matrix_version,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Wheeler diagram data
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{project_id}/wheeler")
+async def get_wheeler_data(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get Wheeler Stratigraphic Notation data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    return {
+        "project_id": project_id,
+        "data": project.wheeler_data or {"trenches": [], "placements": []},
+        "version": project.wheeler_data_version or 0,
+    }
+
+
+@router.put("/{project_id}/wheeler")
+async def update_wheeler_data(
+    project_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update Wheeler Stratigraphic Notation data for a project"""
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    old_data = project.wheeler_data
+    new_data = payload.get("data", {"trenches": [], "placements": []})
+    project.wheeler_data = new_data
+
+    # Bump version and snapshot old data for Time Machine
+    project.wheeler_data_version = (project.wheeler_data_version or 0) + 1
+    if old_data:
+        snapshot = DataVersion(
+            project_id=project_id,
+            data_type="wheeler",
+            version=project.wheeler_data_version - 1,
+            data=old_data,
+            created_by=str(current_user.id),
+        )
+        db.add(snapshot)
+
+    db.commit()
+
+    # Log activity for timeline
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type="WHEELER_DATA_UPDATED",
+        description=f"Wheeler diagram updated by {current_user.email}",
+        user_id=str(current_user.id),
+        metadata={"updated_by": current_user.email},
+    )
+
+    return {
+        "message": "Wheeler data updated successfully",
+        "project_id": project_id,
+        "version": project.wheeler_data_version,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Data version history (Time Machine for Harris Matrix & Wheeler)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{project_id}/data-versions/{data_type}")
+async def get_data_versions(
+    project_id: str,
+    data_type: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get version history for a project's matrix/notation data.
+
+    Args:
+        data_type: ``"harris_matrix"`` or ``"wheeler"``
+    """
+    check_project_permission(project_id, current_user, db)
+
+    if data_type not in ("harris_matrix", "wheeler"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="data_type must be 'harris_matrix' or 'wheeler'",
+        )
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    versions = (
+        db.query(DataVersion)
+        .filter(
+            DataVersion.project_id == project_id,
+            DataVersion.data_type == data_type,
+        )
+        .order_by(DataVersion.version.desc())
+        .all()
+    )
+
+    current_version = (
+        project.harris_matrix_version
+        if data_type == "harris_matrix"
+        else project.wheeler_data_version
+    ) or 0
+
+    return {
+        "project_id": project_id,
+        "data_type": data_type,
+        "current_version": current_version,
+        "versions": [
+            {
+                "id": v.id,
+                "version": v.version,
+                "created_at": v.created_at.isoformat() if v.created_at else None,
+                "created_by": v.created_by,
+            }
+            for v in versions
+        ],
+    }
+
+
+@router.post("/{project_id}/data-versions/{data_type}/restore/{version}")
+async def restore_data_version(
+    project_id: str,
+    data_type: str,
+    version: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Restore a previous version of harris_matrix or wheeler data.
+
+    Creates a new version snapshot of the current data, then overwrites
+    it with the content from the requested version.
+    """
+    check_project_permission(project_id, current_user, db)
+
+    if data_type not in ("harris_matrix", "wheeler"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="data_type must be 'harris_matrix' or 'wheeler'",
+        )
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    target_version = (
+        db.query(DataVersion)
+        .filter(
+            DataVersion.project_id == project_id,
+            DataVersion.data_type == data_type,
+            DataVersion.version == version,
+        )
+        .first()
+    )
+    if not target_version:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Version {version} not found",
+        )
+
+    # Snapshot current data before replacing
+    if data_type == "harris_matrix":
+        current_data = project.harris_matrix_data
+        current_ver = project.harris_matrix_version or 0
+    else:
+        current_data = project.wheeler_data
+        current_ver = project.wheeler_data_version or 0
+
+    if current_data:
+        snapshot = DataVersion(
+            project_id=project_id,
+            data_type=data_type,
+            version=current_ver,
+            data=current_data,
+            created_by=str(current_user.id),
+        )
+        db.add(snapshot)
+
+    # Restore the old data
+    new_ver = current_ver + 1
+    if data_type == "harris_matrix":
+        project.harris_matrix_data = target_version.data
+        project.harris_matrix_version = new_ver
+    else:
+        project.wheeler_data = target_version.data
+        project.wheeler_data_version = new_ver
+
+    db.commit()
+
+    activity_type = (
+        "HARRIS_MATRIX_UPDATED" if data_type == "harris_matrix"
+        else "WHEELER_DATA_UPDATED"
+    )
+    label = "Harris Matrix" if data_type == "harris_matrix" else "Wheeler diagram"
+
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type=activity_type,
+        description=f"{label} restored to version {version} by {current_user.email}",
+        user_id=str(current_user.id),
+        metadata={
+            "restored_version": version,
+            "new_version": new_ver,
+            "updated_by": current_user.email,
+        },
+    )
+
+    return {
+        "message": f"{label} restored to version {version}",
+        "project_id": project_id,
+        "version": new_ver,
     }
