@@ -33,6 +33,7 @@ import { Platform, View, Text, Image } from "react-native";
 // QR matrix generation (works on all platforms)
 let createQRMatrix: ((data: string) => boolean[][]) | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const QR = require("qrcode");
   createQRMatrix = (data: string): boolean[][] => {
     const segments = QR.create(data, { errorCorrectionLevel: "M" });
@@ -55,6 +56,7 @@ let Svg: any = null;
 let Rect: any = null;
 if (Platform.OS !== "web") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const svg = require("react-native-svg");
     Svg = svg.Svg || svg.default;
     Rect = svg.Rect;
@@ -183,6 +185,7 @@ export default function QRCodeView({
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, size]);
 
   // ---------- Native (iOS / Android) ----------

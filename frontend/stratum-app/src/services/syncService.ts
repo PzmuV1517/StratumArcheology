@@ -459,7 +459,7 @@ async function processRequest(request: QueuedRequest): Promise<void> {
     const data = request.data ? JSON.parse(request.data) : undefined;
 
     // Execute the request
-    const response = await api.request({
+    const _response = await api.request({
       method: request.method,
       url: request.url,
       data,

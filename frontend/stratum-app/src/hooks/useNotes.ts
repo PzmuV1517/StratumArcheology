@@ -74,6 +74,7 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
         unsubscribeRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Load notes when projectId changes
@@ -81,6 +82,7 @@ export function useNotes(projectId: number | undefined): UseNotesReturn {
     if (projectId) {
       loadNotes();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadNotes = useCallback(async (): Promise<void> => {

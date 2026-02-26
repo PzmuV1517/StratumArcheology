@@ -46,6 +46,7 @@ const isIOS = Platform.OS === "ios";
 /* ---------- Try native slider (UISlider on iOS) ---------- */
 let NativeSlider: React.ComponentType<any> | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   NativeSlider = require("@react-native-community/slider").default;
 } catch {
   NativeSlider = null;

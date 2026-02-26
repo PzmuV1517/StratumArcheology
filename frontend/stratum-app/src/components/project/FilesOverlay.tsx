@@ -129,10 +129,10 @@ export default function FilesOverlay({
   currentUserId,
 }: Props) {
   // Get safe area insets for proper header spacing on iOS
-  const insets = useSafeAreaInsets();
+  const _insets = useSafeAreaInsets();
   const { socket } = useWebSocket();
   const [isDragging, setIsDragging] = useState(false);
-  const [dragDepth, setDragDepth] = useState(0);
+  const [_dragDepth, setDragDepth] = useState(0);
   const lastDragEvent = useRef<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);

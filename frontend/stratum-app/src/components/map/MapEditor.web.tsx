@@ -253,7 +253,7 @@ export default function MapEditor({
             setWorkSync(updated);
             saveNow();
           } else {
-            const idx = curWork.points.length;
+            const _idx = curWork.points.length;
             const newPts = [...curWork.points, ll];
             const poly = curWork.layer as any;
             if (poly) poly.setLatLngs(newPts as any);
@@ -316,7 +316,7 @@ export default function MapEditor({
             setSitesSync(updated);
             saveNow();
           } else {
-            const idx = cur.points.length;
+            const _idx = cur.points.length;
             const newPts = [...cur.points, ll];
             (cur.layer as any)?.setLatLngs(newPts as any);
             const mk = (L as any)
@@ -341,6 +341,7 @@ export default function MapEditor({
     return () => {
       map.off("click", onClick);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leafletReady, mode, work, sites, activeSite]);
 
   const canClose = (first: LatLngLiteral, click: LatLngLiteral) => {
@@ -411,7 +412,7 @@ export default function MapEditor({
 
   // Load from backend when ready and projectId changes
   useEffect(() => {
-    let cancelled = false;
+    let _cancelled = false;
     (async () => {
       if (!leafletReady || !projectId || !mapRef.current || !LRef.current) return;
       try {
@@ -547,10 +548,11 @@ export default function MapEditor({
             });
           setSitesSync(reSites);
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leafletReady, projectId]);
 
   return (

@@ -44,7 +44,7 @@ function ensureModelViewerScript() {
 
 export default function MeshPanel({
   src,
-  name,
+  name: _name,
 }: {
   src: string | null;
   name?: string;

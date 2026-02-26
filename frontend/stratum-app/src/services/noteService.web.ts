@@ -28,12 +28,7 @@
  */
 // Web-specific note operations
 import api from "./api";
-import {
-  noteServiceCore,
-  Note,
-  Attachment,
-  CreateNoteData,
-} from "./noteService.core";
+import { noteServiceCore, Attachment } from "./noteService.core";
 
 // Re-export types
 export * from "./noteService.core";

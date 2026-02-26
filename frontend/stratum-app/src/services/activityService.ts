@@ -28,11 +28,7 @@
  * SOFTWARE.
  */
 import api from "./api";
-import {
-  ProjectActivity,
-  ActivityListResponse,
-  ActivityType,
-} from "./activityService.types";
+import { ProjectActivity, ActivityType } from "./activityService.types";
 
 /**
  * Activity service for project timeline

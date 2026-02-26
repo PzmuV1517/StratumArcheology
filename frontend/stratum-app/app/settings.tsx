@@ -148,7 +148,7 @@ const storageStyles = StyleSheet.create({
 });
 
 export default function SettingsScreen() {
-  const router = useRouter();
+  const _router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
   const { replayOnboarding } = useOnboarding();

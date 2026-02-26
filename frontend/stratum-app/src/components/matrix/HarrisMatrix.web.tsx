@@ -1391,7 +1391,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
         (window as any).__hm_deleteArtefact = (id: string) => {
           let removed = false;
           (Object.entries(artefactRegistries) as any).forEach(
-            ([cat, arr]: [string, any[]]) => {
+            ([_cat, arr]: [string, any[]]) => {
               if (removed) return;
               const idx = (arr || []).findIndex((r: any) => r.id === id);
               if (idx >= 0) {
@@ -1759,7 +1759,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             // Persist to backend CSV (best-effort)
             try {
               await formsService.saveContextFeature(projectId, rec as any);
-            } catch (e) {
+            } catch (_e) {
               /* network errors ignored for now */
             }
             alert("Context feature record saved.");
@@ -1976,7 +1976,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             updateRecordsDisplay();
             try {
               await formsService.saveStratigraphicUnit(projectId, rec as any);
-            } catch (e) {
+            } catch (_e) {
               /* ignore */
             }
             alert("SU record saved.");
@@ -2118,7 +2118,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 category,
                 ...record,
               } as any);
-            } catch (e) {
+            } catch (_e) {
               /* ignore */
             }
           };
@@ -2576,7 +2576,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               .map((r) => r.split(","));
             const headers = rows.shift() || [];
             showImportModal(rows, headers);
-          } catch (err) {
+          } catch (_err) {
             alert("Failed to parse CSV");
           }
         };
@@ -2815,7 +2815,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           results.push(suExists ? "SU save: PASS" : "SU save: FAIL");
 
           alert(results.join("\n"));
-        } catch (e) {
+        } catch (_e) {
           alert("Self-test failed to run");
         }
       }
@@ -3246,6 +3246,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       (window as any).__hm_editGroupEntity = undefined;
       openGroupModalRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   useEffect(() => {

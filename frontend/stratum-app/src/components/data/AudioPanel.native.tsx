@@ -48,7 +48,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const isLoaded = status?.isLoaded;
+  const _isLoaded = status?.isLoaded;
   const isPlaying = status?.isLoaded && status.isPlaying;
   const position = status?.isLoaded ? status.positionMillis : 0;
   const duration = status?.isLoaded ? status.durationMillis || 0 : 0;

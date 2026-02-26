@@ -90,9 +90,9 @@ export function parseLAS(
     );
   }
 
-  const versionMajor = view.getUint8(base + 24);
-  const versionMinor = view.getUint8(base + 25);
-  const headerSize = view.getUint16(base + 94, true);
+  const _versionMajor = view.getUint8(base + 24);
+  const _versionMinor = view.getUint8(base + 25);
+  const _headerSize = view.getUint16(base + 94, true);
   const offsetToPointData = view.getUint32(base + 96, true) + base; // offset relative to start
   const pointFormat = view.getUint8(base + 104);
   const pointRecordLength = view.getUint16(base + 105, true);

@@ -93,7 +93,7 @@ export default function ProjectOverlays() {
     handleResolveConflict,
     setShowConflictModal,
     setCurrentConflict,
-    navigateToTab,
+    navigateToTab: _navigateToTab,
   } = useProjectDetail();
 
   return (

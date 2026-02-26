@@ -32,7 +32,9 @@ export interface AudioPanelProps {
 
 const AudioPanel =
   Platform.OS === "web"
-    ? require("./AudioPanel.web").default
-    : require("./AudioPanel.native").default;
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./AudioPanel.web").default
+    : // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./AudioPanel.native").default;
 
 export default AudioPanel;

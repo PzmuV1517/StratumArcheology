@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await authService.updateUserData(freshUser);
           setUser(freshUser);
         }
-      } catch (apiError: any) {
+      } catch (_apiError: any) {
         // Token is invalid or expired (401), already cleared by api interceptor
         console.log("[AuthContext] Token validation failed, clearing session");
         setUser(null);

@@ -136,7 +136,7 @@ export default function NotesSection({
         const token = await AsyncStorage.getItem("authToken");
 
         // Create and play new sound
-        const { sound, status } = await Audio.Sound.createAsync(
+        const { sound, status: _status } = await Audio.Sound.createAsync(
           {
             uri: audioUrl,
             headers: token ? { Authorization: `Bearer ${token}` } : undefined,

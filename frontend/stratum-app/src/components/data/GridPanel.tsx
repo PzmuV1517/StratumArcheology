@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useRef, useState } from "react";
+import React from "react";
 import { Platform, View, Text, TextInput, StyleSheet } from "react-native";
 
 interface Props {

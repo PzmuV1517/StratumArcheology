@@ -71,7 +71,7 @@ export function LiquidGlassTextField({
   onBlur,
   ...textInputProps
 }: LiquidGlassTextFieldProps) {
-  const [isFocused, setIsFocused] = useState(false);
+  const [_isFocused, setIsFocused] = useState(false);
   const borderAnim = useRef(new Animated.Value(0)).current;
 
   const handleFocus = useCallback(

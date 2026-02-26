@@ -40,7 +40,7 @@ import { Ionicons } from "@expo/vector-icons";
 export default function PdfPanel({ src }: { src: string | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [_currentPage, _setCurrentPage] = useState(1);
   const webViewRef = React.useRef<WebView>(null);
 
   if (!src) {

@@ -138,7 +138,7 @@ export default function ProjectsScreen() {
     }
   };
 
-  const renderProject = ({ item, index }: any) => {
+  const renderProject = ({ item, index: _index }: any) => {
     // During onboarding, tag the demo project card (or first card as fallback)
     return (
       <TouchableOpacity

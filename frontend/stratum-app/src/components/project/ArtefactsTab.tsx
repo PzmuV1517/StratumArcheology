@@ -69,7 +69,7 @@ export default function ArtefactsTab({
   const [loading, setLoading] = useState(false);
   const showSkeleton = useDelayedLoading(loading);
   const [searchQuery, setSearchQuery] = useState("");
-  const [artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
+  const [_artefactFolder, setArtefactFolder] = useState<FileNode | null>(null);
   const [artefacts, setArtefacts] = useState<
     { folder: FileNode; meta: ArtefactMeta | null; previewUrl?: string }[]
   >([]);
@@ -86,6 +86,7 @@ export default function ArtefactsTab({
 
   useEffect(() => {
     if (projectId) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Reload artefacts when screen comes into focus (e.g., after creating a new artefact)
@@ -94,6 +95,7 @@ export default function ArtefactsTab({
       if (projectId) {
         load();
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]),
   );
 

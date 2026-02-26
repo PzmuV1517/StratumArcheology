@@ -30,9 +30,12 @@
 import { PropsWithChildren, useState } from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
+// eslint-disable-next-line import/no-unresolved
 import { ThemedText } from "@/components/ui/themed-text";
+// eslint-disable-next-line import/no-unresolved
 import { ThemedView } from "@/components/ui/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+// eslint-disable-next-line import/no-unresolved
 import { Colors } from "@/config/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 

@@ -28,19 +28,8 @@
  * SOFTWARE.
  */
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Platform,
-} from "react-native";
-import {
-  subscribeNetworkStatus,
-  NetworkState,
-  isOnline,
-} from "../../services/networkService";
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
+import { subscribeNetworkStatus, NetworkState } from "../../services/networkService";
 import {
   subscribeSyncStatus,
   SyncStatus,
@@ -100,6 +89,7 @@ export function NetworkStatusIndicator({
     } else {
       pulseAnim.setValue(1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncStatus?.isSyncing]);
 
   // Don't render until we have network state

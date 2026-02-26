@@ -37,7 +37,6 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { fileService } from "../src/services/fileService";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import PhotoPanel from "../src/components/data/PhotoPanel";
 import { showAlert } from "../src/utils/alert";
 
@@ -97,6 +96,7 @@ export default function ImagePreviewScreen() {
         } catch {}
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeId, name]);
 
   const handleDownload = async () => {

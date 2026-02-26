@@ -44,6 +44,7 @@ import * as Haptics from "expo-haptics";
 // Try to import native SegmentedControl — it auto-renders with Liquid Glass on iOS 26+
 let NativeSegmentedControl: React.ComponentType<any> | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require("@react-native-segmented-control/segmented-control");
   NativeSegmentedControl = mod.default || mod;
 } catch {

@@ -35,22 +35,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  Platform,
-  RefreshControl,
-  View,
-  Text,
-  ActivityIndicator,
-} from "react-native";
+import { Platform, RefreshControl, View, Text } from "react-native";
 import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  useGlobalSearchParams,
-  useLocalSearchParams,
-  useRouter,
-  useNavigation,
-} from "expo-router";
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";

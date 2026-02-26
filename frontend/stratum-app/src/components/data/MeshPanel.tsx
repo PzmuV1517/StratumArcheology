@@ -33,7 +33,9 @@ export interface MeshPanelProps {
 
 const MeshPanel =
   Platform.OS === "web"
-    ? require("./MeshPanel.web").default
-    : require("./MeshPanel.native").default;
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./MeshPanel.web").default
+    : // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./MeshPanel.native").default;
 
 export default MeshPanel;

@@ -77,6 +77,7 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
         unsubscribeRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, currentPath]);
 
   // Load files when projectId changes
@@ -84,6 +85,7 @@ export function useFiles(projectId: number | undefined): UseFilesReturn {
     if (projectId) {
       loadFiles("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadFiles = useCallback(

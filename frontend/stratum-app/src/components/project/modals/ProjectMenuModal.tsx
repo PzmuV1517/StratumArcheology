@@ -59,7 +59,7 @@ export default function ProjectMenuModal({
   onClose,
   onOpenMembers,
   onOpenSettings,
-  currentTabName,
+  currentTabName: _currentTabName,
   onExitProject,
   onDeleteProject,
   onTransferLeadership,

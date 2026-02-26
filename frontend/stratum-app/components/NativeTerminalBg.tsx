@@ -42,7 +42,7 @@ interface ColumnProps {
 }
 
 const Column = React.memo(
-  ({ index, screenHeight, delay, speed, chars }: ColumnProps) => {
+  ({ index, screenHeight: _screenHeight, delay, speed, chars }: ColumnProps) => {
     // The strip is 2x the char list: when the first copy scrolls away the second
     // is already visible, so the loop reset is invisible.
     const stripHeight = chars.length * CHAR_HEIGHT;
@@ -103,6 +103,7 @@ const Column = React.memo(
     );
   },
 );
+Column.displayName = "Column";
 
 // Scanline overlay
 const Scanlines = React.memo(() => (
@@ -115,6 +116,7 @@ const Scanlines = React.memo(() => (
     ))}
   </View>
 ));
+Scanlines.displayName = "Scanlines";
 
 // Pure-View gradient fade (no native module needed)
 const FADE_STEPS = 8;
@@ -147,6 +149,7 @@ const FadeOverlay = React.memo(({ position }: { position: "top" | "bottom" }) =>
     </View>
   );
 });
+FadeOverlay.displayName = "FadeOverlay";
 
 /**
  * Terminal-style animated background with scrolling Greek characters.

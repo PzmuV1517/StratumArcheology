@@ -28,7 +28,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { Stack } from "expo-router";
 
 import MapEditor from "@/src/components/map/MapEditor";

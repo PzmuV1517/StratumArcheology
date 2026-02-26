@@ -65,7 +65,7 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
         }
       };
       draw();
-    } catch (e: any) {
+    } catch (_e: any) {
       setError("Audio visualizer error");
     }
     return () => {

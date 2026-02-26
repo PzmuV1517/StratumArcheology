@@ -27,6 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+// eslint-disable-next-line import/no-unresolved
 import { Colors } from "@/config/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 

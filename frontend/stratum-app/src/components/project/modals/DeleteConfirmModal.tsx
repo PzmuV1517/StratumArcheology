@@ -28,14 +28,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 export default function DeleteConfirmModal({
   visible,

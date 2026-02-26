@@ -89,7 +89,7 @@ const DRAFT_VERSION = 1;
  */
 export function useAutoSave<T>({
   formId,
-  initialData,
+  initialData: _initialData,
   onRestore,
   interval = 30000,
   debounceDelay = 1000,
@@ -252,6 +252,7 @@ export function useAutoSave<T>({
     };
 
     restoreDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formId]); // Only run on mount
 
   /**

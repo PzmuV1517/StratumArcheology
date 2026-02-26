@@ -33,7 +33,9 @@ export interface PointCloudPanelProps {
 
 const PointCloudPanel =
   Platform.OS === "web"
-    ? require("./PointCloudPanel.web").default
-    : require("./PointCloudPanel.native").default;
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./PointCloudPanel.web").default
+    : // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./PointCloudPanel.native").default;
 
 export default PointCloudPanel;

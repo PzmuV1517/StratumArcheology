@@ -26,7 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { requireNativeComponent, ViewProps } from "react-native";
+import { ViewProps } from "react-native";
 import type {
   BubblingEventHandler,
   DirectEventHandler,
@@ -142,12 +142,14 @@ export interface TabBarPressEvent {
 // Component prop types
 export interface NativeMaterialViewProps extends ViewProps {
   material?: MaterialType;
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   onPress?: BubblingEventHandler<{}>;
 }
 
 export interface NativeButtonProps extends ViewProps {
   title: string;
   buttonStyle?: ButtonStyle;
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   onPress?: BubblingEventHandler<{}>;
 }
 
@@ -170,6 +172,7 @@ export interface NativeSearchBarProps extends ViewProps {
   text?: string;
   onTextChanged?: DirectEventHandler<SearchBarChangeEvent>;
   onSearchPressed?: DirectEventHandler<SearchBarChangeEvent>;
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   onCancelPressed?: DirectEventHandler<{}>;
 }
 
@@ -188,6 +191,7 @@ export interface NativeToolbarButtonProps extends ViewProps {
   title?: string;
   systemItem?: ToolbarSystemItem;
   disabled?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   onPress?: BubblingEventHandler<{}>;
 }
 

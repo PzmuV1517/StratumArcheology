@@ -165,11 +165,13 @@ export default function NoteDetailScreen() {
 
   useEffect(() => {
     loadNote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
   useFocusEffect(
     React.useCallback(() => {
       if (noteId) loadNote();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [noteId]),
   );
 
@@ -498,6 +500,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
       el.removeEventListener("play", onFirstPlay);
       cleanup();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
   const needsResume = ctxRef.current && ctxRef.current.state === "suspended";
@@ -505,6 +508,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
   return (
     <View style={{ gap: 8, position: "relative" }}>
       {/* @ts-ignore */}
+      {/* eslint-disable react/no-unknown-property */}
       <audio
         ref={audioRef as any}
         src={url}
@@ -513,6 +517,7 @@ const AudioAttachmentPlayer = ({ url }: { url: string }) => {
         preload="metadata"
         playsInline
       />
+      {/* eslint-enable react/no-unknown-property */}
       {(!ready || needsResume) && (
         <TouchableOpacity
           style={{

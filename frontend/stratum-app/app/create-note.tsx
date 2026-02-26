@@ -39,7 +39,6 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { showAlert } from "../src/utils/alert";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
@@ -115,12 +114,13 @@ function GlassButton({
 }
 // Lazy import expo-av only on native/mobile to avoid bundler issues on web if unavailable
 let Audio: any = null;
-let Sound: any = null;
+let _Sound: any = null;
 if (Platform.OS !== "web") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const av = require("expo-av");
     Audio = av.Audio;
-    Sound = av.Audio?.Sound;
+    _Sound = av.Audio?.Sound;
   } catch {}
 }
 
@@ -128,7 +128,7 @@ export default function CreateNoteScreen() {
   const { projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-  const iosHeaderPad =
+  const _iosHeaderPad =
     Platform.OS === "ios"
       ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
       : 0;
@@ -150,8 +150,8 @@ export default function CreateNoteScreen() {
   // Auto-save hook for draft recovery
   const {
     saveStatus,
-    wasRestored,
-    saveDraft,
+    wasRestored: _wasRestored,
+    saveDraft: _saveDraft,
     clearDraft,
     hasDraft,
     getDraft,
@@ -177,6 +177,7 @@ export default function CreateNoteScreen() {
       }
     };
     checkDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save when form data changes
@@ -184,6 +185,7 @@ export default function CreateNoteScreen() {
     if (title || content) {
       scheduleAutoSave({ title, content, isVoiceNote });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, content, isVoiceNote]);
 
   const handleRestoreDraft = async () => {
@@ -249,7 +251,7 @@ export default function CreateNoteScreen() {
             if (status.isRecording && status.metering !== undefined) {
               setMeterLevel(status.metering);
             }
-          } catch (err) {
+          } catch (_err) {
             // Recording may have stopped
           }
         }, 100);
@@ -332,6 +334,7 @@ export default function CreateNoteScreen() {
         router.push(dest as any);
       } catch {}
     }, 10);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const handleCreate = async () => {
@@ -811,7 +814,7 @@ function NativeAudioPreview({ uri }: { uri: string }) {
         soundRef.current = null;
       }
       // Create and play new sound from local file URI
-      const { sound, status } = await Audio.Sound.createAsync(
+      const { sound, status: _status } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: true },
         (playbackStatus: any) => {

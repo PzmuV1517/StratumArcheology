@@ -185,6 +185,7 @@ export default function PointCloudPanel({ src, name }: Props) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // React to scene-level settings
@@ -204,6 +205,7 @@ export default function PointCloudPanel({ src, name }: Props) {
 
   React.useEffect(() => {
     updatePointSize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sizeMode, sizePx, sizeWorld]);
 
   React.useEffect(() => {
@@ -479,7 +481,7 @@ export default function PointCloudPanel({ src, name }: Props) {
               setLoading(false);
               return;
             }
-          } catch (e2: any) {
+          } catch (_e2: any) {
             // fall through to display the original conversion error below
           }
           setLoading(false);
@@ -487,6 +489,7 @@ export default function PointCloudPanel({ src, name }: Props) {
         }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, ext]);
 
   const tuneHelpersToFit = React.useCallback(

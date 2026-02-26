@@ -43,7 +43,7 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "../src/services/noteService";
-import { useAutoSave, SaveStatus } from "../src/hooks/useAutoSave";
+import { useAutoSave } from "../src/hooks/useAutoSave";
 import { showAlert } from "../src/utils/alert";
 
 const isIOS = Platform.OS === "ios";
@@ -123,10 +123,10 @@ interface Note {
 }
 
 export default function EditNoteScreen() {
-  const { noteId, projectId } = useLocalSearchParams();
+  const { noteId, projectId: _projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-  const iosHeaderPad = isIOS
+  const _iosHeaderPad = isIOS
     ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
     : 0;
   const router = useRouter();
@@ -165,6 +165,7 @@ export default function EditNoteScreen() {
       }
     };
     checkDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originalDataLoaded]);
 
   // Auto-save when form data changes (only after original data loaded)
@@ -172,6 +173,7 @@ export default function EditNoteScreen() {
     if (originalDataLoaded && (title || content)) {
       saveDraft(formData);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, originalDataLoaded]);
 
   const handleRestoreDraft = async () => {
@@ -190,6 +192,7 @@ export default function EditNoteScreen() {
 
   useEffect(() => {
     loadNote();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
   const loadNote = async () => {

@@ -44,8 +44,10 @@ export * from "./fileService.core";
 let fileService: any;
 
 if (Platform.OS === "web") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   fileService = require("./fileService.web").fileService;
 } else {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   fileService = require("./fileService.native").fileService;
 }
 

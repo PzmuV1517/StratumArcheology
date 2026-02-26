@@ -35,7 +35,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Platform,
 } from "react-native";
 
 export default function RenameModal({
@@ -43,7 +42,7 @@ export default function RenameModal({
   currentName,
   onCancel,
   onRename,
-  isFile,
+  isFile: _isFile,
 }: {
   visible: boolean;
   currentName: string;

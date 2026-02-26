@@ -58,7 +58,7 @@ export default function FileGallery({
   projectId: string;
   onOpenItem: (node: FileNode) => void;
 }) {
-  const { width } = useWindowDimensions();
+  const { width: _width } = useWindowDimensions();
   const [mode, setMode] = useState<Mode>("day");
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -277,7 +277,7 @@ async function fetchAllProjectFiles(projectId: string): Promise<FileNode[]> {
         if (c.type === "folder") queue.push(c);
         else files.push(c);
       }
-    } catch (e) {
+    } catch (_e) {
       console.warn("Failed to list children for folder", folder?.id);
     }
   }

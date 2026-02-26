@@ -297,6 +297,7 @@ export default function HarrisMatrix({
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   /* ── persist to AsyncStorage ── */
@@ -343,6 +344,7 @@ export default function HarrisMatrix({
   // Auto-sync when coming online
   useEffect(() => {
     if (isOnline && hasPending) syncToServer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, hasPending]);
 
   /* ── computed layout ── */
@@ -627,6 +629,7 @@ export default function HarrisMatrix({
     scale.value = 1;
     savedScale.value = 1;
     hasInitializedView.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     canvasDimensions.width,
     canvasDimensions.height,
@@ -643,12 +646,14 @@ export default function HarrisMatrix({
     savedTranslateY.value = 0;
     scale.value = 1;
     savedScale.value = 1;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contexts.size]);
 
   const resetView = useCallback(() => {
     translateX.value = withTiming(defaultView.x);
     translateY.value = withTiming(defaultView.y);
     scale.value = withTiming(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultView.x, defaultView.y]);
 
   /* ── node colour ── */

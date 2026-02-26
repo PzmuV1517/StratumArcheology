@@ -53,7 +53,7 @@ interface QueuedAlert {
 }
 
 // ── Module-level plumbing (runs once on import) ────────────────────────
-const originalAlertFn = Alert.alert.bind(Alert);
+const _originalAlertFn = Alert.alert.bind(Alert);
 
 let showCustomAlert: ((a: QueuedAlert) => void) | null = null;
 const pendingQueue: QueuedAlert[] = [];

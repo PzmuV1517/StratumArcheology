@@ -28,16 +28,12 @@
  */
 // Native-specific note operations using Expo APIs
 import api from "./api";
-import {
-  noteServiceCore,
-  Note,
-  Attachment,
-  CreateNoteData,
-} from "./noteService.core";
+import { noteServiceCore, Attachment } from "./noteService.core";
 import { Audio } from "expo-av";
 // Note: expo-image-picker must be installed separately: npx expo install expo-image-picker
 let ImagePicker: any;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   ImagePicker = require("expo-image-picker");
 } catch {
   ImagePicker = null;

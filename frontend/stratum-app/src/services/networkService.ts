@@ -115,6 +115,7 @@ function initWebNetworkService(): void {
  */
 async function initNativeNetworkService(): Promise<void> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     NetInfo = require("@react-native-community/netinfo").default;
 
     // Get initial state
@@ -123,7 +124,7 @@ async function initNativeNetworkService(): Promise<void> {
 
     // Subscribe to changes
     unsubscribeNetInfo = NetInfo.addEventListener(handleNetInfoChange);
-  } catch (error) {
+  } catch (_error) {
     console.warn("[NetworkService] NetInfo not available, using fallback");
     // Fallback: assume online
     updateNetworkState({

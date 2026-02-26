@@ -32,7 +32,9 @@ export interface PdfPanelProps {
 
 const PdfPanel =
   Platform.OS === "web"
-    ? require("./PdfPanel.web").default
-    : require("./PdfPanel.native").default;
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./PdfPanel.web").default
+    : // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./PdfPanel.native").default;
 
 export default PdfPanel;

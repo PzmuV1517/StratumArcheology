@@ -35,7 +35,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Platform,
 } from "react-native";
 
 export default function NewFolderModal({

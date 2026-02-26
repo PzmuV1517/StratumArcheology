@@ -38,7 +38,7 @@ interface QueuedRequest {
   retryCount: number;
 }
 
-interface SyncConflict {
+interface _SyncConflict {
   entityType: "project" | "note";
   entityId: string;
   localVersion: any;

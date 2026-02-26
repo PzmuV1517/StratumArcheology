@@ -41,7 +41,6 @@ import {
   TextInput,
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import QRCodeView from "../../src/components/common/QRCodeView";
@@ -183,6 +182,7 @@ export default function ArtefactDetail() {
 
   useEffect(() => {
     if (id) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const load = async () => {
@@ -486,7 +486,7 @@ export default function ArtefactDetail() {
               {noteFiles.map((n) => {
                 const isExpanded = expandedNotes.has(n.id);
                 const content = noteContents.get(n.id) || "";
-                const preview = content.substring(0, 100);
+                const _preview = content.substring(0, 100);
                 return (
                   <TouchableOpacity
                     key={n.id}

@@ -31,7 +31,9 @@ import { Platform } from "react-native";
 // This file serves as a TypeScript type reference
 
 const HarrisMatrix = Platform.select({
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   web: () => require("./HarrisMatrix.web").default,
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   default: () => require("./HarrisMatrix.native").default,
 })?.();
 

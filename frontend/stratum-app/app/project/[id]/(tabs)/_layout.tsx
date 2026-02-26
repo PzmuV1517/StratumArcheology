@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";

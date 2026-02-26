@@ -64,6 +64,7 @@ export async function initDatabase(): Promise<void> {
  */
 async function initSQLite(): Promise<void> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     SQLite = require("expo-sqlite");
     db = await SQLite.openDatabaseAsync(DB_NAME);
 
@@ -208,7 +209,7 @@ export async function getUnsyncedProjects(): Promise<LocalProject[]> {
  */
 export async function saveLocalNote(note: LocalNote): Promise<void> {
   if (Platform.OS === "web") {
-    const notes = await getLocalNotes(note.project_id);
+    const _notes = await getLocalNotes(note.project_id);
     const allNotes = await getAllLocalNotes();
     const index = allNotes.findIndex((n) => n.id === note.id);
     if (index >= 0) {

@@ -28,7 +28,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Animated } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { SaveStatus, getDraftStatusDisplay } from "../../hooks/useAutoSave";
 
 interface DraftStatusIndicatorProps {

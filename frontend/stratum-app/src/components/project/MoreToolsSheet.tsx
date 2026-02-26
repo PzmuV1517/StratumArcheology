@@ -34,7 +34,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
-  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 

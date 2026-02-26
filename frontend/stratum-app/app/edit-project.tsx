@@ -51,7 +51,7 @@ interface Member {
   role: "LEADER" | "RESEARCHER" | "GUEST";
 }
 
-interface Project {
+interface _Project {
   id: string;
   name: string;
   description: string;
@@ -78,6 +78,7 @@ export default function EditProjectScreen() {
 
   useEffect(() => {
     loadProject();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const loadProject = async () => {

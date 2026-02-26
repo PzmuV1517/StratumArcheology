@@ -58,6 +58,7 @@ let NativeToolbar: React.FC<any> | null = null;
 let NativeToolbarButton: React.FC<any> | null = null;
 let NativeToolbarMenu: React.FC<any> | null = null;
 if (Platform.OS === "ios") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const lr = require("liquid-react");
   NativeToolbar = lr.NativeToolbar;
   NativeToolbarButton = lr.NativeToolbarButton;

@@ -33,7 +33,9 @@ export interface VideoPanelProps {
 
 const VideoPanel =
   Platform.OS === "web"
-    ? require("./VideoPanel.web").default
-    : require("./VideoPanel.native").default;
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./VideoPanel.web").default
+    : // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require("./VideoPanel.native").default;
 
 export default VideoPanel;

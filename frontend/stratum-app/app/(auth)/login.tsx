@@ -66,14 +66,17 @@ let MemoFaultyTerminal: any = null;
 
 if (Platform.OS === "web") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fa = require("react-icons/fa");
     FaEyeSlash = fa.FaEyeSlash;
     FaEye = fa.FaEye;
   } catch {}
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
     MemoFaultyTerminal = React.memo(FaultyTerminal);
     // @ts-ignore - CSS handled by web bundler
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("../../components/FaultyTerminal.css");
   } catch {}
 }
@@ -145,6 +148,7 @@ export default function LoginScreen() {
     setTimeout(() => {
       setIsAnimating(false);
     }, SWAP_DURATION);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnimating, activeCard, cardProgress]);
 
   const switchToLogin = useCallback(() => {
@@ -158,6 +162,7 @@ export default function LoginScreen() {
     setTimeout(() => {
       setIsAnimating(false);
     }, SWAP_DURATION);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnimating, activeCard, cardProgress]);
 
   // Login card: front at 0, behind at 1
@@ -260,7 +265,7 @@ export default function LoginScreen() {
       api.defaults.baseURL = apiInput;
       setShowDevModal(false);
       showAlert("Applied", "Backend API base URL updated for this app.");
-    } catch (e) {
+    } catch (_e) {
       showAlert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
@@ -275,7 +280,7 @@ export default function LoginScreen() {
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
       showAlert("Reset", "Reverted to default backend API URL.");
-    } catch (e) {
+    } catch (_e) {
       showAlert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
