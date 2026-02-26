@@ -33,6 +33,7 @@ import {
   useWheelerData,
   WheelerTrench,
   WheelerContextPlacement,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   WheelerLacuna,
 } from "../../hooks/useWheelerData";
 import { WheelerPublicationView } from "./WheelerPublicationView.web";
@@ -168,6 +169,7 @@ const IconDownload = () => (
   </svg>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const IconGrid = () => (
   <svg
     width={38}

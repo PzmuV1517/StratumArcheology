@@ -208,8 +208,8 @@ export function WheelerPublicationView({
         <div style={bannerStyle}>
           <span>⚠</span>
           <span>
-            This diagram has unsaved changes — the displayed render may be
-            outdated. Save to refresh.
+            This diagram has unsaved changes — the displayed render may be outdated.
+            Save to refresh.
           </span>
         </div>
       )}
@@ -223,8 +223,7 @@ export function WheelerPublicationView({
             fontFamily: "Inter, system-ui, sans-serif",
           }}
         >
-          Publication-quality · Wheeler 1964 style · Rendered v
-          {renderVersion ?? "?"}
+          Publication-quality · Wheeler 1964 style · Rendered v{renderVersion ?? "?"}
         </span>
         <button
           style={btnStyle}
@@ -266,7 +265,6 @@ export function WheelerPublicationView({
           <>
             <div
               style={svgWrapStyle}
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{ __html: svgText }}
             />
             <p
