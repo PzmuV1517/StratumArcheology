@@ -182,6 +182,10 @@ class Project(Base):
     harris_matrix_version = Column(Integer, default=0, nullable=False)
     wheeler_data_version = Column(Integer, default=0, nullable=False)
 
+    # Publication-quality SVG render (stored in MinIO)
+    wheeler_render_path = Column(Text, nullable=True)   # MinIO object key
+    wheeler_render_version = Column(Integer, nullable=True)  # data version at render time
+
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
     members = relationship(

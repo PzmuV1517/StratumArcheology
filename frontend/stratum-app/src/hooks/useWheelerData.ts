@@ -94,6 +94,10 @@ export interface UseWheelerDataReturn {
   checkForUpdates: () => Promise<void>;
   /** Pull latest data from server, discarding local changes. */
   pull: () => Promise<void>;
+  /** Presigned URL to the latest publication SVG, or null if not yet generated. */
+  renderUrl: string | null;
+  /** Data version that the current render corresponds to. */
+  renderVersion: number | null;
 }
 
 /**
@@ -115,6 +119,8 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState(0);
   const [hasServerChanges, setHasServerChanges] = useState(false);
+  const [renderUrl, setRenderUrl] = useState<string | null>(null);
+  const [renderVersion, setRenderVersion] = useState<number | null>(null);
 
   /** Fetch Wheeler data from the backend. */
   const load = useCallback(async () => {
@@ -129,6 +135,8 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
       setVersion(ver);
       setHasServerChanges(false);
       setDirty(false);
+      setRenderUrl(res.data?.render_url ?? null);
+      setRenderVersion(res.data?.render_version ?? null);
     } catch (e: unknown) {
       // 404 means no Wheeler data saved yet — not an error
       const status = (e as { response?: { status?: number } })?.response?.status;
@@ -155,6 +163,8 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
       setVersion(ver);
       setHasServerChanges(false);
       setDirty(false);
+      setRenderUrl(res.data?.render_url ?? null);
+      setRenderVersion(res.data?.render_version ?? null);
     } catch (e: unknown) {
       const msg =
         (e as { message?: string })?.message ?? "Failed to save Wheeler data";
@@ -256,5 +266,7 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     setData,
     checkForUpdates,
     pull,
+    renderUrl,
+    renderVersion,
   };
 }

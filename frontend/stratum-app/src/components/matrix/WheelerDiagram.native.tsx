@@ -29,7 +29,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,8 @@ import {
   ActivityIndicator,
   Pressable,
   Modal,
+  ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import Svg, {
   Rect,
@@ -46,10 +48,12 @@ import Svg, {
   Line,
   G,
 } from "react-native-svg";
+import { SvgXml } from "react-native-svg";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
+import * as Sharing from "expo-sharing";
 import api from "../../services/api";
 
 import {
@@ -177,7 +181,16 @@ export default function WheelerDiagram({
 
   canEdit: _canEdit = false,
 }: WheelerDiagramProps) {
-  const { data, loading, error } = useWheelerData(projectId);
+  const { data, loading, error, dirty, version, renderUrl, renderVersion } = useWheelerData(projectId);
+
+  // View mode: "diagram" (coloured grid) or "publication" (B&W SVG)
+  const [viewMode, setViewMode] = useState<"diagram" | "publication">("diagram");
+
+  // Publication SVG state
+  const [pubSvg, setPubSvg] = useState<string | null>(null);
+  const [pubLoading, setPubLoading] = useState(false);
+  const [pubError, setPubError] = useState<string | null>(null);
+  const lastPubUrlRef = useRef<string | null>(null);
 
   // Local context metadata for display
   const [contexts] = useState<Map<string, WheelerGridContext>>(() => new Map());
@@ -244,6 +257,54 @@ export default function WheelerDiagram({
     if (isOnline && hasPending) syncToServer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, hasPending]);
+
+  // Fetch publication SVG when switching to publication mode or URL changes
+  useEffect(() => {
+    if (!renderUrl) return;
+    if (renderUrl === lastPubUrlRef.current && pubSvg) return;
+    lastPubUrlRef.current = renderUrl;
+
+    let cancelled = false;
+    setPubLoading(true);
+    setPubError(null);
+
+    api
+      .get(renderUrl, { responseType: "text", baseURL: "" })
+      .then((res: { data: string }) => {
+        if (!cancelled) {
+          setPubSvg(res.data);
+          setPubLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setPubError((err as Error)?.message ?? "Failed to load publication SVG");
+          setPubLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [renderUrl, pubSvg]);
+
+  // Share the publication SVG via expo-sharing
+  const handleShareSvg = useCallback(async () => {
+    if (!pubSvg) return;
+    try {
+      // Write to a temp file using expo-file-system legacy API
+      const { writeAsStringAsync, documentDirectory } = await import("expo-file-system/legacy");
+      const dir = documentDirectory ?? "";
+      const path = `${dir}wheeler-diagram.svg`;
+      await writeAsStringAsync(path, pubSvg);
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(path, { mimeType: "image/svg+xml" });
+      }
+    } catch (e) {
+      console.error("[Wheeler] share error", e);
+    }
+  }, [pubSvg]);
 
   /* ── Pan / Zoom shared values ── */
   const translateX = useSharedValue(0);
@@ -367,6 +428,26 @@ export default function WheelerDiagram({
         </Text>
       </View>
 
+      {/* View mode tab bar */}
+      <View style={s.tabBar}>
+        <TouchableOpacity
+          style={[s.tab, viewMode === "diagram" && s.tabActive]}
+          onPress={() => setViewMode("diagram")}
+        >
+          <Text style={[s.tabText, viewMode === "diagram" && s.tabTextActive]}>
+            📊 Diagram
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.tab, viewMode === "publication" && s.tabActive]}
+          onPress={() => setViewMode("publication")}
+        >
+          <Text style={[s.tabText, viewMode === "publication" && s.tabTextActive]}>
+            📄 Publication
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Desktop recommended banner */}
       <View style={s.banner}>
         <Text style={s.bannerText}>
@@ -374,8 +455,86 @@ export default function WheelerDiagram({
         </Text>
       </View>
 
+      {/* ── Publication mode ── */}
+      {viewMode === "publication" && (
+        <View style={{ flex: 1, backgroundColor: "#fafaf8" }}>
+          {/* Stale warning */}
+          {(dirty || (renderVersion !== null && renderVersion !== version)) && (
+            <View style={{ backgroundColor: "#92400e", padding: 10 }}>
+              <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>
+                ⚠ Unsaved changes — render may be outdated. Save to refresh.
+              </Text>
+            </View>
+          )}
+          {/* Toolbar */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: 10,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: "#d5d3cc",
+              backgroundColor: "#f5f4f0",
+            }}
+          >
+            <Text style={{ fontSize: 11, color: "#9ca3af" }}>
+              Wheeler 1964 style · v{renderVersion ?? "?"}
+            </Text>
+            <TouchableOpacity
+              onPress={handleShareSvg}
+              disabled={!pubSvg}
+              style={{
+                backgroundColor: pubSvg ? "#292521" : "#d1d5db",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 6,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 13 }}>⬆ Share SVG</Text>
+            </TouchableOpacity>
+          </View>
+          {/* SVG content */}
+          {!renderUrl && (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", padding: 24 }}>
+                No publication SVG yet.{"\n"}Save the diagram on desktop to generate one.
+              </Text>
+            </View>
+          )}
+          {pubLoading && (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <ActivityIndicator color={ACCENT} />
+              <Text style={{ color: "#9ca3af", marginTop: 8, fontSize: 13 }}>
+                Loading publication SVG…
+              </Text>
+            </View>
+          )}
+          {pubError && (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+              <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>
+                {pubError}
+              </Text>
+            </View>
+          )}
+          {pubSvg && !pubLoading && (
+            <ScrollView
+              contentContainerStyle={{ padding: 16, alignItems: "center" }}
+              minimumZoomScale={0.5}
+              maximumZoomScale={4}
+              scrollEnabled
+            >
+              <SvgXml xml={pubSvg} width="100%" height={undefined} />
+              <Text style={{ color: "#9ca3af", fontSize: 10, marginTop: 8, textAlign: "center" }}>
+                Vector SVG · Suitable for print and publication
+              </Text>
+            </ScrollView>
+          )}
+        </View>
+      )}
+
       {/* SVG diagram with pan/zoom */}
-      <View
+      {viewMode === "diagram" && <View
         style={s.svgContainer}
         onLayout={(e) => {
           // Capture container dimensions if needed
@@ -514,17 +673,19 @@ export default function WheelerDiagram({
             </Svg>
           </Animated.View>
         </GestureDetector>
-      </View>
+      </View>}
 
-      {/* Legend */}
-      <View style={s.legend}>
-        {Object.entries(TYPE_COLORS).map(([type, color]) => (
-          <View key={type} style={s.legendItem}>
-            <View style={[s.legendSwatch, { backgroundColor: color }]} />
-            <Text style={s.legendLabel}>{type}</Text>
-          </View>
-        ))}
-      </View>
+      {/* Legend — only shown in diagram mode */}
+      {viewMode === "diagram" && (
+        <View style={s.legend}>
+          {Object.entries(TYPE_COLORS).map(([type, color]) => (
+            <View key={type} style={s.legendItem}>
+              <View style={[s.legendSwatch, { backgroundColor: color }]} />
+              <Text style={s.legendLabel}>{type}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Inspect modal */}
       <Modal
@@ -620,6 +781,30 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: "#888",
     textAlign: "center",
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#1A1A1A",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#FF2A2A",
+  },
+  tabText: {
+    fontSize: 13,
+    color: "#888",
+  },
+  tabTextActive: {
+    color: "#F5F5F5",
+    fontWeight: "600",
   },
   svgContainer: {
     flex: 1,

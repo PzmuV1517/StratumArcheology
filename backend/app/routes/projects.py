@@ -33,7 +33,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.minio_client import minio_client
 from app.models import DataVersion, FileNode, FileNodeType, Project, User, project_members
+from app.wheeler_renderer import generate_wheeler_svg
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -665,10 +667,21 @@ async def get_wheeler_data(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
+    render_url: str | None = None
+    if project.wheeler_render_path and minio_client.available:
+        try:
+            render_url = minio_client.get_presigned_url_for_bucket(
+                "wheeler-renders", project.wheeler_render_path
+            )
+        except Exception:
+            pass
+
     return {
         "project_id": project_id,
         "data": project.wheeler_data or {"trenches": [], "placements": []},
         "version": project.wheeler_data_version or 0,
+        "render_url": render_url,
+        "render_version": project.wheeler_render_version,
     }
 
 
@@ -706,6 +719,24 @@ async def update_wheeler_data(
 
     db.commit()
 
+    # Generate and store publication SVG
+    render_url: str | None = None
+    render_version: int | None = None
+    try:
+        svg_text = generate_wheeler_svg(new_data)
+        render_key = f"{project_id}/v{project.wheeler_data_version}.svg"
+        minio_client.ensure_bucket("wheeler-renders")
+        minio_client.upload_text("wheeler-renders", render_key, svg_text)
+        project.wheeler_render_path = render_key
+        project.wheeler_render_version = project.wheeler_data_version
+        db.commit()
+        render_url = minio_client.get_presigned_url_for_bucket(
+            "wheeler-renders", render_key
+        )
+        render_version = project.wheeler_render_version
+    except Exception as exc:
+        print(f"⚠ Wheeler SVG render/upload failed (non-fatal): {exc}")
+
     # Log activity for timeline
     await log_activity(
         db=db,
@@ -720,6 +751,8 @@ async def update_wheeler_data(
         "message": "Wheeler data updated successfully",
         "project_id": project_id,
         "version": project.wheeler_data_version,
+        "render_url": render_url,
+        "render_version": render_version,
     }
 
 

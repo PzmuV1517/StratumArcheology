@@ -34,6 +34,7 @@ import {
   WheelerTrench,
   WheelerContextPlacement,
 } from "../../hooks/useWheelerData";
+import { WheelerPublicationView } from "./WheelerPublicationView.web";
 
 /* ───────────────────────── Constants ───────────────────────── */
 
@@ -337,6 +338,8 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     setData,
     checkForUpdates,
     pull,
+    renderUrl,
+    renderVersion,
   } = useWheelerData(projectId);
 
   // Local context metadata
@@ -375,7 +378,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   const svgContainerRef = useRef<HTMLDivElement>(null);
 
   // View mode toggle: edit (grid) vs visual (Wheeler diagram)
-  const [viewMode, setViewMode] = useState<"edit" | "visual">("edit");
+  const [viewMode, setViewMode] = useState<"edit" | "visual" | "publication">("edit");
 
   // Conflict resolution modal
   const [showConflictModal, setShowConflictModal] = useState(false);
@@ -1178,9 +1181,17 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             borderColor:
               viewMode === "visual" ? "#FF2A2A" : "rgba(255,255,255,0.15)",
           }}
-          onClick={() => setViewMode((m) => (m === "edit" ? "visual" : "edit"))}
+          onClick={() =>
+            setViewMode((m) =>
+              m === "edit" ? "visual" : m === "visual" ? "publication" : "edit"
+            )
+          }
         >
-          {viewMode === "visual" ? "◀ Edit" : "📊 Visual"}
+          {viewMode === "visual"
+            ? "📄 Publication"
+            : viewMode === "publication"
+            ? "◀ Edit"
+            : "📊 Visual"}
         </button>
         {canEdit && viewMode === "edit" && (
           <>
@@ -1302,7 +1313,14 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       </div>
 
       {/* ─── Diagram Content ─── */}
-      {viewMode === "visual" ? (
+      {viewMode === "publication" ? (
+        <WheelerPublicationView
+          renderUrl={renderUrl}
+          renderVersion={renderVersion}
+          currentVersion={version}
+          dirty={dirty}
+        />
+      ) : viewMode === "visual" ? (
         <div style={svgContainerStyle} ref={svgContainerRef}>
           {data.trenches.length === 0 ? (
             <div style={emptyStateStyle}>
