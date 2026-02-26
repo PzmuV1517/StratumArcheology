@@ -64,6 +64,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
         data.get("trenches", []), key=lambda t: t.get("order", 0)
     )
     placements: list[dict] = data.get("placements", [])
+    lacunae: list[dict] = data.get("lacunae", []) or []
 
     # ── Edge case: nothing to draw ────────────────────────────────────────────
     if not trenches:
@@ -211,6 +212,9 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             if cid:
                 ctx_cells.setdefault(cid, []).append((c, r))
 
+    # Build: contextId → placement metadata (description, notes)
+    ctx_meta: dict[str, dict] = {p.get("contextId", ""): p for p in placements}
+
     # ─────────────────────────── SVG ASSEMBLY ────────────────────────────────
 
     parts: list[str] = []
@@ -226,6 +230,15 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
   <pattern id="pub-hiatus" patternUnits="userSpaceOnUse" width="1" height="8">
     <line x1="0" y1="0" x2="1" y2="0" stroke="{STROKE}" stroke-width="0.8" opacity="0.35"/>
   </pattern>
+  <!-- Horizontal hatching for lacuna zones -->
+  <pattern id="pub-lacuna" patternUnits="userSpaceOnUse" width="1" height="7">
+    <line x1="0" y1="0" x2="1" y2="0" stroke="#8B5E00" stroke-width="0.9" opacity="0.45"/>
+  </pattern>
+  <!-- Migration direction arrowhead -->
+  <marker id="pub-arrow" markerWidth="8" markerHeight="6"
+          refX="7" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6 Z" fill="{STROKE}" opacity="0.7"/>
+  </marker>
   <!-- Clip path to constrain labels inside the graph area -->
   <clipPath id="pub-graph-clip">
     <rect x="{PAD_L}" y="{PAD_T}" width="{graph_w}" height="{graph_h}"/>
@@ -257,7 +270,27 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             f'<polygon points="{pts}" fill="{FILL_DEPOSIT}" '
             f'stroke="{STROKE}" stroke-width="{STROKE_W}" stroke-linejoin="round"/>'
         )
-
+    # ── Sequence labels (A, B, C…) ───────────────────────────────────────────
+    for si, seq in enumerate(sequences):
+        letter = chr(65 + si)  # A, B, C, …
+        # Place label in the widest row of the sequence
+        widest_span = -1
+        widest_row_i = 0
+        for ri, (lft, rgt) in enumerate(seq["extents"]):
+            span = rgt - lft
+            if span > widest_span:
+                widest_span = span
+                widest_row_i = ri
+        r_label = seq["row_start"] + widest_row_i
+        lft_lbl, rgt_lbl = seq["extents"][widest_row_i]
+        cx = x_of(lft_lbl) + (x_of(rgt_lbl + 1) - x_of(lft_lbl)) / 2
+        cy = y_of(r_label) + ROW_H * 0.75
+        parts.append(
+            f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" '
+            f'font-family="{FONT}" font-size="10" fill="{STROKE}" '
+            f'font-style="italic" opacity="0.45" letter-spacing="2" '
+            f'clip-path="url(#pub-graph-clip)">SEQUENCE {_esc(letter)}</text>'
+        )
     # ── Hiatus zones ──────────────────────────────────────────────────────────
     for (hs, he) in hiatus_ranges:
         # y1 = top edge of the top hiatus row, y2 = bottom edge of bottom row
@@ -292,17 +325,106 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             f'<polygon points="{pts}" fill="url(#pub-vacuity)" '
             f'stroke="{STROKE}" stroke-width="0.8" stroke-dasharray="4,3"/>'
         )
+    # ── Migration arrows on diagonal boundary segments ──────────────────────
+    for seq in sequences:
+        exts = seq["extents"]
+        rs = seq["row_start"]
+        for i in range(1, len(exts)):
+            prev_l, prev_r = exts[i - 1]
+            curr_l, curr_r = exts[i]
+            r_prev = rs + i - 1
+            r_curr = rs + i
+            # Left boundary diagonal
+            if curr_l != prev_l:
+                x1 = x_of(prev_l);  y1 = y_of(r_prev)
+                x2 = x_of(curr_l);  y2 = y_of(r_curr)
+                parts.append(
+                    f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
+                    f'stroke="{STROKE}" stroke-width="1.2" opacity="0.6" '
+                    f'marker-end="url(#pub-arrow)"/>'
+                )
+            # Right boundary diagonal
+            if curr_r != prev_r:
+                x1 = x_of(prev_r + 1);  y1 = y_of(r_prev)
+                x2 = x_of(curr_r + 1);  y2 = y_of(r_curr)
+                parts.append(
+                    f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
+                    f'stroke="{STROKE}" stroke-width="1.2" opacity="0.6" '
+                    f'marker-end="url(#pub-arrow)"/>'
+                )
 
+    # ── Lacuna zones (missing intervals within sequences) ──────────────────
+    for lac in lacunae:
+        lac_trench_ids: list[str] = lac.get("trenchIds", [])
+        col_indices = sorted(
+            ci for ci in (trench_idx.get(tid) for tid in lac_trench_ids)
+            if ci is not None
+        )
+        if not col_indices:
+            continue
+        left_col = col_indices[0]
+        right_col = col_indices[-1]
+        row_s: int = lac.get("rowStart", 0)
+        row_e: int = lac.get("rowEnd", row_s)
+        lx = x_of(left_col)
+        lw = x_of(right_col + 1) - lx
+        ly = y_of(row_e)              # top edge
+        lh = (y_of(row_s) + ROW_H) - ly  # height
+        lbl = _esc(lac.get("label") or "LACUNA")
+        # Hatched fill
+        parts.append(
+            f'<rect x="{lx:.1f}" y="{ly:.1f}" width="{lw:.1f}" height="{lh:.1f}" '
+            f'fill="url(#pub-lacuna)"/>'
+        )
+        # Dashed amber-ish outline
+        parts.append(
+            f'<rect x="{lx:.1f}" y="{ly:.1f}" width="{lw:.1f}" height="{lh:.1f}" '
+            f'fill="none" stroke="#7a5000" stroke-width="1.2" stroke-dasharray="6,3" opacity="0.8"/>'
+        )
+        # Label
+        cx_lac = lx + lw / 2
+        cy_lac = ly + lh / 2
+        parts.append(
+            f'<text x="{cx_lac:.1f}" y="{cy_lac + 4:.1f}" text-anchor="middle" '
+            f'font-family="{FONT}" font-size="10" fill="#7a5000" '
+            f'font-weight="600" letter-spacing="1.5" '
+            f'clip-path="url(#pub-graph-clip)">{lbl}</text>'
+        )
+        parts.append(
+            f'<text x="{cx_lac:.1f}" y="{cy_lac + 16:.1f}" text-anchor="middle" '
+            f'font-family="{FONT}" font-size="8" fill="#7a5000" opacity="0.6" '
+            f'clip-path="url(#pub-graph-clip)">(missing interval)</text>'
+        )
     # ── Context ID labels ─────────────────────────────────────────────────────
     for cid, cells in ctx_cells.items():
         avg_x = sum(x_of(c) + COL_W / 2 for c, _ in cells) / len(cells)
         avg_y = sum(y_of(r) + ROW_H / 2 for _, r in cells) / len(cells)
+        meta = ctx_meta.get(cid, {})
+        desc: str = (meta.get("description") or "").strip()
+        notes: str = (meta.get("notes") or "").strip()
+        # If there's a description (and/or notes), shift the ID up a little
+        y_id = avg_y + (4 if not desc else -5)
         parts.append(
-            f'<text x="{avg_x:.1f}" y="{avg_y + 4:.1f}" '
+            f'<text x="{avg_x:.1f}" y="{y_id:.1f}" '
             f'text-anchor="middle" font-family="{FONT}" font-size="11" '
             f'fill="{STROKE}" font-weight="600" '
             f'clip-path="url(#pub-graph-clip)">{_esc(cid)}</text>'
         )
+        if desc:
+            parts.append(
+                f'<text x="{avg_x:.1f}" y="{y_id + 13:.1f}" '
+                f'text-anchor="middle" font-family="{FONT}" font-size="8" '
+                f'fill="{STROKE}" font-style="italic" opacity="0.65" '
+                f'clip-path="url(#pub-graph-clip)">{_esc(desc)}</text>'
+            )
+        if notes:
+            y_notes = y_id + (26 if desc else 13)
+            parts.append(
+                f'<text x="{avg_x:.1f}" y="{y_notes:.1f}" '
+                f'text-anchor="middle" font-family="{FONT}" font-size="7" '
+                f'fill="{STROKE}" font-style="italic" opacity="0.45" '
+                f'clip-path="url(#pub-graph-clip)">{_esc(notes)}</text>'
+            )
 
     # ── Y-axis: time period labels (t1 = bottom = row 0) ─────────────────────
     for r in range(total_rows):

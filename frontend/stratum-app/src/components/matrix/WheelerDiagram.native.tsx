@@ -47,8 +47,8 @@ import Svg, {
   Pattern,
   Line,
   G,
+  SvgXml,
 } from "react-native-svg";
-import { SvgXml } from "react-native-svg";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -79,13 +79,6 @@ const TYPE_COLORS: Record<string, string> = {
   fill: "#28a745",
   structure: "#9c27b0",
 };
-
-/** Context type used for Wheeler grid cells on native. */
-interface WheelerGridContext {
-  id: string;
-  type: string;
-  description: string;
-}
 
 /* ───────────────────────── Props ───────────────────────── */
 
@@ -128,7 +121,6 @@ function buildOccupancy(
 function createPlaceholderData(): {
   trenches: WheelerTrench[];
   placements: WheelerContextPlacement[];
-  contexts: Map<string, WheelerGridContext>;
 } {
   const trenches: WheelerTrench[] = [
     { id: "T1", label: "T1", order: 0 },
@@ -142,27 +134,51 @@ function createPlaceholderData(): {
       trenchIds: ["T1", "T2", "T3", "T4"],
       rowStart: 0,
       rowEnd: 0,
+      type: "layer",
+      description: "Topsoil (modern)",
     },
-    { contextId: "SU-002", trenchIds: ["T1", "T2", "T3"], rowStart: 1, rowEnd: 1 },
-    { contextId: "SU-003", trenchIds: ["T2", "T3", "T4"], rowStart: 2, rowEnd: 2 },
-    { contextId: "SU-004", trenchIds: ["T1", "T2"], rowStart: 3, rowEnd: 3 },
-    { contextId: "SU-005", trenchIds: ["T3", "T4"], rowStart: 3, rowEnd: 4 },
+    {
+      contextId: "SU-002",
+      trenchIds: ["T1", "T2", "T3"],
+      rowStart: 1,
+      rowEnd: 1,
+      type: "deposit",
+      description: "Alluvial deposit",
+    },
+    {
+      contextId: "SU-003",
+      trenchIds: ["T2", "T3", "T4"],
+      rowStart: 2,
+      rowEnd: 2,
+      type: "fill",
+      description: "Pit fill",
+    },
+    {
+      contextId: "SU-004",
+      trenchIds: ["T1", "T2"],
+      rowStart: 3,
+      rowEnd: 3,
+      type: "cut",
+      description: "Foundation cut",
+    },
+    {
+      contextId: "SU-005",
+      trenchIds: ["T3", "T4"],
+      rowStart: 3,
+      rowEnd: 4,
+      type: "structure",
+      description: "Wall foundation",
+    },
     {
       contextId: "SU-006",
       trenchIds: ["T1", "T2", "T3", "T4"],
       rowStart: 5,
       rowEnd: 5,
+      type: "layer",
+      description: "Natural subsoil",
     },
   ];
-  const contexts = new Map<string, WheelerGridContext>([
-    ["SU-001", { id: "SU-001", type: "layer", description: "Topsoil (modern)" }],
-    ["SU-002", { id: "SU-002", type: "deposit", description: "Alluvial deposit" }],
-    ["SU-003", { id: "SU-003", type: "fill", description: "Pit fill" }],
-    ["SU-004", { id: "SU-004", type: "cut", description: "Foundation cut" }],
-    ["SU-005", { id: "SU-005", type: "structure", description: "Wall foundation" }],
-    ["SU-006", { id: "SU-006", type: "layer", description: "Natural subsoil" }],
-  ]);
-  return { trenches, placements, contexts };
+  return { trenches, placements };
 }
 
 /* ───────────────────────── Component ───────────────────────── */
@@ -181,7 +197,8 @@ export default function WheelerDiagram({
 
   canEdit: _canEdit = false,
 }: WheelerDiagramProps) {
-  const { data, loading, error, dirty, version, renderUrl, renderVersion } = useWheelerData(projectId);
+  const { data, loading, error, dirty, version, renderUrl, renderVersion } =
+    useWheelerData(projectId);
 
   // View mode: "diagram" (coloured grid) or "publication" (B&W SVG)
   const [viewMode, setViewMode] = useState<"diagram" | "publication">("diagram");
@@ -193,7 +210,7 @@ export default function WheelerDiagram({
   const lastPubUrlRef = useRef<string | null>(null);
 
   // Local context metadata for display
-  const [contexts] = useState<Map<string, WheelerGridContext>>(() => new Map());
+  // (type/description/notes are now stored on each WheelerContextPlacement)
 
   // Inspected context modal
   const [inspected, setInspected] = useState<WheelerContextPlacement | null>(null);
@@ -293,7 +310,8 @@ export default function WheelerDiagram({
     if (!pubSvg) return;
     try {
       // Write to a temp file using expo-file-system legacy API
-      const { writeAsStringAsync, documentDirectory } = await import("expo-file-system/legacy");
+      const { writeAsStringAsync, documentDirectory } =
+        await import("expo-file-system/legacy");
       const dir = documentDirectory ?? "";
       const path = `${dir}wheeler-diagram.svg`;
       await writeAsStringAsync(path, pubSvg);
@@ -350,7 +368,6 @@ export default function WheelerDiagram({
   const effectivePlacements = isPlaceholder
     ? placeholder.placements
     : data.placements;
-  const effectiveContexts = isPlaceholder ? placeholder.contexts : contexts;
 
   const totalRows = useMemo(() => {
     if (effectivePlacements.length === 0) return 6;
@@ -373,10 +390,10 @@ export default function WheelerDiagram({
   /** Get the color for a context by type. */
   const getColor = useCallback(
     (contextId: string): string => {
-      const ctx = effectiveContexts.get(contextId);
-      return TYPE_COLORS[ctx?.type ?? "layer"] ?? TYPE_COLORS.layer;
+      const placement = effectivePlacements.find((p) => p.contextId === contextId);
+      return TYPE_COLORS[placement?.type ?? "layer"] ?? TYPE_COLORS.layer;
     },
-    [effectiveContexts],
+    [effectivePlacements],
   );
 
   /** Handle tapping a context cell. */
@@ -496,14 +513,26 @@ export default function WheelerDiagram({
           </View>
           {/* SVG content */}
           {!renderUrl && (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <Text style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", padding: 24 }}>
-                No publication SVG yet.{"\n"}Save the diagram on desktop to generate one.
+            <View
+              style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+            >
+              <Text
+                style={{
+                  color: "#9ca3af",
+                  fontSize: 13,
+                  textAlign: "center",
+                  padding: 24,
+                }}
+              >
+                No publication SVG yet.{"\n"}Save the diagram on desktop to generate
+                one.
               </Text>
             </View>
           )}
           {pubLoading && (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <View
+              style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+            >
               <ActivityIndicator color={ACCENT} />
               <Text style={{ color: "#9ca3af", marginTop: 8, fontSize: 13 }}>
                 Loading publication SVG…
@@ -511,7 +540,14 @@ export default function WheelerDiagram({
             </View>
           )}
           {pubError && (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 24,
+              }}
+            >
               <Text style={{ color: "#ef4444", fontSize: 13, textAlign: "center" }}>
                 {pubError}
               </Text>
@@ -525,7 +561,14 @@ export default function WheelerDiagram({
               scrollEnabled
             >
               <SvgXml xml={pubSvg} width="100%" height={undefined} />
-              <Text style={{ color: "#9ca3af", fontSize: 10, marginTop: 8, textAlign: "center" }}>
+              <Text
+                style={{
+                  color: "#9ca3af",
+                  fontSize: 10,
+                  marginTop: 8,
+                  textAlign: "center",
+                }}
+              >
                 Vector SVG · Suitable for print and publication
               </Text>
             </ScrollView>
@@ -534,146 +577,150 @@ export default function WheelerDiagram({
       )}
 
       {/* SVG diagram with pan/zoom */}
-      {viewMode === "diagram" && <View
-        style={s.svgContainer}
-        onLayout={(e) => {
-          // Capture container dimensions if needed
-          const { width: _w, height: _h } = e.nativeEvent.layout;
-          void _w;
-          void _h;
-        }}
-      >
-        <GestureDetector gesture={composed}>
-          <Animated.View style={[{ width: svgWidth, height: svgHeight }, animStyle]}>
-            <Svg width={svgWidth} height={svgHeight}>
-              {/* Cross-hatch hiatus pattern */}
-              <Defs>
-                <Pattern
-                  id="native-hiatus"
-                  patternUnits="userSpaceOnUse"
-                  width={8}
-                  height={8}
-                >
-                  <Line
-                    x1={0}
-                    y1={8}
-                    x2={8}
-                    y2={0}
-                    stroke="rgba(255,255,255,0.08)"
-                    strokeWidth={1}
-                  />
-                </Pattern>
-              </Defs>
-
-              {/* X-axis labels */}
-              {sortedTrenches.map((trench, colIdx) => (
-                <SvgText
-                  key={`x-${trench.id}`}
-                  x={AXIS_LABEL_W + colIdx * CELL_W + CELL_W / 2}
-                  y={AXIS_LABEL_H / 2 + 4}
-                  textAnchor="middle"
-                  fill="#EAEAEA"
-                  fontSize={11}
-                  fontWeight="600"
-                >
-                  {trench.label}
-                </SvgText>
-              ))}
-
-              {/* Y-axis labels */}
-              {Array.from({ length: totalRows }, (_, rowIdx) => (
-                <SvgText
-                  key={`y-${rowIdx}`}
-                  x={AXIS_LABEL_W - 8}
-                  y={AXIS_LABEL_H + rowIdx * CELL_H + CELL_H / 2 + 4}
-                  textAnchor="end"
-                  fill="#888888"
-                  fontSize={10}
-                >
-                  {totalRows - rowIdx}
-                </SvgText>
-              ))}
-
-              {/* Grid cells */}
-              {Array.from({ length: totalRows }, (_, rowIdx) =>
-                sortedTrenches.map((trench, colIdx) => {
-                  const placement = occupancy[rowIdx][colIdx];
-                  const x = AXIS_LABEL_W + colIdx * CELL_W;
-                  const y = AXIS_LABEL_H + rowIdx * CELL_H;
-
-                  if (placement) {
-                    const isTopLeftCol =
-                      colIdx === 0 ||
-                      !placement.trenchIds.includes(
-                        sortedTrenches[colIdx - 1]?.id ?? "",
-                      );
-                    const isTopRow = rowIdx === placement.rowStart;
-                    const color = getColor(placement.contextId);
-
-                    return (
-                      <G
-                        key={`cell-${rowIdx}-${colIdx}`}
-                        onPress={() => handleCellPress(placement)}
-                      >
-                        <Rect
-                          x={x + 1}
-                          y={y + 1}
-                          width={CELL_W - 2}
-                          height={CELL_H - 2}
-                          rx={4}
-                          fill={color}
-                          opacity={0.85}
-                          stroke="rgba(255,255,255,0.2)"
-                          strokeWidth={1}
-                        />
-                        {isTopLeftCol && isTopRow && (
-                          <SvgText
-                            x={x + CELL_W / 2}
-                            y={y + CELL_H / 2 + 4}
-                            textAnchor="middle"
-                            fill="#FFFFFF"
-                            fontSize={11}
-                            fontWeight="700"
-                          >
-                            {placement.contextId}
-                          </SvgText>
-                        )}
-                      </G>
-                    );
-                  }
-
-                  // Hiatus cell
-                  return (
-                    <Rect
-                      key={`cell-${rowIdx}-${colIdx}`}
-                      x={x + 1}
-                      y={y + 1}
-                      width={CELL_W - 2}
-                      height={CELL_H - 2}
-                      rx={4}
-                      fill="url(#native-hiatus)"
-                      stroke="rgba(255,255,255,0.05)"
+      {viewMode === "diagram" && (
+        <View
+          style={s.svgContainer}
+          onLayout={(e) => {
+            // Capture container dimensions if needed
+            const { width: _w, height: _h } = e.nativeEvent.layout;
+            void _w;
+            void _h;
+          }}
+        >
+          <GestureDetector gesture={composed}>
+            <Animated.View
+              style={[{ width: svgWidth, height: svgHeight }, animStyle]}
+            >
+              <Svg width={svgWidth} height={svgHeight}>
+                {/* Cross-hatch hiatus pattern */}
+                <Defs>
+                  <Pattern
+                    id="native-hiatus"
+                    patternUnits="userSpaceOnUse"
+                    width={8}
+                    height={8}
+                  >
+                    <Line
+                      x1={0}
+                      y1={8}
+                      x2={8}
+                      y2={0}
+                      stroke="rgba(255,255,255,0.08)"
                       strokeWidth={1}
                     />
-                  );
-                }),
-              )}
+                  </Pattern>
+                </Defs>
 
-              {/* Grid outline */}
-              <Rect
-                x={AXIS_LABEL_W}
-                y={AXIS_LABEL_H}
-                width={sortedTrenches.length * CELL_W}
-                height={totalRows * CELL_H}
-                fill="none"
-                stroke="rgba(255,255,255,0.1)"
-                strokeWidth={1}
-                rx={4}
-              />
-            </Svg>
-          </Animated.View>
-        </GestureDetector>
-      </View>}
+                {/* X-axis labels */}
+                {sortedTrenches.map((trench, colIdx) => (
+                  <SvgText
+                    key={`x-${trench.id}`}
+                    x={AXIS_LABEL_W + colIdx * CELL_W + CELL_W / 2}
+                    y={AXIS_LABEL_H / 2 + 4}
+                    textAnchor="middle"
+                    fill="#EAEAEA"
+                    fontSize={11}
+                    fontWeight="600"
+                  >
+                    {trench.label}
+                  </SvgText>
+                ))}
+
+                {/* Y-axis labels */}
+                {Array.from({ length: totalRows }, (_, rowIdx) => (
+                  <SvgText
+                    key={`y-${rowIdx}`}
+                    x={AXIS_LABEL_W - 8}
+                    y={AXIS_LABEL_H + rowIdx * CELL_H + CELL_H / 2 + 4}
+                    textAnchor="end"
+                    fill="#888888"
+                    fontSize={10}
+                  >
+                    {totalRows - rowIdx}
+                  </SvgText>
+                ))}
+
+                {/* Grid cells */}
+                {Array.from({ length: totalRows }, (_, rowIdx) =>
+                  sortedTrenches.map((trench, colIdx) => {
+                    const placement = occupancy[rowIdx][colIdx];
+                    const x = AXIS_LABEL_W + colIdx * CELL_W;
+                    const y = AXIS_LABEL_H + rowIdx * CELL_H;
+
+                    if (placement) {
+                      const isTopLeftCol =
+                        colIdx === 0 ||
+                        !placement.trenchIds.includes(
+                          sortedTrenches[colIdx - 1]?.id ?? "",
+                        );
+                      const isTopRow = rowIdx === placement.rowStart;
+                      const color = getColor(placement.contextId);
+
+                      return (
+                        <G
+                          key={`cell-${rowIdx}-${colIdx}`}
+                          onPress={() => handleCellPress(placement)}
+                        >
+                          <Rect
+                            x={x + 1}
+                            y={y + 1}
+                            width={CELL_W - 2}
+                            height={CELL_H - 2}
+                            rx={4}
+                            fill={color}
+                            opacity={0.85}
+                            stroke="rgba(255,255,255,0.2)"
+                            strokeWidth={1}
+                          />
+                          {isTopLeftCol && isTopRow && (
+                            <SvgText
+                              x={x + CELL_W / 2}
+                              y={y + CELL_H / 2 + 4}
+                              textAnchor="middle"
+                              fill="#FFFFFF"
+                              fontSize={11}
+                              fontWeight="700"
+                            >
+                              {placement.contextId}
+                            </SvgText>
+                          )}
+                        </G>
+                      );
+                    }
+
+                    // Hiatus cell
+                    return (
+                      <Rect
+                        key={`cell-${rowIdx}-${colIdx}`}
+                        x={x + 1}
+                        y={y + 1}
+                        width={CELL_W - 2}
+                        height={CELL_H - 2}
+                        rx={4}
+                        fill="url(#native-hiatus)"
+                        stroke="rgba(255,255,255,0.05)"
+                        strokeWidth={1}
+                      />
+                    );
+                  }),
+                )}
+
+                {/* Grid outline */}
+                <Rect
+                  x={AXIS_LABEL_W}
+                  y={AXIS_LABEL_H}
+                  width={sortedTrenches.length * CELL_W}
+                  height={totalRows * CELL_H}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.1)"
+                  strokeWidth={1}
+                  rx={4}
+                />
+              </Svg>
+            </Animated.View>
+          </GestureDetector>
+        </View>
+      )}
 
       {/* Legend — only shown in diagram mode */}
       {viewMode === "diagram" && (
@@ -697,14 +744,21 @@ export default function WheelerDiagram({
         <Pressable style={s.modalBackdrop} onPress={() => setInspected(null)}>
           <View style={s.modalContent}>
             <Text style={s.modalTitle}>{inspected?.contextId ?? ""}</Text>
-            {effectiveContexts.get(inspected?.contextId ?? "") && (
+            {(inspected?.type || inspected?.description) && (
               <>
-                <Text style={s.modalDetail}>
-                  Type: {effectiveContexts.get(inspected?.contextId ?? "")?.type}
-                </Text>
-                <Text style={s.modalDetail}>
-                  {effectiveContexts.get(inspected?.contextId ?? "")?.description}
-                </Text>
+                {inspected.type && (
+                  <Text style={s.modalDetail}>Type: {inspected.type}</Text>
+                )}
+                {inspected.description && (
+                  <Text style={s.modalDetail}>{inspected.description}</Text>
+                )}
+                {inspected.notes && (
+                  <Text
+                    style={[s.modalDetail, { fontStyle: "italic", color: "#aaa" }]}
+                  >
+                    {inspected.notes}
+                  </Text>
+                )}
               </>
             )}
             <Text style={s.modalMeta}>

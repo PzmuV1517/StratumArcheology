@@ -52,6 +52,30 @@ export interface WheelerContextPlacement {
   rowStart: number;
   /** Ending row on the Y-axis (inclusive). */
   rowEnd: number;
+  /** Stratigraphic type, e.g. "layer", "deposit", "cut", "fill", "structure". */
+  type?: string;
+  /** Brief description of this context. */
+  description?: string;
+  /** Longer free-form field notes. */
+  notes?: string;
+}
+
+/**
+ * A lacuna: a missing interval *within* a sequence where the stratigraphic
+ * record is absent for specific trenches. Rendered as a cross-hatched zone
+ * with a dashed outline inside the sequence polygon.
+ */
+export interface WheelerLacuna {
+  /** Unique identifier for this lacuna. */
+  id: string;
+  /** Trench columns spanned by this lacuna. */
+  trenchIds: string[];
+  /** Oldest (bottom) row of the missing interval (0 = oldest). */
+  rowStart: number;
+  /** Youngest (top) row of the missing interval (inclusive). */
+  rowEnd: number;
+  /** Optional display label. Defaults to "LACUNA" if omitted. */
+  label?: string;
 }
 
 /** Complete Wheeler diagram data for a project. */
@@ -60,6 +84,8 @@ export interface WheelerData {
   trenches: WheelerTrench[];
   /** Context placements within the grid. */
   placements: WheelerContextPlacement[];
+  /** Lacunae: missing intervals within sequences. */
+  lacunae?: WheelerLacuna[];
 }
 
 /** Return type of the {@link useWheelerData} hook. */
@@ -98,6 +124,10 @@ export interface UseWheelerDataReturn {
   renderUrl: string | null;
   /** Data version that the current render corresponds to. */
   renderVersion: number | null;
+  /** Add a lacuna (missing interval within a sequence). */
+  addLacuna: (lacuna: WheelerLacuna) => void;
+  /** Remove a lacuna by its ID. */
+  removeLacuna: (lacunaId: string) => void;
 }
 
 /**
@@ -219,6 +249,24 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     setDirty(true);
   }, []);
 
+  /** Add a lacuna to the diagram. */
+  const addLacuna = useCallback((lacuna: WheelerLacuna) => {
+    setDataState((prev) => ({
+      ...prev,
+      lacunae: [...(prev.lacunae ?? []), lacuna],
+    }));
+    setDirty(true);
+  }, []);
+
+  /** Remove a lacuna by its ID. */
+  const removeLacuna = useCallback((lacunaId: string) => {
+    setDataState((prev) => ({
+      ...prev,
+      lacunae: (prev.lacunae ?? []).filter((l) => l.id !== lacunaId),
+    }));
+    setDirty(true);
+  }, []);
+
   /** Replace the full data state. */
   const setData = useCallback((next: WheelerData) => {
     setDataState(next);
@@ -268,5 +316,7 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     pull,
     renderUrl,
     renderVersion,
+    addLacuna,
+    removeLacuna,
   };
 }

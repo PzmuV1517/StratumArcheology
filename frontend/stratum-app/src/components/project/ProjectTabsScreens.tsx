@@ -512,7 +512,8 @@ export function ProjectWheelerScreen() {
           style={
             Platform.OS === "web"
               ? ({
-                  height: "calc(100vh - 340px)",
+                  flex: 1,
+                  minHeight: 0,
                   borderRadius: 12,
                   overflow: "hidden",
                   borderWidth: 1,
@@ -526,7 +527,7 @@ export function ProjectWheelerScreen() {
           }
         >
           {Platform.OS === "web" ? (
-            <div style={{ height: "100%", width: "100%" }}>
+            <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
               {WheelerComponent &&
                 React.createElement(WheelerComponent, {
                   projectId: project?.id as string,

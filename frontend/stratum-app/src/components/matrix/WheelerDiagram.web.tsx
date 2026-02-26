@@ -33,8 +33,214 @@ import {
   useWheelerData,
   WheelerTrench,
   WheelerContextPlacement,
+  WheelerLacuna,
 } from "../../hooks/useWheelerData";
 import { WheelerPublicationView } from "./WheelerPublicationView.web";
+
+/* ───────────────── Micro-icons (inline SVG) ───────────────── */
+
+const IconEdit = () => (
+  <svg
+    width={12}
+    height={12}
+    viewBox="0 0 12 12"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path
+      d="M8.5 1.5L10.5 3.5L4 10H2V8L8.5 1.5Z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path d="M7 3L9 5" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+
+const IconVisual = () => (
+  <svg
+    width={13}
+    height={12}
+    viewBox="0 0 13 12"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <rect
+      x="1"
+      y="6"
+      width="2.5"
+      height="5"
+      rx="0.4"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <rect
+      x="5"
+      y="3.5"
+      width="2.5"
+      height="7.5"
+      rx="0.4"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+    <rect
+      x="9"
+      y="1"
+      width="2.5"
+      height="10"
+      rx="0.4"
+      stroke="currentColor"
+      strokeWidth="1.2"
+    />
+  </svg>
+);
+
+const IconDoc = () => (
+  <svg
+    width={11}
+    height={13}
+    viewBox="0 0 11 13"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path
+      d="M1.5 1H7L9.5 3.5V12H1.5V1Z"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path d="M6.5 1V4H9.5" stroke="currentColor" strokeWidth="1.2" />
+    <path
+      d="M3.5 6H7M3.5 8.5H6"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const IconFlask = () => (
+  <svg
+    width={11}
+    height={13}
+    viewBox="0 0 11 13"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path
+      d="M3.5 1V5L1 10.5C0.7 11.2 1.2 12 2 12H9C9.8 12 10.3 11.2 10 10.5L7.5 5V1"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M2.5 1H8.5"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+    />
+    <circle cx="4" cy="9" r="0.9" fill="currentColor" opacity="0.5" />
+    <circle cx="6.5" cy="8" r="0.7" fill="currentColor" opacity="0.4" />
+  </svg>
+);
+
+const IconDownload = () => (
+  <svg
+    width={12}
+    height={13}
+    viewBox="0 0 12 13"
+    fill="none"
+    style={{ display: "inline-block", verticalAlign: "middle", flexShrink: 0 }}
+  >
+    <path
+      d="M6 1V9M3.5 6.5L6 9L8.5 6.5"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M1 11.5H11"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const IconGrid = () => (
+  <svg
+    width={38}
+    height={38}
+    viewBox="0 0 38 38"
+    fill="none"
+    style={{ display: "block", opacity: 0.25 }}
+  >
+    <rect
+      x="2"
+      y="2"
+      width="15"
+      height="15"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <rect
+      x="21"
+      y="2"
+      width="15"
+      height="15"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <rect
+      x="2"
+      y="21"
+      width="15"
+      height="15"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <rect
+      x="21"
+      y="21"
+      width="15"
+      height="15"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+  </svg>
+);
+
+const IconRuler = () => (
+  <svg
+    width={38}
+    height={38}
+    viewBox="0 0 38 38"
+    fill="none"
+    style={{ display: "block", opacity: 0.25 }}
+  >
+    <rect
+      x="4"
+      y="14"
+      width="30"
+      height="10"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      transform="rotate(-45 19 19)"
+    />
+    <path
+      d="M10 28L14 24M15 24L19 20M20 20L24 16"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 /* ───────────────────────── Constants ───────────────────────── */
 
@@ -43,13 +249,6 @@ const CELL_H = 60;
 const AXIS_LABEL_W = 80;
 const AXIS_LABEL_H = 36;
 const TOOLBAR_H = 48;
-
-/** Context type used for Wheeler grid cells. */
-interface WheelerGridContext {
-  id: string;
-  type: string;
-  description: string;
-}
 
 /** Color map for stratigraphic context types. */
 const TYPE_COLORS: Record<string, string> = {
@@ -113,6 +312,7 @@ const accentButtonStyle: React.CSSProperties = {
 
 const svgContainerStyle: React.CSSProperties = {
   flex: 1,
+  minHeight: 0,
   overflow: "auto",
   backgroundColor: "#0A0A0A",
 };
@@ -270,50 +470,142 @@ function buildOccupancy(
 interface HelpStep {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   shortcut?: string;
 }
+
+/* Larger help-overlay icons (32px) */
+const HelpIconRuler = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z" />
+    <path d="M8 8h2M8 12h2M8 16h2M15 8h1M15 12h1M15 16h1" />
+  </svg>
+);
+const HelpIconLayers = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2L2 7l10 5 10-5-10-5Z" />
+    <path d="M2 12l10 5 10-5" />
+    <path d="M2 17l10 5 10-5" />
+  </svg>
+);
+const HelpIconPencil = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+  </svg>
+);
+const HelpIconBarChart = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 3v18h18" />
+    <path d="M7 16V10M11 16V4M15 16V8M19 16V12" />
+  </svg>
+);
+const HelpIconSave = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
+    <path d="M17 21v-8H7v8M7 3v5h8" />
+  </svg>
+);
+const HelpIconBook = () => (
+  <svg
+    width={32}
+    height={32}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+  </svg>
+);
 
 const HELP_STEPS: HelpStep[] = [
   {
     title: "Add Trench",
     description:
       "Add a new trench/section column to the X-axis. Each trench represents a spatial position on the site. Click the '+ Trench' button in the toolbar.",
-    icon: "📐",
+    icon: <HelpIconRuler />,
     shortcut: "toolbar → + Trench",
   },
   {
     title: "Add Context",
     description:
       "Place a stratigraphic unit on the diagram. Assign it a context ID, choose its type (layer, deposit, cut, fill, structure), select which trenches it spans, and set the time-row range. Click '+ Context' in the toolbar.",
-    icon: "🧱",
+    icon: <HelpIconLayers />,
     shortcut: "toolbar → + Context",
   },
   {
     title: "Edit / Remove",
     description:
       "Hover over a filled cell and click to inspect it. Use the context menu (right-click or click the ✕ next to a trench label) to remove items.",
-    icon: "✏️",
+    icon: <HelpIconPencil />,
   },
   {
     title: "Auto-layout",
     description:
       "Automatically re-distributes all context placements into evenly-spaced rows. Useful after bulk edits.",
-    icon: "📊",
+    icon: <HelpIconBarChart />,
     shortcut: "toolbar → Auto-layout",
   },
   {
     title: "Save",
     description:
       "Saves the current diagram state to the server. The button turns red when you have unsaved changes. Your work is versioned in Time Machine.",
-    icon: "💾",
+    icon: <HelpIconSave />,
     shortcut: "toolbar → Save",
   },
   {
     title: "Understanding the Diagram",
     description:
       "The Wheeler diagram (Wheeler, 1964) plots time (Y-axis, oldest at bottom) against spatial position (X-axis, trenches). Filled cells show where a stratigraphic unit was deposited. Empty cross-hatched cells represent lacunae (hiatuses) — gaps in the stratigraphic record. Unconformity boundaries are shown as wavy lines between sequences.",
-    icon: "📖",
+    icon: <HelpIconBook />,
   },
 ];
 
@@ -340,12 +632,9 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     pull,
     renderUrl,
     renderVersion,
+    addLacuna,
+    removeLacuna,
   } = useWheelerData(projectId);
-
-  // Local context metadata
-  const [contexts, setContexts] = useState<Map<string, WheelerGridContext>>(
-    () => new Map(),
-  );
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<{
@@ -367,18 +656,30 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   // Context modal form
   const [ctxFormId, setCtxFormId] = useState("");
+  const [ctxEditMode, setCtxEditMode] = useState(false);
   const [ctxFormType, setCtxFormType] = useState("layer");
   const [ctxFormDesc, setCtxFormDesc] = useState("");
+  const [ctxFormNotes, setCtxFormNotes] = useState("");
   const [ctxFormTrenches, setCtxFormTrenches] = useState<string[]>([]);
   const [ctxFormRowStart, setCtxFormRowStart] = useState("0");
   const [ctxFormRowEnd, setCtxFormRowEnd] = useState("0");
   const [ctxFormError, setCtxFormError] = useState("");
 
+  // Lacuna modal state
+  const [showLacunaModal, setShowLacunaModal] = useState(false);
+  const [lacunaFormTrenches, setLacunaFormTrenches] = useState<string[]>([]);
+  const [lacunaFormRowStart, setLacunaFormRowStart] = useState("0");
+  const [lacunaFormRowEnd, setLacunaFormRowEnd] = useState("0");
+  const [lacunaFormLabel, setLacunaFormLabel] = useState("");
+  const [lacunaFormError, setLacunaFormError] = useState("");
+
   // Ref for scrollable SVG container
   const svgContainerRef = useRef<HTMLDivElement>(null);
 
   // View mode toggle: edit (grid) vs visual (Wheeler diagram)
-  const [viewMode, setViewMode] = useState<"edit" | "visual" | "publication">("edit");
+  const [viewMode, setViewMode] = useState<"edit" | "visual" | "publication">(
+    "edit",
+  );
 
   // Conflict resolution modal
   const [showConflictModal, setShowConflictModal] = useState(false);
@@ -431,13 +732,15 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     setShowTrenchModal(false);
   }, [trenchFormId, trenchFormLabel, data.trenches, addTrench]);
 
-  const openContextModal = useCallback(() => {
-    setCtxFormId("");
-    setCtxFormType("layer");
-    setCtxFormDesc("");
-    setCtxFormTrenches([]);
-    setCtxFormRowStart("0");
-    setCtxFormRowEnd("0");
+  const openContextModal = useCallback((existing?: WheelerContextPlacement) => {
+    setCtxEditMode(!!existing);
+    setCtxFormId(existing?.contextId ?? "");
+    setCtxFormType(existing?.type ?? "layer");
+    setCtxFormDesc(existing?.description ?? "");
+    setCtxFormNotes(existing?.notes ?? "");
+    setCtxFormTrenches(existing?.trenchIds ?? []);
+    setCtxFormRowStart(String(existing?.rowStart ?? 0));
+    setCtxFormRowEnd(String(existing?.rowEnd ?? 0));
     setCtxFormError("");
     setShowContextModal(true);
   }, []);
@@ -463,25 +766,56 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       trenchIds: ctxFormTrenches,
       rowStart,
       rowEnd,
-    });
-    setContexts((prev) => {
-      const next = new Map(prev);
-      next.set(id, {
-        id,
-        type: ctxFormType,
-        description: ctxFormDesc.trim(),
-      });
-      return next;
+      type: ctxFormType,
+      description: ctxFormDesc.trim() || undefined,
+      notes: ctxFormNotes.trim() || undefined,
     });
     setShowContextModal(false);
   }, [
     ctxFormId,
     ctxFormType,
     ctxFormDesc,
+    ctxFormNotes,
     ctxFormTrenches,
     ctxFormRowStart,
     ctxFormRowEnd,
     updatePlacement,
+  ]);
+
+  const openLacunaModal = useCallback(() => {
+    setLacunaFormTrenches([]);
+    setLacunaFormRowStart("0");
+    setLacunaFormRowEnd("0");
+    setLacunaFormLabel("");
+    setLacunaFormError("");
+    setShowLacunaModal(true);
+  }, []);
+
+  const submitLacuna = useCallback(() => {
+    if (lacunaFormTrenches.length === 0) {
+      setLacunaFormError("Select at least one trench.");
+      return;
+    }
+    const rowStart = parseInt(lacunaFormRowStart, 10);
+    const rowEnd = parseInt(lacunaFormRowEnd, 10);
+    if (isNaN(rowStart) || isNaN(rowEnd) || rowStart < 0 || rowEnd < rowStart) {
+      setLacunaFormError("Invalid row range — rowEnd must be ≥ rowStart.");
+      return;
+    }
+    addLacuna({
+      id: `lac-${Date.now()}`,
+      trenchIds: lacunaFormTrenches,
+      rowStart,
+      rowEnd,
+      label: lacunaFormLabel.trim() || undefined,
+    });
+    setShowLacunaModal(false);
+  }, [
+    lacunaFormTrenches,
+    lacunaFormRowStart,
+    lacunaFormRowEnd,
+    lacunaFormLabel,
+    addLacuna,
   ]);
 
   const handleAutoLayout = useCallback(() => {
@@ -494,6 +828,59 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     }));
     setData({ ...data, placements: result });
   }, [data, setData]);
+
+  // ── Debug helper: fill diagram with realistic sample data ──────────────
+  const handleLoadDemo = useCallback(() => {
+    const demoTrenches = [
+      { id: "T1", label: "Trench I", order: 0 },
+      { id: "T2", label: "Trench II", order: 1 },
+      { id: "T3", label: "Trench III", order: 2 },
+      { id: "T4", label: "Trench IV", order: 3 },
+    ];
+    const demoPlacements = [
+      // t1 – natural subsoil spans all trenches
+      {
+        contextId: "SU-101",
+        trenchIds: ["T1", "T2", "T3", "T4"],
+        rowStart: 0,
+        rowEnd: 0,
+      },
+      // t2 – early alluvial deposit, partial
+      { contextId: "SU-102", trenchIds: ["T1", "T2", "T3"], rowStart: 1, rowEnd: 1 },
+      { contextId: "SU-103", trenchIds: ["T4"], rowStart: 1, rowEnd: 1 },
+      // t3 – deposition continues then retreats left (vacuity on right)
+      { contextId: "SU-104", trenchIds: ["T1", "T2"], rowStart: 2, rowEnd: 2 },
+      { contextId: "SU-105", trenchIds: ["T3"], rowStart: 2, rowEnd: 3 },
+      // t4 – hiatus gap (rows 3 has only T3, row 4 is truly empty → hiatus)
+      // t5 – re-occupation after hiatus
+      { contextId: "SU-106", trenchIds: ["T2", "T3", "T4"], rowStart: 5, rowEnd: 5 },
+      { contextId: "SU-107", trenchIds: ["T1"], rowStart: 5, rowEnd: 6 },
+      // t6-t7 – structure period
+      { contextId: "SU-108", trenchIds: ["T2", "T3"], rowStart: 6, rowEnd: 7 },
+      { contextId: "SU-109", trenchIds: ["T4"], rowStart: 6, rowEnd: 6 },
+      // t8 – latest layer
+      {
+        contextId: "SU-110",
+        trenchIds: ["T1", "T2", "T3", "T4"],
+        rowStart: 8,
+        rowEnd: 8,
+      },
+    ];
+    const demoMeta: Record<string, { type: string; description: string }> = {
+      "SU-101": { type: "layer", description: "Natural subsoil" },
+      "SU-102": { type: "deposit", description: "Alluvial deposit" },
+      "SU-103": { type: "deposit", description: "Localised silting" },
+      "SU-104": { type: "fill", description: "Mixed fill" },
+      "SU-105": { type: "structure", description: "Wall foundation" },
+      "SU-106": { type: "layer", description: "Post-hiatus re-occupation" },
+      "SU-107": { type: "cut", description: "Robber trench" },
+      "SU-108": { type: "structure", description: "Masonry course" },
+      "SU-109": { type: "fill", description: "Construction backfill" },
+      "SU-110": { type: "layer", description: "Topsoil (modern)" },
+    };
+    const enriched = demoPlacements.map((p) => ({ ...p, ...demoMeta[p.contextId] }));
+    setData({ trenches: demoTrenches, placements: enriched });
+  }, [setData]);
 
   const handleSave = useCallback(async () => {
     await save();
@@ -520,10 +907,10 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   const getColor = useCallback(
     (contextId: string): string => {
-      const ctx = contexts.get(contextId);
-      return TYPE_COLORS[ctx?.type ?? "layer"] ?? TYPE_COLORS.layer;
+      const placement = data.placements.find((p) => p.contextId === contextId);
+      return TYPE_COLORS[placement?.type ?? "layer"] ?? TYPE_COLORS.layer;
     },
-    [contexts],
+    [data.placements],
   );
 
   /* ── Help walkthrough ── */
@@ -806,6 +1193,43 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               strokeWidth={1}
             />
           </pattern>
+          {/* Horizontal lines for lacuna zones */}
+          <pattern
+            id="w-lacuna-hatch"
+            patternUnits="userSpaceOnUse"
+            width={1}
+            height={7}
+          >
+            <line
+              x1={0}
+              y1={0}
+              x2={1}
+              y2={0}
+              stroke="rgba(255,180,50,0.30)"
+              strokeWidth={1}
+            />
+          </pattern>
+          {/* Arrowhead for migration direction on boundary diagonals */}
+          <marker
+            id="w-arrow"
+            markerWidth={8}
+            markerHeight={6}
+            refX={7}
+            refY={3}
+            orient="auto"
+          >
+            <path d="M0,0 L8,3 L0,6 Z" fill="#FF2A2A" opacity={0.75} />
+          </marker>
+          <marker
+            id="w-arrow-rev"
+            markerWidth={8}
+            markerHeight={6}
+            refX={1}
+            refY={3}
+            orient="auto-start-reverse"
+          >
+            <path d="M8,0 L0,3 L8,6 Z" fill="#FF2A2A" opacity={0.75} />
+          </marker>
         </defs>
 
         {/* ── Background ── */}
@@ -910,7 +1334,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           </g>
         ))}
 
-        {/* ── Diagonal boundary lines ── */}
+        {/* ── Diagonal boundary lines with migration arrows ── */}
         {boundaryLines.map((bl, i) => (
           <line
             key={`bl-${i}`}
@@ -921,6 +1345,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             stroke="#FF2A2A"
             strokeWidth={2}
             opacity={0.7}
+            markerEnd="url(#w-arrow)"
           />
         ))}
 
@@ -935,13 +1360,13 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           const rightCol = indices[indices.length - 1];
           const cx = (xOf(leftCol) + xOf(rightCol + 1)) / 2;
           const cy = (yOf(p.rowEnd) + yOf(p.rowStart) + ROW_H) / 2;
-          const ctx = contexts.get(p.contextId);
           return (
             <g
               key={`cl-${p.contextId}`}
               onMouseMove={(e) => handleCellHover(e, p)}
               onMouseLeave={handleCellLeave}
               style={{ cursor: "pointer" }}
+              onClick={() => canEdit && openContextModal(p)}
             >
               <text
                 x={cx}
@@ -954,7 +1379,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               >
                 {p.contextId}
               </text>
-              {ctx && (
+              {p.type && (
                 <text
                   x={cx}
                   y={cy + 14}
@@ -963,7 +1388,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   fontSize={9}
                   fontFamily="'Inter', system-ui, sans-serif"
                 >
-                  {ctx.type}
+                  {p.type}
                 </text>
               )}
             </g>
@@ -1004,55 +1429,77 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           );
         })}
 
-        {/* ── Lacuna annotation on empty areas outside deposit polygons ── */}
-        {sequences.map((seq, si) => {
-          // Find max extent of the sequence
-          let maxRight = 0;
-          let minLeft = cols;
-          seq.extents.forEach((ext) => {
-            if (ext.left < minLeft) minLeft = ext.left;
-            if (ext.right > maxRight) maxRight = ext.right;
-          });
-          const annotations: React.ReactNode[] = [];
-          seq.extents.forEach((ext, i) => {
-            const r = seq.rowStart + i;
-            // Left lacuna
-            if (ext.left > minLeft) {
-              annotations.push(
+        {/* ── Lacuna zones (data-driven missing intervals) ── */}
+        {(data.lacunae ?? []).map((lac) => {
+          const colIndices = lac.trenchIds
+            .map((tid) => sortedTrenches.findIndex((t) => t.id === tid))
+            .filter((ci) => ci >= 0)
+            .sort((a, b) => a - b);
+          if (colIndices.length === 0) return null;
+          const leftCol = colIndices[0];
+          const rightCol = colIndices[colIndices.length - 1];
+          const x = xOf(leftCol);
+          const w = xOf(rightCol + 1) - x;
+          const y = yOf(lac.rowEnd);
+          const h = yOf(lac.rowStart) + ROW_H - y;
+          const lbl = lac.label ?? "LACUNA";
+          return (
+            <g key={`lac-${lac.id}`}>
+              {/* Hatched fill */}
+              <rect x={x} y={y} width={w} height={h} fill="url(#w-lacuna-hatch)" />
+              {/* Amber dashed outline */}
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill="none"
+                stroke="#ffc107"
+                strokeWidth={1.5}
+                strokeDasharray="6,3"
+                opacity={0.7}
+              />
+              {/* Label */}
+              <text
+                x={x + w / 2}
+                y={y + h / 2 + 4}
+                textAnchor="middle"
+                fill="#ffc107"
+                fontSize={10}
+                fontWeight={700}
+                fontFamily="'Inter', system-ui, sans-serif"
+                letterSpacing={1.5}
+                opacity={0.85}
+              >
+                {lbl}
+              </text>
+              <text
+                x={x + w / 2}
+                y={y + h / 2 + 16}
+                textAnchor="middle"
+                fill="rgba(255,193,7,0.45)"
+                fontSize={8}
+                fontFamily="'Inter', system-ui, sans-serif"
+              >
+                (missing interval)
+              </text>
+              {/* Remove button in edit mode */}
+              {canEdit && (
                 <text
-                  key={`lac-l-${si}-${i}`}
-                  x={xOf(minLeft) + 12}
-                  y={yOf(r) + ROW_H / 2 + 4}
-                  fill="rgba(255,255,255,0.15)"
-                  fontSize={8}
-                  fontWeight={600}
-                  fontFamily="'Inter', system-ui, sans-serif"
-                  letterSpacing={1}
+                  x={x + w - 6}
+                  y={y + 12}
+                  textAnchor="end"
+                  fill="rgba(255,255,255,0.25)"
+                  fontSize={10}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => removeLacuna(lac.id)}
                 >
-                  LACUNA
-                </text>,
-              );
-            }
-          });
-          if (annotations.length === 0) return null;
-          return <g key={`lac-grp-${si}`}>{annotations}</g>;
+                  ✕
+                </text>
+              )}
+            </g>
+          );
         })}
-
-        {/* ── Arrows along baselevel transit (left diagonal boundaries) ── */}
-        {boundaryLines.length > 0 && (
-          <defs>
-            <marker
-              id="w-arrow"
-              markerWidth={8}
-              markerHeight={6}
-              refX={8}
-              refY={3}
-              orient="auto"
-            >
-              <path d="M0,0 L8,3 L0,6" fill="#FF2A2A" opacity={0.6} />
-            </marker>
-          </defs>
-        )}
 
         {/* ── X-axis: section/trench labels ── */}
         {sortedTrenches.map((trench, i) => (
@@ -1170,29 +1617,58 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     <div style={containerStyle}>
       {/* ─── Toolbar ─── */}
       <div style={toolbarStyle}>
-        <span style={{ fontWeight: 700, fontSize: 14, color: "#F5F5F5" }}>
+        <span
+          style={{ fontWeight: 700, fontSize: 14, color: "#F5F5F5", marginRight: 4 }}
+        >
           Wheeler Diagram
         </span>
-        <button
-          type="button"
+
+        {/* ─── View mode tabs ─── */}
+        <div
           style={{
-            ...buttonStyle,
-            backgroundColor: viewMode === "visual" ? "#FF2A2A" : "#222222",
-            borderColor:
-              viewMode === "visual" ? "#FF2A2A" : "rgba(255,255,255,0.15)",
+            display: "flex",
+            gap: 2,
+            backgroundColor: "#111",
+            borderRadius: 8,
+            padding: 2,
+            flexShrink: 0,
           }}
-          onClick={() =>
-            setViewMode((m) =>
-              m === "edit" ? "visual" : m === "visual" ? "publication" : "edit"
-            )
-          }
         >
-          {viewMode === "visual"
-            ? "📄 Publication"
-            : viewMode === "publication"
-            ? "◀ Edit"
-            : "📊 Visual"}
-        </button>
+          {(["edit", "visual", "publication"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              style={{
+                ...buttonStyle,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                backgroundColor: viewMode === mode ? "#FF2A2A" : "transparent",
+                borderColor: viewMode === mode ? "#FF2A2A" : "transparent",
+                color: viewMode === mode ? "#fff" : "#999",
+                borderRadius: 6,
+                padding: "5px 12px",
+              }}
+              onClick={() => setViewMode(mode)}
+            >
+              {mode === "edit" && (
+                <>
+                  <IconEdit /> Edit
+                </>
+              )}
+              {mode === "visual" && (
+                <>
+                  <IconVisual /> Visual
+                </>
+              )}
+              {mode === "publication" && (
+                <>
+                  <IconDoc /> Publication
+                </>
+              )}
+            </button>
+          ))}
+        </div>
         {canEdit && viewMode === "edit" && (
           <>
             <button
@@ -1209,7 +1685,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             <button
               type="button"
               style={buttonStyle}
-              onClick={openContextModal}
+              onClick={() => openContextModal()}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
               onMouseLeave={(e) =>
                 (e.currentTarget.style.backgroundColor = "#222222")
@@ -1227,6 +1703,47 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               }
             >
               Auto-layout
+            </button>
+            <button
+              type="button"
+              style={{
+                ...buttonStyle,
+                borderColor: "rgba(255,193,7,0.35)",
+                color: "#ffc107",
+              }}
+              onClick={openLacunaModal}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#2a2200")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#222222")
+              }
+              title="Mark a missing interval (lacuna) within a sequence"
+            >
+              + Lacuna
+            </button>
+            {/* ── Debug helper ── */}
+            <button
+              type="button"
+              style={{
+                ...buttonStyle,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                borderColor: "rgba(255,193,7,0.4)",
+                color: "#ffc107",
+                fontSize: 11,
+              }}
+              onClick={handleLoadDemo}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#2a2200")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#222222")
+              }
+              title="Fill with sample archaeological data for testing"
+            >
+              <IconFlask /> Demo
             </button>
             <button
               type="button"
@@ -1266,7 +1783,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   (e.currentTarget.style.backgroundColor = "#1a6b3c")
                 }
               >
-                ⬇ Pull
+                <IconDownload /> Pull
               </button>
             )}
           </>
@@ -1307,6 +1824,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           )}
           <span>
             {sortedTrenches.length} trenches · {data.placements.length} contexts ·{" "}
+            {(data.lacunae ?? []).length > 0 && `${data.lacunae!.length} lacunae · `}
             {totalRows} rows · v{version}
           </span>
         </div>
@@ -1324,10 +1842,10 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
         <div style={svgContainerStyle} ref={svgContainerRef}>
           {data.trenches.length === 0 ? (
             <div style={emptyStateStyle}>
-              <span style={{ fontSize: 40 }}>📊</span>
+              <IconVisual />
               <span>No data to visualize yet</span>
               <span style={{ fontSize: 12, color: "#666" }}>
-                Switch to Edit mode and add trenches & contexts first
+                Switch to Edit mode and add trenches &amp; contexts first
               </span>
             </div>
           ) : (
@@ -1335,8 +1853,8 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           )}
         </div>
       ) : data.trenches.length === 0 ? (
-        <div style={{ ...emptyStateStyle, flex: 1 }}>
-          <span style={{ fontSize: 40 }}>📐</span>
+        <div style={{ ...emptyStateStyle, flex: 1, minHeight: 0 }}>
+          <IconRuler />
           <span>Add a trench to get started</span>
           <span style={{ fontSize: 12, color: "#666" }}>
             Use the + Trench button above, then add contexts
@@ -1458,7 +1976,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   const isTopRow = rowIdx === placement.rowEnd;
 
                   const color = getColor(placement.contextId);
-                  const ctx = contexts.get(placement.contextId);
 
                   return (
                     <g
@@ -1468,13 +1985,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                       style={{ cursor: "pointer" }}
                       onClick={() => {
                         if (canEdit) {
-                          if (
-                            window.confirm(
-                              `Remove context "${placement.contextId}"?`,
-                            )
-                          ) {
-                            removePlacement(placement.contextId);
-                          }
+                          openContextModal(placement);
                         }
                       }}
                     >
@@ -1502,7 +2013,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                           >
                             {placement.contextId}
                           </text>
-                          {ctx && (
+                          {placement.type && (
                             <text
                               x={x + CELL_W / 2}
                               y={y + CELL_H / 2 + 12}
@@ -1511,7 +2022,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                               fontSize={10}
                               fontFamily="'Inter', system-ui, sans-serif"
                             >
-                              {ctx.type}
+                              {placement.type}
                             </text>
                           )}
                         </>
@@ -1668,14 +2179,28 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           <div style={{ fontWeight: 700, marginBottom: 4 }}>
             {tooltip.placement.contextId}
           </div>
-          {contexts.get(tooltip.placement.contextId) && (
+          {(tooltip.placement.type || tooltip.placement.description) && (
             <>
-              <div style={{ color: "#EAEAEA", marginBottom: 2 }}>
-                Type: {contexts.get(tooltip.placement.contextId)?.type}
-              </div>
-              <div style={{ color: "#EAEAEA" }}>
-                {contexts.get(tooltip.placement.contextId)?.description}
-              </div>
+              {tooltip.placement.type && (
+                <div style={{ color: "#EAEAEA", marginBottom: 2 }}>
+                  Type: {tooltip.placement.type}
+                </div>
+              )}
+              {tooltip.placement.description && (
+                <div
+                  style={{
+                    color: "#EAEAEA",
+                    marginBottom: tooltip.placement.notes ? 2 : 0,
+                  }}
+                >
+                  {tooltip.placement.description}
+                </div>
+              )}
+              {tooltip.placement.notes && (
+                <div style={{ color: "#aaa", fontStyle: "italic", fontSize: 11 }}>
+                  {tooltip.placement.notes}
+                </div>
+              )}
             </>
           )}
           <div style={{ color: "#888", marginTop: 4, fontSize: 11 }}>
@@ -1777,19 +2302,22 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 color: "#F5F5F5",
               }}
             >
-              Add / Edit Context Placement
+              {ctxEditMode ? "Edit Context" : "Add Context"}
             </h3>
 
             {/* Context ID */}
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Context ID *</label>
               <input
-                style={inputStyle}
+                style={{ ...inputStyle, opacity: ctxEditMode ? 0.6 : 1 }}
                 placeholder="e.g. SU-007, A3"
                 value={ctxFormId}
+                readOnly={ctxEditMode}
                 onChange={(e) => {
-                  setCtxFormId(e.target.value);
-                  setCtxFormError("");
+                  if (!ctxEditMode) {
+                    setCtxFormId(e.target.value);
+                    setCtxFormError("");
+                  }
                 }}
                 autoFocus
               />
@@ -1819,6 +2347,17 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 placeholder="Brief description of the context"
                 value={ctxFormDesc}
                 onChange={(e) => setCtxFormDesc(e.target.value)}
+              />
+            </div>
+
+            {/* Notes */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>Notes</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: 72, resize: "vertical" }}
+                placeholder="Longer field notes, observations, finds…"
+                value={ctxFormNotes}
+                onChange={(e) => setCtxFormNotes(e.target.value)}
               />
             </div>
 
@@ -1902,6 +2441,22 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             )}
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              {ctxEditMode && (
+                <button
+                  type="button"
+                  style={{
+                    ...buttonStyle,
+                    color: "#dc3545",
+                    borderColor: "#dc3545",
+                  }}
+                  onClick={() => {
+                    removePlacement(ctxFormId);
+                    setShowContextModal(false);
+                  }}
+                >
+                  Delete
+                </button>
+              )}
               <button
                 type="button"
                 style={buttonStyle}
@@ -1914,7 +2469,138 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 style={accentButtonStyle}
                 onClick={submitContext}
               >
-                Add Context
+                {ctxEditMode ? "Save Changes" : "Add Context"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add Lacuna Modal ─── */}
+      {showLacunaModal && (
+        <div
+          style={modalOverlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowLacunaModal(false);
+          }}
+        >
+          <div style={modalContentStyle}>
+            <h3
+              style={{
+                margin: "0 0 4px",
+                fontSize: 18,
+                fontWeight: 700,
+                color: "#ffc107",
+              }}
+            >
+              Add Lacuna
+            </h3>
+            <p style={{ margin: "0 0 16px", fontSize: 12, color: "#888" }}>
+              A lacuna marks a missing interval <em>within</em> a sequence — where
+              the record is absent (not excavated / eroded). It appears as a hatched
+              amber zone in the diagram.
+            </p>
+
+            {/* Trench selection */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>Trenches *</label>
+              {data.trenches.length === 0 ? (
+                <div style={{ color: "#888", fontSize: 13 }}>No trenches yet.</div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {data.trenches.map((t) => {
+                    const selected = lacunaFormTrenches.includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 16,
+                          border: selected
+                            ? "1px solid #ffc107"
+                            : "1px solid #3A3A3A",
+                          backgroundColor: selected ? "rgba(255,193,7,0.2)" : "#222",
+                          color: selected ? "#ffc107" : "#999",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          fontWeight: selected ? 600 : 400,
+                        }}
+                        onClick={() =>
+                          setLacunaFormTrenches((prev) =>
+                            prev.includes(t.id)
+                              ? prev.filter((id) => id !== t.id)
+                              : [...prev, t.id],
+                          )
+                        }
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Row range */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Row Start (0 = oldest)</label>
+                <input
+                  style={inputStyle}
+                  type="number"
+                  min={0}
+                  value={lacunaFormRowStart}
+                  onChange={(e) => setLacunaFormRowStart(e.target.value)}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Row End (inclusive)</label>
+                <input
+                  style={inputStyle}
+                  type="number"
+                  min={0}
+                  value={lacunaFormRowEnd}
+                  onChange={(e) => setLacunaFormRowEnd(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Optional label */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Label (optional)</label>
+              <input
+                style={inputStyle}
+                placeholder='Defaults to "LACUNA"'
+                value={lacunaFormLabel}
+                onChange={(e) => setLacunaFormLabel(e.target.value)}
+              />
+            </div>
+
+            {lacunaFormError && (
+              <div style={{ color: "#dc3545", fontSize: 13, marginBottom: 12 }}>
+                {lacunaFormError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                style={buttonStyle}
+                onClick={() => setShowLacunaModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={{
+                  ...accentButtonStyle,
+                  backgroundColor: "#b8860b",
+                  borderColor: "#ffc107",
+                }}
+                onClick={submitLacuna}
+              >
+                Add Lacuna
               </button>
             </div>
           </div>
