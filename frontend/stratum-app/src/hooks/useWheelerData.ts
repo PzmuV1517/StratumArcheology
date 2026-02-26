@@ -72,6 +72,10 @@ export interface UseWheelerDataReturn {
   error: string | null;
   /** Whether local data has unsaved changes. */
   dirty: boolean;
+  /** Last-known version from the server after load or save. */
+  version: number;
+  /** Whether the server has a newer version than the last loaded one. */
+  hasServerChanges: boolean;
   /** Reload data from the API. */
   load: () => Promise<void>;
   /** Persist current data to the API. */
@@ -86,6 +90,10 @@ export interface UseWheelerDataReturn {
   removePlacement: (contextId: string) => void;
   /** Replace the full data state (e.g. after auto-layout). */
   setData: (data: WheelerData) => void;
+  /** Check if the server has a newer version without overwriting local data. */
+  checkForUpdates: () => Promise<void>;
+  /** Pull latest data from server, discarding local changes. */
+  pull: () => Promise<void>;
 }
 
 /**
@@ -105,6 +113,8 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [version, setVersion] = useState(0);
+  const [hasServerChanges, setHasServerChanges] = useState(false);
 
   /** Fetch Wheeler data from the backend. */
   const load = useCallback(async () => {
@@ -114,7 +124,10 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     try {
       const res = await api.get(`/projects/${projectId}/wheeler`);
       const loaded: WheelerData = res.data?.data ?? { trenches: [], placements: [] };
+      const ver: number = res.data?.version ?? 0;
       setDataState(loaded);
+      setVersion(ver);
+      setHasServerChanges(false);
       setDirty(false);
     } catch (e: unknown) {
       // 404 means no Wheeler data saved yet — not an error
@@ -137,7 +150,10 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     if (!projectId) return;
     setError(null);
     try {
-      await api.put(`/projects/${projectId}/wheeler`, { data });
+      const res = await api.put(`/projects/${projectId}/wheeler`, { data });
+      const ver: number = res.data?.version ?? 0;
+      setVersion(ver);
+      setHasServerChanges(false);
       setDirty(false);
     } catch (e: unknown) {
       const msg =
@@ -199,6 +215,26 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     setDirty(true);
   }, []);
 
+  /**
+   * Check whether the server has a newer version of the Wheeler data
+   * without overwriting local state.
+   */
+  const checkForUpdates = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await api.get(`/projects/${projectId}/wheeler`);
+      const serverVer: number = res.data?.version ?? 0;
+      setHasServerChanges(serverVer > version);
+    } catch {
+      // Silently ignore — we can't reach the server
+    }
+  }, [projectId, version]);
+
+  /** Pull latest data from the server, discarding any local changes. */
+  const pull = useCallback(async () => {
+    await load();
+  }, [load]);
+
   // Load on mount / project change
   useEffect(() => {
     load();
@@ -209,6 +245,8 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     loading,
     error,
     dirty,
+    version,
+    hasServerChanges,
     load,
     save,
     addTrench,
@@ -216,5 +254,7 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
     updatePlacement,
     removePlacement,
     setData,
+    checkForUpdates,
+    pull,
   };
 }

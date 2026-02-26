@@ -327,12 +327,16 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     loading,
     error,
     dirty,
+    version,
+    hasServerChanges,
     save,
     addTrench,
     removeTrench,
     updatePlacement,
     removePlacement,
     setData,
+    checkForUpdates,
+    pull,
   } = useWheelerData(projectId);
 
   // Local context metadata
@@ -372,6 +376,14 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   // View mode toggle: edit (grid) vs visual (Wheeler diagram)
   const [viewMode, setViewMode] = useState<"edit" | "visual">("edit");
+
+  // Conflict resolution modal
+  const [showConflictModal, setShowConflictModal] = useState(false);
+
+  // Check for server updates on mount
+  useEffect(() => {
+    checkForUpdates();
+  }, [checkForUpdates]);
 
   const totalRows = useMemo(() => {
     if (data.placements.length === 0) return 6;
@@ -1220,6 +1232,32 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             >
               {dirty ? "● Save" : "Save"}
             </button>
+            {hasServerChanges && (
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: "#1a6b3c",
+                  border: "1px solid #2ecc71",
+                  color: "#fff",
+                }}
+                onClick={() => {
+                  if (dirty) {
+                    setShowConflictModal(true);
+                  } else {
+                    pull();
+                  }
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#15552f")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#1a6b3c")
+                }
+              >
+                ⬇ Pull
+              </button>
+            )}
           </>
         )}
 
@@ -1250,9 +1288,15 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
         <div style={statusBarStyle}>
           {dirty && <span style={{ color: "#ffc107" }}>Unsaved changes</span>}
+          {hasServerChanges && (
+            <span style={{ color: "#2ecc71" }}>⬇ Server update available</span>
+          )}
+          {!dirty && !hasServerChanges && (
+            <span style={{ color: "#4caf50" }}>✓ Up to date</span>
+          )}
           <span>
             {sortedTrenches.length} trenches · {data.placements.length} contexts ·{" "}
-            {totalRows} rows
+            {totalRows} rows · v{version}
           </span>
         </div>
       </div>
@@ -1364,10 +1408,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             {Array.from({ length: totalRows }, (_, rowIdx) => {
               const displayRow = rowIdx + 1;
               const yCenter =
-                AXIS_LABEL_H +
-                (totalRows - 1 - rowIdx) * CELL_H +
-                CELL_H / 2 +
-                4;
+                AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H + CELL_H / 2 + 4;
               return (
                 <text
                   key={`y-${rowIdx}`}
@@ -1388,8 +1429,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               sortedTrenches.map((trench, colIdx) => {
                 const placement = occupancy[rowIdx][colIdx];
                 const x = AXIS_LABEL_W + colIdx * CELL_W;
-                const y =
-                  AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
+                const y = AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
 
                 if (placement) {
                   const isTopLeftCol =
@@ -1481,8 +1521,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
             {/* Unconformity wavy lines */}
             {unconformityRows.map((rowIdx) => {
-              const y =
-                AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
+              const y = AXIS_LABEL_H + (totalRows - 1 - rowIdx) * CELL_H;
               const width = sortedTrenches.length * CELL_W;
               return (
                 <g key={`unconf-${rowIdx}`}>
@@ -1860,6 +1899,85 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 Add Context
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Conflict Resolution Modal ─── */}
+      {showConflictModal && (
+        <div
+          style={modalOverlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowConflictModal(false);
+          }}
+        >
+          <div style={modalContentStyle}>
+            <h3 style={{ margin: "0 0 8px", color: "#FF2A2A" }}>⚠ Sync Conflict</h3>
+            <p style={{ margin: "0 0 12px", color: "#ccc", fontSize: 13 }}>
+              You have unsaved local changes, but the server also has a newer
+              version. You can choose what to do below. If you're unsure, it's
+              usually best to pull the server version. Either way, both versions will
+              be saved in the Time Machine so you can review them later.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              {/* Option 1: Keep local changes and push */}
+              <button
+                type="button"
+                style={{
+                  ...accentButtonStyle,
+                  textAlign: "left",
+                  padding: "10px 14px",
+                }}
+                onClick={async () => {
+                  setShowConflictModal(false);
+                  await save();
+                }}
+              >
+                <strong>Keep Local &amp; Push</strong>
+                <br />
+                <span style={{ fontSize: 11, opacity: 0.8 }}>
+                  Overwrite the server with your local changes
+                </span>
+              </button>
+
+              {/* Option 2: Pull server changes */}
+              <button
+                type="button"
+                style={{
+                  ...buttonStyle,
+                  textAlign: "left",
+                  padding: "10px 14px",
+                  backgroundColor: "#1a6b3c",
+                  border: "1px solid #2ecc71",
+                }}
+                onClick={async () => {
+                  setShowConflictModal(false);
+                  await pull();
+                }}
+              >
+                <strong>Discard Local &amp; Pull</strong>
+                <br />
+                <span style={{ fontSize: 11, opacity: 0.8 }}>
+                  Replace your local data with the server version
+                </span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              style={{ ...buttonStyle, width: "100%" }}
+              onClick={() => setShowConflictModal(false)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
