@@ -463,6 +463,92 @@ export function ProjectToolsScreen() {
   );
 }
 
+/**
+ * Wheeler Stratigraphic Notation screen.
+ *
+ * Lazy-loads the platform-specific WheelerDiagram component
+ * and renders it inside a project tab guard.
+ */
+export function ProjectWheelerScreen() {
+  const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
+
+  const [WheelerComponent, setWheelerComponent] =
+    React.useState<React.ComponentType<{
+      projectId: string;
+      canEdit?: boolean;
+    }> | null>(null);
+
+  useEffect(() => {
+    setCurrentTabName("wheeler");
+  }, [setCurrentTabName]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      import("@/src/components/matrix/WheelerDiagram.web")
+        .then((mod) => setWheelerComponent(() => mod.default))
+        .catch(() => {
+          /* WheelerDiagram web not available */
+        });
+    } else {
+      import("@/src/components/matrix/WheelerDiagram.native")
+        .then((mod) => setWheelerComponent(() => mod.default))
+        .catch(() => {
+          /* WheelerDiagram native not available */
+        });
+    }
+  }, []);
+
+  return (
+    <ProjectTabGuard>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#111111",
+          paddingTop: iosHeaderPad,
+          paddingBottom: Platform.OS === "android" ? 84 : 0,
+        }}
+      >
+        <View
+          style={
+            Platform.OS === "web"
+              ? ({
+                  flex: 1,
+                  minHeight: 0,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                  backgroundColor: "#0A0A0A",
+                } as any)
+              : {
+                  flex: 1,
+                  backgroundColor: "#0A0A0A",
+                }
+          }
+        >
+          {Platform.OS === "web" ? (
+            <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
+              {WheelerComponent &&
+                React.createElement(WheelerComponent, {
+                  projectId: project?.id as string,
+                  canEdit: true,
+                })}
+            </div>
+          ) : (
+            <View style={{ flex: 1, width: "100%" }}>
+              {WheelerComponent &&
+                React.createElement(WheelerComponent, {
+                  projectId: project?.id as string,
+                  canEdit: false,
+                })}
+            </View>
+          )}
+        </View>
+      </View>
+    </ProjectTabGuard>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // More Hub Screen (iOS)
 // ---------------------------------------------------------------------------

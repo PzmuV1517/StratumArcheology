@@ -77,6 +77,30 @@ interface TimeMachineTabProps {
   projectId: string;
 }
 
+/* ─── Data version types (Harris Matrix / Wheeler) ─── */
+
+interface DataVersionEntry {
+  id: string;
+  version: number;
+  created_at: string | null;
+  created_by: string | null;
+}
+
+interface DataVersionsResponse {
+  project_id: string;
+  data_type: string;
+  current_version: number;
+  versions: DataVersionEntry[];
+}
+
+const DATA_TYPE_INFO: Record<
+  string,
+  { icon: string; label: string; color: string }
+> = {
+  harris_matrix: { icon: "🔗", label: "Harris Matrix", color: "#4A90D9" },
+  wheeler: { icon: "📊", label: "Wheeler Diagram", color: "#9C27B0" },
+};
+
 const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string }> =
   {
     documents: { icon: "📄", label: "Documents", color: "#4A90D9" },
@@ -101,14 +125,31 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
+  // Data version history state (Harris Matrix + Wheeler)
+  const [harrisVersions, setHarrisVersions] = useState<DataVersionsResponse | null>(
+    null,
+  );
+  const [wheelerVersions, setWheelerVersions] =
+    useState<DataVersionsResponse | null>(null);
+  const [expandedDataTypes, setExpandedDataTypes] = useState<Set<string>>(new Set());
+
   const loadTimeMachineData = useCallback(async () => {
     try {
       const url = selectedCategory
         ? `/files/project/${projectId}/time-machine?category=${selectedCategory}`
         : `/files/project/${projectId}/time-machine`;
 
-      const response = await api.get(url);
-      setData(response.data);
+      const [tmResponse, harrisRes, wheelerRes] = await Promise.all([
+        api.get(url),
+        api
+          .get(`/projects/${projectId}/data-versions/harris_matrix`)
+          .catch(() => null),
+        api.get(`/projects/${projectId}/data-versions/wheeler`).catch(() => null),
+      ]);
+
+      setData(tmResponse.data);
+      if (harrisRes) setHarrisVersions(harrisRes.data);
+      if (wheelerRes) setWheelerVersions(wheelerRes.data);
     } catch (error) {
       console.error("Error loading time machine data:", error);
       showAlert("Error", "Failed to load version history");
@@ -263,6 +304,119 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           },
         },
       ],
+    );
+  };
+
+  /* ── Data version helpers (Harris Matrix / Wheeler) ── */
+
+  const toggleDataType = (dataType: string) => {
+    setExpandedDataTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(dataType)) {
+        next.delete(dataType);
+      } else {
+        next.add(dataType);
+      }
+      return next;
+    });
+  };
+
+  const restoreDataVersion = (dataType: string, version: number) => {
+    const info = DATA_TYPE_INFO[dataType] ?? DATA_TYPE_INFO.harris_matrix;
+    showAlert(
+      "Restore Version",
+      `Restore ${info.label} to version ${version}? The current data will be saved as a new version.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Restore",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.post(
+                `/projects/${projectId}/data-versions/${dataType}/restore/${version}`,
+              );
+              showAlert("Success", `${info.label} restored to version ${version}`);
+              loadTimeMachineData();
+            } catch (error) {
+              console.error("Error restoring data version:", error);
+              showAlert("Error", `Failed to restore ${info.label}`);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const renderDataVersionSection = (dvr: DataVersionsResponse) => {
+    const info = DATA_TYPE_INFO[dvr.data_type] ?? DATA_TYPE_INFO.harris_matrix;
+    const isExpanded = expandedDataTypes.has(dvr.data_type);
+
+    return (
+      <View key={dvr.data_type} style={styles.categorySection}>
+        <TouchableOpacity
+          style={styles.categoryHeader}
+          onPress={() => toggleDataType(dvr.data_type)}
+        >
+          <View style={styles.categoryInfo}>
+            <Text style={styles.categoryIcon}>{info.icon}</Text>
+            <View>
+              <Text style={styles.categoryLabel}>{info.label}</Text>
+              <Text style={styles.categoryMeta}>
+                Current v{dvr.current_version} · {dvr.versions.length} snapshots
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.versionsContainer}>
+            {/* Current version */}
+            <View style={styles.versionItem}>
+              <View style={styles.versionDot} />
+              <View style={styles.versionInfo}>
+                <Text style={styles.versionLabel}>
+                  Version {dvr.current_version}
+                  <Text style={styles.currentVersionBadge}> (Current)</Text>
+                </Text>
+                <Text style={styles.versionMeta}>Latest saved state</Text>
+              </View>
+            </View>
+
+            {dvr.versions.map((v) => (
+              <View key={v.id} style={styles.versionItem}>
+                <View style={[styles.versionDot, styles.versionDotOld]} />
+                <View style={styles.versionInfo}>
+                  <View style={styles.versionHeader}>
+                    <Text style={styles.versionLabel}>Version {v.version}</Text>
+                    <View style={styles.versionActions}>
+                      <TouchableOpacity
+                        style={styles.versionActionButton}
+                        onPress={() => restoreDataVersion(dvr.data_type, v.version)}
+                      >
+                        <Text style={styles.versionActionText}>↩️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <Text style={styles.versionMeta}>
+                    {v.created_at ? formatDate(v.created_at) : "Unknown date"}
+                  </Text>
+                </View>
+              </View>
+            ))}
+
+            {dvr.versions.length === 0 && (
+              <View style={{ padding: 12 }}>
+                <Text style={styles.versionMeta}>
+                  No previous versions yet. Edit the {info.label} to create
+                  snapshots.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -472,6 +626,9 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   const bottomPadding =
     (Platform.OS === "android" ? 84 : 0) + (insets.bottom || 0) + 16;
 
+  const dataSnapshotCount =
+    (harrisVersions?.versions.length ?? 0) + (wheelerVersions?.versions.length ?? 0);
+
   return (
     <View style={styles.container}>
       {/* Header Stats */}
@@ -483,12 +640,12 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{data.total_versions}</Text>
-          <Text style={styles.statLabel}>Total Versions</Text>
+          <Text style={styles.statLabel}>File Versions</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{categories.length}</Text>
-          <Text style={styles.statLabel}>Categories</Text>
+          <Text style={styles.statValue}>{dataSnapshotCount}</Text>
+          <Text style={styles.statLabel}>Data Snapshots</Text>
         </View>
       </View>
 
@@ -518,6 +675,25 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           </View>
         ) : (
           categories.map(([category, files]) => renderCategory(category, files))
+        )}
+
+        {/* Data Version History (Harris Matrix & Wheeler) */}
+        {(harrisVersions || wheelerVersions) && (
+          <View style={{ marginTop: 16 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#F5F5F5",
+                marginBottom: 12,
+                paddingHorizontal: 4,
+              }}
+            >
+              Data Version History
+            </Text>
+            {harrisVersions && renderDataVersionSection(harrisVersions)}
+            {wheelerVersions && renderDataVersionSection(wheelerVersions)}
+          </View>
         )}
       </ScrollView>
     </View>

@@ -144,5 +144,47 @@ class MinIOClient:
             raise
 
 
+    def ensure_bucket(self, bucket_name: str) -> None:
+        """Ensure a named bucket exists (creates it if missing)."""
+        if not self.client:
+            return
+        try:
+            if not self.client.bucket_exists(bucket_name):
+                self.client.make_bucket(bucket_name)
+                print(f"✓ MinIO bucket '{bucket_name}' created")
+            else:
+                print(f"✓ MinIO bucket '{bucket_name}' exists")
+        except S3Error as e:
+            print(f"✗ MinIO bucket ensure error ({bucket_name}): {e}")
+
+    def upload_text(self, bucket: str, key: str, text: str, content_type: str = "image/svg+xml") -> str:
+        """Upload a UTF-8 text payload to MinIO and return the object key."""
+        if not self.client:
+            raise RuntimeError("MinIO client unavailable")
+        data = text.encode("utf-8")
+        stream = BytesIO(data)
+        try:
+            self.client.put_object(
+                bucket, key, stream, length=len(data), content_type=content_type
+            )
+            return key
+        except S3Error as e:
+            print(f"✗ MinIO upload_text error: {e}")
+            raise
+
+    def get_presigned_url_for_bucket(self, bucket: str, key: str, expiry_seconds: int = 604800) -> str:
+        """Return a presigned GET URL for an object in *any* bucket."""
+        if not self.client:
+            raise RuntimeError("MinIO client unavailable")
+        from datetime import timedelta
+        try:
+            return self.client.presigned_get_object(
+                bucket, key, expires=timedelta(seconds=expiry_seconds)
+            )
+        except S3Error as e:
+            print(f"✗ MinIO presigned URL error: {e}")
+            raise
+
+
 # Initialize MinIO client
 minio_client = MinIOClient()

@@ -48,11 +48,11 @@ interface MoreToolsItem {
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (tab: "gallery" | "gps" | "history" | "tools") => void;
+  onNavigate: (tab: "gallery" | "gps" | "history" | "tools" | "wheeler") => void;
 }
 
 const ITEMS: {
-  key: "gallery" | "gps" | "history" | "tools";
+  key: "gallery" | "gps" | "history" | "tools" | "wheeler";
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
@@ -60,10 +60,11 @@ const ITEMS: {
   { key: "gps", label: "GPS Map", icon: "map" },
   { key: "history", label: "Time Machine", icon: "time" },
   { key: "tools", label: "Tools", icon: "construct" },
+  { key: "wheeler", label: "Wheeler Notation", icon: "analytics-outline" },
 ];
 
 export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) {
-  const handlePress = (tab: "gallery" | "gps" | "history" | "tools") => {
+  const handlePress = (tab: "gallery" | "gps" | "history" | "tools" | "wheeler") => {
     onClose();
     // Small delay so the modal dismisses before navigation
     setTimeout(() => onNavigate(tab), 150);

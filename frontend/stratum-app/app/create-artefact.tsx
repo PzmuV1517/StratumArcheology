@@ -276,6 +276,7 @@ export default function CreateArtefactScreen() {
         console.warn("QR code registration failed", e);
       }
 
+      // Build manifest with all metadata and children
       const manifest = buildManifestFromChildren(
         folder.id,
         name.trim(),

@@ -126,6 +126,7 @@ export default function ProjectTabsLayout() {
           options={{ title: "Time Machine", href: null }}
         />
         <Tabs.Screen name="tools" options={{ title: "Tools", href: null }} />
+        <Tabs.Screen name="wheeler" options={{ title: "Wheeler", href: null }} />
       </Tabs>
 
       <MoreToolsSheet
