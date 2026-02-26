@@ -570,43 +570,43 @@ const HelpIconBook = () => (
 
 const HELP_STEPS: HelpStep[] = [
   {
-    title: "Add Trench",
+    title: "Add a Trench",
     description:
-      "Add a new trench/section column to the X-axis. Each trench represents a spatial position on the site. Click the '+ Trench' button in the toolbar.",
+      "Trenches (or sections) form the X-axis — each one is a spatial position on your site. Hit '+ Trench' in the toolbar, give it an ID and an optional display label, then press Add.",
     icon: <HelpIconRuler />,
     shortcut: "toolbar → + Trench",
   },
   {
-    title: "Add Context",
+    title: "Add a Context",
     description:
-      "Place a stratigraphic unit on the diagram. Assign it a context ID, choose its type (layer, deposit, cut, fill, structure), select which trenches it spans, and set the time-row range. Click '+ Context' in the toolbar.",
+      "A context is a single stratigraphic unit (e.g. SU-007). Set its type (layer, deposit, cut, fill, structure), write a short description and any longer field notes, pick which trenches it spans, and set the time-row range (row 0 = oldest).",
     icon: <HelpIconLayers />,
     shortcut: "toolbar → + Context",
   },
   {
-    title: "Edit / Remove",
+    title: "Edit or Delete a Context",
     description:
-      "Hover over a filled cell and click to inspect it. Use the context menu (right-click or click the ✕ next to a trench label) to remove items.",
+      "Click any filled cell in Edit mode to re-open its form — change the type, description, notes, trench span, or row range. Use the Delete button inside the form to remove it entirely.",
     icon: <HelpIconPencil />,
   },
   {
-    title: "Auto-layout",
+    title: "Mark a Lacuna",
     description:
-      "Automatically re-distributes all context placements into evenly-spaced rows. Useful after bulk edits.",
+      "A lacuna is a missing interval within a sequence — rock that was never deposited, eroded away, or not excavated. It renders as a cross-hatched amber zone. Use '+ Lacuna' and define the affected trenches and row range.",
     icon: <HelpIconBarChart />,
-    shortcut: "toolbar → Auto-layout",
+    shortcut: "toolbar → + Lacuna",
   },
   {
-    title: "Save",
+    title: "Save, Pull & Discard",
     description:
-      "Saves the current diagram state to the server. The button turns red when you have unsaved changes. Your work is versioned in Time Machine.",
+      "'Save' pushes your local changes to the server (button turns red when unsaved). 'Pull' fetches the latest server version — use it any time to sync. 'Discard' throws away all unsaved local changes and reloads from the last saved version.",
     icon: <HelpIconSave />,
-    shortcut: "toolbar → Save",
+    shortcut: "toolbar → Save / Pull / Discard",
   },
   {
-    title: "Understanding the Diagram",
+    title: "Reading the Diagram",
     description:
-      "The Wheeler diagram (Wheeler, 1964) plots time (Y-axis, oldest at bottom) against spatial position (X-axis, trenches). Filled cells show where a stratigraphic unit was deposited. Empty cross-hatched cells represent lacunae (hiatuses) — gaps in the stratigraphic record. Unconformity boundaries are shown as wavy lines between sequences.",
+      "The Wheeler diagram (Wheeler, 1964) plots time on the Y-axis (oldest at bottom) against spatial position on the X-axis. Filled cells show deposited units; empty hatched cells are hiatuses. Diagonal edges with arrows show migration between trenches. The Publication view exports a print-quality B&W SVG including context descriptions.",
     icon: <HelpIconBook />,
   },
 ];
@@ -624,6 +624,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     dirty,
     version,
     hasServerChanges,
+    load,
     save,
     addTrench,
     removeTrench,
@@ -819,17 +820,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     lacunaFormLabel,
     addLacuna,
   ]);
-
-  const handleAutoLayout = useCallback(() => {
-    if (data.placements.length === 0) return;
-    const sorted = [...data.placements].sort((a, b) => a.rowStart - b.rowStart);
-    const result = sorted.map((p, i) => ({
-      ...p,
-      rowStart: i,
-      rowEnd: i,
-    }));
-    setData({ ...data, placements: result });
-  }, [data, setData]);
 
   // ── Debug helper: fill diagram with realistic sample data ──────────────
   const handleLoadDemo = useCallback(() => {
@@ -1697,17 +1687,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             </button>
             <button
               type="button"
-              style={buttonStyle}
-              onClick={handleAutoLayout}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "#222222")
-              }
-            >
-              Auto-layout
-            </button>
-            <button
-              type="button"
               style={{
                 ...buttonStyle,
                 borderColor: "rgba(255,193,7,0.35)",
@@ -1762,30 +1741,71 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             >
               {dirty ? "● Save" : "Save"}
             </button>
-            {hasServerChanges && (
+            {/* Pull – always visible */}
+            <button
+              type="button"
+              style={{
+                ...buttonStyle,
+                ...(hasServerChanges
+                  ? {
+                      backgroundColor: "#1a6b3c",
+                      border: "1px solid #2ecc71",
+                      color: "#fff",
+                    }
+                  : {}),
+              }}
+              onClick={() => {
+                if (dirty) {
+                  setShowConflictModal(true);
+                } else {
+                  pull();
+                }
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = hasServerChanges
+                  ? "#15552f"
+                  : "#333")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = hasServerChanges
+                  ? "#1a6b3c"
+                  : "#222222")
+              }
+              title={
+                hasServerChanges
+                  ? "Server has a newer version — click to pull"
+                  : "Pull latest from server"
+              }
+            >
+              <IconDownload /> Pull
+            </button>
+            {/* Discard – only when dirty */}
+            {dirty && (
               <button
                 type="button"
                 style={{
                   ...buttonStyle,
-                  backgroundColor: "#1a6b3c",
-                  border: "1px solid #2ecc71",
-                  color: "#fff",
+                  color: "#aaa",
+                  borderColor: "rgba(255,255,255,0.1)",
                 }}
                 onClick={() => {
-                  if (dirty) {
-                    setShowConflictModal(true);
-                  } else {
-                    pull();
+                  if (
+                    window.confirm(
+                      "Discard all unsaved changes and reload from server?",
+                    )
+                  ) {
+                    load();
                   }
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#15552f")
+                  (e.currentTarget.style.backgroundColor = "#2a2a2a")
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#1a6b3c")
+                  (e.currentTarget.style.backgroundColor = "#222222")
                 }
+                title="Throw away unsaved changes and reload from server"
               >
-                <IconDownload /> Pull
+                Discard
               </button>
             )}
           </>
