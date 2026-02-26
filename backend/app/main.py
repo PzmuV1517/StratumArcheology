@@ -69,20 +69,9 @@ logger.info("Firebase initialized")
 # =============================================================================
 # DATABASE MIGRATIONS
 # =============================================================================
-# REMOVED: Base.metadata.create_all(bind=engine)
-#
-# Database schema is now managed by Alembic migrations.
-#
-# To apply migrations:
-#   cd backend
-#   alembic upgrade head
-#
-# To create a new migration after model changes:
-#   alembic revision --autogenerate -m "description of changes"
-#
-# To downgrade:
-#   alembic downgrade -1  (one step back)
-#   alembic downgrade base  (all the way back)
+# IMPORTANT: Do NOT call Base.metadata.create_all() here.
+# Database schema is managed by Alembic migrations.
+# Run migrations with: alembic upgrade head
 # =============================================================================
 
 # Create FastAPI app
@@ -97,11 +86,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add error handling middleware (must be first to catch all errors)
-# This provides:
-# - Structured error logging with request context
-# - Database transaction rollback on errors
-# - MinIO upload cleanup on errors
-# - User-friendly error responses
 app.add_middleware(ErrorHandlingMiddleware, minio_client=minio_client)
 
 # Add rate limiting middleware
