@@ -326,3 +326,60 @@ class InviteAcceptResponse(BaseModel):
     project_id: str
     user_id: str
     role: str
+
+
+# ── Chat / Messaging Schemas ─────────────────────────────────────────────────
+
+
+class ChatMessageCreate(BaseModel):
+    """Body for sending a new chat message."""
+
+    content: str
+    # Exactly one of project_id (room) or recipient_id (DM) must be set
+    project_id: str | None = None
+    recipient_id: str | None = None
+    reply_to_id: str | None = None
+
+
+class ChatMessageEdit(BaseModel):
+    """Body for editing an existing message."""
+
+    content: str
+
+
+class ChatMessageResponse(BaseModel):
+    """Single chat message returned from REST or WS."""
+
+    id: str
+    sender_id: str
+    sender_name: str | None = None
+    sender_photo: str | None = None
+    project_id: str | None = None
+    recipient_id: str | None = None
+    content: str
+    reply_to_id: str | None = None
+    created_at: datetime
+    edited_at: datetime | None = None
+    is_deleted: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class ChatMessagePage(BaseModel):
+    """Paginated list of messages (cursor-based)."""
+
+    messages: list[ChatMessageResponse]
+    next_cursor: str | None = None  # ISO timestamp of last message
+    has_more: bool = False
+
+
+class ConversationPreview(BaseModel):
+    """Summary row for the DM inbox / conversation list."""
+
+    other_user_id: str
+    other_user_name: str | None = None
+    other_user_photo: str | None = None
+    last_message: str
+    last_message_at: datetime
+    unread_count: int = 0

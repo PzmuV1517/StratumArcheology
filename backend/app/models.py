@@ -116,6 +116,9 @@ class ActivityType(str, enum.Enum):
     # Wheeler Diagram activities
     WHEELER_DATA_UPDATED = "wheeler_data_updated"
 
+    # Chat activities
+    MESSAGE_SENT = "message_sent"
+
 
 # Association table for project members
 project_members = Table(
@@ -514,6 +517,50 @@ class QRCode(Base):
 
     project = relationship(
         "Project", backref=backref("qr_codes", cascade="all, delete-orphan")
+    )
+
+
+class ChatMessage(Base):
+    """A single chat message — either a project room message or a direct message.
+
+    * project_id set + recipient_id NULL  → project room chat
+    * project_id NULL + recipient_id set  → direct message
+    """
+
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    sender_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Non-null for project room messages
+    project_id = Column(
+        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    # Non-null for DMs
+    recipient_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    content = Column(Text, nullable=False)
+    # Optional reply-to support (like Slack threads)
+    reply_to_id = Column(
+        String, ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    edited_at = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, default=False)
+
+    # Relationships
+    sender = relationship("User", foreign_keys=[sender_id])
+    recipient = relationship("User", foreign_keys=[recipient_id])
+    project = relationship(
+        "Project", backref=backref("chat_messages", cascade="all, delete-orphan")
+    )
+    reply_to = relationship("ChatMessage", remote_side="ChatMessage.id")
+
+    __table_args__ = (
+        Index("ix_chat_messages_project_created", "project_id", "created_at"),
+        Index("ix_chat_messages_dm", "sender_id", "recipient_id", "created_at"),
     )
 
 

@@ -91,6 +91,17 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Messages - DM Inbox */}
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="message.fill" color={color} />
+          ),
+        }}
+      />
+
       {/* Settings - App settings */}
       <Tabs.Screen
         name="settings"

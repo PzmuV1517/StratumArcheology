@@ -47,6 +47,7 @@ from app.rate_limiter import limiter
 from app.routes import (
     activities,
     auth,
+    chat,
     convert,
     files,
     forms,
@@ -111,6 +112,7 @@ app.include_router(forms.router, prefix="/api")
 app.include_router(invites.router, prefix="/api")
 app.include_router(qrcodes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 logger.info(
     "STRATUM API started",
