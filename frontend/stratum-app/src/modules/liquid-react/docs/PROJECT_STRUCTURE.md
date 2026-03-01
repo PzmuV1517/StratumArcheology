@@ -59,20 +59,17 @@ liquid-react/
 ### Package Configuration
 
 **package.json**
-
 - NPM package metadata
 - Dependencies and peer dependencies
 - Scripts for linting and testing
 - Files to include in distribution
 
 **tsconfig.json**
-
 - TypeScript compiler options
 - ES2019 target for React Native compatibility
 - Declaration file generation
 
 **liquid-react.podspec**
-
 - CocoaPods specification
 - iOS platform requirements (13.0+)
 - Swift version (5.0)
@@ -81,7 +78,6 @@ liquid-react/
 ### Documentation
 
 **README.md**
-
 - Installation instructions
 - Quick start guide
 - Component overview
@@ -89,35 +85,30 @@ liquid-react/
 - Known limitations
 
 **docs/API_REFERENCE.md**
-
 - Complete prop documentation
 - Event payloads
 - Type definitions
 - Layout guidelines
 
 **docs/ARCHITECTURE.md**
-
 - Design philosophy
 - Component structure patterns
 - Layout system explanation
 - Performance optimizations
 
 **docs/APP_STORE_COMPLIANCE.md**
-
 - Public API verification
 - Legal status confirmation
 - Comparison with unsafe approaches
 - Verification checklist
 
 **docs/COMPONENT_MAPPING.md**
-
 - 1:1 UIKit mapping table
 - Implementation patterns
 - Props mapping
 - Public API verification
 
 **docs/EXAMPLES.md**
-
 - Complete app example
 - Minimal examples
 - Form example
@@ -126,27 +117,23 @@ liquid-react/
 ### JavaScript/TypeScript Layer
 
 **src/types.ts**
-
 - TypeScript interfaces for all components
 - Material type definitions
 - Button style enums
 - Event payload types
 
 **src/nativeComponents.ts**
-
 - `requireNativeComponent` calls
 - Registers native view managers
 - Type-safe native component exports
 
 **src/components.tsx**
-
 - React component wrappers
 - Default styles
 - JSDoc documentation
 - Child component support
 
 **src/index.ts**
-
 - Main entry point
 - Re-exports all components
 - Type exports
@@ -154,65 +141,55 @@ liquid-react/
 ### Native iOS Layer
 
 **LiquidReact-Bridging-Header.h**
-
 - Objective-C to Swift bridge
 - `RCT_EXTERN_MODULE` declarations
 - `RCT_EXPORT_VIEW_PROPERTY` exports
 - Connects Swift managers to React Native
 
 **Material View Manager**
-
 - Wraps `UIVisualEffectView`
 - Supports all 15 system materials
 - Handles child view hierarchy
 - Tap gesture support
 
 **Button Manager**
-
 - Wraps `UIButton`
 - Supports 7 button configurations
 - Native press handling
 - System animations
 
 **Switch Manager**
-
 - Wraps `UISwitch`
 - Value change events
 - Intrinsic size support
 
 **Segmented Control Manager**
-
 - Wraps `UISegmentedControl`
 - Dynamic segment management
 - Selection change events
 
 **Search Bar Manager**
-
 - Wraps `UISearchBar`
 - Implements `UISearchBarDelegate`
 - Text change, search, and cancel events
 
 **Navigation Bar Manager**
-
 - Wraps `UINavigationBar`
 - Appearance API support
 - Translucency control
 
 **Toolbar Manager**
-
 - Wraps `UIToolbar`
 - System bar button items
 - Flexible/fixed space support
 
 **Tab Bar Manager**
-
 - Wraps `UITabBar`
 - System and custom tab items
 - Selection change events
 - SF Symbols icon support
 
 **Container Managers**
-
 - System background colors
 - Continuous corner radius
 - Child view support
@@ -244,14 +221,12 @@ liquid-react/
 ## Development Workflow
 
 ### 1. Install Dependencies
-
 ```bash
 npm install
 cd ios && pod install
 ```
 
 ### 2. Link to Test App
-
 ```bash
 cd ../your-react-native-app
 npm link ../liquid-react
@@ -259,13 +234,11 @@ cd ios && pod install
 ```
 
 ### 3. Build Test App
-
 ```bash
 npm run ios
 ```
 
 ### 4. Modify and Test
-
 - Edit Swift files in `ios/`
 - Edit TypeScript in `src/`
 - Rebuild to see changes
@@ -288,20 +261,17 @@ npm run ios
 ## Naming Conventions
 
 ### TypeScript
-
 - Components: `NativeMaterialView` (PascalCase)
 - Types: `MaterialType` (PascalCase)
 - Props: `material` (camelCase)
 
 ### Swift
-
 - Managers: `LRNativeMaterialViewManager` (PascalCase)
 - Views: `NativeMaterialView` (PascalCase)
 - Properties: `@objc var material` (camelCase)
 - Methods: `updateMaterial()` (camelCase)
 
 ### Files
-
 - Swift: `LRNative*Manager.swift`
 - TypeScript: `*.ts` or `*.tsx`
 - Docs: `*.md` (UPPERCASE)
@@ -309,7 +279,6 @@ npm run ios
 ## Module Prefix
 
 All native classes use `LR` prefix (Liquid React):
-
 - `LRNativeMaterialViewManager`
 - `LRNativeButtonManager`
 - etc.
@@ -319,14 +288,12 @@ This prevents naming conflicts with other native modules.
 ## Version Control
 
 Tracked files:
-
 - ✅ Source code (Swift, TypeScript)
 - ✅ Configuration files
 - ✅ Documentation
 - ✅ Package manifests
 
 Ignored files:
-
 - ❌ Build artifacts
 - ❌ Dependencies (node_modules, Pods)
 - ❌ IDE-specific files

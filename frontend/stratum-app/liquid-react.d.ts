@@ -26,9 +26,10 @@
  */
 declare module "liquid-react" {
   import type { ViewProps } from "react-native";
-  import type React from "react";
+  import type { ReactNode, FC } from "react";
 
-  // Material types for NativeMaterialView
+  // ─── Scalar types ──────────────────────────────────────────────────────────
+
   export type MaterialType =
     | "systemUltraThinMaterial"
     | "systemThinMaterial"
@@ -81,6 +82,93 @@ declare module "liquid-react" {
     | "redo"
     | "close";
 
+  export type TabBarSystemItem =
+    | "more"
+    | "favorites"
+    | "featured"
+    | "topRated"
+    | "recents"
+    | "contacts"
+    | "history"
+    | "bookmarks"
+    | "search"
+    | "downloads"
+    | "mostRecent"
+    | "mostViewed";
+
+  export type StackAxis = "vertical" | "horizontal";
+  export type StackAlignment =
+    | "fill"
+    | "leading"
+    | "trailing"
+    | "center"
+    | "firstBaseline"
+    | "lastBaseline";
+  export type StackDistribution =
+    | "fill"
+    | "fillEqually"
+    | "fillProportionally"
+    | "equalSpacing"
+    | "equalCentering";
+
+  // ─── Shared item/event types ────────────────────────────────────────────────
+
+  /** A toolbar bar-button-item (icon, title, or system glyph). */
+  export interface ToolbarItem {
+    icon?: string;
+    title?: string;
+    systemItem?: ToolbarSystemItem;
+    disabled?: boolean;
+  }
+
+  /** A menu item (optionally containing sub-items). */
+  export interface ToolbarMenuItem {
+    id?: string;
+    title: string;
+    icon?: string;
+    destructive?: boolean;
+    disabled?: boolean;
+    children?: ToolbarMenuItem[];
+  }
+
+  export interface TabBarItem {
+    title: string;
+    icon?: string;
+    systemItem?: TabBarSystemItem;
+  }
+
+  // ─── Event payload types ────────────────────────────────────────────────────
+
+  /** Payload for switch value-change events. */
+  export interface ValueChangeEvent {
+    value: boolean;
+  }
+
+  export interface SegmentedControlValueChangeEvent {
+    selectedIndex: number;
+  }
+
+  export interface SearchBarChangeEvent {
+    text: string;
+  }
+
+  export interface TabBarPressEvent {
+    index: number;
+  }
+
+  export interface ToolbarMenuActionEvent {
+    id: string;
+    title: string;
+  }
+
+  /** Payload delivered when a NativeToolbarButton inside a NativeToolbar is tapped. */
+  export interface ToolbarButtonPressEvent {
+    icon: string;
+    title: string;
+  }
+
+  // ─── Component prop types ───────────────────────────────────────────────────
+
   export interface NativeMaterialViewProps extends ViewProps {
     material?: MaterialType;
     onPress?: () => void;
@@ -97,67 +185,107 @@ declare module "liquid-react" {
     onTintColor?: string;
     thumbTintColor?: string;
     disabled?: boolean;
-    onValueChange?: (event: { nativeEvent: { value: boolean } }) => void;
+    /** Payload is `{ value: boolean }` — NOT wrapped in `nativeEvent`. */
+    onValueChange?: (event: ValueChangeEvent) => void;
+  }
+
+  export interface NativeSegmentedControlProps extends ViewProps {
+    segments: string[];
+    selectedIndex?: number;
+    /** Payload is `{ selectedIndex: number }`. */
+    onValueChange?: (event: SegmentedControlValueChangeEvent) => void;
+  }
+
+  export interface NativeSearchBarProps extends ViewProps {
+    placeholder?: string;
+    text?: string;
+    onTextChanged?: (event: SearchBarChangeEvent) => void;
+    onSearchPressed?: (event: SearchBarChangeEvent) => void;
+    onCancelPressed?: () => void;
+  }
+
+  export interface NativeNavigationBarProps extends ViewProps {
+    title?: string;
+    translucent?: boolean;
   }
 
   export interface NativeToolbarProps extends ViewProps {
     translucent?: boolean;
+    children?: ReactNode;
+    /**
+     * Fires when a NativeToolbarButton child is tapped.
+     * Payload: `{ icon: string; title: string }`.
+     */
+    onToolbarButtonPress?: (event: ToolbarButtonPressEvent) => void;
+    /**
+     * Fires when a NativeToolbarMenu child action is selected.
+     * Payload: `{ id: string; title: string }`.
+     */
+    onToolbarMenuAction?: (event: ToolbarMenuActionEvent) => void;
   }
 
   export interface NativeToolbarButtonProps extends ViewProps {
-    title?: string;
     icon?: string;
+    title?: string;
     systemItem?: ToolbarSystemItem;
     disabled?: boolean;
+    /** Only fires when the button is NOT inside a NativeToolbar. */
     onPress?: () => void;
   }
 
   export interface NativeToolbarMenuProps extends ViewProps {
-    title?: string;
     icon?: string;
-    items?: {
-      id?: string;
-      title: string;
-      icon?: string;
-      destructive?: boolean;
-      disabled?: boolean;
-    }[];
-    onAction?: (event: { nativeEvent: { id: string; title: string } }) => void;
+    title?: string;
+    /** The menu items to show in the pull-down menu. */
+    menuItems: ToolbarMenuItem[];
+    disabled?: boolean;
+    /** Only fires when the menu is NOT inside a NativeToolbar. */
+    onMenuAction?: (event: ToolbarMenuActionEvent) => void;
   }
 
-  // Components
-  export const NativeMaterialView: React.FC<NativeMaterialViewProps>;
-  export const NativeButton: React.FC<NativeButtonProps>;
-  export const NativeSwitch: React.FC<NativeSwitchProps>;
-  export const NativeSegmentedControl: React.FC<any>;
-  export const NativeSearchBar: React.FC<any>;
-  export const NativeNavigationBar: React.FC<any>;
-  export const NativeToolbar: React.FC<NativeToolbarProps>;
-  export const NativeToolbarButton: React.FC<NativeToolbarButtonProps>;
-  export const NativeToolbarMenu: React.FC<NativeToolbarMenuProps>;
-  export const NativeTabBar: React.FC<any>;
-  export const NativeGroupedContainer: React.FC<any>;
-  export const NativeCardContainer: React.FC<any>;
-  export const NativeStackView: React.FC<any>;
+  export interface NativeTabBarProps extends ViewProps {
+    items: TabBarItem[];
+    selectedIndex?: number;
+    translucent?: boolean;
+    onTabPress?: (event: TabBarPressEvent) => void;
+  }
+
+  export interface NativeGroupedContainerProps extends ViewProps {
+    insetGrouped?: boolean;
+  }
+
+  export interface NativeCardContainerProps extends ViewProps {
+    cornerRadius?: number;
+  }
+
+  export interface NativeStackViewProps extends ViewProps {
+    axis?: StackAxis;
+    spacing?: number;
+    alignment?: StackAlignment;
+    distribution?: StackDistribution;
+  }
 
   export interface NativeMenuButtonProps extends ViewProps {
     icon?: string;
     tintColorHex?: string;
-    menuItems?: {
-      id?: string;
-      title: string;
-      icon?: string;
-      destructive?: boolean;
-      disabled?: boolean;
-      children?: {
-        id?: string;
-        title: string;
-        icon?: string;
-        destructive?: boolean;
-        disabled?: boolean;
-      }[];
-    }[];
-    onMenuAction?: (event: { nativeEvent: { id: string; title: string } }) => void;
+    menuItems: ToolbarMenuItem[];
+    onMenuAction?: (event: ToolbarMenuActionEvent) => void;
   }
-  export const NativeMenuButton: React.FC<NativeMenuButtonProps>;
+
+  // ─── Components ─────────────────────────────────────────────────────────────
+
+  export const NativeMaterialView: FC<NativeMaterialViewProps>;
+  export const NativeButton: FC<NativeButtonProps>;
+  export const NativeSwitch: FC<NativeSwitchProps>;
+  export const NativeSegmentedControl: FC<NativeSegmentedControlProps>;
+  export const NativeSearchBar: FC<NativeSearchBarProps>;
+  export const NativeNavigationBar: FC<NativeNavigationBarProps>;
+  export const NativeToolbar: FC<NativeToolbarProps>;
+  export const NativeToolbarButton: FC<NativeToolbarButtonProps>;
+  export const NativeToolbarMenu: FC<NativeToolbarMenuProps>;
+  export const NativeTabBar: FC<NativeTabBarProps>;
+  export const NativeGroupedContainer: FC<NativeGroupedContainerProps>;
+  export const NativeCardContainer: FC<NativeCardContainerProps>;
+  export const NativeStackView: FC<NativeStackViewProps>;
+  export const NativeMenuButton: FC<NativeMenuButtonProps>;
 }

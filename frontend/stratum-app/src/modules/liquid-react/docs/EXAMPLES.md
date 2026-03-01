@@ -5,8 +5,8 @@ This directory contains comprehensive examples of using Liquid-React components.
 ## Complete App Example
 
 ```jsx
-import React, { useState } from "react";
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from "react-native";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import {
   NativeMaterialView,
   NativeButton,
@@ -18,12 +18,12 @@ import {
   NativeTabBar,
   NativeGroupedContainer,
   NativeCardContainer,
-} from "liquid-react";
+} from 'liquid-react';
 
 export default function App() {
   const [switchValue, setSwitchValue] = useState(false);
   const [selectedSegment, setSelectedSegment] = useState(0);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
 
   return (
@@ -57,7 +57,7 @@ export default function App() {
             <NativeButton
               title="Press Me"
               buttonStyle="filled"
-              onPress={() => console.log("Button pressed")}
+              onPress={() => console.log('Button pressed')}
               style={styles.button}
             />
           </NativeCardContainer>
@@ -77,7 +77,7 @@ export default function App() {
           <NativeCardContainer cornerRadius={12} style={styles.card}>
             <Text style={styles.cardTitle}>Segmented Control</Text>
             <NativeSegmentedControl
-              segments={["Option 1", "Option 2", "Option 3"]}
+              segments={['Option 1', 'Option 2', 'Option 3']}
               selectedIndex={selectedSegment}
               onValueChange={(e) => setSelectedSegment(e.nativeEvent.selectedIndex)}
               style={styles.segmentedControl}
@@ -89,7 +89,7 @@ export default function App() {
             placeholder="Search..."
             text={searchText}
             onChangeText={(e) => setSearchText(e.nativeEvent.text)}
-            onSearchPress={(e) => console.log("Search:", e.nativeEvent.text)}
+            onSearchPress={(e) => console.log('Search:', e.nativeEvent.text)}
             style={styles.searchBar}
           />
         </NativeGroupedContainer>
@@ -105,7 +105,10 @@ export default function App() {
             <Text style={styles.materialText}>systemThinMaterial</Text>
           </NativeMaterialView>
 
-          <NativeMaterialView material="systemMaterial" style={styles.materialCard}>
+          <NativeMaterialView
+            material="systemMaterial"
+            style={styles.materialCard}
+          >
             <Text style={styles.materialText}>systemMaterial</Text>
           </NativeMaterialView>
 
@@ -166,11 +169,11 @@ export default function App() {
       {/* Toolbar */}
       <NativeToolbar
         items={[
-          { systemItem: "add" },
-          { systemItem: "flexibleSpace" },
-          { title: "Custom" },
-          { systemItem: "flexibleSpace" },
-          { systemItem: "done" },
+          { systemItem: 'add' },
+          { systemItem: 'flexibleSpace' },
+          { title: 'Custom' },
+          { systemItem: 'flexibleSpace' },
+          { systemItem: 'done' },
         ]}
         translucent={true}
         style={styles.toolbar}
@@ -179,9 +182,9 @@ export default function App() {
       {/* Tab Bar */}
       <NativeTabBar
         items={[
-          { title: "Home", icon: "house" },
-          { title: "Search", icon: "magnifyingglass" },
-          { title: "Settings", icon: "gearshape" },
+          { title: 'Home', icon: 'house' },
+          { title: 'Search', icon: 'magnifyingglass' },
+          { title: 'Settings', icon: 'gearshape' },
         ]}
         selectedIndex={selectedTab}
         onTabPress={(e) => setSelectedTab(e.nativeEvent.index)}
@@ -195,10 +198,10 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f2f7",
+    backgroundColor: '#f2f2f7',
   },
   navigationBar: {
-    width: "100%",
+    width: '100%',
   },
   content: {
     flex: 1,
@@ -214,40 +217,40 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 8,
-    color: "#000",
+    color: '#000',
   },
   sectionDescription: {
     fontSize: 14,
-    color: "#666",
+    color: '#666',
   },
   card: {
     padding: 16,
     marginBottom: 12,
   },
   cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 12,
-    color: "#000",
+    color: '#000',
   },
   button: {
-    width: "100%",
+    width: '100%',
   },
   buttonVariation: {
     marginBottom: 10,
   },
   segmentedControl: {
-    width: "100%",
+    width: '100%',
   },
   searchBar: {
-    width: "100%",
+    width: '100%',
     marginTop: 12,
   },
   materialCard: {
@@ -255,19 +258,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
     minHeight: 60,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   materialText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#000",
+    fontWeight: '600',
+    color: '#000',
   },
   toolbar: {
-    width: "100%",
+    width: '100%',
   },
   tabBar: {
-    width: "100%",
+    width: '100%',
   },
 });
 ```
@@ -277,17 +280,19 @@ const styles = StyleSheet.create({
 ### Material View Only
 
 ```jsx
-import React from "react";
-import { View, Text } from "react-native";
-import { NativeMaterialView } from "liquid-react";
+import React from 'react';
+import { View, Text } from 'react-native';
+import { NativeMaterialView } from 'liquid-react';
 
 export default function MinimalMaterialExample() {
   return (
     <NativeMaterialView
       material="systemMaterial"
-      style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     >
-      <Text style={{ fontSize: 24, fontWeight: "bold" }}>Native Blur Material</Text>
+      <Text style={{ fontSize: 24, fontWeight: 'bold' }}>
+        Native Blur Material
+      </Text>
     </NativeMaterialView>
   );
 }
@@ -296,9 +301,9 @@ export default function MinimalMaterialExample() {
 ### Button Example
 
 ```jsx
-import React from "react";
-import { View, Alert } from "react-native";
-import { NativeButton } from "liquid-react";
+import React from 'react';
+import { View, Alert } from 'react-native';
+import { NativeButton } from 'liquid-react';
 
 export default function ButtonExample() {
   return (
@@ -306,14 +311,14 @@ export default function ButtonExample() {
       <NativeButton
         title="Tap Me"
         buttonStyle="filled"
-        onPress={() => Alert.alert("Success", "Button was pressed!")}
-        style={{ width: "100%", marginBottom: 10 }}
+        onPress={() => Alert.alert('Success', 'Button was pressed!')}
+        style={{ width: '100%', marginBottom: 10 }}
       />
       <NativeButton
         title="Secondary Action"
         buttonStyle="bordered"
-        onPress={() => Alert.alert("Info", "Secondary action triggered")}
-        style={{ width: "100%" }}
+        onPress={() => Alert.alert('Info', 'Secondary action triggered')}
+        style={{ width: '100%' }}
       />
     </View>
   );
@@ -323,22 +328,22 @@ export default function ButtonExample() {
 ### Form Example
 
 ```jsx
-import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import {
   NativeGroupedContainer,
   NativeCardContainer,
   NativeSwitch,
   NativeSegmentedControl,
   NativeButton,
-} from "liquid-react";
+} from 'liquid-react';
 
 export default function FormExample() {
   const [notifications, setNotifications] = useState(true);
   const [theme, setTheme] = useState(0);
 
   const handleSubmit = () => {
-    console.log("Form submitted:", { notifications, theme });
+    console.log('Form submitted:', { notifications, theme });
   };
 
   return (
@@ -356,7 +361,7 @@ export default function FormExample() {
       <NativeCardContainer cornerRadius={12} style={styles.card}>
         <Text style={styles.label}>Theme</Text>
         <NativeSegmentedControl
-          segments={["Light", "Dark", "Auto"]}
+          segments={['Light', 'Dark', 'Auto']}
           selectedIndex={theme}
           onValueChange={(e) => setTheme(e.nativeEvent.selectedIndex)}
           style={styles.segmentedControl}
@@ -383,17 +388,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 12,
   },
   segmentedControl: {
-    width: "100%",
+    width: '100%',
   },
   button: {
     marginTop: 20,

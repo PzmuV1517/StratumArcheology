@@ -4,18 +4,18 @@ This table documents the **exact 1:1 mapping** between Liquid-React components a
 
 ## Complete Mapping
 
-| React Component          | Native Swift Class                | UIKit Component      | Purpose                                   |
-| ------------------------ | --------------------------------- | -------------------- | ----------------------------------------- |
-| `NativeMaterialView`     | `LRNativeMaterialViewManager`     | `UIVisualEffectView` | System blur materials with vibrancy       |
-| `NativeButton`           | `LRNativeButtonManager`           | `UIButton`           | Native buttons with system configurations |
-| `NativeSwitch`           | `LRNativeSwitchManager`           | `UISwitch`           | Toggle control (on/off)                   |
-| `NativeSegmentedControl` | `LRNativeSegmentedControlManager` | `UISegmentedControl` | Segmented picker control                  |
-| `NativeSearchBar`        | `LRNativeSearchBarManager`        | `UISearchBar`        | Search input with cancel button           |
-| `NativeNavigationBar`    | `LRNativeNavigationBarManager`    | `UINavigationBar`    | Top navigation bar                        |
-| `NativeToolbar`          | `LRNativeToolbarManager`          | `UIToolbar`          | Bottom toolbar with bar button items      |
-| `NativeTabBar`           | `LRNativeTabBarManager`           | `UITabBar`           | Tab navigation bar                        |
-| `NativeGroupedContainer` | `LRNativeGroupedContainerManager` | `UIView`             | Container with system grouped background  |
-| `NativeCardContainer`    | `LRNativeCardContainerManager`    | `UIView`             | Card with continuous corner radius        |
+| React Component | Native Swift Class | UIKit Component | Purpose |
+|----------------|-------------------|-----------------|---------|
+| `NativeMaterialView` | `LRNativeMaterialViewManager` | `UIVisualEffectView` | System blur materials with vibrancy |
+| `NativeButton` | `LRNativeButtonManager` | `UIButton` | Native buttons with system configurations |
+| `NativeSwitch` | `LRNativeSwitchManager` | `UISwitch` | Toggle control (on/off) |
+| `NativeSegmentedControl` | `LRNativeSegmentedControlManager` | `UISegmentedControl` | Segmented picker control |
+| `NativeSearchBar` | `LRNativeSearchBarManager` | `UISearchBar` | Search input with cancel button |
+| `NativeNavigationBar` | `LRNativeNavigationBarManager` | `UINavigationBar` | Top navigation bar |
+| `NativeToolbar` | `LRNativeToolbarManager` | `UIToolbar` | Bottom toolbar with bar button items |
+| `NativeTabBar` | `LRNativeTabBarManager` | `UITabBar` | Tab navigation bar |
+| `NativeGroupedContainer` | `LRNativeGroupedContainerManager` | `UIView` | Container with system grouped background |
+| `NativeCardContainer` | `LRNativeCardContainerManager` | `UIView` | Card with continuous corner radius |
 
 ## Implementation Patterns
 
@@ -26,11 +26,11 @@ This table documents the **exact 1:1 mapping** between Liquid-React components a
 ```swift
 class NativeButton: UIView {
     private var button: UIButton!  // Contains UIKit component
-
+    
     @objc var title: NSString = "" {
         didSet { updateButton() }
     }
-
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         button.frame = bounds  // Frame-based layout
@@ -39,7 +39,6 @@ class NativeButton: UIView {
 ```
 
 **Characteristics:**
-
 - UIKit component is a child of wrapper view
 - Props map to UIKit properties
 - No custom drawing
@@ -53,16 +52,16 @@ class NativeButton: UIView {
 class NativeMaterialView: UIView {
     private var effectView: UIVisualEffectView?
     private var contentView: UIView!
-
+    
     @objc var material: NSString = "systemMaterial" {
         didSet { updateMaterial() }
     }
-
+    
     private func updateMaterial() {
         let blurEffect = UIBlurEffect(style: .systemMaterial)
         effectView = UIVisualEffectView(effect: blurEffect)
     }
-
+    
     override func insertReactSubview(_ subview: UIView!, at atIndex: Int) {
         contentView.insertSubview(subview, at: atIndex)
     }
@@ -70,7 +69,6 @@ class NativeMaterialView: UIView {
 ```
 
 **Characteristics:**
-
 - Effect view as background
 - Content view for React children
 - System-controlled visual effects
@@ -85,7 +83,7 @@ class NativeCardContainer: UIView {
     @objc var cornerRadius: CGFloat = 10.0 {
         didSet { updateAppearance() }
     }
-
+    
     private func updateAppearance() {
         backgroundColor = .secondarySystemGroupedBackground
         layer.cornerRadius = cornerRadius
@@ -95,7 +93,6 @@ class NativeCardContainer: UIView {
 ```
 
 **Characteristics:**
-
 - System background colors
 - Native corner curves
 - Simple container pattern
@@ -109,7 +106,7 @@ class NativeCardContainer: UIView {
 class NativeNavigationBar: UIView {
     private var navigationBar: UINavigationBar!
     private var navigationItem: UINavigationItem!
-
+    
     private func updateAppearance() {
         let appearance = UINavigationBarAppearance()
         appearance.configureWithDefaultBackground()
@@ -119,7 +116,6 @@ class NativeNavigationBar: UIView {
 ```
 
 **Characteristics:**
-
 - Uses UIKit bar components
 - System appearance API
 - Translucent by default
@@ -129,41 +125,41 @@ class NativeNavigationBar: UIView {
 
 ### Material View Props → UIVisualEffectView
 
-| React Prop | Swift Property                   | UIKit API                |
-| ---------- | -------------------------------- | ------------------------ |
-| `material` | `material: NSString`             | `UIBlurEffect.Style`     |
-| `onPress`  | `onPress: RCTBubblingEventBlock` | `UITapGestureRecognizer` |
+| React Prop | Swift Property | UIKit API |
+|-----------|---------------|-----------|
+| `material` | `material: NSString` | `UIBlurEffect.Style` |
+| `onPress` | `onPress: RCTBubblingEventBlock` | `UITapGestureRecognizer` |
 
 ### Button Props → UIButton
 
-| React Prop    | Swift Property                   | UIKit API                      |
-| ------------- | -------------------------------- | ------------------------------ |
-| `title`       | `title: NSString`                | `UIButton.Configuration.title` |
-| `buttonStyle` | `buttonStyle: NSString`          | `UIButton.Configuration.*`     |
-| `onPress`     | `onPress: RCTBubblingEventBlock` | `UIButton.addTarget`           |
+| React Prop | Swift Property | UIKit API |
+|-----------|---------------|-----------|
+| `title` | `title: NSString` | `UIButton.Configuration.title` |
+| `buttonStyle` | `buttonStyle: NSString` | `UIButton.Configuration.*` |
+| `onPress` | `onPress: RCTBubblingEventBlock` | `UIButton.addTarget` |
 
 ### Switch Props → UISwitch
 
-| React Prop      | Swift Property                         | UIKit API               |
-| --------------- | -------------------------------------- | ----------------------- |
-| `value`         | `value: Bool`                          | `UISwitch.isOn`         |
+| React Prop | Swift Property | UIKit API |
+|-----------|---------------|-----------|
+| `value` | `value: Bool` | `UISwitch.isOn` |
 | `onValueChange` | `onValueChange: RCTBubblingEventBlock` | `UISwitch.valueChanged` |
 
 ### Segmented Control Props → UISegmentedControl
 
-| React Prop      | Swift Property                         | UIKit API                                 |
-| --------------- | -------------------------------------- | ----------------------------------------- |
-| `segments`      | `segments: NSArray`                    | `UISegmentedControl.insertSegment`        |
-| `selectedIndex` | `selectedIndex: NSInteger`             | `UISegmentedControl.selectedSegmentIndex` |
-| `onValueChange` | `onValueChange: RCTBubblingEventBlock` | `UISegmentedControl.valueChanged`         |
+| React Prop | Swift Property | UIKit API |
+|-----------|---------------|-----------|
+| `segments` | `segments: NSArray` | `UISegmentedControl.insertSegment` |
+| `selectedIndex` | `selectedIndex: NSInteger` | `UISegmentedControl.selectedSegmentIndex` |
+| `onValueChange` | `onValueChange: RCTBubblingEventBlock` | `UISegmentedControl.valueChanged` |
 
 ### Search Bar Props → UISearchBar
 
-| React Prop      | Swift Property                         | UIKit API                                 |
-| --------------- | -------------------------------------- | ----------------------------------------- |
-| `placeholder`   | `placeholder: NSString`                | `UISearchBar.placeholder`                 |
-| `text`          | `text: NSString`                       | `UISearchBar.text`                        |
-| `onChangeText`  | `onChangeText: RCTBubblingEventBlock`  | `UISearchBarDelegate.textDidChange`       |
+| React Prop | Swift Property | UIKit API |
+|-----------|---------------|-----------|
+| `placeholder` | `placeholder: NSString` | `UISearchBar.placeholder` |
+| `text` | `text: NSString` | `UISearchBar.text` |
+| `onChangeText` | `onChangeText: RCTBubblingEventBlock` | `UISearchBarDelegate.textDidChange` |
 | `onSearchPress` | `onSearchPress: RCTBubblingEventBlock` | `UISearchBarDelegate.searchButtonClicked` |
 | `onCancelPress` | `onCancelPress: RCTBubblingEventBlock` | `UISearchBarDelegate.cancelButtonClicked` |
 
@@ -172,47 +168,39 @@ class NativeNavigationBar: UIView {
 Every component uses **only** public APIs:
 
 ### UIVisualEffectView (iOS 8.0+)
-
 ✅ Public API since iOS 8  
 ✅ Documented: [developer.apple.com/documentation/uikit/uivisualeffectview](https://developer.apple.com/documentation/uikit/uivisualeffectview)  
-✅ System blur materials: iOS 13.0+
+✅ System blur materials: iOS 13.0+  
 
 ### UIButton (iOS 2.0+)
-
 ✅ Public API since iOS 2  
 ✅ Configuration API: iOS 15.0+  
-✅ Documented: [developer.apple.com/documentation/uikit/uibutton](https://developer.apple.com/documentation/uikit/uibutton)
+✅ Documented: [developer.apple.com/documentation/uikit/uibutton](https://developer.apple.com/documentation/uikit/uibutton)  
 
 ### UISwitch (iOS 2.0+)
-
 ✅ Public API since iOS 2  
-✅ Documented: [developer.apple.com/documentation/uikit/uiswitch](https://developer.apple.com/documentation/uikit/uiswitch)
+✅ Documented: [developer.apple.com/documentation/uikit/uiswitch](https://developer.apple.com/documentation/uikit/uiswitch)  
 
 ### UISegmentedControl (iOS 2.0+)
-
 ✅ Public API since iOS 2  
-✅ Documented: [developer.apple.com/documentation/uikit/uisegmentedcontrol](https://developer.apple.com/documentation/uikit/uisegmentedcontrol)
+✅ Documented: [developer.apple.com/documentation/uikit/uisegmentedcontrol](https://developer.apple.com/documentation/uikit/uisegmentedcontrol)  
 
 ### UISearchBar (iOS 2.0+)
-
 ✅ Public API since iOS 2  
-✅ Documented: [developer.apple.com/documentation/uikit/uisearchbar](https://developer.apple.com/documentation/uikit/uisearchbar)
+✅ Documented: [developer.apple.com/documentation/uikit/uisearchbar](https://developer.apple.com/documentation/uikit/uisearchbar)  
 
 ### UINavigationBar (iOS 2.0+)
-
 ✅ Public API since iOS 2  
 ✅ Appearance API: iOS 13.0+  
-✅ Documented: [developer.apple.com/documentation/uikit/uinavigationbar](https://developer.apple.com/documentation/uikit/uinavigationbar)
+✅ Documented: [developer.apple.com/documentation/uikit/uinavigationbar](https://developer.apple.com/documentation/uikit/uinavigationbar)  
 
 ### UIToolbar (iOS 2.0+)
-
 ✅ Public API since iOS 2  
-✅ Documented: [developer.apple.com/documentation/uikit/uitoolbar](https://developer.apple.com/documentation/uikit/uitoolbar)
+✅ Documented: [developer.apple.com/documentation/uikit/uitoolbar](https://developer.apple.com/documentation/uikit/uitoolbar)  
 
 ### UITabBar (iOS 2.0+)
-
 ✅ Public API since iOS 2  
-✅ Documented: [developer.apple.com/documentation/uikit/uitabbar](https://developer.apple.com/documentation/uikit/uitabbar)
+✅ Documented: [developer.apple.com/documentation/uikit/uitabbar](https://developer.apple.com/documentation/uikit/uitabbar)  
 
 ## What We Do NOT Use
 
@@ -257,7 +245,7 @@ override func layoutSubviews() {
 
 ✅ Compatible with React Native  
 ✅ Simple and predictable  
-✅ No constraint conflicts
+✅ No constraint conflicts  
 
 ### NOT Auto Layout
 
@@ -268,7 +256,7 @@ NSLayoutConstraint.activate([...])
 ```
 
 ❌ Not compatible with React Native layout  
-❌ Would conflict with RN's frame updates
+❌ Would conflict with RN's frame updates  
 
 ## Animation Strategy
 
@@ -282,7 +270,7 @@ UIView.animate(withDuration: 0.3) {
 
 ✅ System timing curves  
 ✅ Hardware accelerated  
-✅ iOS-controlled motion
+✅ iOS-controlled motion  
 
 ### NOT Custom Animations
 
@@ -294,7 +282,7 @@ JavaScript-driven animations
 ```
 
 ❌ Would override iOS defaults  
-❌ Inconsistent with system
+❌ Inconsistent with system  
 
 ## Event Flow
 
