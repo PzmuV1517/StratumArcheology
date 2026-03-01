@@ -59,6 +59,31 @@ const StratumDarkTheme = {
 };
 
 function RootLayoutNav() {
+  // Web-only: register the precaching service worker
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        // Immediately activate any waiting worker
+        if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        reg.onupdatefound = () => {
+          const installing = reg.installing;
+          if (!installing) return;
+          installing.onstatechange = () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              // New content is available – activate immediately
+              installing.postMessage({ type: "SKIP_WAITING" });
+            }
+          };
+        };
+      })
+      .catch(() => {
+        // SW file not present in dev mode – silently ignore
+      });
+  }, []);
+
   // Web-only: keep dark inputs even when browser autofill applies
   useEffect(() => {
     if (Platform.OS !== "web") return;
