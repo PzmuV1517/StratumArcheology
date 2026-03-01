@@ -27,7 +27,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@react-navigation/stack": "^7.4.10",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "d3": "^7.9.0",
     "expo": "~54.0.29",
     "expo-av": "^16.0.7",
@@ -56,17 +56,13 @@
     "expo-three": "^8.0.0",
     "expo-web-browser": "~15.0.8",
     "firebase": "^12.4.0",
-    "gsap": "^3.13.0",
     "katex": "^0.16.11",
     "leaflet": "^1.9.4",
-    "lightningcss": "^1.30.2",
     "liquid-react": "^1.0.0",
     "mathjs": "^15.0.0",
-    "ogl": "^1.0.11",
     "papaparse": "^5.4.1",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
-    "react-bits": "^1.0.5",
     "react-dom": "19.1.0",
     "react-icons": "^5.3.0",
     "react-markdown": "^9.0.3",
@@ -74,7 +70,6 @@
     "react-native-gesture-handler": "~2.28.0",
     "react-native-image-picker": "^8.2.1",
     "react-native-maps": "1.20.1",
-    "react-native-markdown-display": "^7.0.2",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
@@ -82,16 +77,12 @@
     "react-native-web": "~0.21.0",
     "react-native-webview": "^13.12.5",
     "react-native-worklets": "0.5.1",
-    "react-virtualized-auto-sizer": "^1.0.7",
-    "react-window": "^1.8.11",
     "rehype-katex": "^7.0.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
     "socket.io-client": "^4.8.1",
-    "three": "^0.181.0",
-    "video.js": "^8.23.4",
-    "xlsx": "^0.18.5"
+    "three": "^0.166.0"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.28.5",
@@ -102,9 +93,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
-    "@types/react-native": "^0.72.8",
-    "@types/react-window": "^1.8.8",
-    "@types/three": "^0.181.0",
+    "@types/three": "^0.166.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
@@ -118,6 +107,16 @@
     "prettier": "^3.8.0",
     "tailwindcss": "^4.1.16",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "@expo/browser-polyfill": {
+      "react": "$react",
+      "react-native": "$react-native",
+      "expo-file-system": "$expo-file-system"
+    },
+    "isomorphic-fetch": {
+      "node-fetch": "2.7.0"
+    }
   },
   "private": true
 }
