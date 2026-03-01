@@ -38,12 +38,14 @@ import {
   ScrollView,
   Modal,
   Platform,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { projectService } from "../src/services/projectService";
 import { authService } from "../src/services/authService";
 import { showAlert } from "../src/utils/alert";
-
+import ImageCropModal from "../src/components/ui/ImageCropModal";
 interface Member {
   id: string;
   display_name: string;
@@ -68,6 +70,13 @@ export default function EditProjectScreen() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [ranLmiId, setRanLmiId] = useState("");
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  // Crop modal state (web only — native uses system crop UI)
+  const [cropImage, setCropImage] = useState<{
+    uri: string;
+    mimeType: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -91,6 +100,7 @@ export default function EditProjectScreen() {
       setName(projectData.name);
       setDescription(projectData.description || "");
       setRanLmiId(projectData.ran_lmi_id || "");
+      setCoverImageUrl(projectData.cover_image_url || null);
 
       // Check if current user is the owner
       const userId = currentUser?.id;
@@ -139,6 +149,111 @@ export default function EditProjectScreen() {
       showAlert("Error", message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/heic",
+    "image/heif",
+  ];
+  const MIME_TO_EXT: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/heic": "heic",
+    "image/heif": "heif",
+  };
+
+  /** Upload the final (cropped) image */
+  const uploadCoverImage = async (uri: string, mimeType: string) => {
+    const ext = MIME_TO_EXT[mimeType.toLowerCase()] || "jpg";
+    setUploadingImage(true);
+    try {
+      const updated = await projectService.uploadCoverImage(projectId as string, {
+        uri,
+        type: mimeType,
+        name: `cover.${ext}`,
+      });
+      setCoverImageUrl(updated.cover_image_url || null);
+    } catch (error: any) {
+      const message =
+        error?.detail || error?.message || "Failed to upload cover image.";
+      showAlert("Error", message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handlePickCoverImage = async () => {
+    if (!isOwner) {
+      showAlert(
+        "Permission Denied",
+        "Only the project leader can change the cover image.",
+      );
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      showAlert("Permission Required", "Please allow access to your photo library.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      // On native, allowsEditing gives system crop UI with 3:2 aspect
+      allowsEditing: Platform.OS !== "web",
+      aspect: [3, 2],
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType || "image/jpeg";
+    if (!ALLOWED_TYPES.includes(mimeType.toLowerCase())) {
+      showAlert(
+        "Unsupported Format",
+        "Only JPEG, PNG, WebP, GIF, or HEIC photos are allowed as cover images.",
+      );
+      return;
+    }
+
+    if (Platform.OS === "web") {
+      // On web, show our custom crop modal
+      setCropImage({ uri: asset.uri, mimeType });
+    } else {
+      // On native, the system already cropped — upload directly
+      await uploadCoverImage(asset.uri, mimeType);
+    }
+  };
+
+  /** Called when the crop modal produces a cropped image */
+  const handleCropComplete = async (croppedUri: string) => {
+    const mimeType = cropImage?.mimeType || "image/jpeg";
+    setCropImage(null);
+    await uploadCoverImage(croppedUri, mimeType);
+  };
+
+  const handleRemoveCoverImage = async () => {
+    if (!isOwner) return;
+    setUploadingImage(true);
+    try {
+      await projectService.deleteCoverImage(projectId as string);
+      setCoverImageUrl(null);
+    } catch (error: any) {
+      const message =
+        error?.detail || error?.message || "Failed to remove cover image.";
+      showAlert("Error", message);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -215,6 +330,55 @@ export default function EditProjectScreen() {
       <ScrollView style={styles.content}>
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Edit Project</Text>
+
+          {/* Cover Image */}
+          <Text style={styles.label}>Cover Image</Text>
+          {coverImageUrl ? (
+            <View style={styles.coverImageContainer}>
+              <Image
+                source={{ uri: coverImageUrl }}
+                style={styles.coverImagePreview}
+                resizeMode="cover"
+              />
+              <View style={styles.coverImageActions}>
+                <TouchableOpacity
+                  style={styles.coverImageButton}
+                  onPress={handlePickCoverImage}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator color="#F5F5F5" size="small" />
+                  ) : (
+                    <Text style={styles.coverImageButtonText}>Change Photo</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.coverImageButton, styles.coverImageRemoveButton]}
+                  onPress={handleRemoveCoverImage}
+                  disabled={uploadingImage}
+                >
+                  <Text style={styles.coverImageRemoveText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.coverImagePlaceholder}
+              onPress={handlePickCoverImage}
+              disabled={uploadingImage}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator color="#FF2A2A" />
+              ) : (
+                <>
+                  <Text style={styles.coverImagePlaceholderIcon}>🖼️</Text>
+                  <Text style={styles.coverImagePlaceholderText}>
+                    Add Cover Photo
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           <Text style={styles.label}>Project Name *</Text>
           <TextInput
@@ -342,6 +506,17 @@ export default function EditProjectScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Image Crop Modal (web only) */}
+      {cropImage && (
+        <ImageCropModal
+          visible={!!cropImage}
+          imageUri={cropImage.uri}
+          mimeType={cropImage.mimeType}
+          onCrop={handleCropComplete}
+          onCancel={() => setCropImage(null)}
+        />
+      )}
     </View>
   );
 }
@@ -398,6 +573,66 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: "top",
+  },
+  coverImageContainer: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  coverImagePreview: {
+    width: "100%",
+    aspectRatio: 3 / 2,
+  },
+  coverImageActions: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 10,
+    backgroundColor: "#1E1E1E",
+  },
+  coverImageButton: {
+    flex: 1,
+    backgroundColor: "#2A2A2A",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#444",
+  },
+  coverImageButtonText: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  coverImageRemoveButton: {
+    borderColor: "#FF4444",
+  },
+  coverImageRemoveText: {
+    color: "#FF4444",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  coverImagePlaceholder: {
+    height: 120,
+    backgroundColor: "#1E1E1E",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    gap: 8,
+  },
+  coverImagePlaceholderIcon: {
+    fontSize: 32,
+  },
+  coverImagePlaceholderText: {
+    color: "#9A9A9A",
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
   button: {
     backgroundColor: "#FF2A2A",

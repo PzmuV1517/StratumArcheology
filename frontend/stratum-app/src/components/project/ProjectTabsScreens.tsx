@@ -32,10 +32,13 @@ import {
   ScrollView,
   View,
   Text,
+  Image,
+  ImageBackground,
   Platform,
   TouchableOpacity,
   StyleSheet as RNStyleSheet,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -91,16 +94,40 @@ export function ProjectOverviewScreen() {
         refreshControl={maybeRefreshControl}
       >
         <View style={styles.overviewContainer}>
-          <View style={styles.overviewHero}>
-            <Text style={styles.overviewTitle}>{project?.name}</Text>
-            {!!project?.ran_lmi_id && (
-              <View style={styles.overviewBadge}>
-                <Text style={styles.overviewBadgeText}>
-                  RAN/LMI: {project?.ran_lmi_id}
-                </Text>
-              </View>
-            )}
-          </View>
+          {project?.cover_image_url ? (
+            <View style={overviewLocalStyles.heroBanner}>
+              <ImageBackground
+                source={{ uri: project.cover_image_url }}
+                style={overviewLocalStyles.heroBannerImage}
+                resizeMode="cover"
+              >
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.75)"]}
+                  style={overviewLocalStyles.heroBannerGradient}
+                >
+                  <Text style={styles.overviewTitle}>{project?.name}</Text>
+                  {!!project?.ran_lmi_id && (
+                    <View style={styles.overviewBadge}>
+                      <Text style={styles.overviewBadgeText}>
+                        RAN/LMI: {project?.ran_lmi_id}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </ImageBackground>
+            </View>
+          ) : (
+            <View style={styles.overviewHero}>
+              <Text style={styles.overviewTitle}>{project?.name}</Text>
+              {!!project?.ran_lmi_id && (
+                <View style={styles.overviewBadge}>
+                  <Text style={styles.overviewBadgeText}>
+                    RAN/LMI: {project?.ran_lmi_id}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           <View style={styles.overviewStatsGrid}>
             <View style={styles.overviewStatCard}>
@@ -684,5 +711,27 @@ const moreStyles = RNStyleSheet.create({
     color: "#9A9A9A",
     textAlign: "center",
     lineHeight: 16,
+  },
+});
+
+const overviewLocalStyles = RNStyleSheet.create({
+  heroBanner: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    maxWidth: 600,
+    width: "100%",
+    alignSelf: "center",
+  },
+  heroBannerImage: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+  },
+  heroBannerGradient: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 16,
   },
 });

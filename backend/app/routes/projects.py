@@ -27,7 +27,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -176,11 +178,19 @@ async def get_project(
         )
 
     # Return project with properly formatted members
+    cover_presigned: str | None = None
+    if project.cover_image_url:
+        try:
+            cover_presigned = minio_client.get_presigned_url(project.cover_image_url, expiry=7200)
+        except Exception:
+            cover_presigned = None
+
     return {
         "id": project.id,
         "name": project.name,
         "description": project.description,
         "ran_lmi_id": project.ran_lmi_id,
+        "cover_image_url": cover_presigned,
         "owner_id": project.owner_id,
         "created_at": project.created_at,
         "updated_at": project.updated_at,
@@ -218,6 +228,123 @@ async def update_project(
     db.refresh(project)
 
     return project
+
+
+@router.post("/{project_id}/cover-image", response_model=ProjectResponse)
+async def upload_cover_image(
+    project_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload or replace the cover image for a project (owner only)"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can change the cover image",
+        )
+
+    content_type = file.content_type or ""
+    ALLOWED_TYPES = {
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/heic",
+        "image/heif",
+    }
+    if content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only JPEG, PNG, WebP, GIF, HEIC, or HEIF images are allowed. SVG and other formats are not supported.",
+        )
+
+    # Delete old cover image from MinIO if present
+    if project.cover_image_url:
+        try:
+            await minio_client.delete_file(project.cover_image_url)
+        except Exception:
+            pass
+
+    raw_ext = (file.filename or "image.jpg").rsplit(".", 1)[-1].lower()
+    SAFE_EXTS = {"jpg", "jpeg", "png", "webp", "gif", "heic", "heif"}
+    ext = raw_ext if raw_ext in SAFE_EXTS else "jpg"
+    object_name = f"projects/{project_id}/cover/{uuid.uuid4().hex}.{ext}"
+
+    file_data = await file.read()
+    await minio_client.upload_file(file_data, object_name, content_type)
+
+    project.cover_image_url = object_name
+    db.commit()
+    db.refresh(project)
+
+    presigned: str | None = None
+    try:
+        presigned = minio_client.get_presigned_url(object_name, expiry=7200)
+    except Exception:
+        pass
+
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "ran_lmi_id": project.ran_lmi_id,
+        "cover_image_url": presigned,
+        "owner_id": project.owner_id,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+        "is_active": project.is_active,
+    }
+
+
+@router.delete("/{project_id}/cover-image", response_model=ProjectResponse)
+async def delete_cover_image(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove the cover image from a project (owner only)"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    if project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can remove the cover image",
+        )
+
+    if project.cover_image_url:
+        try:
+            await minio_client.delete_file(project.cover_image_url)
+        except Exception:
+            pass
+        project.cover_image_url = None
+        db.commit()
+        db.refresh(project)
+
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "ran_lmi_id": project.ran_lmi_id,
+        "cover_image_url": None,
+        "owner_id": project.owner_id,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+        "is_active": project.is_active,
+    }
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

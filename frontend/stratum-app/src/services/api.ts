@@ -64,7 +64,7 @@ export const authEvents = {
  * Helper to resolve the most appropriate base URL at runtime
  * Supports runtime override via AsyncStorage and HTTPS upgrade for web
  */
-const resolveBaseUrl = async (): Promise<string> => {
+export const resolveBaseUrl = async (): Promise<string> => {
   try {
     const override = await AsyncStorage.getItem("apiBaseUrlOverride");
     let base = override || config.apiBaseUrl;

@@ -28,7 +28,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import api from "./api";
+import { Platform } from "react-native";
+import api, { resolveBaseUrl } from "./api";
 import {
   Project,
   ProjectMember,
@@ -202,6 +203,75 @@ export const projectService = {
   },
 
   /**
+   * Upload a cover image for a project.
+   * Uses native fetch (not axios) so React Native can correctly serialise
+   * the { uri, type, name } blob object into a real multipart part.
+   * Axios may stringify the blob before RN's XHR layer sees it.
+   */
+  uploadCoverImage: async (
+    projectId: string,
+    asset: { uri: string; type?: string; name?: string },
+  ): Promise<Project> => {
+    // On native, use FileSystem.uploadAsync which correctly sends the file URI
+    // as a real binary multipart part — bypassing FormData serialization issues.
+    if (Platform.OS !== "web") {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const FileSystem = require("expo-file-system/legacy");
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+        const [token, baseUrl] = await Promise.all([
+          AsyncStorage.getItem("authToken") as Promise<string | null>,
+          resolveBaseUrl(),
+        ]);
+        const result = await FileSystem.uploadAsync(
+          `${baseUrl}/projects/${projectId}/cover-image`,
+          asset.uri,
+          {
+            fieldName: "file",
+            mimeType: asset.type || "image/jpeg",
+            httpMethod: "POST",
+            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
+        if (result.status >= 400) {
+          throw JSON.parse(result.body);
+        }
+        return JSON.parse(result.body) as Project;
+      } catch (error: any) {
+        throw error?.response?.data ?? error;
+      }
+    }
+
+    // Web: fetch the blob URL to get a real Blob, then wrap in FormData
+    try {
+      const blob = await fetch(asset.uri).then((r) => r.blob());
+      const file = new File([blob], asset.name || "cover.jpg", {
+        type: asset.type || blob.type || "image/jpeg",
+      });
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post(`/projects/${projectId}/cover-image`, formData);
+      return response.data;
+    } catch (error: any) {
+      throw error?.response?.data ?? error;
+    }
+  },
+
+  /**
+   * Remove the cover image from a project
+   */
+  deleteCoverImage: async (projectId: string): Promise<Project> => {
+    try {
+      const response = await api.delete(`/projects/${projectId}/cover-image`);
+      return response.data;
+    } catch (error: any) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
    * Transfer project ownership to another member
    */
   transferOwnership: async (
@@ -240,6 +310,7 @@ export type {
   ProjectMember,
   CreateProjectData,
   UpdateProjectData,
+  CoverImageAsset,
   InviteResponse,
   JoinResponse,
   GpsState,

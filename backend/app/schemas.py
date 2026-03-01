@@ -116,6 +116,7 @@ class ProjectBase(BaseModel):
     name: str
     description: str | None = None
     ran_lmi_id: str | None = None
+    cover_image_url: str | None = None
 
 
 class ProjectCreate(ProjectBase):

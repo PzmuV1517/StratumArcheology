@@ -51,6 +51,8 @@ export interface Project {
   members: ProjectMember[];
   is_active?: boolean;
   ran_lmi_id?: string;
+  /** Presigned URL for the project cover image (set by backend when fetching) */
+  cover_image_url?: string;
 }
 
 /** Payload for creating a new project. */
@@ -65,6 +67,13 @@ export interface UpdateProjectData {
   name?: string;
   description?: string | null;
   ran_lmi_id?: string | null;
+}
+
+/** Asset used when uploading a cover image from the device. */
+export interface CoverImageAsset {
+  uri: string;
+  type?: string;
+  name?: string;
 }
 
 /** Response returned after creating a project invite. */

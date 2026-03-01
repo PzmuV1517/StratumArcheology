@@ -171,6 +171,7 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    cover_image_url = Column(Text, nullable=True)  # MinIO object key for cover image
     harris_matrix_data = Column(
         JSON, nullable=True
     )  # Harris Matrix visualization data
