@@ -3,7 +3,6 @@
 Complete reference for all Liquid-React components, props, and types.
 
 ## Table of Contents
-
 - [Materials & Containers](#materials--containers)
 - [Controls](#controls)
 - [Navigation](#navigation)
@@ -26,11 +25,10 @@ Exposes `UIVisualEffectView` with system blur materials.
 | `children` | `ReactNode` | `undefined` | Child components |
 
 **Example:**
-
 ```jsx
-<NativeMaterialView
+<NativeMaterialView 
   material="systemUltraThinMaterial"
-  onPress={() => console.log("Pressed")}
+  onPress={() => console.log('Pressed')}
 >
   <Text>Content with native blur</Text>
 </NativeMaterialView>
@@ -52,7 +50,6 @@ UIView with system grouped background color.
 | `children` | `ReactNode` | `undefined` | Child components |
 
 **Example:**
-
 ```jsx
 <NativeGroupedContainer insetGrouped={true}>
   <Text>Grouped content</Text>
@@ -75,7 +72,6 @@ UIView with continuous corner radius.
 | `children` | `ReactNode` | `undefined` | Child components |
 
 **Example:**
-
 ```jsx
 <NativeCardContainer cornerRadius={12}>
   <Text>Card content</Text>
@@ -101,12 +97,11 @@ Native UIButton with system configurations.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **Example:**
-
 ```jsx
-<NativeButton
+<NativeButton 
   title="Continue"
   buttonStyle="filled"
-  onPress={() => console.log("Pressed")}
+  onPress={() => console.log('Pressed')}
 />
 ```
 
@@ -126,24 +121,22 @@ Native UISwitch toggle control.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **Event Payload:**
-
 ```typescript
 {
   nativeEvent: {
-    value: boolean;
+    value: boolean
   }
 }
 ```
 
 **Example:**
-
 ```jsx
 const [enabled, setEnabled] = useState(false);
 
 <NativeSwitch
   value={enabled}
   onValueChange={(e) => setEnabled(e.nativeEvent.value)}
-/>;
+/>
 ```
 
 **UIKit Mapping:** `UISwitch`
@@ -163,25 +156,23 @@ Native UISegmentedControl for segmented selection.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **Event Payload:**
-
 ```typescript
 {
   nativeEvent: {
-    selectedIndex: number;
+    selectedIndex: number
   }
 }
 ```
 
 **Example:**
-
 ```jsx
 const [index, setIndex] = useState(0);
 
 <NativeSegmentedControl
-  segments={["First", "Second", "Third"]}
+  segments={['First', 'Second', 'Third']}
   selectedIndex={index}
   onValueChange={(e) => setIndex(e.nativeEvent.selectedIndex)}
-/>;
+/>
 ```
 
 **UIKit Mapping:** `UISegmentedControl`
@@ -203,26 +194,24 @@ Native UISearchBar for search input.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **Event Payload:**
-
 ```typescript
 {
   nativeEvent: {
-    text: string;
+    text: string
   }
 }
 ```
 
 **Example:**
-
 ```jsx
-const [search, setSearch] = useState("");
+const [search, setSearch] = useState('');
 
 <NativeSearchBar
   placeholder="Search..."
   text={search}
   onChangeText={(e) => setSearch(e.nativeEvent.text)}
-  onSearchPress={(e) => console.log("Search:", e.nativeEvent.text)}
-/>;
+  onSearchPress={(e) => console.log('Search:', e.nativeEvent.text)}
+/>
 ```
 
 **UIKit Mapping:** `UISearchBar`
@@ -244,9 +233,12 @@ Native UINavigationBar for top navigation.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **Example:**
-
 ```jsx
-<NativeNavigationBar title="My App" translucent={true} barTintColor="#007AFF" />
+<NativeNavigationBar
+  title="My App"
+  translucent={true}
+  barTintColor="#007AFF"
+/>
 ```
 
 **UIKit Mapping:** `UINavigationBar`
@@ -265,7 +257,6 @@ Native UIToolbar for bottom toolbars.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **ToolbarItem Type:**
-
 ```typescript
 {
   title?: string;          // Custom title
@@ -274,14 +265,13 @@ Native UIToolbar for bottom toolbars.
 ```
 
 **Example:**
-
 ```jsx
 <NativeToolbar
   items={[
-    { systemItem: "add" },
-    { systemItem: "flexibleSpace" },
-    { title: "Custom" },
-    { systemItem: "done" },
+    { systemItem: 'add' },
+    { systemItem: 'flexibleSpace' },
+    { title: 'Custom' },
+    { systemItem: 'done' }
   ]}
   translucent={true}
 />
@@ -305,7 +295,6 @@ Native UITabBar for tab navigation.
 | `style` | `ViewStyle` | `undefined` | React Native style object |
 
 **TabBarItem Type:**
-
 ```typescript
 {
   title: string;           // Tab title (required)
@@ -315,29 +304,27 @@ Native UITabBar for tab navigation.
 ```
 
 **Event Payload:**
-
 ```typescript
 {
   nativeEvent: {
-    index: number;
+    index: number
   }
 }
 ```
 
 **Example:**
-
 ```jsx
 const [tab, setTab] = useState(0);
 
 <NativeTabBar
   items={[
-    { title: "Home", icon: "house" },
-    { title: "Search", icon: "magnifyingglass" },
-    { title: "Profile", icon: "person" },
+    { title: 'Home', icon: 'house' },
+    { title: 'Search', icon: 'magnifyingglass' },
+    { title: 'Profile', icon: 'person' }
   ]}
   selectedIndex={tab}
   onTabPress={(e) => setTab(e.nativeEvent.index)}
-/>;
+/>
 ```
 
 **UIKit Mapping:** `UITabBar`
@@ -352,25 +339,24 @@ All available UIKit system blur materials:
 
 ```typescript
 type MaterialType =
-  | "systemUltraThinMaterial"
-  | "systemThinMaterial"
-  | "systemMaterial"
-  | "systemThickMaterial"
-  | "systemChromeMaterial"
-  | "systemUltraThinMaterialLight"
-  | "systemThinMaterialLight"
-  | "systemMaterialLight"
-  | "systemThickMaterialLight"
-  | "systemChromeMaterialLight"
-  | "systemUltraThinMaterialDark"
-  | "systemThinMaterialDark"
-  | "systemMaterialDark"
-  | "systemThickMaterialDark"
-  | "systemChromeMaterialDark";
+  | 'systemUltraThinMaterial'
+  | 'systemThinMaterial'
+  | 'systemMaterial'
+  | 'systemThickMaterial'
+  | 'systemChromeMaterial'
+  | 'systemUltraThinMaterialLight'
+  | 'systemThinMaterialLight'
+  | 'systemMaterialLight'
+  | 'systemThickMaterialLight'
+  | 'systemChromeMaterialLight'
+  | 'systemUltraThinMaterialDark'
+  | 'systemThinMaterialDark'
+  | 'systemMaterialDark'
+  | 'systemThickMaterialDark'
+  | 'systemChromeMaterialDark';
 ```
 
 **Thickness Hierarchy:**
-
 - `UltraThin` - Lightest blur
 - `Thin` - Light blur
 - `Material` - Standard blur (default)
@@ -378,7 +364,6 @@ type MaterialType =
 - `Chrome` - Extra heavy blur
 
 **Appearance Variants:**
-
 - No suffix - Adapts to system (light/dark)
 - `Light` - Light appearance only
 - `Dark` - Dark appearance only
@@ -391,13 +376,13 @@ UIButton configuration styles:
 
 ```typescript
 type ButtonStyle =
-  | "filled" // Solid background (default)
-  | "gray" // Gray background
-  | "tinted" // Tinted background
-  | "plain" // No background
-  | "bordered" // Border outline
-  | "borderedTinted" // Tinted border
-  | "borderedProminent"; // Prominent border
+  | 'filled'              // Solid background (default)
+  | 'gray'                // Gray background
+  | 'tinted'              // Tinted background
+  | 'plain'               // No background
+  | 'bordered'            // Border outline
+  | 'borderedTinted'      // Tinted border
+  | 'borderedProminent';  // Prominent border
 ```
 
 **UIKit Mapping:** `UIButton.Configuration.*`
@@ -410,30 +395,13 @@ System toolbar item types:
 
 ```typescript
 type ToolbarSystemItem =
-  | "done"
-  | "cancel"
-  | "edit"
-  | "save"
-  | "add"
-  | "flexibleSpace"
-  | "fixedSpace"
-  | "compose"
-  | "reply"
-  | "action"
-  | "organize"
-  | "bookmarks"
-  | "search"
-  | "refresh"
-  | "stop"
-  | "camera"
-  | "trash"
-  | "play"
-  | "pause"
-  | "rewind"
-  | "fastForward"
-  | "undo"
-  | "redo"
-  | "close";
+  | 'done' | 'cancel' | 'edit' | 'save' | 'add'
+  | 'flexibleSpace' | 'fixedSpace'
+  | 'compose' | 'reply' | 'action' | 'organize'
+  | 'bookmarks' | 'search' | 'refresh' | 'stop'
+  | 'camera' | 'trash' | 'play' | 'pause'
+  | 'rewind' | 'fastForward'
+  | 'undo' | 'redo' | 'close';
 ```
 
 **UIKit Mapping:** `UIBarButtonItem.SystemItem`
@@ -446,18 +414,9 @@ System tab bar item types:
 
 ```typescript
 type TabBarSystemItem =
-  | "more"
-  | "favorites"
-  | "featured"
-  | "topRated"
-  | "recents"
-  | "contacts"
-  | "history"
-  | "bookmarks"
-  | "search"
-  | "downloads"
-  | "mostRecent"
-  | "mostViewed";
+  | 'more' | 'favorites' | 'featured' | 'topRated'
+  | 'recents' | 'contacts' | 'history' | 'bookmarks'
+  | 'search' | 'downloads' | 'mostRecent' | 'mostViewed';
 ```
 
 **UIKit Mapping:** `UITabBarItem.SystemItem`
@@ -467,7 +426,6 @@ type TabBarSystemItem =
 ## Layout Guidelines
 
 ### Recommended Heights
-
 - `NativeButton`: 44pt (default iOS touch target)
 - `NativeSegmentedControl`: 32pt
 - `NativeSearchBar`: 56pt
@@ -477,16 +435,13 @@ type TabBarSystemItem =
 - `NativeSwitch`: Intrinsic size (51×31pt)
 
 ### Container Sizing
-
 All container components accept standard React Native `style` props:
-
 - `width` / `height`
 - `flex`
 - `padding` / `margin`
 - `backgroundColor` (overrides system colors)
 
 ### Best Practices
-
 1. Always provide explicit `width` and `height` or use `flex` layout
 2. Use `SafeAreaView` for navigation/tab bars
 3. Respect iOS safe areas

@@ -40,7 +40,6 @@ Liquid-React is a **thin declarative bridge**, not a UI framework. Apple renders
 Each component follows this pattern:
 
 ### JavaScript Layer
-
 ```typescript
 // src/components.tsx
 export const NativeMaterialView: React.FC<Props> = (props) => {
@@ -49,7 +48,6 @@ export const NativeMaterialView: React.FC<Props> = (props) => {
 ```
 
 ### Native View Manager
-
 ```swift
 // ios/LRNativeMaterialViewManager.swift
 @objc(LRNativeMaterialViewManager)
@@ -61,15 +59,14 @@ class LRNativeMaterialViewManager: RCTViewManager {
 ```
 
 ### Native View Implementation
-
 ```swift
 class NativeMaterialView: UIView {
     private var effectView: UIVisualEffectView?
-
+    
     @objc var material: NSString = "systemMaterial" {
         didSet { updateMaterial() }
     }
-
+    
     private func updateMaterial() {
         let blurEffect = UIBlurEffect(style: .systemMaterial)
         effectView = UIVisualEffectView(effect: blurEffect)
@@ -78,7 +75,6 @@ class NativeMaterialView: UIView {
 ```
 
 ### Objective-C Bridge
-
 ```objc
 // ios/LiquidReact-Bridging-Header.h
 @interface RCT_EXTERN_MODULE(LRNativeMaterialViewManager, RCTViewManager)
@@ -88,23 +84,22 @@ RCT_EXPORT_VIEW_PROPERTY(material, NSString)
 
 ## Component-to-UIKit Mapping
 
-| React Component          | UIKit Component      | Purpose                           |
-| ------------------------ | -------------------- | --------------------------------- |
-| `NativeMaterialView`     | `UIVisualEffectView` | System blur materials             |
-| `NativeButton`           | `UIButton`           | Native button with configurations |
-| `NativeSwitch`           | `UISwitch`           | Toggle control                    |
-| `NativeSegmentedControl` | `UISegmentedControl` | Segmented picker                  |
-| `NativeSearchBar`        | `UISearchBar`        | Search input                      |
-| `NativeNavigationBar`    | `UINavigationBar`    | Top navigation                    |
-| `NativeToolbar`          | `UIToolbar`          | Bottom toolbar                    |
-| `NativeTabBar`           | `UITabBar`           | Tab navigation                    |
-| `NativeGroupedContainer` | `UIView`             | Grouped background                |
-| `NativeCardContainer`    | `UIView`             | Card with corners                 |
+| React Component | UIKit Component | Purpose |
+|----------------|-----------------|---------|
+| `NativeMaterialView` | `UIVisualEffectView` | System blur materials |
+| `NativeButton` | `UIButton` | Native button with configurations |
+| `NativeSwitch` | `UISwitch` | Toggle control |
+| `NativeSegmentedControl` | `UISegmentedControl` | Segmented picker |
+| `NativeSearchBar` | `UISearchBar` | Search input |
+| `NativeNavigationBar` | `UINavigationBar` | Top navigation |
+| `NativeToolbar` | `UIToolbar` | Bottom toolbar |
+| `NativeTabBar` | `UITabBar` | Tab navigation |
+| `NativeGroupedContainer` | `UIView` | Grouped background |
+| `NativeCardContainer` | `UIView` | Card with corners |
 
 ## Layout System
 
 ### Frame-Based Layout
-
 React Native uses frame-based layout (not Auto Layout):
 
 ```swift
@@ -116,7 +111,6 @@ override func layoutSubviews() {
 ```
 
 ### Child View Hierarchy
-
 ```swift
 override func insertReactSubview(_ subview: UIView!, at atIndex: Int) {
     contentView.insertSubview(subview, at: atIndex)
@@ -130,7 +124,6 @@ override func removeReactSubview(_ subview: UIView!) {
 ## Props & Events
 
 ### Props (JavaScript → Native)
-
 ```typescript
 // Define in types.ts
 export interface NativeMaterialViewProps extends ViewProps {
@@ -149,7 +142,6 @@ RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
 ```
 
 ### Events (Native → JavaScript)
-
 ```swift
 @objc var onPress: RCTBubblingEventBlock?
 
@@ -165,13 +157,12 @@ RCT_EXPORT_VIEW_PROPERTY(onPress, RCTBubblingEventBlock)
 ## Material System
 
 ### System Materials
-
 Liquid-React exposes all UIKit blur styles:
 
 ```swift
 private func getBlurEffect(for material: String) -> UIBlurEffect {
     let style: UIBlurEffect.Style
-
+    
     switch material {
     case "systemUltraThinMaterial":
         style = .systemUltraThinMaterial
@@ -181,25 +172,23 @@ private func getBlurEffect(for material: String) -> UIBlurEffect {
     default:
         style = .systemMaterial
     }
-
+    
     return UIBlurEffect(style: style)
 }
 ```
 
 ### No Custom Tuning
-
 ❌ Cannot adjust blur intensity  
 ❌ Cannot customize vibrancy  
-❌ Cannot override tint
+❌ Cannot override tint  
 
 ✅ iOS controls all visual properties  
 ✅ Adapts to system appearance  
-✅ Respects accessibility settings
+✅ Respects accessibility settings  
 
 ## Animation Strategy
 
 ### UIKit Animations Only
-
 ```swift
 UIView.animate(withDuration: 0.3) {
     self.alpha = 1.0
@@ -207,7 +196,6 @@ UIView.animate(withDuration: 0.3) {
 ```
 
 ### Property Animators
-
 ```swift
 let animator = UIViewPropertyAnimator(
     duration: 0.3,
@@ -219,16 +207,14 @@ animator.startAnimation()
 ```
 
 ### What We Don't Do
-
 ❌ JavaScript-driven animations  
 ❌ Custom timing curves  
 ❌ Manual Core Animation  
-❌ Override UIKit defaults
+❌ Override UIKit defaults  
 
 ## Performance Optimizations
 
 ### View Reuse
-
 ```swift
 private var effectView: UIVisualEffectView?
 
@@ -239,13 +225,11 @@ private func updateMaterial() {
 ```
 
 ### Minimal Re-renders
-
 - Props update only when changed
 - Frame calculations in `layoutSubviews()`
 - Cached system effects where possible
 
 ### Bridge Efficiency
-
 - Direct property setters
 - Bubbling events only when needed
 - No unnecessary serialization
@@ -253,7 +237,6 @@ private func updateMaterial() {
 ## Threading
 
 ### Main Queue Setup
-
 ```swift
 override static func requiresMainQueueSetup() -> Bool {
     return true // UIKit requires main thread
@@ -265,13 +248,11 @@ All UIKit operations run on main thread automatically.
 ## Debugging
 
 ### Enable React Native debugging
-
 ```bash
 npm start -- --reset-cache
 ```
 
 ### Xcode debugging
-
 - Set breakpoints in Swift view managers
 - Use `po` to inspect UIKit views
 - Check view hierarchy in Debug View Hierarchy
@@ -279,13 +260,11 @@ npm start -- --reset-cache
 ### Common Issues
 
 **Blur not appearing:**
-
 - Check material prop value
 - Ensure parent has non-zero frame
 - Verify iOS version (13.0+)
 
 **Layout problems:**
-
 - Check parent provides frame
 - Verify `layoutSubviews()` implementation
 - Use React Native Inspector
@@ -293,25 +272,20 @@ npm start -- --reset-cache
 ## Testing
 
 ### Unit Testing
-
 Test JavaScript component exports:
-
 ```typescript
-import { NativeMaterialView } from "liquid-react";
+import { NativeMaterialView } from 'liquid-react';
 expect(NativeMaterialView).toBeDefined();
 ```
 
 ### Integration Testing
-
 Test on real iOS device:
-
 - Visual inspection
 - Different iOS versions
 - Light/dark mode
 - Accessibility settings
 
 ### No Snapshot Tests
-
 Visual appearance controlled by iOS, not deterministic across versions.
 
 ## Extending the Module
@@ -319,7 +293,6 @@ Visual appearance controlled by iOS, not deterministic across versions.
 ### Adding New Components
 
 1. **Create Swift View Manager**
-
 ```swift
 @objc(LRNativeCustomViewManager)
 class LRNativeCustomViewManager: RCTViewManager {
@@ -330,7 +303,6 @@ class LRNativeCustomViewManager: RCTViewManager {
 ```
 
 2. **Implement Native View**
-
 ```swift
 class NativeCustomView: UIView {
     // UIKit component integration
@@ -338,7 +310,6 @@ class NativeCustomView: UIView {
 ```
 
 3. **Export to Objective-C**
-
 ```objc
 @interface RCT_EXTERN_MODULE(LRNativeCustomViewManager, RCTViewManager)
 RCT_EXPORT_VIEW_PROPERTY(customProp, NSString)
@@ -346,7 +317,6 @@ RCT_EXPORT_VIEW_PROPERTY(customProp, NSString)
 ```
 
 4. **Create TypeScript Types**
-
 ```typescript
 export interface NativeCustomViewProps extends ViewProps {
   customProp?: string;
@@ -354,14 +324,12 @@ export interface NativeCustomViewProps extends ViewProps {
 ```
 
 5. **Register Component**
-
 ```typescript
-export const RNNativeCustomView =
-  requireNativeComponent<NativeCustomViewProps>("LRNativeCustomView");
+export const RNNativeCustomView = 
+  requireNativeComponent<NativeCustomViewProps>('LRNativeCustomView');
 ```
 
 ### Guidelines for New Components
-
 - ✅ Must use public UIKit API
 - ✅ Must delegate rendering to iOS
 - ✅ Must use frame-based layout
@@ -372,7 +340,6 @@ export const RNNativeCustomView =
 ## Build Configuration
 
 ### CocoaPods Integration
-
 ```ruby
 # liquid-react.podspec
 s.platform     = :ios, "13.0"
@@ -382,7 +349,6 @@ s.swift_version = "5.0"
 ```
 
 ### Xcode Project Settings
-
 - Swift Compiler Language Version: Swift 5
 - Deployment Target: iOS 13.0
 - Enable Bitcode: No (React Native requirement)
@@ -390,11 +356,9 @@ s.swift_version = "5.0"
 ## Memory Management
 
 ### ARC (Automatic Reference Counting)
-
 All Swift code uses ARC—no manual memory management.
 
 ### View Lifecycle
-
 ```swift
 deinit {
     // ARC handles cleanup automatically
@@ -403,9 +367,7 @@ deinit {
 ```
 
 ### Avoiding Retain Cycles
-
 Use `[weak self]` in closures when needed:
-
 ```swift
 button.addAction(UIAction { [weak self] _ in
     self?.handlePress()
