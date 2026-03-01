@@ -127,6 +127,7 @@ export default function ProjectTabsLayout() {
         />
         <Tabs.Screen name="tools" options={{ title: "Tools", href: null }} />
         <Tabs.Screen name="wheeler" options={{ title: "Wheeler", href: null }} />
+        <Tabs.Screen name="chat" options={{ title: "Chat", href: null }} />
       </Tabs>
 
       <MoreToolsSheet

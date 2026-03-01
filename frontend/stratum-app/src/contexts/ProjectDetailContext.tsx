@@ -82,7 +82,8 @@ export type ProjectTabName =
   | "gps"
   | "history"
   | "tools"
-  | "wheeler";
+  | "wheeler"
+  | "chat";
 
 /** Extended project type that includes the optional members array. */
 export type Project = ServiceProject & {
