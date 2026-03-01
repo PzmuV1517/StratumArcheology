@@ -57,10 +57,13 @@
     "expo-three": "^8.0.0",
     "expo-web-browser": "~15.0.8",
     "firebase": "^12.4.0",
+    "gasp": "^0.0.2",
+    "gsap": "^3.14.2",
     "katex": "^0.16.11",
     "leaflet": "^1.9.4",
     "liquid-react": "^1.0.0",
     "mathjs": "^15.0.0",
+    "ogl": "^1.0.11",
     "papaparse": "^5.4.1",
     "qrcode": "^1.5.4",
     "react": "19.1.0",
@@ -117,7 +120,19 @@
     },
     "isomorphic-fetch": {
       "node-fetch": "2.7.0"
-    }
+    },
+    "glob": "^13.0.6",
+    "test-exclude": "^8.0.0",
+    "fbemitter": "^3.0.0",
+    "@expo/ngrok": {
+      "uuid": "^9.0.0"
+    },
+    "text-encoding": "npm:@sinonjs/text-encoding@^0.7.3",
+    "jest-environment-jsdom": {
+      "jsdom": "^28.0.0"
+    },
+    "rimraf": "^6.0.0",
+    "domexception": "file:./scripts/domexception-shim"
   },
   "private": true
 }

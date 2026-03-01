@@ -397,13 +397,11 @@ export default function DataPreviewScreen() {
           if (!Papa)
             Papa =
               (await import("papaparse")).default || (await import("papaparse"));
-          if (!XLSX) XLSX = await import("xlsx");
-          if (!AutoSizer)
-            AutoSizer = (await import("react-virtualized-auto-sizer")).default;
-          if (!VariableSizeGrid)
-            VariableSizeGrid = (await import("react-window")).VariableSizeGrid;
-
-          // (moved markdown preloading to the txt/md branch above)
+          try {
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
 
           if (ext.endsWith(".csv")) {
             const text = await blob.text();
@@ -411,12 +409,16 @@ export default function DataPreviewScreen() {
             if (parsed?.data) setTable(parsed.data as any);
             else setTextContent(text);
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-            const arrayBuffer = await blob.arrayBuffer();
-            const wb = XLSX.read(arrayBuffer, { type: "array" });
-            const firstSheet = wb.SheetNames[0];
-            const ws = wb.Sheets[firstSheet];
-            const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
-            setTable(json as string[][]);
+            if (!XLSX) {
+              setTextContent("[xlsx library not installed – install \"xlsx\" to preview Excel files]");
+            } else {
+              const arrayBuffer = await blob.arrayBuffer();
+              const wb = XLSX.read(arrayBuffer, { type: "array" });
+              const firstSheet = wb.SheetNames[0];
+              const ws = wb.Sheets[firstSheet];
+              const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+              setTable(json as string[][]);
+            }
           } else {
             // Try CSV by MIME fallback
             try {
@@ -600,7 +602,15 @@ export default function DataPreviewScreen() {
           const csv = Papa.unparse(trimmed);
           blob = new Blob([csv], { type: "text/csv" });
         } else {
-          if (!XLSX) XLSX = await import("xlsx");
+          try {
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
+          if (!XLSX) {
+            showAlert("Error", "xlsx library not installed – cannot save Excel files");
+            return;
+          }
           const ws = XLSX.utils.aoa_to_sheet(trimmed);
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
