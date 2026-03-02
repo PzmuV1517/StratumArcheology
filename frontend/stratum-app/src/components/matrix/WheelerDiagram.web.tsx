@@ -681,6 +681,8 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   // Ref for scrollable SVG container
   const svgContainerRef = useRef<HTMLDivElement>(null);
+  // Ref for hidden CSV import file input
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // View mode toggle: edit (grid) vs visual (Wheeler diagram)
   const [viewMode, setViewMode] = useState<"edit" | "visual" | "publication">(
@@ -889,6 +891,161 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   const handleSave = useCallback(async () => {
     await save();
   }, [save]);
+
+  // ── CSV Export ────────────────────────────────────────────────────────────
+  const handleExportCSV = useCallback(() => {
+    const esc = (s: string) =>
+      s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+
+    const lines: string[] = [];
+
+    // Trenches section
+    lines.push("SECTION,TRENCHES");
+    lines.push("id,label,order");
+    for (const t of data.trenches) {
+      lines.push([esc(t.id), esc(t.label), String(t.order)].join(","));
+    }
+
+    // Placements section
+    lines.push("");
+    lines.push("SECTION,PLACEMENTS");
+    lines.push("contextId,trenchIds,rowStart,rowEnd,type,description,notes");
+    for (const p of data.placements) {
+      lines.push(
+        [
+          esc(p.contextId),
+          esc(p.trenchIds.join("|"))  ,
+          String(p.rowStart),
+          String(p.rowEnd),
+          esc(p.type ?? ""),
+          esc(p.description ?? ""),
+          esc(p.notes ?? ""),
+        ].join(","),
+      );
+    }
+
+    // Lacunae section
+    lines.push("");
+    lines.push("SECTION,LACUNAE");
+    lines.push("id,trenchIds,rowStart,rowEnd,label");
+    for (const l of data.lacunae ?? []) {
+      lines.push(
+        [
+          esc(l.id),
+          esc(l.trenchIds.join("|"))  ,
+          String(l.rowStart),
+          String(l.rowEnd),
+          esc(l.label ?? ""),
+        ].join(","),
+      );
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wheeler-diagram.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [data]);
+
+  // ── CSV Import ────────────────────────────────────────────────────────────
+  const handleImportCSV = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      // Reset so the same file can be re-imported
+      e.target.value = "";
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const text = ev.target?.result as string;
+          const rawLines = text.split(/\r?\n/);
+
+          // Minimal CSV parser that handles "quoted,fields"
+          const parseRow = (line: string): string[] => {
+            const cells: string[] = [];
+            let cur = "";
+            let inQ = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (inQ) {
+                if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+                else if (ch === '"')                    { inQ = false; }
+                else                                    { cur += ch; }
+              } else {
+                if      (ch === '"') { inQ = true; }
+                else if (ch === ",") { cells.push(cur); cur = ""; }
+                else                 { cur += ch; }
+              }
+            }
+            cells.push(cur);
+            return cells;
+          };
+
+          type Section = "none" | "TRENCHES" | "PLACEMENTS" | "LACUNAE";
+          let section: Section = "none";
+          let skipHeader = false;
+
+          const trenches: typeof data.trenches = [];
+          const placements: typeof data.placements = [];
+          const lacunae: NonNullable<typeof data.lacunae> = [];
+
+          for (const raw of rawLines) {
+            const line = raw.trim();
+            if (!line) continue;
+
+            if (line.startsWith("SECTION,")) {
+              section = line.split(",")[1] as Section;
+              skipHeader = true;
+              continue;
+            }
+            if (skipHeader) { skipHeader = false; continue; }
+
+            const cells = parseRow(line);
+
+            if (section === "TRENCHES") {
+              const [id, label, order] = cells;
+              if (id) trenches.push({ id, label: label ?? id, order: Number(order ?? 0) });
+            } else if (section === "PLACEMENTS") {
+              const [contextId, trenchIdsRaw, rowStart, rowEnd, type, description, notes] = cells;
+              if (contextId) {
+                placements.push({
+                  contextId,
+                  trenchIds: (trenchIdsRaw ?? "").split("|").filter(Boolean),
+                  rowStart: Number(rowStart ?? 0),
+                  rowEnd:   Number(rowEnd   ?? 0),
+                  type:        type        || undefined,
+                  description: description || undefined,
+                  notes:       notes       || undefined,
+                });
+              }
+            } else if (section === "LACUNAE") {
+              const [id, trenchIdsRaw, rowStart, rowEnd, label] = cells;
+              if (id) {
+                lacunae.push({
+                  id,
+                  trenchIds: (trenchIdsRaw ?? "").split("|").filter(Boolean),
+                  rowStart: Number(rowStart ?? 0),
+                  rowEnd:   Number(rowEnd   ?? 0),
+                  label: label || undefined,
+                });
+              }
+            }
+          }
+
+          setData({ trenches, placements, lacunae });
+        } catch {
+          alert("Failed to parse CSV — make sure it was exported from this app.");
+        }
+      };
+      reader.readAsText(file);
+    },
+    [setData],
+  );
 
   const handleCellHover = useCallback(
     (e: React.MouseEvent, placement: WheelerContextPlacement | null) => {
@@ -1916,6 +2073,40 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 Discard
               </button>
             )}
+
+            {/* ── CSV divider ── */}
+            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", flexShrink: 0 }} />
+
+            {/* Export CSV */}
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={handleExportCSV}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
+              title="Export diagram as CSV"
+            >
+              ↓ CSV
+            </button>
+
+            {/* Import CSV */}
+            <button
+              type="button"
+              style={buttonStyle}
+              onClick={() => importInputRef.current?.click()}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
+              title="Import diagram from CSV (replaces current data)"
+            >
+              ↑ CSV
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              style={{ display: "none" }}
+              onChange={handleImportCSV}
+            />
           </div>
         )}
 
