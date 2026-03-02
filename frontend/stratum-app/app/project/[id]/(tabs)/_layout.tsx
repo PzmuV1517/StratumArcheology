@@ -105,6 +105,13 @@ export default function ProjectTabsLayout() {
             ),
           }}
         />
+        <Tabs.Screen name="chat" options={{
+            title: "Chat",
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={26} name="bubble.left.and.bubble.right.fill" color={color} />
+            ),
+          }}
+        />
         <Tabs.Screen
           name="gallery"
           listeners={{
@@ -127,7 +134,6 @@ export default function ProjectTabsLayout() {
         />
         <Tabs.Screen name="tools" options={{ title: "Tools", href: null }} />
         <Tabs.Screen name="wheeler" options={{ title: "Wheeler", href: null }} />
-        <Tabs.Screen name="chat" options={{ title: "Chat", href: null }} />
       </Tabs>
 
       <MoreToolsSheet

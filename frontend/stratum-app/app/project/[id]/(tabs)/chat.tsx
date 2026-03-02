@@ -22,7 +22,7 @@ import {
   Modal,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useChat } from "@/src/hooks/useChat";
 import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
@@ -33,7 +33,7 @@ import type { Channel } from "@/src/services/chatService.types";
 export default function ProjectChatScreen() {
   const { id: projectId } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = React.useContext(BottomTabBarHeightContext) ?? 0;
 
   /* ── Channel state ───────────────────────────────── */
   const [channels, setChannels] = useState<Channel[]>([]);
