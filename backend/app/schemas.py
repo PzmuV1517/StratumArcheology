@@ -56,6 +56,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     display_name: str
+    username: str
 
 
 class FirebaseTokenRequest(BaseModel):
@@ -71,9 +72,20 @@ class AuthResponse(BaseModel):
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
+    username: str | None = None
     display_name: str | None = None
     photo_url: str | None = None
+    banner_url: str | None = None
     bio: str | None = None
+    description: str | None = None
+    phone: str | None = None
+    timezone: str | None = None
+    show_projects: bool = True
+    link_x: str | None = None
+    link_discord: str | None = None
+    link_bsky: str | None = None
+    link_linkedin: str | None = None
+    link_website: str | None = None
 
 
 class UserCreate(UserBase):
@@ -92,9 +104,20 @@ class UserResponse(UserBase):
 
 
 class ProfileUpdateRequest(BaseModel):
+    username: str | None = None
     display_name: str | None = None
     photo_url: str | None = None
+    banner_url: str | None = None
     bio: str | None = None
+    description: str | None = None
+    phone: str | None = None
+    timezone: str | None = None
+    show_projects: bool | None = None
+    link_x: str | None = None
+    link_discord: str | None = None
+    link_bsky: str | None = None
+    link_linkedin: str | None = None
+    link_website: str | None = None
 
 
 # Project Member Response (includes role from join table)
@@ -335,10 +358,12 @@ class ChatMessageCreate(BaseModel):
     """Body for sending a new chat message."""
 
     content: str
-    # Exactly one of project_id (room) or recipient_id (DM) must be set
+    # Channel message (primary), project room (legacy), or DM
+    channel_id: str | None = None
     project_id: str | None = None
     recipient_id: str | None = None
     reply_to_id: str | None = None
+    mentions: list[dict] | None = None  # [{"type":"user","id":"...","display":"@name"}]
 
 
 class ChatMessageEdit(BaseModel):
@@ -354,9 +379,12 @@ class ChatMessageResponse(BaseModel):
     sender_id: str
     sender_name: str | None = None
     sender_photo: str | None = None
+    sender_username: str | None = None
+    channel_id: str | None = None
     project_id: str | None = None
     recipient_id: str | None = None
     content: str
+    mentions: list[dict] | None = None
     reply_to_id: str | None = None
     created_at: datetime
     edited_at: datetime | None = None
@@ -380,6 +408,66 @@ class ConversationPreview(BaseModel):
     other_user_id: str
     other_user_name: str | None = None
     other_user_photo: str | None = None
+    other_user_username: str | None = None
     last_message: str
     last_message_at: datetime
     unread_count: int = 0
+
+
+# ── Channel Schemas ──────────────────────────────────────────────────────────
+
+
+class ChannelCreate(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class ChannelUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class ChannelMemberAdd(BaseModel):
+    user_ids: list[str] = []
+    group_ids: list[str] = []  # Add all members of these user groups
+
+
+class ChannelResponse(BaseModel):
+    id: str
+    project_id: str
+    name: str
+    description: str | None = None
+    is_default: bool
+    created_by: str | None = None
+    created_at: datetime
+    member_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+# ── User Group Schemas ───────────────────────────────────────────────────────
+
+
+class UserGroupCreate(BaseModel):
+    name: str
+
+
+class UserGroupMemberAdd(BaseModel):
+    user_ids: list[str]
+
+
+class UserGroupResponse(BaseModel):
+    id: str
+    project_id: str
+    name: str
+    created_by: str | None = None
+    created_at: datetime
+    member_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class UserGroupWithMembers(UserGroupResponse):
+    members: list["ProjectMemberResponse"] = []

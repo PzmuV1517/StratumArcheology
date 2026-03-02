@@ -193,12 +193,14 @@ export default function LoginScreen() {
 
   // Refs for iOS AutoFill focus chaining
   const loginPasswordRef = useRef<TextInput>(null);
+  const regUsernameRef = useRef<TextInput>(null);
   const regEmailRef = useRef<TextInput>(null);
   const regPasswordRef = useRef<TextInput>(null);
   const regConfirmRef = useRef<TextInput>(null);
 
   // Register form state
   const [regDisplayName, setRegDisplayName] = useState("");
+  const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
@@ -317,7 +319,7 @@ export default function LoginScreen() {
   };
 
   const handleRegister = async () => {
-    if (!regEmail || !regPassword || !regDisplayName) {
+    if (!regEmail || !regPassword || !regDisplayName || !regUsername) {
       showAlert("Error", "Please fill in all fields");
       return;
     }
@@ -326,6 +328,15 @@ export default function LoginScreen() {
         "Invalid Email",
         "Please enter a valid email address (e.g., user@example.com)",
       );
+      return;
+    }
+    const trimmedUsername = regUsername.trim().toLowerCase();
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      showAlert("Error", "Username must be 3-30 characters");
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(trimmedUsername)) {
+      showAlert("Error", "Username can only contain lowercase letters, numbers, dots, hyphens, and underscores");
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -337,7 +348,7 @@ export default function LoginScreen() {
       return;
     }
     setRegLoading(true);
-    const result = await register(regEmail, regPassword, regDisplayName);
+    const result = await register(regEmail, regPassword, regDisplayName, trimmedUsername);
     setRegLoading(false);
     if (!result.success) {
       showAlert("Registration Failed", result.error);
@@ -457,6 +468,26 @@ export default function LoginScreen() {
           onChangeText={setRegDisplayName}
           autoComplete="name"
           textContentType="name"
+          returnKeyType="next"
+          onSubmitEditing={() => regUsernameRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>USERNAME</Text>
+        <TextInput
+          ref={regUsernameRef}
+          style={styles.input}
+          placeholder="e.g. john.doe (unique, lowercase)"
+          placeholderTextColor="#4A4A4A"
+          value={regUsername}
+          onChangeText={(text) => setRegUsername(text.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          autoComplete="username"
+          textContentType="username"
+          maxLength={30}
           returnKeyType="next"
           onSubmitEditing={() => regEmailRef.current?.focus()}
           blurOnSubmit={false}

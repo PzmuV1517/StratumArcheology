@@ -38,7 +38,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { Stack, router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import styles from "@/src/components/project/ProjectDetailStyles";
@@ -54,15 +53,27 @@ import {
   ProjectToolsScreen,
 } from "@/src/components/project/ProjectTabsScreens";
 
+// liquid-react native components — loaded at module scope.
+// Only available in dev client / production builds (not Expo Go).
+// STRATUM uses the new React Native architecture so there is no RCTCxxBridge
+// watchdog risk; module-level require is safe and must be used here because
+// require() inside useMemo is unreliable for native modules on new arch.
 let NativeToolbar: React.FC<any> | null = null;
 let NativeToolbarButton: React.FC<any> | null = null;
 let NativeToolbarMenu: React.FC<any> | null = null;
 if (Platform.OS === "ios") {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const lr = require("liquid-react");
-  NativeToolbar = lr.NativeToolbar;
-  NativeToolbarButton = lr.NativeToolbarButton;
-  NativeToolbarMenu = lr.NativeToolbarMenu;
+  try {
+    const Constants = require("expo-constants").default;
+    const isExpoGo = Constants.executionEnvironment === "storeClient";
+    if (!isExpoGo) {
+      const lr = require("liquid-react");
+      NativeToolbar = lr.NativeToolbar;
+      NativeToolbarButton = lr.NativeToolbarButton;
+      NativeToolbarMenu = lr.NativeToolbarMenu;
+    }
+  } catch {
+    // liquid-react not available — fall back to standard header buttons
+  }
 }
 
 type FullScreenModal = "gallery" | "gps" | "history" | "tools" | null;
@@ -77,32 +88,7 @@ function ProjectStack() {
     onDeleteProject,
   } = useProjectDetail();
   const showHeaderActions = !!project && !loading;
-  const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState<FullScreenModal>(null);
-
-  const moreMenuItems = [
-    { id: "gallery", title: "Gallery", icon: "photo.on.rectangle" },
-    { id: "gps", title: "GPS Map", icon: "map" },
-    { id: "history", title: "Time Machine", icon: "clock.arrow.circlepath" },
-    { id: "tools", title: "Tools", icon: "wrench.and.screwdriver" },
-    {
-      id: "settings",
-      title: "Project Settings",
-      icon: "gearshape",
-      children: [
-        { id: "edit", title: "Edit Project", icon: "pencil" },
-        { id: "members", title: "Members", icon: "person.2" },
-        { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
-        {
-          id: "exit",
-          title: "Exit Project",
-          icon: "rectangle.portrait.and.arrow.right",
-          destructive: true,
-        },
-        { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
-      ],
-    },
-  ];
 
   const handleMenuAction = (event: {
     nativeEvent: { id: string; title: string };
@@ -140,7 +126,7 @@ function ProjectStack() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
       <Stack
         screenOptions={{
           headerShown: true,
@@ -231,9 +217,63 @@ function ProjectStack() {
             headerRight: () => {
               if (!showHeaderActions) return null;
 
-              // iOS uses standalone NativeToolbar, so no headerRight needed
-              if (Platform.OS === "ios") return null;
+              // iOS dev client / production: use native toolbar with two dropdown menus
+              if (
+                Platform.OS === "ios" &&
+                NativeToolbar &&
+                NativeToolbarButton &&
+                NativeToolbarMenu
+              ) {
+                return (
+                  <NativeToolbar
+                    translucent
+                    style={{ height: 44, backgroundColor: "transparent" }}
+                  >
+                    <NativeToolbarButton
+                      icon="folder.fill"
+                      onPress={() => setShowFilesOverlay(true)}
+                    />
+                    <NativeToolbarMenu
+                      icon="ellipsis.circle"
+                      menuItems={[
+                        { id: "gallery", title: "Gallery", icon: "photo.on.rectangle" },
+                        { id: "gps", title: "GPS Map", icon: "map" },
+                        { id: "history", title: "Time Machine", icon: "clock.arrow.circlepath" },
+                        { id: "tools", title: "Tools", icon: "wrench.and.screwdriver" },
+                      ]}
+                      onMenuAction={(e: any) => {
+                        const itemId = e.nativeEvent.id;
+                        if (
+                          itemId === "gallery" ||
+                          itemId === "gps" ||
+                          itemId === "history" ||
+                          itemId === "tools"
+                        ) {
+                          setActiveModal(itemId as FullScreenModal);
+                        }
+                      }}
+                    />
+                    <NativeToolbarMenu
+                      icon="line.3.horizontal"
+                      menuItems={[
+                        { id: "members", title: "Members", icon: "person.2" },
+                        { id: "edit", title: "Edit Project", icon: "pencil" },
+                        { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
+                        {
+                          id: "exit",
+                          title: "Exit Project",
+                          icon: "rectangle.portrait.and.arrow.right",
+                          destructive: true,
+                        },
+                        { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
+                      ]}
+                      onMenuAction={handleMenuAction}
+                    />
+                  </NativeToolbar>
+                );
+              }
 
+              // Fallback: standard header buttons (Expo Go / Android / Web)
               return (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <TouchableOpacity
@@ -258,33 +298,6 @@ function ProjectStack() {
           }}
         />
       </Stack>
-      {Platform.OS === "ios" &&
-        showHeaderActions &&
-        NativeToolbar &&
-        NativeToolbarButton &&
-        NativeToolbarMenu && (
-          <NativeToolbar
-            style={{
-              position: "absolute",
-              top: insets.top,
-              right: 0,
-              width: 120,
-              height: 44,
-              zIndex: 100,
-            }}
-            onToolbarButtonPress={(event: { nativeEvent: { icon: string } }) => {
-              const { icon } = event.nativeEvent;
-              if (icon === "folder.fill") {
-                setShowFilesOverlay(true);
-              }
-            }}
-            onToolbarMenuAction={handleMenuAction}
-          >
-            <NativeToolbarButton icon="folder.fill" />
-            <NativeToolbarMenu icon="ellipsis.circle" menuItems={moreMenuItems} />
-          </NativeToolbar>
-        )}
-
       {/* Full-screen modals for iOS */}
       {Platform.OS === "ios" && (
         <>
@@ -340,7 +353,7 @@ function ProjectStack() {
           </Modal>
         </>
       )}
-    </View>
+    </>
   );
 }
 

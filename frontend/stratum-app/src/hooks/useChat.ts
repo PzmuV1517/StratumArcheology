@@ -2,23 +2,22 @@
  * @file
  * Chat hook — real-time messaging with REST history.
  *
- * Manages message state, real-time Socket.IO events (new_message,
- * message_edited, message_deleted, user_typing), initial history
- * fetching, and infinite scroll (loadMore).
+ * Manages message state, real-time Socket.IO events, initial history
+ * fetching, and infinite scroll. Supports project rooms, channels, and DMs.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../contexts/AuthContext";
 import { chatService } from "../services/chatService";
-import type { ChatMessage, SendMessagePayload } from "../services/chatService.types";
+import type { ChatMessage, SendMessagePayload, MentionRef } from "../services/chatService.types";
 
 interface UseChatOptions {
   /** Project room mode — pass a project ID. */
   projectId?: string;
+  /** Channel mode — pass a channel ID (within a project). */
+  channelId?: string | number;
   /** DM mode — pass the other user's ID. */
   otherUserId?: string;
 }
@@ -28,7 +27,7 @@ interface UseChatReturn {
   isLoading: boolean;
   hasMore: boolean;
   typingUsers: string[];
-  sendMessage: (content: string, replyToId?: string) => Promise<void>;
+  sendMessage: (content: string, replyToId?: string, mentions?: MentionRef[]) => Promise<void>;
   editMessage: (messageId: string, content: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
   loadMore: () => Promise<void>;
@@ -42,7 +41,7 @@ interface UseChatReturn {
  *   const chat = useChat({ projectId: "..." });     // project room
  *   const chat = useChat({ otherUserId: "..." });    // DM
  */
-export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatReturn {
+export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): UseChatReturn {
   const { socket, isConnected } = useWebSocket();
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,17 +60,29 @@ export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatRetu
     identifiedRef.current = true;
   }, [socket, isConnected, user?.id]);
 
+  // ── Join channel room on Socket.IO ──────────────────────────────────
+
+  useEffect(() => {
+    if (!socket || !isConnected || !channelId) return;
+    socket.emit("join_channel", { channel_id: channelId });
+    return () => {
+      socket.emit("leave_channel", { channel_id: channelId });
+    };
+  }, [socket, isConnected, channelId]);
+
   // ── Fetch initial history ───────────────────────────────────────────
 
   const fetchHistory = useCallback(
     async (cursor?: string | null) => {
       setIsLoading(true);
       try {
-        const page = projectId
-          ? await chatService.getProjectMessages(projectId, cursor)
-          : otherUserId
-            ? await chatService.getDmMessages(otherUserId, cursor)
-            : null;
+        const page = channelId
+          ? await chatService.getChannelMessages(channelId, cursor)
+          : projectId
+            ? await chatService.getProjectMessages(projectId, cursor)
+            : otherUserId
+              ? await chatService.getDmMessages(otherUserId, cursor)
+              : null;
 
         if (!page) return;
 
@@ -92,7 +103,7 @@ export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatRetu
         setIsLoading(false);
       }
     },
-    [projectId, otherUserId],
+    [channelId, projectId, otherUserId],
   );
 
   useEffect(() => {
@@ -114,7 +125,8 @@ export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatRetu
 
     const handleNewMessage = (data: ChatMessage) => {
       // Filter — only accept messages for our current chat
-      if (projectId && data.project_id !== projectId) return;
+      if (channelId && String(data.channel_id) !== String(channelId)) return;
+      if (!channelId && projectId && data.project_id !== projectId) return;
       if (
         otherUserId &&
         data.sender_id !== otherUserId &&
@@ -166,17 +178,19 @@ export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatRetu
       socket.off("message_deleted", handleDeleted);
       socket.off("user_typing", handleTyping);
     };
-  }, [socket, projectId, otherUserId, user?.id]);
+  }, [socket, channelId, projectId, otherUserId, user?.id]);
 
   // ── Actions ─────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
-    async (content: string, replyToId?: string) => {
+    async (content: string, replyToId?: string, mentions?: MentionRef[]) => {
       const payload: SendMessagePayload = {
         content,
         project_id: projectId ?? null,
         recipient_id: otherUserId ?? null,
+        channel_id: channelId ? String(channelId) : null,
         reply_to_id: replyToId ?? null,
+        mentions: mentions ?? null,
       };
 
       if (socket?.connected) {
@@ -193,7 +207,7 @@ export function useChat({ projectId, otherUserId }: UseChatOptions): UseChatRetu
         }
       }
     },
-    [socket, projectId, otherUserId],
+    [socket, channelId, projectId, otherUserId],
   );
 
   const editMessage = useCallback(

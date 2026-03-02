@@ -3,19 +3,18 @@
  * Chat / messaging REST service.
  *
  * Provides functions for fetching message history, conversation list,
- * and sending/editing/deleting messages via the REST API.
- * Real-time delivery is handled by Socket.IO events in useChat hook.
+ * channels, mentionables, and sending/editing/deleting messages.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
 import api from "./api";
-import {
+import type {
   ChatMessage,
   ChatMessagePage,
   ConversationPreview,
   SendMessagePayload,
+  Channel,
+  Mentionable,
 } from "./chatService.types";
 
 export const chatService = {
@@ -34,6 +33,25 @@ export const chatService = {
       return res.data;
     } catch (error: any) {
       console.error("Failed to fetch project messages:", error);
+      return { messages: [], next_cursor: null, has_more: false };
+    }
+  },
+
+  // ── Channel messages ───────────────────────────────────────────────────
+
+  /** Fetch paginated channel messages (newest first). */
+  getChannelMessages: async (
+    channelId: string | number,
+    cursor?: string | null,
+    limit = 50,
+  ): Promise<ChatMessagePage> => {
+    try {
+      const params: Record<string, any> = { limit };
+      if (cursor) params.cursor = cursor;
+      const res = await api.get(`/chat/channel/${channelId}`, { params });
+      return res.data;
+    } catch (error: any) {
+      console.error("Failed to fetch channel messages:", error);
       return { messages: [], next_cursor: null, has_more: false };
     }
   },
@@ -67,6 +85,66 @@ export const chatService = {
     } catch (error: any) {
       console.error("Failed to fetch conversations:", error);
       return [];
+    }
+  },
+
+  // ── Channels ───────────────────────────────────────────────────────────
+
+  /** List channels for a project (auto-creates #general). */
+  getChannels: async (projectId: string): Promise<Channel[]> => {
+    try {
+      const res = await api.get(`/projects/${projectId}/channels`);
+      return res.data;
+    } catch (error: any) {
+      console.error("Failed to fetch channels:", error);
+      return [];
+    }
+  },
+
+  /** Create a new channel in a project. */
+  createChannel: async (
+    projectId: string,
+    name: string,
+    description?: string,
+  ): Promise<Channel | null> => {
+    try {
+      const res = await api.post(`/projects/${projectId}/channels`, {
+        name,
+        description,
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error("Failed to create channel:", error);
+      return null;
+    }
+  },
+
+  /** Delete a channel. */
+  deleteChannel: async (channelId: number): Promise<boolean> => {
+    try {
+      await api.delete(`/channels/${channelId}`);
+      return true;
+    } catch (error: any) {
+      console.error("Failed to delete channel:", error);
+      return false;
+    }
+  },
+
+  // ── Mentionables ───────────────────────────────────────────────────────
+
+  /** Search mentionable users and groups in a project. */
+  getMentionables: async (
+    projectId: string,
+    query = "",
+  ): Promise<Mentionable> => {
+    try {
+      const res = await api.get(`/projects/${projectId}/mentionables`, {
+        params: { q: query },
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error("Failed to fetch mentionables:", error);
+      return { users: [], groups: [] };
     }
   },
 

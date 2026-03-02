@@ -1,15 +1,13 @@
 /**
  * @file
- * Chat message input bar with send button.
+ * Chat message input bar with @mention autocomplete.
  *
  * Features: typing indicator emission, reply-to preview,
- * multiline expansion, and send on Enter.
+ * multiline expansion, @mention popup, and send on Enter.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -17,17 +15,23 @@ import {
   Text,
   StyleSheet,
   Platform,
+  FlatList,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from "react-native";
-import type { ChatMessage } from "../../services/chatService.types";
+import type { ChatMessage, MentionRef, Mentionable } from "../../services/chatService.types";
+import { chatService } from "../../services/chatService";
 
 interface MessageInputProps {
-  onSend: (content: string, replyToId?: string) => void;
+  onSend: (content: string, replyToId?: string, mentions?: MentionRef[]) => void;
   onTyping?: () => void;
   replyTo?: ChatMessage | null;
   onCancelReply?: () => void;
   placeholder?: string;
+  /** Required for @mention autocomplete. */
+  projectId?: string;
+  /** Disable input and send button (e.g. while channels are loading). */
+  disabled?: boolean;
 }
 
 export default function MessageInput({
@@ -36,21 +40,64 @@ export default function MessageInput({
   replyTo,
   onCancelReply,
   placeholder = "Type a message…",
+  projectId,
+  disabled = false,
 }: MessageInputProps) {
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
+  /** @mention autocomplete state */
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<Mentionable>({ users: [], groups: [] });
+  const [pendingMentions, setPendingMentions] = useState<MentionRef[]>([]);
+  const mentionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Detect @ trigger in text */
+  const detectMention = useCallback((input: string) => {
+    // Find the last @ that starts after a space or at the beginning
+    const match = input.match(/@(\w{0,30})$/);
+    if (match) {
+      setMentionQuery(match[1]);
+    } else {
+      setMentionQuery(null);
+    }
+  }, []);
+
+  /** Fetch mentionables when query changes */
+  useEffect(() => {
+    if (mentionQuery === null || !projectId) {
+      setMentionResults({ users: [], groups: [] });
+      return;
+    }
+    if (mentionDebounce.current) clearTimeout(mentionDebounce.current);
+    mentionDebounce.current = setTimeout(async () => {
+      const results = await chatService.getMentionables(projectId, mentionQuery);
+      setMentionResults(results);
+    }, 200);
+  }, [mentionQuery, projectId]);
+
+  /** Insert a mention into the text */
+  const insertMention = useCallback((name: string, ref: MentionRef) => {
+    setText((prev) => {
+      const atIndex = prev.lastIndexOf("@");
+      if (atIndex === -1) return prev;
+      return prev.substring(0, atIndex) + `@${name} `;
+    });
+    setPendingMentions((prev) => [...prev, ref]);
+    setMentionQuery(null);
+    inputRef.current?.focus();
+  }, []);
 
   const handleSend = () => {
     const t = text.trim();
     if (!t) return;
-    onSend(t, replyTo?.id);
+    onSend(t, replyTo?.id, pendingMentions.length > 0 ? pendingMentions : undefined);
     setText("");
+    setPendingMentions([]);
     onCancelReply?.();
     inputRef.current?.focus();
   };
 
   const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
-    // Send on Enter (desktop), Shift+Enter for newline
     if (Platform.OS === "web" && e.nativeEvent.key === "Enter") {
       // @ts-ignore — web-only shiftKey
       if (!(e.nativeEvent as any).shiftKey) {
@@ -62,11 +109,47 @@ export default function MessageInput({
 
   const handleChange = (t: string) => {
     setText(t);
+    detectMention(t);
     onTyping?.();
   };
 
+  const showMentions =
+    mentionQuery !== null &&
+    (mentionResults.users.length > 0 || mentionResults.groups.length > 0);
+
   return (
     <View style={styles.wrapper}>
+      {/* @mention autocomplete popup */}
+      {showMentions && (
+        <View style={styles.mentionPopup}>
+          <FlatList
+            keyboardShouldPersistTaps="handled"
+            data={[
+              ...mentionResults.users.map((u) => ({
+                key: `user-${u.id}`,
+                label: u.display_name + (u.username ? ` (@${u.username})` : ""),
+                ref: { type: "user" as const, id: u.id, name: u.username || u.display_name },
+              })),
+              ...mentionResults.groups.map((g) => ({
+                key: `group-${g.id}`,
+                label: `group: ${g.name}`,
+                ref: { type: "group" as const, id: g.id, name: g.name },
+              })),
+            ]}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.mentionItem}
+                onPress={() => insertMention(item.ref.name, item.ref)}
+              >
+                <Text style={styles.mentionText}>{item.label}</Text>
+              </TouchableOpacity>
+            )}
+            style={{ maxHeight: 180 }}
+          />
+        </View>
+      )}
+
       {/* Reply preview banner */}
       {replyTo && (
         <View style={styles.replyBanner}>
@@ -83,7 +166,7 @@ export default function MessageInput({
         </View>
       )}
 
-      <View style={styles.row}>
+      <View style={[styles.row, disabled && styles.rowDisabled]}>
         <TextInput
           ref={inputRef}
           style={styles.input}
@@ -96,13 +179,14 @@ export default function MessageInput({
           maxLength={4000}
           selectionColor="#007AFF"
           blurOnSubmit={false}
+          editable={!disabled}
         />
         <TouchableOpacity
           onPress={handleSend}
-          disabled={!text.trim()}
-          style={[styles.sendBtn, !!text.trim() && styles.sendBtnActive]}
+          disabled={!text.trim() || disabled}
+          style={[styles.sendBtn, !!text.trim() && !disabled && styles.sendBtnActive]}
         >
-          <Text style={[styles.sendText, !!text.trim() && styles.sendTextActive]}>
+          <Text style={[styles.sendText, !!text.trim() && !disabled && styles.sendTextActive]}>
             ↑
           </Text>
         </TouchableOpacity>
@@ -123,6 +207,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
+  },
+  rowDisabled: {
+    opacity: 0.4,
   },
   input: {
     flex: 1,
@@ -155,7 +242,7 @@ const styles = StyleSheet.create({
   sendTextActive: {
     color: "#FFFFFF",
   },
-  // Reply banner
+  /* Reply banner */
   replyBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -183,5 +270,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#8E8E93",
     paddingHorizontal: 4,
+  },
+  /* @mention popup */
+  mentionPopup: {
+    backgroundColor: "#2C2C2E",
+    borderTopWidth: 1,
+    borderTopColor: "#3A3A3C",
+    borderRadius: 12,
+    marginHorizontal: 8,
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  mentionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#3A3A3C",
+  },
+  mentionText: {
+    fontSize: 14,
+    color: "#F5F5F5",
   },
 });

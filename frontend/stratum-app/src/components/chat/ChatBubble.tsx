@@ -2,14 +2,13 @@
  * @file
  * Single chat message bubble.
  *
- * Renders a message with sender name, avatar initial, timestamp,
- * edit/delete actions for own messages, and reply-to preview.
+ * Renders a message with sender name, avatar, timestamp,
+ * edit/delete actions for own messages, @mention highlights,
+ * and clickable sender avatar/name for profile navigation.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,7 +17,8 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import type { ChatMessage } from "../../services/chatService.types";
+import { useRouter } from "expo-router";
+import type { ChatMessage, MentionRef } from "../../services/chatService.types";
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -45,6 +45,42 @@ export default function ChatBubble({
   onReply,
 }: ChatBubbleProps) {
   const [showActions, setShowActions] = useState(false);
+  const router = useRouter();
+
+  /** Render message content with @mention highlights */
+  const renderedContent = useMemo(() => {
+    if (!message.mentions?.length) {
+      return <Text style={styles.content}>{message.content}</Text>;
+    }
+    // Build a regex from mention names to highlight them
+    const mentionNames = message.mentions.map((m) => `@${m.name}`);
+    const pattern = new RegExp(`(${mentionNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})`, "gi");
+    const parts = message.content.split(pattern);
+    return (
+      <Text style={styles.content}>
+        {parts.map((part, i) => {
+          const isMention = mentionNames.some(
+            (n) => n.toLowerCase() === part.toLowerCase()
+          );
+          if (isMention) {
+            return (
+              <Text key={i} style={styles.mention}>
+                {part}
+              </Text>
+            );
+          }
+          return part;
+        })}
+      </Text>
+    );
+  }, [message.content, message.mentions]);
+
+  const navigateToProfile = () => {
+    router.push({
+      pathname: "/profile/[userId]",
+      params: { userId: message.sender_id },
+    });
+  };
 
   if (message.is_deleted) {
     return (
@@ -79,11 +115,11 @@ export default function ChatBubble({
 
   return (
     <View style={[styles.row, isOwnMessage && styles.rowOwn]}>
-      {/* Avatar */}
+      {/* Avatar — tap to view profile */}
       {!isOwnMessage && (
-        <View style={styles.avatar}>
+        <TouchableOpacity onPress={navigateToProfile} style={styles.avatar}>
           <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        </TouchableOpacity>
       )}
 
       <TouchableOpacity
@@ -93,9 +129,11 @@ export default function ChatBubble({
         style={[styles.bubble, isOwnMessage ? styles.bubbleOwn : styles.bubbleOther]}
       >
         {!isOwnMessage && (
-          <Text style={styles.senderName}>{message.sender_name ?? "Unknown"}</Text>
+          <TouchableOpacity onPress={navigateToProfile}>
+            <Text style={styles.senderName}>{message.sender_name ?? "Unknown"}</Text>
+          </TouchableOpacity>
         )}
-        <Text style={styles.content}>{message.content}</Text>
+        {renderedContent}
         <View style={styles.meta}>
           <Text style={styles.time}>{formatTime(message.created_at)}</Text>
           {message.edited_at && <Text style={styles.edited}>(edited)</Text>}
@@ -202,6 +240,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#8E8E93",
     fontStyle: "italic",
+  },
+  mention: {
+    color: "#5AC8FA",
+    fontWeight: "600",
   },
   actionsRow: {
     flexDirection: "row",

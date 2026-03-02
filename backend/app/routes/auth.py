@@ -147,6 +147,26 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
                 detail="Email already registered",
             )
 
+        # Validate username
+        username = request.username.strip().lower()
+        if len(username) < 3 or len(username) > 30:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be 3-30 characters",
+            )
+        import re
+        if not re.match(r'^[a-z0-9_.-]+$', username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
+            )
+        existing_username = db.query(User).filter(User.username == username).first()
+        if existing_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken",
+            )
+
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
             email=request.email,
@@ -159,6 +179,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             id=str(uuid.uuid4()),
             firebase_uid=firebase_user.uid,
             email=request.email,
+            username=username,
             display_name=request.display_name,
             created_at=datetime.utcnow(),
             last_login=datetime.utcnow(),
@@ -280,12 +301,58 @@ async def update_profile(
     db: Session = Depends(get_db),
 ):
     """Update current user's profile information"""
+    # Handle username change with validation
+    if request.username is not None:
+        import re
+        username = request.username.strip().lower()
+        if len(username) < 3 or len(username) > 30:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username must be 3-30 characters",
+            )
+        if not re.match(r'^[a-z0-9_.-]+$', username):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
+            )
+        existing = (
+            db.query(User)
+            .filter(User.username == username, User.id != current_user.id)
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken",
+            )
+        current_user.username = username
+
     if request.display_name is not None:
         current_user.display_name = request.display_name
     if request.photo_url is not None:
         current_user.photo_url = request.photo_url
+    if request.banner_url is not None:
+        current_user.banner_url = request.banner_url
     if request.bio is not None:
         current_user.bio = request.bio
+    if request.description is not None:
+        current_user.description = request.description
+    if request.phone is not None:
+        current_user.phone = request.phone
+    if request.timezone is not None:
+        current_user.timezone = request.timezone
+    if request.show_projects is not None:
+        current_user.show_projects = request.show_projects
+    if request.link_x is not None:
+        current_user.link_x = request.link_x
+    if request.link_discord is not None:
+        current_user.link_discord = request.link_discord
+    if request.link_bsky is not None:
+        current_user.link_bsky = request.link_bsky
+    if request.link_linkedin is not None:
+        current_user.link_linkedin = request.link_linkedin
+    if request.link_website is not None:
+        current_user.link_website = request.link_website
 
     db.commit()
     db.refresh(current_user)
@@ -327,7 +394,7 @@ async def search_users(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Search users by email or display name"""
+    """Search users by email, display name, or username"""
     if len(query) < 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -339,9 +406,26 @@ async def search_users(
         .filter(
             (User.email.ilike(f"%{query}%"))
             | (User.display_name.ilike(f"%{query}%"))
+            | (User.username.ilike(f"%{query}%"))
         )
         .limit(10)
         .all()
     )
 
     return users
+
+
+@router.get("/username/check")
+async def check_username(
+    username: str,
+    db: Session = Depends(get_db),
+):
+    """Check if a username is available. Public endpoint (no auth required)."""
+    import re
+    username = username.strip().lower()
+    if len(username) < 3 or len(username) > 30:
+        return {"available": False, "reason": "Username must be 3-30 characters"}
+    if not re.match(r'^[a-z0-9_.-]+$', username):
+        return {"available": False, "reason": "Only lowercase letters, numbers, dots, hyphens, underscores"}
+    existing = db.query(User).filter(User.username == username).first()
+    return {"available": existing is None}
