@@ -60,6 +60,11 @@ export default function ProjectTabsLayout() {
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="chat">
+        <Label>Chat</Label>
+        <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="gallery" hidden>
         <Label>Gallery</Label>
       </NativeTabs.Trigger>
