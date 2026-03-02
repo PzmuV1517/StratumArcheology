@@ -148,7 +148,7 @@ export default function ProjectMenuModal({
             >
               <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
             </TouchableOpacity>
-          </View>{" "}
+          </View>
         </View>
       </Modal>
       {/* Exit confirmation modal */}

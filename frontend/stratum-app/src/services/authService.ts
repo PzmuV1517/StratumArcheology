@@ -72,12 +72,14 @@ export const authService = {
     email: string,
     password: string,
     displayName: string,
+    username: string,
   ): Promise<AuthResult> => {
     try {
       const response = await api.post("/auth/register", {
         email,
         password,
         display_name: displayName,
+        username,
       });
       const { access_token, user } = response.data;
 

@@ -172,6 +172,44 @@ async def leave_project(sid, data):
         return {"status": "error", "message": str(e)}
 
 
+@sio.event
+async def join_channel(sid, data):
+    """Client joins a channel room to receive channel messages.
+
+    Data: { "channel_id": "uuid" }
+    """
+    try:
+        channel_id = data.get("channel_id") if data else None
+        if not channel_id:
+            return {"status": "error", "message": "Missing channel_id"}
+        room = f"channel_{channel_id}"
+        await sio.enter_room(sid, room)
+        logger.debug(f"sid {sid} joined channel room {room}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error in join_channel: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def leave_channel(sid, data):
+    """Client leaves a channel room.
+
+    Data: { "channel_id": "uuid" }
+    """
+    try:
+        channel_id = data.get("channel_id") if data else None
+        if not channel_id:
+            return {"status": "error", "message": "Missing channel_id"}
+        room = f"channel_{channel_id}"
+        await sio.leave_room(sid, room)
+        logger.debug(f"sid {sid} left channel room {room}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error in leave_channel: {e}")
+        return {"status": "error", "message": str(e)}
+
+
 async def emit_member_kicked(project_id: str, user_id: str):
     """
     Notify a specific user they've been kicked from a project.
@@ -391,16 +429,20 @@ async def send_message(sid, data):
     Data: {
         "content": "...",
         "project_id": "..." | null,
+        "channel_id": "..." | null,
         "recipient_id": "..." | null,
-        "reply_to_id": "..." | null
+        "reply_to_id": "..." | null,
+        "mentions": [...] | null
     }
     Exactly one of project_id or recipient_id must be provided.
     """
     try:
         content = (data.get("content") or "").strip()
         project_id = data.get("project_id")
+        channel_id = data.get("channel_id")
         recipient_id = data.get("recipient_id")
         reply_to_id = data.get("reply_to_id")
+        mentions = data.get("mentions")
 
         if not content:
             return {"status": "error", "message": "Empty message"}
@@ -429,14 +471,17 @@ async def send_message(sid, data):
             # Look up sender display info
             sender = db.query(User).filter(User.id == sender_id).first()
             sender_name = sender.display_name if sender else None
+            sender_username = sender.username if sender else None
             sender_photo = sender.photo_url if sender else None
 
             msg = ChatMessage(
                 sender_id=sender_id,
                 project_id=project_id,
+                channel_id=channel_id,
                 recipient_id=recipient_id,
                 content=content,
                 reply_to_id=reply_to_id,
+                mentions=mentions,
             )
             db.add(msg)
             db.commit()
@@ -446,18 +491,24 @@ async def send_message(sid, data):
                 "id": msg.id,
                 "sender_id": sender_id,
                 "sender_name": sender_name,
+                "sender_username": sender_username,
                 "sender_photo": sender_photo,
                 "project_id": project_id,
+                "channel_id": channel_id,
                 "recipient_id": recipient_id,
                 "content": content,
+                "mentions": mentions,
                 "reply_to_id": reply_to_id,
                 "created_at": msg.created_at.isoformat(),
                 "edited_at": None,
                 "is_deleted": False,
             }
 
-            if project_id:
-                # Broadcast to the project room
+            if channel_id:
+                # Broadcast to the specific channel room
+                await sio.emit("new_message", payload, room=f"channel_{channel_id}")
+            elif project_id:
+                # Broadcast to the project room (non-channel project messages)
                 room = f"project_{project_id}"
                 await sio.emit("new_message", payload, room=room)
             else:

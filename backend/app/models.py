@@ -139,9 +139,21 @@ class User(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     firebase_uid = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
+    username = Column(String, unique=True, nullable=True, index=True)
     display_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
+    banner_url = Column(String, nullable=True)
     bio = Column(Text, nullable=True)  # User bio/about me
+    description = Column(Text, nullable=True)  # Extended profile description
+    phone = Column(String, nullable=True)
+    timezone = Column(String, nullable=True)  # e.g. "Europe/Bucharest"
+    show_projects = Column(Boolean, default=True, nullable=False)
+    # Social links
+    link_x = Column(String, nullable=True)  # X (Twitter)
+    link_discord = Column(String, nullable=True)
+    link_bsky = Column(String, nullable=True)  # Bluesky
+    link_linkedin = Column(String, nullable=True)
+    link_website = Column(String, nullable=True)  # Personal website
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -520,11 +532,114 @@ class QRCode(Base):
     )
 
 
-class ChatMessage(Base):
-    """A single chat message — either a project room message or a direct message.
+# ── Channels & User Groups ───────────────────────────────────────────────────
 
-    * project_id set + recipient_id NULL  → project room chat
-    * project_id NULL + recipient_id set  → direct message
+
+class Channel(Base):
+    """A named chat channel within a project (like Slack channels)."""
+
+    __tablename__ = "channels"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name = Column(String, nullable=False)  # e.g. "general", "finds-log"
+    description = Column(Text, nullable=True)
+    is_default = Column(Boolean, default=False, nullable=False)  # The #general channel
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("channels", cascade="all, delete-orphan")
+    )
+    creator = relationship("User", foreign_keys=[created_by])
+    members = relationship(
+        "ChannelMember", back_populates="channel", cascade="all, delete-orphan"
+    )
+    messages = relationship(
+        "ChatMessage", back_populates="channel", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_channel_name_per_project"),
+    )
+
+
+class ChannelMember(Base):
+    """Membership of a user in a channel."""
+
+    __tablename__ = "channel_members"
+
+    channel_id = Column(
+        String, ForeignKey("channels.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    channel = relationship("Channel", back_populates="members")
+    user = relationship("User")
+
+
+class UserGroup(Base):
+    """Named group of users within a project (for permissions and @mentions)."""
+
+    __tablename__ = "user_groups"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name = Column(String, nullable=False)  # e.g. "field-leads", "lab-team"
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("user_groups", cascade="all, delete-orphan")
+    )
+    creator = relationship("User", foreign_keys=[created_by])
+    members = relationship(
+        "UserGroupMember", back_populates="group", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_user_group_name_per_project"),
+    )
+
+
+class UserGroupMember(Base):
+    """Membership of a user in a user group."""
+
+    __tablename__ = "user_group_members"
+
+    group_id = Column(
+        String, ForeignKey("user_groups.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    group = relationship("UserGroup", back_populates="members")
+    user = relationship("User")
+
+
+class ChatMessage(Base):
+    """A single chat message — channel message, project room message, or DM.
+
+    * channel_id set  → channel message (Slack-like)
+    * project_id set + channel_id NULL + recipient_id NULL  → legacy project room
+    * recipient_id set  → direct message
     """
 
     __tablename__ = "chat_messages"
@@ -533,7 +648,11 @@ class ChatMessage(Base):
     sender_id = Column(
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    # Non-null for project room messages
+    # Channel message (primary method for project chat)
+    channel_id = Column(
+        String, ForeignKey("channels.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    # Legacy: Non-null for project room messages without channels
     project_id = Column(
         String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
@@ -542,6 +661,8 @@ class ChatMessage(Base):
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
     content = Column(Text, nullable=False)
+    # @ mentions stored as JSON: [{"type":"user","id":"...", "display":"@name"}, {"type":"group","id":"...","display":"@group"}]
+    mentions = Column(JSON, nullable=True)
     # Optional reply-to support (like Slack threads)
     reply_to_id = Column(
         String, ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True
@@ -553,12 +674,14 @@ class ChatMessage(Base):
     # Relationships
     sender = relationship("User", foreign_keys=[sender_id])
     recipient = relationship("User", foreign_keys=[recipient_id])
+    channel = relationship("Channel", back_populates="messages")
     project = relationship(
         "Project", backref=backref("chat_messages", cascade="all, delete-orphan")
     )
     reply_to = relationship("ChatMessage", remote_side="ChatMessage.id")
 
     __table_args__ = (
+        Index("ix_chat_messages_channel_created", "channel_id", "created_at"),
         Index("ix_chat_messages_project_created", "project_id", "created_at"),
         Index("ix_chat_messages_dm", "sender_id", "recipient_id", "created_at"),
     )

@@ -27,14 +27,24 @@
  * SOFTWARE.
  */
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
+import React, { useState, useCallback } from "react";
 import { DynamicColorIOS, Platform } from "react-native";
+import { useAuth } from "@/src/contexts/AuthContext";
+import UsernamePromptModal from "@/src/components/UsernamePromptModal";
 
 // Active color for tab items
 const ACTIVE_COLOR = "#FF2A2A";
 const isLiquidGlass = parseInt(String(Platform.Version), 10) >= 26;
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const [usernameSet, setUsernameSet] = useState(false);
+  const needsUsername = !!user && !user.username && !usernameSet;
+  const handleUsernameComplete = useCallback(() => setUsernameSet(true), []);
+
   return (
+    <>
+    <UsernamePromptModal visible={needsUsername} onComplete={handleUsernameComplete} />
     <NativeTabs
       minimizeBehavior="onScrollDown"
       tintColor={DynamicColorIOS({ dark: ACTIVE_COLOR, light: ACTIVE_COLOR })}
@@ -54,13 +64,13 @@ export default function TabLayout() {
       })}
     >
       {/* Overview - Landing tab (default) */}
-      <NativeTabs.Trigger name="overview">
+      <NativeTabs.Trigger name="index">
         <Label>Overview</Label>
         <Icon sf={{ default: "house", selected: "house.fill" }} />
       </NativeTabs.Trigger>
 
       {/* Projects - All projects list */}
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="projects">
         <Label>Projects</Label>
         <Icon sf={{ default: "folder", selected: "folder.fill" }} />
       </NativeTabs.Trigger>
@@ -69,6 +79,12 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="profile">
         <Label>Profile</Label>
         <Icon sf={{ default: "person", selected: "person.fill" }} />
+      </NativeTabs.Trigger>
+
+      {/* Messages - DM Inbox */}
+      <NativeTabs.Trigger name="messages">
+        <Label>Messages</Label>
+        <Icon sf={{ default: "message", selected: "message.fill" }} />
       </NativeTabs.Trigger>
 
       {/* Settings - App settings */}
@@ -85,5 +101,6 @@ export default function TabLayout() {
         <Label>Explore</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
+    </>
   );
 }
