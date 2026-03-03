@@ -123,15 +123,20 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hide GPS and Explore tabs from navigation */}
-      <Tabs.Screen
-        name="gps"
-        options={{
-          href: null,
-        }}
-      />
+      {/* Unearthed - Public projects & user search */}
       <Tabs.Screen
         name="explore"
+        options={{
+          title: "Unearthed",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="globe.americas.fill" color={color} />
+          ),
+        }}
+      />
+
+      {/* Hide GPS tab from navigation */}
+      <Tabs.Screen
+        name="gps"
         options={{
           href: null,
         }}

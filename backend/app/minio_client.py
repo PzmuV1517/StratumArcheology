@@ -188,3 +188,22 @@ class MinIOClient:
 
 # Initialize MinIO client
 minio_client = MinIOClient()
+
+
+def resolve_storage_url(url: str | None) -> str | None:
+    """If *url* looks like a MinIO object path, generate a fresh presigned URL.
+
+    Recognises paths stored by the profile-picture / banner-image upload
+    endpoints (e.g. ``profiles/…`` or ``banners/…``).  Full HTTP(S) or
+    data-URIs are passed through unchanged.
+    """
+    if not url:
+        return None
+    # Already a full URL – nothing to resolve
+    if url.startswith(("http://", "https://", "data:")):
+        return url
+    # Treat as a MinIO object key → generate a 1-hour presigned URL
+    try:
+        return minio_client.get_presigned_url(url, expiry=3600)
+    except Exception:
+        return url

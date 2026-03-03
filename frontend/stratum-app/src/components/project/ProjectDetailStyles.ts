@@ -714,6 +714,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
   },
+  memberAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 16,
+  },
   memberAvatarText: {
     fontSize: 18,
     fontWeight: "700",

@@ -472,9 +472,8 @@ export default function SettingsScreen() {
       }
 
       // Upload to profile pictures endpoint
-      const response = await api.post("/files/profile-picture", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Don't set Content-Type — let RN set it with the correct multipart boundary
+      const response = await api.post("/files/profile-picture", formData);
 
       return response.data.url;
     } catch (error: any) {
@@ -490,28 +489,22 @@ export default function SettingsScreen() {
   const saveProfile = async () => {
     setSavingProfile(true);
     try {
-      let photoUrl = newPhotoUrl;
+      let imageUploaded = false;
 
-      // Upload new image if selected
+      // Upload new image if selected — the backend endpoint already sets photo_url
       if (selectedImage && selectedImage !== user?.photo_url) {
         try {
-          const uploadedUrl = await uploadProfileImage();
-          if (uploadedUrl) {
-            photoUrl = uploadedUrl;
-          }
+          await uploadProfileImage();
+          imageUploaded = true;
         } catch {
           // Continue with existing photo URL if upload fails
           console.warn("Profile image upload failed, keeping existing photo");
         }
       }
 
-      const updates: { display_name?: string; photo_url?: string; bio?: string } =
-        {};
+      const updates: { display_name?: string; bio?: string } = {};
       if (newDisplayName !== user?.display_name) {
         updates.display_name = newDisplayName;
-      }
-      if (photoUrl !== user?.photo_url) {
-        updates.photo_url = photoUrl;
       }
       if (newBio !== (user?.bio || "")) {
         updates.bio = newBio;
@@ -519,6 +512,9 @@ export default function SettingsScreen() {
 
       if (Object.keys(updates).length > 0) {
         await api.patch("/auth/me", updates);
+      }
+
+      if (Object.keys(updates).length > 0 || imageUploaded) {
         if (refreshUser) {
           await refreshUser();
         }

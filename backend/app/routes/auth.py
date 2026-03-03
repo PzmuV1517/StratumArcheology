@@ -372,23 +372,7 @@ async def update_onboarding_status(
     return current_user
 
 
-@router.get("/users/{user_id}", response_model=UserResponse)
-async def get_user_profile(
-    user_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get a user's public profile by ID"""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    return user
-
-
-@router.get("/users/search")
+@router.get("/users/search", response_model=list[UserResponse])
 async def search_users(
     query: str,
     current_user: User = Depends(get_current_user),
@@ -413,6 +397,22 @@ async def search_users(
     )
 
     return users
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get a user's public profile by ID"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return user
 
 
 @router.get("/username/check")
