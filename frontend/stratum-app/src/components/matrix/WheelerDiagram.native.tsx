@@ -62,6 +62,7 @@ import {
   WheelerContextPlacement,
   WheelerData,
 } from "../../hooks/useWheelerData";
+import { useArtefactIndex } from "../../hooks/useArtefactIndex";
 
 /* ───────────────────────── Constants ───────────────────────── */
 
@@ -199,6 +200,8 @@ export default function WheelerDiagram({
 }: WheelerDiagramProps) {
   const { data, loading, error, dirty, version, renderUrl, renderVersion } =
     useWheelerData(projectId);
+
+  const artefactIndex = useArtefactIndex(projectId);
 
   // View mode: "diagram" (coloured grid) or "publication" (B&W SVG)
   const [viewMode, setViewMode] = useState<"diagram" | "publication">("diagram");
@@ -571,6 +574,85 @@ export default function WheelerDiagram({
               >
                 Vector SVG · Suitable for print and publication
               </Text>
+
+              {/* Linked artefacts index */}
+              {artefactIndex.length > 0 &&
+                data.placements.some(
+                  (p) => (p.linkedArtefactIds?.length ?? 0) > 0,
+                ) && (
+                  <View
+                    style={{
+                      marginTop: 20,
+                      width: "100%",
+                      backgroundColor: "#1c1c1e",
+                      borderRadius: 8,
+                      padding: 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#F5F5F5",
+                        fontWeight: "700",
+                        fontSize: 13,
+                        marginBottom: 10,
+                      }}
+                    >
+                      Linked Artefacts Index
+                    </Text>
+                    {data.placements
+                      .filter((p) => (p.linkedArtefactIds?.length ?? 0) > 0)
+                      .map((p) => (
+                        <View
+                          key={p.contextId}
+                          style={{
+                            marginBottom: 10,
+                            paddingBottom: 10,
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                            borderBottomColor: "#2a2a2a",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#F5F5F5",
+                              fontWeight: "600",
+                              fontSize: 12,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {p.contextId}
+                            {p.type ? (
+                              <Text
+                                style={{ fontWeight: "400", color: "#9ca3af" }}
+                              >
+                                {" "}({p.type})
+                              </Text>
+                            ) : null}
+                          </Text>
+                          {p.linkedArtefactIds!.map((aid) => {
+                            const a = artefactIndex.find((x) => x.id === aid);
+                            return (
+                              <Text
+                                key={aid}
+                                style={{
+                                  color: "#EAEAEA",
+                                  fontSize: 11,
+                                  marginLeft: 8,
+                                  marginBottom: 2,
+                                }}
+                              >
+                                •{" "}
+                                {a
+                                  ? a.number
+                                    ? `#${a.number} ${a.name}`
+                                    : a.name
+                                  : aid}
+                              </Text>
+                            );
+                          })}
+                        </View>
+                      ))}
+                  </View>
+                )}
             </ScrollView>
           )}
         </View>
@@ -760,6 +842,26 @@ export default function WheelerDiagram({
                   </Text>
                 )}
               </>
+            )}
+            {(inspected?.linkedArtefactIds?.length ?? 0) > 0 && (
+              <View style={{ marginTop: 6 }}>
+                <Text
+                  style={[
+                    s.modalDetail,
+                    { color: "#4CAF50", fontWeight: "600", marginBottom: 2 },
+                  ]}
+                >
+                  Linked artefacts:
+                </Text>
+                {inspected!.linkedArtefactIds!.map((aid) => {
+                  const a = artefactIndex.find((x) => x.id === aid);
+                  return (
+                    <Text key={aid} style={s.modalDetail}>
+                      • {a ? (a.number ? `#${a.number} ${a.name}` : a.name) : aid}
+                    </Text>
+                  );
+                })}
+              </View>
             )}
             <Text style={s.modalMeta}>
               Trenches: {inspected?.trenchIds.join(", ")} · Rows{" "}

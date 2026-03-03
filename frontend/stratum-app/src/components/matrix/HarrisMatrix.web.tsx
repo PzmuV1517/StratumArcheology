@@ -43,6 +43,10 @@ import {
   normalizeLoadedData,
   ArtefactRecord,
 } from "./registryModels";
+import {
+  useArtefactIndex,
+  type ArtefactIndexItem,
+} from "../../hooks/useArtefactIndex";
 
 const DEFAULT_GROUP_COLOR = "#ff9800";
 const DEFAULT_SUBGROUP_COLOR = "#9c27b0";
@@ -156,6 +160,19 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
 
   // Expose imperative handlers to JSX via ref
   const apiRef = useRef<any>({});
+
+  // Linked-artefact state for the context / SU forms
+  const [harrisLinkedIds, setHarrisLinkedIds] = useState<string[]>([]);
+  const [harrisLinkedCtxId, setHarrisLinkedCtxId] = useState<string | null>(null);
+  const artefactIndex = useArtefactIndex(projectId);
+
+  // Keep apiRef setters up-to-date every render so the useEffect closure
+  // can always reach the latest React state without stale closures.
+  apiRef.current.setLinkedCtx = (id: string, ids: string[]) => {
+    setHarrisLinkedCtxId(id);
+    setHarrisLinkedIds(ids);
+  };
+  apiRef.current.getLinkedIds = (): string[] => harrisLinkedIds;
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -1224,6 +1241,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.featureNumber || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.linkedArtefactIds?.length > 0 ? `<span style="color:#4CAF50;font-size:11px;">\uD83D\uDD17 ${rec.linkedArtefactIds.length}</span>` : ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
                   <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openCFRecord && window.__hm_openCFRecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Open</button>
                   <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteCFRecord && window.__hm_deleteCFRecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Delete</button>
@@ -1239,6 +1257,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.id || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.unitType || ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;\">${rec.sector || ""}</td>
+                <td style=\"border:1px solid #333;padding:4px;\">${rec.linkedArtefactIds?.length > 0 ? `<span style="color:#4CAF50;font-size:11px;">\uD83D\uDD17 ${rec.linkedArtefactIds.length}</span>` : ""}</td>
                 <td style=\"border:1px solid #333;padding:4px;text-align:center;\">
                   <button style=\"font-size:11px;margin-right:6px;\" onclick=\"window.__hm_openSURecord && window.__hm_openSURecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Open</button>
                   <button style=\"font-size:11px;background:#922;color:#fff;border:none;padding:2px 6px;\" onclick=\"window.__hm_deleteSURecord && window.__hm_deleteSURecord('${(rec.id || "").replace(/\"/g, "&quot;")}')\">Delete</button>
@@ -1303,11 +1322,11 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             </ul>
             <div style=\"margin-top:10px;\">
               <h4 style=\"margin:6px 0;\">Context Feature Forms</h4>
-              ${cfRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Feature</th><th>Sector</th><th>Actions</th></tr></thead><tbody>${cfRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No context feature forms yet.</div>'}
+              ${cfRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Feature</th><th>Sector</th><th>Linked</th><th>Actions</th></tr></thead><tbody>${cfRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No context feature forms yet.</div>'}
             </div>
             <div style=\"margin-top:10px;\">
               <h4 style=\"margin:6px 0;\">Stratigraphic Unit Forms</h4>
-              ${suRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Type</th><th>Sector</th><th>Actions</th></tr></thead><tbody>${suRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No stratigraphic unit forms yet.</div>'}
+              ${suRows ? `<table style=\\\"width:100%;border-collapse:collapse;font-size:12px;\\\"><thead><tr><th>ID</th><th>Type</th><th>Sector</th><th>Linked</th><th>Actions</th></tr></thead><tbody>${suRows}</tbody></table>` : '<div style=\"font-size:12px;color:var(--muted,#adb5bd);\">No stratigraphic unit forms yet.</div>'}
             </div>
             <div style=\"margin-top:10px;\">
               <h4 style=\"margin:6px 0;\">Artefact Registry Entries</h4>
@@ -1342,12 +1361,14 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           const rec = contextForms.get(id);
           if (!rec) return;
           populateContextFeatureFormFromRecord(rec);
+          apiRef.current.setLinkedCtx?.(id, rec.linkedArtefactIds ?? []);
           setSidebarView("featureForm");
         };
         (window as any).__hm_openSURecord = (id: string) => {
           const rec = stratigraphicUnits.get(id);
           if (!rec) return;
           populateSUFormFromRecord(rec);
+          apiRef.current.setLinkedCtx?.(id, rec.linkedArtefactIds ?? []);
           setSidebarView("suForm");
         };
         (window as any).__hm_deleteCFRecord = (id: string) => {
@@ -1752,6 +1773,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               dateCreated: readInputValue("cf_dateCreated"),
               checkedBy: readInputValue("cf_checkedBy"),
               dateChecked: readInputValue("cf_dateChecked"),
+              linkedArtefactIds: (apiRef.current.getLinkedIds?.() as string[] || []).filter(Boolean),
             };
             contextForms.set(id, rec);
             saveToStorage();
@@ -1970,6 +1992,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               dateCreated: readInputValue("su_dateCreated"),
               checkedBy: readInputValue("su_checkedBy"),
               dateChecked: readInputValue("su_dateChecked"),
+              linkedArtefactIds: (apiRef.current.getLinkedIds?.() as string[] || []).filter(Boolean),
             };
             stratigraphicUnits.set(id, rec);
             saveToStorage();
@@ -3470,13 +3493,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               <div className="button-grid">
                 <button
                   className="btn-primary"
-                  onClick={() => setSidebarView("featureForm")}
+                  onClick={() => {
+                    setHarrisLinkedCtxId(null);
+                    setHarrisLinkedIds([]);
+                    setSidebarView("featureForm");
+                  }}
                 >
                   Open Context Feature Form
                 </button>
                 <button
                   className="btn-primary"
-                  onClick={() => setSidebarView("suForm")}
+                  onClick={() => {
+                    setHarrisLinkedCtxId(null);
+                    setHarrisLinkedIds([]);
+                    setSidebarView("suForm");
+                  }}
                 >
                   Open SU Form
                 </button>
@@ -3726,6 +3757,88 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                   </button>
                 </div>
               </form>
+
+              {/* ── Linked Artefacts picker (React-rendered, wired via apiRef) ── */}
+              {artefactIndex.length > 0 && (
+                <div
+                  style={{
+                    padding: "12px 0 4px",
+                    borderTop: "1px solid #2A2A2A",
+                    marginTop: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#adb5bd",
+                      marginBottom: 8,
+                    }}
+                  >
+                    🔗 Linked Artefacts
+                    {harrisLinkedCtxId && (
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          marginLeft: 6,
+                          color: "#888",
+                        }}
+                      >
+                        — {harrisLinkedCtxId}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+                  >
+                    {artefactIndex.map((a: ArtefactIndexItem) => {
+                      const linked = harrisLinkedIds.includes(a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          style={{
+                            padding: "3px 10px",
+                            borderRadius: 14,
+                            border: linked
+                              ? "1px solid #4CAF50"
+                              : "1px solid #3A3A3A",
+                            backgroundColor: linked
+                              ? "rgba(76,175,80,0.2)"
+                              : "#222",
+                            color: linked ? "#4CAF50" : "#999",
+                            fontSize: 11,
+                            cursor: "pointer",
+                            fontWeight: linked ? 600 : 400,
+                          }}
+                          onClick={() =>
+                            setHarrisLinkedIds((prev: string[]) =>
+                              prev.includes(a.id)
+                                ? prev.filter((x: string) => x !== a.id)
+                                : [...prev, a.id],
+                            )
+                          }
+                        >
+                          {a.number ? `#${a.number} ` : ""}{a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {harrisLinkedIds.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        color: "#888",
+                      }}
+                    >
+                      {harrisLinkedIds.length} artefact
+                      {harrisLinkedIds.length !== 1 ? "s" : ""} linked —
+                      saved with the record when you press Save above.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div
@@ -4039,6 +4152,88 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                   }}
                 />
               </form>
+
+              {/* ── Linked Artefacts picker (React-rendered, wired via apiRef) ── */}
+              {artefactIndex.length > 0 && (
+                <div
+                  style={{
+                    padding: "12px 0 4px",
+                    borderTop: "1px solid #2A2A2A",
+                    marginTop: 4,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#adb5bd",
+                      marginBottom: 8,
+                    }}
+                  >
+                    🔗 Linked Artefacts
+                    {harrisLinkedCtxId && (
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          marginLeft: 6,
+                          color: "#888",
+                        }}
+                      >
+                        — {harrisLinkedCtxId}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+                  >
+                    {artefactIndex.map((a: ArtefactIndexItem) => {
+                      const linked = harrisLinkedIds.includes(a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          style={{
+                            padding: "3px 10px",
+                            borderRadius: 14,
+                            border: linked
+                              ? "1px solid #4CAF50"
+                              : "1px solid #3A3A3A",
+                            backgroundColor: linked
+                              ? "rgba(76,175,80,0.2)"
+                              : "#222",
+                            color: linked ? "#4CAF50" : "#999",
+                            fontSize: 11,
+                            cursor: "pointer",
+                            fontWeight: linked ? 600 : 400,
+                          }}
+                          onClick={() =>
+                            setHarrisLinkedIds((prev: string[]) =>
+                              prev.includes(a.id)
+                                ? prev.filter((x: string) => x !== a.id)
+                                : [...prev, a.id],
+                            )
+                          }
+                        >
+                          {a.number ? `#${a.number} ` : ""}{a.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {harrisLinkedIds.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        fontSize: 11,
+                        color: "#888",
+                      }}
+                    >
+                      {harrisLinkedIds.length} artefact
+                      {harrisLinkedIds.length !== 1 ? "s" : ""} linked —
+                      saved with the record when you press Save above.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div

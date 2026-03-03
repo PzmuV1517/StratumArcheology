@@ -121,6 +121,8 @@ export interface ContextFeatureRecord {
   dateCreated?: string;
   checkedBy?: string;
   dateChecked?: string;
+  /** FileNode folder IDs of artefacts linked to this context. */
+  linkedArtefactIds?: string[];
 }
 
 export interface StratigraphicUnitRecord {
@@ -194,6 +196,8 @@ export interface StratigraphicUnitRecord {
   dateCreated?: string;
   checkedBy?: string;
   dateChecked?: string;
+  /** FileNode folder IDs of artefacts linked to this SU. */
+  linkedArtefactIds?: string[];
 }
 
 export interface SampleEntry {

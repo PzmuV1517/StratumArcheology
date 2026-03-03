@@ -37,6 +37,7 @@ import {
   WheelerLacuna,
 } from "../../hooks/useWheelerData";
 import { WheelerPublicationView } from "./WheelerPublicationView.web";
+import { useArtefactIndex } from "../../hooks/useArtefactIndex";
 
 /* ───────────────── Micro-icons (inline SVG) ───────────────── */
 
@@ -641,6 +642,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     addLacuna,
     removeLacuna,
   } = useWheelerData(projectId);
+  const artefactIndex = useArtefactIndex(projectId);
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<{
@@ -666,6 +668,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   const [ctxFormType, setCtxFormType] = useState("layer");
   const [ctxFormDesc, setCtxFormDesc] = useState("");
   const [ctxFormNotes, setCtxFormNotes] = useState("");
+  const [ctxFormLinkedArtefacts, setCtxFormLinkedArtefacts] = useState<string[]>([]);
   const [ctxFormTrenches, setCtxFormTrenches] = useState<string[]>([]);
   const [ctxFormRowStart, setCtxFormRowStart] = useState("0");
   const [ctxFormRowEnd, setCtxFormRowEnd] = useState("0");
@@ -752,6 +755,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     setCtxFormType(existing?.type ?? "layer");
     setCtxFormDesc(existing?.description ?? "");
     setCtxFormNotes(existing?.notes ?? "");
+    setCtxFormLinkedArtefacts(existing?.linkedArtefactIds ?? []);
     setCtxFormTrenches(existing?.trenchIds ?? []);
     setCtxFormRowStart(String(existing?.rowStart ?? 0));
     setCtxFormRowEnd(String(existing?.rowEnd ?? 0));
@@ -783,6 +787,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       type: ctxFormType,
       description: ctxFormDesc.trim() || undefined,
       notes: ctxFormNotes.trim() || undefined,
+      linkedArtefactIds: ctxFormLinkedArtefacts.length ? ctxFormLinkedArtefacts : undefined,
     });
     setShowContextModal(false);
   }, [
@@ -790,6 +795,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     ctxFormType,
     ctxFormDesc,
     ctxFormNotes,
+    ctxFormLinkedArtefacts,
     ctxFormTrenches,
     ctxFormRowStart,
     ctxFormRowEnd,
@@ -1552,6 +1558,35 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   {p.type}
                 </text>
               )}
+              {/* Linked artefacts badge */}
+              {p.linkedArtefactIds && p.linkedArtefactIds.length > 0 && (() => {
+                const badgeY = cy + (p.type ? 28 : 18);
+                const label = `\u{1F517} ${p.linkedArtefactIds.length}`;
+                return (
+                  <g>
+                    <rect
+                      x={cx - 18}
+                      y={badgeY - 9}
+                      width={36}
+                      height={12}
+                      rx={6}
+                      fill="rgba(76,175,80,0.28)"
+                      stroke="#4CAF50"
+                      strokeWidth={0.6}
+                    />
+                    <text
+                      x={cx}
+                      y={badgeY}
+                      textAnchor="middle"
+                      fill="#4CAF50"
+                      fontSize={8}
+                      fontFamily="'Inter', system-ui, sans-serif"
+                    >
+                      {label}
+                    </text>
+                  </g>
+                );
+              })()}
             </g>
           );
         })}
@@ -2158,6 +2193,8 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           renderVersion={renderVersion}
           currentVersion={version}
           dirty={dirty}
+          placements={data.placements}
+          artefactIndex={artefactIndex}
         />
       ) : viewMode === "visual" ? (
         <div style={svgContainerStyle} ref={svgContainerRef}>
@@ -2528,6 +2565,9 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             Trenches: {tooltip.placement.trenchIds.join(", ")} · Rows t
             {totalRows - tooltip.placement.rowStart}–t
             {totalRows - tooltip.placement.rowEnd}
+            {tooltip.placement.linkedArtefactIds?.length ? (
+              <> · {tooltip.placement.linkedArtefactIds.length} artefact{tooltip.placement.linkedArtefactIds.length !== 1 ? "s" : ""} linked</>
+            ) : null}
           </div>
         </div>
       )}
@@ -2681,6 +2721,47 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 onChange={(e) => setCtxFormNotes(e.target.value)}
               />
             </div>
+
+            {/* Linked Artefacts */}
+            {artefactIndex.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Linked Artefacts</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {artefactIndex.map((a) => {
+                    const linked = ctxFormLinkedArtefacts.includes(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 16,
+                          border: linked
+                            ? "1px solid #4CAF50"
+                            : "1px solid #3A3A3A",
+                          backgroundColor: linked
+                            ? "rgba(76,175,80,0.2)"
+                            : "#222",
+                          color: linked ? "#4CAF50" : "#999",
+                          fontSize: 12,
+                          cursor: "pointer",
+                          fontWeight: linked ? 600 : 400,
+                        }}
+                        onClick={() =>
+                          setCtxFormLinkedArtefacts((prev) =>
+                            prev.includes(a.id)
+                              ? prev.filter((x) => x !== a.id)
+                              : [...prev, a.id],
+                          )
+                        }
+                      >
+                        {a.number ? `#${a.number} ` : ""}{a.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Trench selection */}
             <div style={{ marginBottom: 12 }}>

@@ -58,6 +58,8 @@ export interface WheelerContextPlacement {
   description?: string;
   /** Longer free-form field notes. */
   notes?: string;
+  /** FileNode folder IDs of artefacts linked to this context. */
+  linkedArtefactIds?: string[];
 }
 
 /**

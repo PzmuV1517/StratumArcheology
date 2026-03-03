@@ -30,6 +30,8 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import type { WheelerContextPlacement } from "../../hooks/useWheelerData";
+import type { ArtefactIndexItem } from "../../hooks/useArtefactIndex";
 
 /* ───────────────────────── Props ───────────────────────── */
 
@@ -42,6 +44,10 @@ interface Props {
   currentVersion: number;
   /** Whether the user has unsaved local edits. */
   dirty: boolean;
+  /** All context placements (for linked-artefact annotation). */
+  placements?: WheelerContextPlacement[];
+  /** Flat artefact index for the project. */
+  artefactIndex?: ArtefactIndexItem[];
 }
 
 /* ───────────────────────── Component ───────────────────────── */
@@ -51,6 +57,8 @@ export function WheelerPublicationView({
   renderVersion,
   currentVersion,
   dirty,
+  placements,
+  artefactIndex,
 }: Props) {
   const [svgText, setSvgText] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -278,6 +286,92 @@ export function WheelerPublicationView({
             >
               SVG is vector-scalable and suitable for print and publication.
             </p>
+
+            {/* ── Linked artefacts index ── */}
+            {placements && artefactIndex && artefactIndex.length > 0 && (() => {
+              const linked = placements.filter(
+                (p) => p.linkedArtefactIds && p.linkedArtefactIds.length > 0,
+              );
+              if (linked.length === 0) return null;
+              return (
+                <div
+                  style={{
+                    marginTop: 24,
+                    width: "100%",
+                    maxWidth: 640,
+                    background: "#fff",
+                    border: "1px solid #d5d3cc",
+                    borderRadius: 6,
+                    padding: "16px 20px",
+                    fontFamily: "Inter, system-ui, sans-serif",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#292521",
+                      marginBottom: 12,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    Linked Artefacts Index
+                  </div>
+                  {linked.map((p) => (
+                    <div
+                      key={p.contextId}
+                      style={{
+                        marginBottom: 10,
+                        paddingBottom: 10,
+                        borderBottom: "1px solid #eee",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "#292521",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {p.contextId}
+                        {p.type && (
+                          <span
+                            style={{
+                              fontWeight: 400,
+                              color: "#6b7280",
+                              marginLeft: 6,
+                            }}
+                          >
+                            ({p.type})
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {p.linkedArtefactIds!.map((aid) => {
+                          const a = artefactIndex.find((x) => x.id === aid);
+                          return (
+                            <span
+                              key={aid}
+                              style={{
+                                fontSize: 11,
+                                background: "#f3f4f6",
+                                border: "1px solid #d1d5db",
+                                borderRadius: 10,
+                                padding: "2px 8px",
+                                color: "#292521",
+                              }}
+                            >
+                              {a ? (a.number ? `#${a.number} ${a.name}` : a.name) : aid}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
