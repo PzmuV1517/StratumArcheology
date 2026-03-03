@@ -31,7 +31,7 @@ SOFTWARE.
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 
 class UserRole(str, Enum):
@@ -100,6 +100,12 @@ class UserResponse(UserBase):
     created_at: datetime
     last_login: datetime | None = None
 
+    @field_validator("photo_url", "banner_url", mode="before")
+    @classmethod
+    def _resolve_urls(cls, v: str | None) -> str | None:
+        from app.minio_client import resolve_storage_url
+        return resolve_storage_url(v)
+
     class Config:
         from_attributes = True
 
@@ -130,6 +136,12 @@ class ProjectMemberResponse(BaseModel):
     bio: str | None = None
     role: UserRole
 
+    @field_validator("photo_url", mode="before")
+    @classmethod
+    def _resolve_urls(cls, v: str | None) -> str | None:
+        from app.minio_client import resolve_storage_url
+        return resolve_storage_url(v)
+
     class Config:
         from_attributes = True
 
@@ -140,6 +152,7 @@ class ProjectBase(BaseModel):
     description: str | None = None
     ran_lmi_id: str | None = None
     cover_image_url: str | None = None
+    is_public: bool = False
 
 
 class ProjectCreate(ProjectBase):
@@ -159,6 +172,11 @@ class ProjectResponse(ProjectBase):
 
 class ProjectWithMembers(ProjectResponse):
     members: list[ProjectMemberResponse] = []
+
+
+class PublicProjectResponse(ProjectResponse):
+    """Public project with member count for popularity ranking."""
+    member_count: int = 0
 
 
 # Project Member Schemas
@@ -391,6 +409,12 @@ class ChatMessageResponse(BaseModel):
     edited_at: datetime | None = None
     is_deleted: bool = False
 
+    @field_validator("sender_photo", mode="before")
+    @classmethod
+    def _resolve_urls(cls, v: str | None) -> str | None:
+        from app.minio_client import resolve_storage_url
+        return resolve_storage_url(v)
+
     class Config:
         from_attributes = True
 
@@ -413,6 +437,12 @@ class ConversationPreview(BaseModel):
     last_message: str
     last_message_at: datetime
     unread_count: int = 0
+
+    @field_validator("other_user_photo", mode="before")
+    @classmethod
+    def _resolve_urls(cls, v: str | None) -> str | None:
+        from app.minio_client import resolve_storage_url
+        return resolve_storage_url(v)
 
 
 # ── Channel Schemas ──────────────────────────────────────────────────────────

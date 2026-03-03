@@ -35,7 +35,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Platform, RefreshControl, View, Text } from "react-native";
+import { Platform, RefreshControl, View, Text, Image } from "react-native";
 import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -164,6 +164,7 @@ type ProjectDetailContextValue = {
   onTransferLeadership: () => void;
   goToProjects: () => void;
   navigateToTab: (tab: ProjectTabName) => void;
+  refreshProject: () => Promise<void>;
 };
 
 const ProjectDetailContext = createContext<ProjectDetailContextValue | null>(null);
@@ -1020,11 +1021,15 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const renderMember = ({ item }: { item: Member }) => (
     <View style={styles.memberCardInner}>
-      <View style={styles.memberAvatar}>
-        <Text style={styles.memberAvatarText}>
-          {item.display_name?.charAt(0).toUpperCase() || "U"}
-        </Text>
-      </View>
+      {item.photo_url ? (
+        <Image source={{ uri: item.photo_url }} style={styles.memberAvatarImage} />
+      ) : (
+        <View style={styles.memberAvatar}>
+          <Text style={styles.memberAvatarText}>
+            {item.display_name?.charAt(0).toUpperCase() || "U"}
+          </Text>
+        </View>
+      )}
       <View style={styles.memberDetails}>
         <Text style={styles.memberName}>{item.display_name}</Text>
         <Text style={styles.memberEmail}>{item.email}</Text>
@@ -1164,6 +1169,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     onTransferLeadership,
     goToProjects,
     navigateToTab,
+    refreshProject: handleRefresh,
   };
 
   return (

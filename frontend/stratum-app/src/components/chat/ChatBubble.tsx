@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import type { ChatMessage, MentionRef } from "../../services/chatService.types";
@@ -118,7 +119,11 @@ export default function ChatBubble({
       {/* Avatar — tap to view profile */}
       {!isOwnMessage && (
         <TouchableOpacity onPress={navigateToProfile} style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          {message.sender_photo ? (
+            <Image source={{ uri: message.sender_photo }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
         </TouchableOpacity>
       )}
 
@@ -191,6 +196,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  avatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   bubble: {
     maxWidth: "75%",

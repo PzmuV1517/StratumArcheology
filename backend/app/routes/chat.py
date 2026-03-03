@@ -38,6 +38,7 @@ from sqlalchemy.orm import Session, aliased
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.minio_client import resolve_storage_url
 from app.models import Channel, ChatMessage, User
 from app.schemas import (
     ChatMessageCreate,
@@ -337,7 +338,7 @@ async def send_message(
             "id": msg.id,
             "sender_id": current_user.id,
             "sender_name": current_user.display_name,
-            "sender_photo": current_user.photo_url,
+            "sender_photo": resolve_storage_url(current_user.photo_url),
             "sender_username": current_user.username,
             "channel_id": body.channel_id,
             "project_id": body.project_id,

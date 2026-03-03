@@ -80,6 +80,7 @@ class ActivityType(str, enum.Enum):
     # Project activities
     PROJECT_CREATED = "project_created"
     PROJECT_UPDATED = "project_updated"
+    PROJECT_PUBLICITY_CHANGED = "project_publicity_changed"
 
     # Member activities
     MEMBER_JOINED = "member_joined"
@@ -186,6 +187,7 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    is_public = Column(Boolean, default=False)  # Whether the project is publicly visible
     cover_image_url = Column(Text, nullable=True)  # MinIO object key for cover image
     harris_matrix_data = Column(
         JSON, nullable=True

@@ -93,12 +93,15 @@ export default function TabLayout() {
         <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
       </NativeTabs.Trigger>
 
+      {/* Unearthed - Public projects & user search */}
+      <NativeTabs.Trigger name="explore">
+        <Label>Unearthed</Label>
+        <Icon sf={{ default: "globe.americas", selected: "globe.americas.fill" }} />
+      </NativeTabs.Trigger>
+
       {/* Hidden tabs - not shown in tab bar */}
       <NativeTabs.Trigger name="gps" hidden>
         <Label>GPS</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="explore" hidden>
-        <Label>Explore</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
     </>

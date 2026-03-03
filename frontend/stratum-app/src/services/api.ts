@@ -156,11 +156,10 @@ api.interceptors.request.use(
         axiosConfig.headers["Content-Type"] = "application/json";
       }
     } else {
-      // Remove JSON header so browser can set multipart boundary
-      if (
-        axiosConfig.headers &&
-        axiosConfig.headers["Content-Type"] === "application/json"
-      ) {
+      // Always remove Content-Type for FormData so RN/browser can set it
+      // with the correct multipart boundary. Explicitly setting it breaks
+      // Axios's FormData serializer and React Native file uploads.
+      if (axiosConfig.headers) {
         delete axiosConfig.headers["Content-Type"];
       }
     }

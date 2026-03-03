@@ -128,15 +128,23 @@ export default function ProfileScreen() {
     });
     if (result.canceled) return;
     const uri = result.assets[0].uri;
-    // Upload to backend
     const form = new FormData();
-    form.append("file", { uri, name: `${type}.jpg`, type: "image/jpeg" } as any);
+    const filename = `${type}_${Date.now()}.jpg`;
+
+    if (Platform.OS === "web") {
+      // Web: fetch the blob/data URI and append as a real File object
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      form.append("file", new File([blob], filename, { type: "image/jpeg" }));
+    } else {
+      // Native: use the { uri, name, type } convention that RN understands
+      form.append("file", { uri, name: filename, type: "image/jpeg" } as any);
+    }
+
     try {
-      const field = type === "avatar" ? "photo_url" : "banner_url";
-      const { data } = await api.post("/files/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      await api.patch("/auth/me", { [field]: data.url || data.file_url });
+      const endpoint = type === "avatar" ? "/files/profile-picture" : "/files/banner-image";
+      // Don't set Content-Type header — let RN/browser set it with the correct multipart boundary
+      await api.post(endpoint, form);
       await refreshUser();
     } catch (e: any) {
       showAlert("Upload failed", e?.response?.data?.detail || "Could not upload image");

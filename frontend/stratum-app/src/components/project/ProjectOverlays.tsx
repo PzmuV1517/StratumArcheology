@@ -40,6 +40,7 @@ import MoveBanner from "@/src/components/project/MoveBanner";
 import { ConflictResolutionModal } from "@/src/components/sync/ConflictResolutionModal";
 import { showAlert } from "@/src/utils/alert";
 import { fileService } from "@/src/services/fileService";
+import { projectService } from "@/src/services/projectService";
 import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
 
 export default function ProjectOverlays() {
@@ -94,7 +95,20 @@ export default function ProjectOverlays() {
     setShowConflictModal,
     setCurrentConflict,
     navigateToTab: _navigateToTab,
+    refreshProject,
   } = useProjectDetail();
+
+  const handleTogglePublicise = async () => {
+    if (!project?.id) return;
+    try {
+      await projectService.togglePublicise(project.id);
+      await refreshProject();
+      showAlert("Success", project.is_public ? "Project is now private" : "Project is now public");
+    } catch (error) {
+      console.error("Failed to toggle publicity:", error);
+      showAlert("Error", "Failed to change project visibility");
+    }
+  };
 
   return (
     <>
@@ -109,6 +123,8 @@ export default function ProjectOverlays() {
         onDeleteProject={onDeleteProject}
         onTransferLeadership={onTransferLeadership}
         isOwner={isOwner}
+        isPublic={project?.is_public ?? false}
+        onTogglePublicise={handleTogglePublicise}
         canChangeSettings={canChangeSettings}
       />
 

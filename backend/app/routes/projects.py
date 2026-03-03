@@ -29,13 +29,13 @@ SOFTWARE.
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
-from app.minio_client import minio_client
+from app.minio_client import minio_client, resolve_storage_url
 from app.models import DataVersion, FileNode, FileNodeType, Project, User, project_members
 from app.wheeler_renderer import generate_wheeler_svg
 from app.schemas import (
@@ -44,6 +44,7 @@ from app.schemas import (
     ProjectMemberUpdate,
     ProjectResponse,
     ProjectWithMembers,
+    PublicProjectResponse,
     UserResponse,
 )
 from app.websocket import (
@@ -54,6 +55,86 @@ from app.websocket import (
 )
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+# ─── Public project discovery (no auth) ────────────────────────────────────────
+
+@router.get("/public", response_model=list[PublicProjectResponse])
+@router.get("/public/", response_model=list[PublicProjectResponse], include_in_schema=False)
+async def get_public_projects(
+    q: str | None = Query(None, min_length=1, description="Optional search query"),
+    db: Session = Depends(get_db),
+):
+    """Get publicly visible projects sorted by member count (most popular first).
+
+    Optionally filter by a search term that matches project name or description.
+    """
+    member_count = (
+        func.count(project_members.c.user_id).label("member_count")
+    )
+    query = (
+        db.query(Project, member_count)
+        .outerjoin(project_members, Project.id == project_members.c.project_id)
+        .filter(Project.is_public.is_(True), Project.is_active.is_(True))
+    )
+
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(
+            (Project.name.ilike(pattern)) | (Project.description.ilike(pattern))
+        )
+
+    rows = (
+        query
+        .group_by(Project.id)
+        .order_by(member_count.desc(), Project.updated_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    results = []
+    for proj, count in rows:
+        data = PublicProjectResponse.model_validate(proj)
+        data.member_count = count
+        results.append(data)
+    return results
+
+
+# ─── Toggle project publicity ──────────────────────────────────────────────────
+
+@router.patch("/{project_id}/publicise", response_model=ProjectResponse)
+async def toggle_project_publicity(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle the public visibility of a project. Only the owner can do this."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    if project.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project owner can change publicity",
+        )
+
+    project.is_public = not project.is_public
+    db.commit()
+    db.refresh(project)
+
+    new_state = "public" if project.is_public else "private"
+    await log_activity(
+        db=db,
+        project_id=project_id,
+        activity_type="project_publicity_changed",
+        description=f'Project "{project.name}" is now {new_state}',
+        user_id=current_user.id,
+        metadata={"is_public": project.is_public},
+    )
+
+    return project
 
 
 @router.post(
@@ -171,7 +252,7 @@ async def get_project(
                 "id": user.id,
                 "email": user.email,
                 "display_name": user.display_name,
-                "photo_url": user.photo_url,
+                "photo_url": resolve_storage_url(user.photo_url),
                 "bio": user.bio,
                 "role": member_role,
             }
@@ -195,6 +276,7 @@ async def get_project(
         "created_at": project.created_at,
         "updated_at": project.updated_at,
         "is_active": project.is_active,
+        "is_public": project.is_public,
         "members": members_list,
     }
 

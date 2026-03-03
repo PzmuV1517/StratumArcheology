@@ -50,6 +50,8 @@ interface Props {
   onDeleteProject?: () => void;
   onTransferLeadership?: () => void;
   isOwner?: boolean;
+  isPublic?: boolean;
+  onTogglePublicise?: () => void;
   canChangeSettings?: boolean;
 }
 
@@ -64,9 +66,12 @@ export default function ProjectMenuModal({
   onDeleteProject,
   onTransferLeadership,
   isOwner = false,
+  isPublic = false,
+  onTogglePublicise,
   canChangeSettings = true,
 }: Props) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showPubliciseConfirm, setShowPubliciseConfirm] = useState(false);
 
   const handleExitPress = () => {
     setShowExitConfirm(true);
@@ -130,6 +135,19 @@ export default function ProjectMenuModal({
                   Only the leader can change settings
                 </Text>
               </View>
+            )}
+            {isOwner && onTogglePublicise && (
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  onClose();
+                  setShowPubliciseConfirm(true);
+                }}
+              >
+                <Text style={styles.menuItemText}>
+                  {isPublic ? "Privatise Project" : "Publicise Project"}
+                </Text>
+              </TouchableOpacity>
             )}
             {onExitProject && (
               <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
@@ -206,6 +224,47 @@ export default function ProjectMenuModal({
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowExitConfirm(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* Publicise / Privatise confirmation modal */}
+      <Modal
+        visible={showPubliciseConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPubliciseConfirm(false)}
+      >
+        <View style={styles.menuBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowPubliciseConfirm(false)}
+          />
+          <View style={styles.menuCard}>
+            <Text style={styles.confirmTitle}>
+              {isPublic ? "Privatise Project?" : "Publicise Project?"}
+            </Text>
+            <Text style={styles.confirmText}>
+              {isPublic
+                ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
+                : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image."}
+            </Text>
+            <TouchableOpacity
+              style={[styles.confirmButton, !isPublic && { backgroundColor: "#1A2E1A", borderWidth: 1, borderColor: "#44AA44" }]}
+              onPress={() => {
+                setShowPubliciseConfirm(false);
+                onTogglePublicise?.();
+              }}
+            >
+              <Text style={[styles.confirmButtonText, !isPublic && { color: "#44AA44" }]}>
+                {isPublic ? "Privatise" : "Publicise"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowPubliciseConfirm(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
