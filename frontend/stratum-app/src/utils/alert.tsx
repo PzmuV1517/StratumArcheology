@@ -38,7 +38,10 @@ import { Alert, Platform } from "react-native";
  * Calling `error?.detail` in a catch block yields that array, which React
  * refuses to render as a child.  This helper always returns a plain string.
  */
-export function extractErrorMessage(error: unknown, fallback = "Something went wrong."): string {
+export function extractErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong.",
+): string {
   if (!error) return fallback;
   if (typeof error === "string") return error || fallback;
 

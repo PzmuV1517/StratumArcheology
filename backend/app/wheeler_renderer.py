@@ -1,7 +1,7 @@
 """
-Wheeler Stratigraphic Notation – SVG publication renderer.
+Wheeler Stratigraphic Notation - SVG publication renderer.
 
-Generates a 1964-style black-and-white Wheeler Space–Time diagram as a
+Generates a 1964-style black-and-white Wheeler Space-Time diagram as a
 standalone SVG string.
 
 MIT License
@@ -50,12 +50,12 @@ FILL_DEPOSIT = "#f0ede8"   # very light warm fill for deposit blocks
 
 def generate_wheeler_svg(data: dict[str, Any]) -> str:
     """
-    Generate a Wheeler Space–Time diagram as an SVG string.
+    Generate a Wheeler Space-Time diagram as an SVG string.
 
     Args:
         data: dict with keys:
-            ``trenches``   – list of ``{id, label, order}`` dicts
-            ``placements`` – list of ``{contextId, trenchIds, rowStart, rowEnd}``
+            ``trenches``   - list of ``{id, label, order}`` dicts
+            ``placements`` - list of ``{contextId, trenchIds, rowStart, rowEnd}``
 
     Returns:
         A self-contained SVG string (UTF-8).
