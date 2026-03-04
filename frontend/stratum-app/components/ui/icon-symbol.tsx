@@ -65,6 +65,7 @@ const MAPPING = {
   "bubble.left.and.bubble.right.fill": "forum",
   "globe.americas": "public",
   "globe.americas.fill": "public",
+  "rectangle.portrait.and.arrow.right": "logout",
 } as IconMapping;
 
 /**
