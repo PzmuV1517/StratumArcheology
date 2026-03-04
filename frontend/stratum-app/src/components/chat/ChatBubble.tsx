@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#3A3A3C",
+    backgroundColor: "#2A2A2A",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -209,26 +209,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   bubbleOwn: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#FF2A2A",
     borderBottomRightRadius: 4,
   },
   bubbleOther: {
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#1A1A1A",
     borderBottomLeftRadius: 4,
   },
   bubbleDeleted: {
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#0E0E0E",
     opacity: 0.6,
   },
   senderName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#8E8E93",
+    color: "#9A9A9A",
     marginBottom: 2,
   },
   content: {
     fontSize: 15,
-    color: "#FFFFFF",
+    color: "#F5F5F5",
     lineHeight: 20,
   },
   meta: {
@@ -248,11 +248,11 @@ const styles = StyleSheet.create({
   },
   deletedText: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#9A9A9A",
     fontStyle: "italic",
   },
   mention: {
-    color: "#5AC8FA",
+    color: "#FF2A2A",
     fontWeight: "600",
   },
   actionsRow: {
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     fontSize: 13,
-    color: "#007AFF",
+    color: "#FF2A2A",
     paddingVertical: 4,
     paddingHorizontal: 6,
   },

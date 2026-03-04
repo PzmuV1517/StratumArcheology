@@ -27,6 +27,8 @@ interface MessageInputProps {
   onTyping?: () => void;
   replyTo?: ChatMessage | null;
   onCancelReply?: () => void;
+  editingMessage?: ChatMessage | null;
+  onCancelEdit?: () => void;
   placeholder?: string;
   /** Required for @mention autocomplete. */
   projectId?: string;
@@ -39,11 +41,14 @@ export default function MessageInput({
   onTyping,
   replyTo,
   onCancelReply,
+  editingMessage,
+  onCancelEdit,
   placeholder = "Type a message…",
   projectId,
   disabled = false,
 }: MessageInputProps) {
   const [text, setText] = useState("");
+  const [inputHeight, setInputHeight] = useState(40);
   const inputRef = useRef<TextInput>(null);
   /** @mention autocomplete state */
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -87,13 +92,28 @@ export default function MessageInput({
     inputRef.current?.focus();
   }, []);
 
+  /** Populate input when editing message */
+  useEffect(() => {
+    if (editingMessage) {
+      setText(editingMessage.content);
+      // Focus input after populating
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [editingMessage]);
+
   const handleSend = () => {
     const t = text.trim();
     if (!t) return;
     onSend(t, replyTo?.id, pendingMentions.length > 0 ? pendingMentions : undefined);
     setText("");
+    setInputHeight(40); // Reset to minimum height
     setPendingMentions([]);
-    onCancelReply?.();
+    // Clear reply or edit mode after sending
+    if (editingMessage) {
+      onCancelEdit?.();
+    } else {
+      onCancelReply?.();
+    }
     inputRef.current?.focus();
   };
 
@@ -111,6 +131,16 @@ export default function MessageInput({
     setText(t);
     detectMention(t);
     onTyping?.();
+    // Reset height when text is cleared
+    if (t === "") {
+      setInputHeight(40);
+    }
+  };
+
+  const handleContentSizeChange = (event: any) => {
+    const height = event.nativeEvent.contentSize.height;
+    // Min height 40, max height 120
+    setInputHeight(Math.max(40, Math.min(120, height)));
   };
 
   const showMentions =
@@ -166,18 +196,35 @@ export default function MessageInput({
         </View>
       )}
 
+      {/* Edit preview banner */}
+      {editingMessage && (
+        <View style={styles.replyBanner}>
+          <View style={styles.replyBar} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.replyName}>Editing message</Text>
+            <Text style={styles.replyText} numberOfLines={1}>
+              {editingMessage.content}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onCancelEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.replyCancel}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={[styles.row, disabled && styles.rowDisabled]}>
         <TextInput
           ref={inputRef}
-          style={styles.input}
+          style={[styles.input, { height: inputHeight }]}
           value={text}
           onChangeText={handleChange}
+          onContentSizeChange={handleContentSizeChange}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          placeholderTextColor="#8E8E93"
+          placeholderTextColor="#9A9A9A"
           multiline
           maxLength={4000}
-          selectionColor="#007AFF"
+          selectionColor="#FF2A2A"
           blurOnSubmit={false}
           editable={!disabled}
         />
@@ -197,9 +244,7 @@ export default function MessageInput({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#3A3A3C",
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#111111",
   },
   row: {
     flexDirection: "row",
@@ -213,13 +258,13 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#1A1A1A",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
     fontSize: 15,
-    color: "#FFFFFF",
+    color: "#F5F5F5",
     maxHeight: 120,
     ...(Platform.OS === "web" ? { outlineStyle: "none" } : {}),
   } as any,
@@ -227,20 +272,20 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#3A3A3C",
+    backgroundColor: "#2A2A2A",
     alignItems: "center",
     justifyContent: "center",
   },
   sendBtnActive: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#FF2A2A",
   },
   sendText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#8E8E93",
+    color: "#9A9A9A",
   },
   sendTextActive: {
-    color: "#FFFFFF",
+    color: "#F5F5F5",
   },
   /* Reply banner */
   replyBanner: {
@@ -248,34 +293,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#1A1A1A",
     gap: 8,
   },
   replyBar: {
     width: 3,
     height: "100%",
-    backgroundColor: "#007AFF",
+    backgroundColor: "#FF2A2A",
     borderRadius: 2,
   } as any,
   replyName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#007AFF",
+    color: "#FF2A2A",
   },
   replyText: {
     fontSize: 13,
-    color: "#8E8E93",
+    color: "#9A9A9A",
   },
   replyCancel: {
     fontSize: 16,
-    color: "#8E8E93",
+    color: "#9A9A9A",
     paddingHorizontal: 4,
   },
   /* @mention popup */
   mentionPopup: {
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#1A1A1A",
     borderTopWidth: 1,
-    borderTopColor: "#3A3A3C",
+    borderTopColor: "#2A2A2A",
     borderRadius: 12,
     marginHorizontal: 8,
     marginBottom: 4,
@@ -285,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#3A3A3C",
+    borderBottomColor: "#2A2A2A",
   },
   mentionText: {
     fontSize: 14,

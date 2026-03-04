@@ -66,7 +66,7 @@ export default function MessagesScreen() {
       <TouchableOpacity
         style={styles.row}
         activeOpacity={0.7}
-        onPress={() => router.push(`/dm/${item.other_user_id}` as any)}
+        onPress={() => router.push(`/(tabs)/dm/${item.other_user_id}` as any)}
       >
         {/* Avatar */}
         <View style={styles.avatar}>
@@ -153,8 +153,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#2A2A2A",
   },
   avatar: {
     width: 48,

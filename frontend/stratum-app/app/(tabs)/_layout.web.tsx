@@ -113,6 +113,9 @@ export default function TabLayout() {
     (path: string) => {
       if (path === "/")
         return pathname === "/" || pathname === "" || pathname === "/index";
+      // Highlight messages tab when in DM conversation
+      if (path === "/messages" && pathname.includes("/dm/"))
+        return true;
       return pathname.startsWith(path);
     },
     [pathname],
