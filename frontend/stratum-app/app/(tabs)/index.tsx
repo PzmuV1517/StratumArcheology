@@ -373,20 +373,19 @@ export default function OverviewScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      {/* Welcome Section */}
-      <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeText}>
-          Welcome back
-          {user?.display_name ? `, ${user.display_name.split(" ")[0]}` : ""}
-        </Text>
-        <Text style={styles.subtitleText}>
-          {"Here's what's happening in your projects"}
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Overview</Text>
+        <Text style={styles.headerSubtitle}>
+          Welcome back{user?.display_name ? `,${user.display_name.split(" ")[0]}` : ""}
         </Text>
       </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+      >
 
       {/* Recent Projects Section */}
       <View style={styles.section}>
@@ -590,7 +589,8 @@ export default function OverviewScreen() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -598,6 +598,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#111111",
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 4 : 60,
+    paddingBottom: 16,
+    backgroundColor: "#111111",
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
+  },
+  scrollView: {
+    flex: 1,
   },
   contentContainer: {
     paddingBottom: 120,

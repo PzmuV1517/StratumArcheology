@@ -720,6 +720,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
       </View>
 
       <ScrollView
@@ -1399,12 +1400,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 16,
+    backgroundColor: "#111111",
   },
   backButton: {
     padding: 8,
@@ -1415,9 +1414,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 32,
     fontWeight: "700",
     color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
   },
   content: {
     flex: 1,

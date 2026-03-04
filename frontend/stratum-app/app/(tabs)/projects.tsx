@@ -195,6 +195,7 @@ export default function ProjectsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Projects</Text>
+          <Text style={styles.headerSubtitle}>Manage your excavation projects</Text>
         </View>
         <ProjectListSkeleton count={4} />
       </View>
@@ -205,6 +206,7 @@ export default function ProjectsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Projects</Text>
+        <Text style={styles.headerSubtitle}>Manage your excavation projects</Text>
       </View>
 
       {/* Sub-tab selector */}
@@ -345,17 +347,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   header: {
-    padding: 24,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 16,
     backgroundColor: "#111111",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: "700",
     color: "#F5F5F5",
     letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
   },
   // Sub-tab styles
   subTabContainer: {

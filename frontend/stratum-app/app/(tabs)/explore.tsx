@@ -38,6 +38,7 @@ import {
   TextInput,
   Image,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
@@ -361,19 +362,20 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 12,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 16,
     backgroundColor: "#111111",
   },
   headerTitle: {
     fontSize: 32,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontWeight: "700",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: "#999",
-    marginTop: 4,
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
   },
 
   /* ── Search bar ─────────────────────────────────── */

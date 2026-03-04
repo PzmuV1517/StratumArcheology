@@ -18,6 +18,7 @@ import {
   StyleSheet,
   RefreshControl,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { chatService } from "@/src/services/chatService";
@@ -91,6 +92,7 @@ export default function MessagesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Messages</Text>
+        <Text style={styles.subtitle}>Direct messages with team members</Text>
       </View>
 
       {loading ? (
@@ -130,14 +132,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 16,
+    backgroundColor: "#111111",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "700",
     color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
   },
   row: {
     flexDirection: "row",
