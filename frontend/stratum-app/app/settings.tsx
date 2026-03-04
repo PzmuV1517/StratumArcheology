@@ -39,6 +39,8 @@ import {
   Modal,
   TextInput,
   Image,
+  Switch,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,6 +51,10 @@ import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { showAlert } from "../src/utils/alert";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { config } from "../src/config/config";
+import { ConflictResolutionModal } from "../src/components/sync/ConflictResolutionModal";
+import type { FileConflict } from "../src/services/offlineQueueService";
 import {
   offlineFilesStorage,
   recentProjectsCache,
@@ -59,6 +65,25 @@ import {
   OfflineStorageStats,
 } from "../src/services/offlineQueueService";
 import { OfflineFile } from "../src/db/schema";
+
+/* ── Social link definitions ────────────────────────────────────── */
+const SOCIAL_LINKS = [
+  { key: "link_x", label: "X (Twitter)", placeholder: "https://x.com/handle" },
+  { key: "link_discord", label: "Discord", placeholder: "username#0000 or invite link" },
+  { key: "link_bsky", label: "Bluesky", placeholder: "https://bsky.app/profile/handle" },
+  { key: "link_linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/..." },
+  { key: "link_website", label: "Website", placeholder: "https://yoursite.com" },
+] as const;
+
+type SocialKey = (typeof SOCIAL_LINKS)[number]["key"];
+
+/* ── Timezone options ───────────────────────────────────────── */
+const TIMEZONES = [
+  "UTC", "America/New_York", "America/Chicago", "America/Denver",
+  "America/Los_Angeles", "Europe/London", "Europe/Paris", "Europe/Berlin",
+  "Europe/Bucharest", "Europe/Moscow", "Asia/Tokyo", "Asia/Shanghai",
+  "Asia/Kolkata", "Australia/Sydney",
+];
 
 // Storage bar component
 function StorageBar({
@@ -148,15 +173,19 @@ const storageStyles = StyleSheet.create({
 });
 
 export default function SettingsScreen() {
-  const _router = useRouter();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const { replayOnboarding } = useOnboarding();
+
+  // Logout
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Storage stats
   const [stratumUsed, setStratumUsed] = useState(0);
   const [otherUsed, setOtherUsed] = useState(0);
-  const [totalStorage, setTotalStorage] = useState(64 * 1e9); // Default 64GB
+  const [totalStorage, setTotalStorage] = useState(64 * 1e9);
   const [loadingStorage, setLoadingStorage] = useState(true);
   const [storageAvailable, setStorageAvailable] = useState(false);
   const [offlineStorageStats, setOfflineStorageStats] =
@@ -166,20 +195,19 @@ export default function SettingsScreen() {
   const [offlineFiles, setOfflineFiles] = useState<OfflineFile[]>([]);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(false);
-  // Connection status - use a ref to track actual status
   const [connectionStatus, setConnectionStatus] = useState<
     "unknown" | "connected" | "disconnected"
   >("unknown");
   const connectionCheckedRef = React.useRef(false);
 
-  // Network state (real-time from NetInfo)
+  // Network state
   const [networkState, setNetworkState] = useState<NetInfoState | null>(null);
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
 
   // Downloaded projects
   const [downloadedProjects, setDownloadedProjects] = useState<any[]>([]);
 
-  // Profile settings
+  // Profile settings (simple modal fields)
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(user?.display_name || "");
   const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
@@ -187,31 +215,55 @@ export default function SettingsScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Subscribe to network state changes
+  // Extended profile edit fields
+  const [selectedBannerImage, setSelectedBannerImage] = useState<string | null>(null);
+  const [editUsername, setEditUsername] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editTimezone, setEditTimezone] = useState("");
+  const [editShowProjects, setEditShowProjects] = useState(true);
+  const [editSocials, setEditSocials] = useState<Record<SocialKey, string>>({
+    link_x: "", link_discord: "", link_bsky: "", link_linkedin: "", link_website: "",
+  });
+  const [showTzPicker, setShowTzPicker] = useState(false);
+
+  // Developer tools state
+  const [showDevModal, setShowDevModal] = useState(false);
+  const [apiInput, setApiInput] = useState(config.apiBaseUrl);
+  const [effectiveApi, setEffectiveApi] = useState(config.apiBaseUrl);
+  const [savingApi, setSavingApi] = useState(false);
+  const [showConflictTest, setShowConflictTest] = useState(false);
+
+  // ─── Network subscription ────────────────────────────
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
       setNetworkState(state);
-      // Only update connection status if we haven't done a manual check yet
-      // This prevents auto-setting to 'connected' when the user hasn't verified backend connectivity
       if (!connectionCheckedRef.current) {
-        // Set to unknown until user manually checks - network available != backend connected
         if (state.isConnected === false) {
           setConnectionStatus("disconnected");
         }
-        // Don't auto-set to connected - let user verify with the check button
       }
     });
-
-    // Get initial state
     NetInfo.fetch().then((state) => {
       setNetworkState(state);
       if (state.isConnected === false) {
         setConnectionStatus("disconnected");
       }
-      // Don't auto-set to connected - keep unknown until manual check
     });
-
     return () => unsubscribe();
+  }, []);
+
+  // ─── Load API override on mount ──────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const override = await AsyncStorage.getItem("apiBaseUrlOverride");
+        const current = override || config.apiBaseUrl;
+        setEffectiveApi(current);
+        setApiInput(current);
+        if (override) api.defaults.baseURL = override;
+      } catch {}
+    })();
   }, []);
 
   const loadPendingQueue = useCallback(async () => {
@@ -224,7 +276,6 @@ export default function SettingsScreen() {
     }
   }, []);
 
-  // Load storage info on mount
   useEffect(() => {
     loadStorageInfo();
     loadOfflineFiles();
@@ -232,35 +283,27 @@ export default function SettingsScreen() {
     loadPendingQueue();
   }, [loadPendingQueue]);
 
+  // ─── Storage helpers ─────────────────────────────────
   const loadStorageInfo = async () => {
     if (Platform.OS === "web") {
       setLoadingStorage(false);
       return;
     }
-
     try {
-      // Get STRATUM offline files size
       const stratumSize = await offlineFilesStorage.getOfflineStorageSize();
       setStratumUsed(stratumSize);
-
-      // Get offline queue storage stats
       try {
         const queueStats = await getOfflineStorageStats();
         setOfflineStorageStats(queueStats);
-        // Add queue storage to stratum size for more accurate total
         if (queueStats && queueStats.totalSize) {
-          setStratumUsed((prev) => prev + queueStats.totalSize * 1024); // Convert KB to bytes
+          setStratumUsed((prev) => prev + queueStats.totalSize * 1024);
         }
       } catch (queueErr) {
         console.warn("Failed to get queue storage stats:", queueErr);
       }
-
-      // Get device storage info - wrap in try-catch for Expo Go compatibility
       try {
         if (typeof FileSystem.getFreeDiskStorageAsync === "function") {
           const freeSpace = await FileSystem.getFreeDiskStorageAsync();
-
-          // Also try to get total disk storage for more accurate calculation
           let totalDiskSpace = freeSpace;
           if (typeof FileSystem.getTotalDiskCapacityAsync === "function") {
             try {
@@ -269,28 +312,24 @@ export default function SettingsScreen() {
               setOtherUsed(totalDiskSpace - freeSpace - stratumSize);
               setStorageAvailable(true);
             } catch {
-              // Fallback: estimate total based on free space
-              const estimatedTotal = freeSpace + stratumSize + 20 * 1e9; // Rough estimate
+              const estimatedTotal = freeSpace + stratumSize + 20 * 1e9;
               setTotalStorage(estimatedTotal);
               setOtherUsed(estimatedTotal - freeSpace - stratumSize);
               setStorageAvailable(true);
             }
           } else {
-            // Fallback: estimate total based on free space
             const estimatedTotal = freeSpace + stratumSize + 20 * 1e9;
             setTotalStorage(estimatedTotal);
             setOtherUsed(estimatedTotal - freeSpace - stratumSize);
             setStorageAvailable(true);
           }
         } else {
-          // Fallback for Expo Go where this API may not be available
           console.warn("Storage APIs not available, using fallback values");
-          setTotalStorage(64 * 1e9); // Default 64GB
-          setOtherUsed(32 * 1e9); // Estimate 32GB used by other
+          setTotalStorage(64 * 1e9);
+          setOtherUsed(32 * 1e9);
         }
       } catch (storageErr) {
         console.warn("Storage API error:", storageErr);
-        // Fallback values
         setTotalStorage(64 * 1e9);
         setOtherUsed(32 * 1e9);
       }
@@ -311,55 +350,36 @@ export default function SettingsScreen() {
     setDownloadedProjects(projects);
   };
 
+  // ─── Connection check ────────────────────────────────
   const checkConnection = async () => {
     setCheckingConnection(true);
-    connectionCheckedRef.current = true; // Mark that we've done a manual check
+    connectionCheckedRef.current = true;
     try {
-      // First check network connectivity via NetInfo
       const netState = await NetInfo.fetch();
-
       if (!netState.isConnected) {
         setConnectionStatus("disconnected");
-        showAlert(
-          "No Network",
-          "Your device is not connected to a network. Check your Wi-Fi or cellular data.",
-        );
+        showAlert("No Network", "Your device is not connected to a network. Check your Wi-Fi or cellular data.");
         setCheckingConnection(false);
         return;
       }
-
       if (!netState.isInternetReachable) {
         setConnectionStatus("disconnected");
-        showAlert(
-          "No Internet",
-          "Network connected but internet is not reachable. Try again later.",
-        );
+        showAlert("No Internet", "Network connected but internet is not reachable. Try again later.");
         setCheckingConnection(false);
         return;
       }
-
-      // Now try to reach the STRATUM backend using the health endpoint
       const response = await api.get("/health");
       if (response.status === 200) {
         setConnectionStatus("connected");
-        const pendingMessage =
-          pendingQueueCount > 0
-            ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
-            : "";
-        showAlert(
-          "Connected ✓",
-          `Successfully connected to STRATUM backend.${pendingMessage}`,
-        );
+        const pendingMessage = pendingQueueCount > 0 ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.` : "";
+        showAlert("Connected \u2713", `Successfully connected to STRATUM backend.${pendingMessage}`);
       } else {
         setConnectionStatus("disconnected");
         showAlert("Connection Failed", "Could not reach STRATUM backend.");
       }
     } catch {
       setConnectionStatus("disconnected");
-      showAlert(
-        "Connection Failed",
-        "Could not reach STRATUM backend. The server may be temporarily unavailable.",
-      );
+      showAlert("Connection Failed", "Could not reach STRATUM backend. The server may be temporarily unavailable.");
     } finally {
       setCheckingConnection(false);
     }
@@ -414,29 +434,22 @@ export default function SettingsScreen() {
     );
   };
 
+  // ─── Image pickers ───────────────────────────────────
   const pickImage = async () => {
     try {
-      // Request permissions first on iOS
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        showAlert(
-          "Permission Required",
-          "Please allow access to your photo library to upload a profile picture.",
-        );
+        showAlert("Permission Required", "Please allow access to your photo library to upload a profile picture.");
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        // Check file size (50MB max) - fileSize may not always be available
         if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
           showAlert("Image Too Large", "Please select an image under 50MB.");
           return;
@@ -449,82 +462,114 @@ export default function SettingsScreen() {
     }
   };
 
+  const pickBannerImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        showAlert("Permission Required", "Please allow access to your photo library to upload a banner.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [16, 5],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.fileSize && asset.fileSize > 50 * 1024 * 1024) {
+          showAlert("Image Too Large", "Please select an image under 50MB.");
+          return;
+        }
+        setSelectedBannerImage(asset.uri);
+      }
+    } catch (error) {
+      console.error("Error picking banner:", error);
+      showAlert("Error", "Failed to pick banner image.");
+    }
+  };
+
   const uploadProfileImage = async (): Promise<string | null> => {
     if (!selectedImage) return null;
-
     try {
-      // Create form data for upload
       const formData = new FormData();
       const filename = `profile_${user?.id}_${Date.now()}.jpg`;
-
       if (Platform.OS === "web") {
-        // Web: fetch blob from URI
         const response = await fetch(selectedImage);
         const blob = await response.blob();
         formData.append("file", blob, filename);
       } else {
-        // Native: use file URI directly
-        formData.append("file", {
-          uri: selectedImage,
-          type: "image/jpeg",
-          name: filename,
-        } as any);
+        formData.append("file", { uri: selectedImage, type: "image/jpeg", name: filename } as any);
       }
-
-      // Upload to profile pictures endpoint
-      // Don't set Content-Type — let RN set it with the correct multipart boundary
       const response = await api.post("/files/profile-picture", formData);
-
       return response.data.url;
     } catch (error: any) {
       console.error("Failed to upload profile image:", error);
-      // If upload fails, try using base64 data URL as fallback
       if (selectedImage.startsWith("data:") || Platform.OS === "web") {
-        return selectedImage; // Use data URL directly
+        return selectedImage;
       }
       throw error;
     }
   };
 
+  // ─── Save profile (full) ─────────────────────────────
   const saveProfile = async () => {
+    if (editUsername.length > 0 && editUsername.length < 3) {
+      showAlert("Invalid username", "Username must be at least 3 characters");
+      return;
+    }
     setSavingProfile(true);
     try {
-      let imageUploaded = false;
+      // Upload banner if changed
+      if (selectedBannerImage) {
+        try {
+          const bannerForm = new FormData();
+          const bannerFilename = `banner_${user?.id}_${Date.now()}.jpg`;
+          if (Platform.OS === "web") {
+            const res = await fetch(selectedBannerImage);
+            const blob = await res.blob();
+            bannerForm.append("file", blob, bannerFilename);
+          } else {
+            bannerForm.append("file", { uri: selectedBannerImage, type: "image/jpeg", name: bannerFilename } as any);
+          }
+          await api.post("/files/banner-image", bannerForm);
+        } catch {
+          console.warn("Banner upload failed, continuing");
+        }
+      }
 
-      // Upload new image if selected — the backend endpoint already sets photo_url
+      // Upload avatar if changed
       if (selectedImage && selectedImage !== user?.photo_url) {
         try {
           await uploadProfileImage();
-          imageUploaded = true;
         } catch {
-          // Continue with existing photo URL if upload fails
-          console.warn("Profile image upload failed, keeping existing photo");
+          console.warn("Avatar upload failed, keeping existing photo");
         }
       }
 
-      const updates: { display_name?: string; bio?: string } = {};
-      if (newDisplayName !== user?.display_name) {
-        updates.display_name = newDisplayName;
-      }
-      if (newBio !== (user?.bio || "")) {
-        updates.bio = newBio;
-      }
+      // Build patch body with ALL profile fields
+      const body: Record<string, any> = {
+        display_name: newDisplayName,
+        bio: newBio,
+        description: editDescription,
+        phone: editPhone,
+        timezone: editTimezone,
+        show_projects: editShowProjects,
+        ...editSocials,
+      };
+      if (editUsername) body.username = editUsername;
 
-      if (Object.keys(updates).length > 0) {
-        await api.patch("/auth/me", updates);
-      }
+      await api.patch("/auth/me", body);
 
-      if (Object.keys(updates).length > 0 || imageUploaded) {
-        if (refreshUser) {
-          await refreshUser();
-        }
-        showAlert("Success", "Profile updated successfully.");
+      if (refreshUser) {
+        await refreshUser();
       }
-
+      showAlert("Success", "Profile updated successfully.");
       setShowProfileModal(false);
       setSelectedImage(null);
+      setSelectedBannerImage(null);
     } catch (error: any) {
-      showAlert("Error", error.message || "Failed to update profile.");
+      showAlert("Error", error?.response?.data?.detail || error.message || "Failed to update profile.");
     } finally {
       setSavingProfile(false);
     }
@@ -535,6 +580,19 @@ export default function SettingsScreen() {
     setNewPhotoUrl(user?.photo_url || "");
     setNewBio(user?.bio || "");
     setSelectedImage(null);
+    setSelectedBannerImage(null);
+    setEditUsername((user as any)?.username || "");
+    setEditDescription((user as any)?.description || "");
+    setEditPhone((user as any)?.phone || "");
+    setEditTimezone((user as any)?.timezone || "");
+    setEditShowProjects((user as any)?.show_projects !== false);
+    setEditSocials({
+      link_x: (user as any)?.link_x || "",
+      link_discord: (user as any)?.link_discord || "",
+      link_bsky: (user as any)?.link_bsky || "",
+      link_linkedin: (user as any)?.link_linkedin || "",
+      link_website: (user as any)?.link_website || "",
+    });
     setShowProfileModal(true);
   };
 
@@ -544,15 +602,112 @@ export default function SettingsScreen() {
       "This will show you the STRATUM onboarding walkthrough again.",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Start Tutorial",
-          onPress: () => {
-            replayOnboarding();
-          },
-        },
+        { text: "Start Tutorial", onPress: () => { replayOnboarding(); } },
       ],
     );
   };
+
+  const performLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      router.replace("/(auth)/login");
+    } catch (e) {
+      console.error("Logout failed:", e);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // ─── Help / About / Dev helpers ──────────────────────
+  const handleHelpSupport = () => {
+    showAlert(
+      "Help & Support",
+      "Need help?\n\n\u2022 Email: support@stratum.app\n\u2022 Documentation: docs.stratum.app\n\u2022 Community Forum: forum.stratum.app",
+      [{ text: "OK", style: "default" }],
+    );
+  };
+
+  const handleAbout = () => {
+    showAlert(
+      "About STRATUM",
+      "STRATUM v1.0.0\n\nArchaeological Site Documentation & Collaboration Platform\n\nBuilt for FLL 2025-2026 UNEARTHED Challenge\n\n\u00a9 2026 Andrei Banu & Levin Mircea",
+      [{ text: "OK", style: "default" }],
+    );
+  };
+
+  const openDevModal = async () => {
+    try {
+      const override = await AsyncStorage.getItem("apiBaseUrlOverride");
+      const current = override || config.apiBaseUrl;
+      setApiInput(current);
+      setShowDevModal(true);
+    } catch {
+      setApiInput(config.apiBaseUrl);
+      setShowDevModal(true);
+    }
+  };
+
+  const validateUrl = (url: string) => /^https?:\/\//i.test(url);
+
+  const saveApiOverride = async () => {
+    if (!validateUrl(apiInput)) {
+      showAlert("Invalid URL", "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api");
+      return;
+    }
+    try {
+      setSavingApi(true);
+      await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
+      api.defaults.baseURL = apiInput;
+      setEffectiveApi(apiInput);
+      setShowDevModal(false);
+      showAlert("Applied", "Backend API base URL updated for this app.");
+    } catch {
+      showAlert("Error", "Failed to save API URL override");
+    } finally {
+      setSavingApi(false);
+    }
+  };
+
+  const resetApiOverride = async () => {
+    try {
+      setSavingApi(true);
+      await AsyncStorage.removeItem("apiBaseUrlOverride");
+      api.defaults.baseURL = config.apiBaseUrl;
+      setEffectiveApi(config.apiBaseUrl);
+      setApiInput(config.apiBaseUrl);
+      setShowDevModal(false);
+      showAlert("Reset", "Reverted to default backend API URL.");
+    } catch {
+      showAlert("Error", "Failed to reset API URL override");
+    } finally {
+      setSavingApi(false);
+    }
+  };
+
+  /* ── Conflict demo data ─────────────────────────────────────── */
+  const demoConflict: FileConflict = {
+    id: "demo-conflict-1",
+    nodeId: "node-abc-123",
+    projectId: "project-xyz",
+    fileName: "field-notes-sector-B.txt",
+    localVersion: {
+      nodeId: "node-abc-123", projectId: "project-xyz",
+      name: "field-notes-sector-B.txt", localVersion: 3, remoteVersion: 4,
+      localUpdatedAt: new Date(Date.now() - 3600000).toISOString(),
+      remoteUpdatedAt: new Date(Date.now() - 1800000).toISOString(),
+      hasLocalEdits: true, localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
+    },
+    remoteVersion: {
+      version: 4, updatedAt: new Date(Date.now() - 1800000).toISOString(),
+      updatedBy: "Dr. Petrova",
+    },
+    localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
+    createdAt: new Date().toISOString(),
+    resolved: false,
+  };
+  const demoLocalContent = "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.";
+  const demoRemoteContent = "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.\n\nUpdate: Fragment catalogued as SB-L4-0042. Cross-ref with GPS marker B-17.";
 
   // Group offline files by project
   const groupedOfflineFiles = offlineFiles.reduce(
@@ -573,6 +728,9 @@ export default function SettingsScreen() {
     return `${bytes} B`;
   };
 
+  /* ======================================================
+   *  RENDER
+   * ==================================================== */
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -582,9 +740,9 @@ export default function SettingsScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       >
-        {/* Profile Settings Section - Moved above Storage */}
+        {/* ── Profile Settings Section ─────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile Settings</Text>
 
@@ -605,9 +763,22 @@ export default function SettingsScreen() {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.menuItemText}>Edit Profile</Text>
                 <Text style={styles.menuItemSubtext}>
-                  Change photo and display name
+                  Change photo, name, bio, socials & more
                 </Text>
               </View>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push({ pathname: "/profile/[userId]", params: { userId: String(user?.id ?? "") } })}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>View My Profile</Text>
+              <Text style={styles.menuItemSubtext}>
+                See how others see your profile
+              </Text>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
@@ -623,7 +794,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Storage Section - Mobile Only */}
+        {/* ── Storage Section - Mobile Only ─────────────── */}
         {Platform.OS !== "web" && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Storage</Text>
@@ -657,7 +828,7 @@ export default function SettingsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuItemText}>Offline Usage</Text>
                 <Text style={styles.menuItemSubtext}>
-                  {offlineFiles.length} file(s) • {formatSize(stratumUsed)}
+                  {offlineFiles.length} file(s) \u2022 {formatSize(stratumUsed)}
                 </Text>
               </View>
               <Text style={styles.menuItemArrow}>→</Text>
@@ -665,7 +836,38 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* Connection & Sync Section */}
+        {/* ── Account Section ──────────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleHelpSupport}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>Help & Support</Text>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>About</Text>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          {Platform.OS !== "web" && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/scan-qr" as any)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemText}>Scan QR Code</Text>
+              </View>
+              <Text style={styles.menuItemArrow}>→</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Connection & Sync Section ────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Connection & Sync</Text>
 
@@ -729,9 +931,42 @@ export default function SettingsScreen() {
             )}
           </View>
         </View>
+
+        {/* ── Development Section ──────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Development</Text>
+
+          <TouchableOpacity style={styles.menuItem} onPress={openDevModal}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>Backend API Base URL</Text>
+              <Text style={styles.menuItemSubtext} numberOfLines={1}>{effectiveApi}</Text>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => setShowConflictTest(true)}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>Test Conflict Resolution</Text>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Logout ───────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.logoutButton, isLoggingOut && { opacity: 0.7 }]}
+          onPress={() => setShowLogoutModal(true)}
+          disabled={isLoggingOut}
+        >
+          {isLoggingOut ? (
+            <ActivityIndicator color="#F5F5F5" />
+          ) : (
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Offline Usage Modal */}
+      {/* ── Offline Usage Modal ────────────────────────── */}
       <Modal
         visible={showOfflineModal}
         animationType="slide"
@@ -928,13 +1163,14 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* Profile Edit Modal */}
+      {/* ── Profile Edit Modal (full) ──────────────────── */}
       <Modal
         visible={showProfileModal}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setShowProfileModal(false)}
       >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowProfileModal(false)}>
@@ -954,7 +1190,26 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+            {/* Banner */}
+            <TouchableOpacity onPress={pickBannerImage} activeOpacity={0.7}>
+              <View style={styles.bannerEditWrap}>
+                {selectedBannerImage || user?.banner_url ? (
+                  <Image
+                    source={{ uri: selectedBannerImage || user?.banner_url }}
+                    style={styles.bannerEditImage}
+                  />
+                ) : (
+                  <View style={styles.bannerEditPlaceholder}>
+                    <Text style={{ color: "#666", fontSize: 13 }}>Tap to set banner</Text>
+                  </View>
+                )}
+                <View style={styles.bannerEditBadge}>
+                  <Text style={styles.editBadgeText}>Edit</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
             {/* Profile Picture */}
             <View style={styles.profileEditSection}>
               <TouchableOpacity onPress={pickImage} style={styles.profileImageEdit}>
@@ -990,6 +1245,20 @@ export default function SettingsScreen() {
               />
             </View>
 
+            {/* Username */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Username</Text>
+              <TextInput
+                style={styles.input}
+                value={editUsername}
+                onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+                placeholder="unique_username"
+                placeholderTextColor="#666"
+                autoCapitalize="none"
+                maxLength={30}
+              />
+            </View>
+
             {/* Bio */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Bio</Text>
@@ -1006,7 +1275,173 @@ export default function SettingsScreen() {
               />
               <Text style={styles.charCount}>{newBio.length}/300</Text>
             </View>
+
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, { height: 100, textAlignVertical: "top" }]}
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="Tell others about yourself..."
+                placeholderTextColor="#666"
+                multiline
+                maxLength={500}
+              />
+            </View>
+
+            {/* Phone */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Phone</Text>
+              <TextInput
+                style={styles.input}
+                value={editPhone}
+                onChangeText={setEditPhone}
+                placeholder="+1 234 567 8900"
+                placeholderTextColor="#666"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            {/* Timezone */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Timezone</Text>
+              <TouchableOpacity style={styles.input} onPress={() => setShowTzPicker(true)}>
+                <Text style={{ color: editTimezone ? "#F5F5F5" : "#666", fontSize: 16 }}>
+                  {editTimezone || "Select timezone..."}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Social Links */}
+            <Text style={[styles.inputLabel, { marginTop: 8, marginBottom: 4 }]}>Social Links</Text>
+            {SOCIAL_LINKS.map(({ key, label, placeholder }) => (
+              <View key={key} style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { fontSize: 12 }]}>{label}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editSocials[key]}
+                  onChangeText={(t) => setEditSocials((p) => ({ ...p, [key]: t }))}
+                  placeholder={placeholder}
+                  placeholderTextColor="#666"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            ))}
+
+            {/* Show Projects Toggle */}
+            <View style={[styles.switchRow, { marginVertical: 16 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inputLabel}>Show Projects on Profile</Text>
+                <Text style={styles.switchHint}>
+                  When enabled, others can see which projects you belong to.
+                </Text>
+              </View>
+              <Switch
+                value={editShowProjects}
+                onValueChange={setEditShowProjects}
+                trackColor={{ false: "#3A3A3C", true: "#FF2A2A80" }}
+                thumbColor={editShowProjects ? "#FF2A2A" : "#9A9A9A"}
+              />
+            </View>
           </ScrollView>
+        </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Timezone picker modal ──────────────────────── */}
+      <Modal visible={showTzPicker} transparent animationType="slide" onRequestClose={() => setShowTzPicker(false)}>
+        <View style={styles.tzModalBackdrop}>
+          <View style={[styles.tzModalCard, { maxHeight: "60%" }]}>
+            <Text style={styles.tzModalTitle}>Select Timezone</Text>
+            <ScrollView style={{ marginTop: 12 }}>
+              {TIMEZONES.map((tz) => (
+                <TouchableOpacity
+                  key={tz}
+                  style={[styles.tzItem, editTimezone === tz && styles.tzItemActive]}
+                  onPress={() => { setEditTimezone(tz); setShowTzPicker(false); }}
+                >
+                  <Text style={[styles.tzText, editTimezone === tz && { color: "#FF2A2A" }]}>{tz}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.tzCancelBtn, { alignSelf: "flex-end", marginTop: 12 }]} onPress={() => setShowTzPicker(false)}>
+              <Text style={styles.tzCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Dev API modal ──────────────────────────────── */}
+      <Modal visible={showDevModal} transparent animationType="fade" onRequestClose={() => setShowDevModal(false)}>
+        <View style={styles.tzModalBackdrop}>
+          <View style={styles.tzModalCard}>
+            <Text style={styles.tzModalTitle}>Backend API Base URL</Text>
+            <Text style={styles.devModalText}>
+              Enter the full API url including /api.{"\n"}Example: http://192.168.1.100:8000/api
+            </Text>
+            <TextInput
+              style={styles.devModalInput}
+              placeholder="http://host:port/api"
+              placeholderTextColor="#777"
+              value={apiInput}
+              onChangeText={setApiInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.devModalActions}>
+              <TouchableOpacity style={styles.devModalBtn} onPress={() => setShowDevModal(false)} disabled={savingApi}>
+                <Text style={styles.devModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.devModalBtn, { backgroundColor: "#3A0C0C", borderWidth: 1, borderColor: "#FF4444" }]}
+                onPress={resetApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.devModalBtnText, { color: "#FF4444" }]}>Reset</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.devModalBtn, { backgroundColor: "#FF2A2A" }]} onPress={saveApiOverride} disabled={savingApi}>
+                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.devModalBtnText, { color: "#F5F5F5" }]}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Conflict Resolution test ───────────────────── */}
+      <ConflictResolutionModal
+        visible={showConflictTest}
+        conflict={demoConflict}
+        onResolve={(resolution) => { setShowConflictTest(false); showAlert("Resolution", `You chose: ${resolution}`); }}
+        onCancel={() => setShowConflictTest(false)}
+        localContent={demoLocalContent}
+        remoteContent={demoRemoteContent}
+      />
+
+      {/* ── Logout confirmation modal ──────────────────── */}
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
+        <View style={styles.logoutModalBackdrop}>
+          <View style={styles.logoutModalCard}>
+            <Text style={styles.logoutModalTitle}>Confirm logout</Text>
+            <Text style={styles.logoutModalText}>Are you sure you want to log out of STRATUM?</Text>
+            <View style={styles.logoutModalActions}>
+              <TouchableOpacity style={styles.logoutModalBtn} onPress={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
+                <Text style={styles.logoutModalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.logoutModalBtn, styles.logoutModalDestructive, isLoggingOut && { opacity: 0.7 }]}
+                onPress={performLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[styles.logoutModalBtnText, { color: "#FF4444" }]}>Logout</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1233,7 +1668,7 @@ const styles = StyleSheet.create({
   // Profile edit modal
   profileEditSection: {
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: 16,
   },
   profileImageEdit: {
     position: "relative",
@@ -1277,8 +1712,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 12,
   },
+  // Banner edit
+  bannerEditWrap: {
+    width: "100%",
+    height: 120,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#1A1A1A",
+    marginBottom: 8,
+    position: "relative",
+  },
+  bannerEditImage: {
+    width: "100%",
+    height: 120,
+    resizeMode: "cover",
+  },
+  bannerEditPlaceholder: {
+    flex: 1,
+    backgroundColor: "#1E1E1E",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+  },
+  bannerEditBadge: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    backgroundColor: "#333",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#111111",
+  },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
@@ -1295,13 +1765,6 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
   },
   bioInput: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 16,
-    color: "#F5F5F5",
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
     height: 100,
     textAlignVertical: "top",
   },
@@ -1310,6 +1773,17 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "right",
     marginTop: 4,
+  },
+  // Switch row
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  switchHint: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
   },
   // Connection & Sync styles
   connectionRow: {
@@ -1361,7 +1835,6 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
-  // Storage stats in modal
   storageStatRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1387,5 +1860,146 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
     textAlign: "center",
+  },
+  // Timezone picker modal
+  tzModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  tzModalCard: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#333",
+    width: "100%",
+  },
+  tzModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 8,
+  },
+  tzItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+  },
+  tzItemActive: {
+    backgroundColor: "#1A0505",
+  },
+  tzText: {
+    fontSize: 15,
+    color: "#F5F5F5",
+  },
+  tzCancelBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+  },
+  tzCancelText: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  // Dev modal
+  devModalText: {
+    fontSize: 14,
+    color: "#CCCCCC",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  devModalInput: {
+    backgroundColor: "#121212",
+    color: "#F5F5F5",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+    marginBottom: 16,
+  },
+  devModalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  devModalBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+  },
+  devModalBtnText: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  // Logout
+  logoutButton: {
+    backgroundColor: "#FF2A2A",
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  logoutButtonText: {
+    color: "#F5F5F5",
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  logoutModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  logoutModalCard: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#333",
+    width: "100%",
+  },
+  logoutModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 8,
+  },
+  logoutModalText: {
+    fontSize: 14,
+    color: "#CCCCCC",
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  logoutModalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  logoutModalBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+  },
+  logoutModalBtnText: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  logoutModalDestructive: {
+    backgroundColor: "#3A0C0C",
+    borderWidth: 1,
+    borderColor: "#FF4444",
   },
 });

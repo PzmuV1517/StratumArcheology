@@ -90,17 +90,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Profile - User profile */}
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="person.fill" color={color} />
-          ),
-        }}
-      />
-
       {/* Messages - DM Inbox */}
       <Tabs.Screen
         name="messages"

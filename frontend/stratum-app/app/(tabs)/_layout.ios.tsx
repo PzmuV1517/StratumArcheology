@@ -75,12 +75,6 @@ export default function TabLayout() {
         <Icon sf={{ default: "folder", selected: "folder.fill" }} />
       </NativeTabs.Trigger>
 
-      {/* Profile - User profile */}
-      <NativeTabs.Trigger name="profile">
-        <Label>Profile</Label>
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-      </NativeTabs.Trigger>
-
       {/* Messages - DM Inbox */}
       <NativeTabs.Trigger name="messages">
         <Label>Messages</Label>
