@@ -157,7 +157,7 @@ export default function UnearthedScreen() {
       <TouchableOpacity
         key={project.id}
         style={styles.projectCard}
-        onPress={() => router.push(`/project/${project.id}`)}
+        onPress={() => router.push(`/public-project/${project.id}`)}
         activeOpacity={0.7}
       >
         {project.cover_image_url ? (
@@ -175,7 +175,7 @@ export default function UnearthedScreen() {
           <Text style={styles.projectName} numberOfLines={1}>
             {project.name}
           </Text>
-          <Text style={styles.projectDescription} numberOfLines={2}>
+          <Text style={styles.projectDescription} numberOfLines={2} ellipsizeMode="tail">
             {project.description || "No description"}
           </Text>
           <View style={styles.cardFooter}>

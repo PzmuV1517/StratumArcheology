@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
 from app.minio_client import minio_client, resolve_storage_url
-from app.models import DataVersion, FileNode, FileNodeType, Project, User, project_members
+from app.models import DataVersion, FileNode, FileNodeType, Project, User, UserRole, project_members
 from app.wheeler_renderer import generate_wheeler_svg
 from app.schemas import (
     ProjectCreate,
@@ -44,6 +44,7 @@ from app.schemas import (
     ProjectMemberUpdate,
     ProjectResponse,
     ProjectWithMembers,
+    PublicProjectDetailResponse,
     PublicProjectResponse,
     UserResponse,
 )
@@ -98,6 +99,107 @@ async def get_public_projects(
         data.member_count = count
         results.append(data)
     return results
+
+
+@router.get("/public/{project_id}", response_model=PublicProjectDetailResponse)
+async def get_public_project_detail(
+    project_id: str,
+    db: Session = Depends(get_db),
+):
+    """Get full details for a single public project (no auth required).
+
+    Returns project info, member list, member count, and GPS bounds.
+    """
+    import json as _json
+    from app.models import ProjectGPS
+
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.is_public.is_(True), Project.is_active.is_(True))
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Public project not found")
+
+    # Members -----------------------------------------------------------
+    members_with_roles = db.execute(
+        select(User, project_members.c.role)
+        .join(project_members, User.id == project_members.c.user_id)
+        .where(project_members.c.project_id == project_id)
+    ).all()
+
+    members_list = []
+    owner_found = False
+    for user, role in members_with_roles:
+        if user.id == project.owner_id:
+            owner_found = True
+        member_role = (
+            "leader" if user.id == project.owner_id
+            else (role.value if role else "guest")
+        )
+        members_list.append({
+            "id": user.id,
+            "email": user.email,
+            "display_name": user.display_name,
+            "photo_url": resolve_storage_url(user.photo_url),
+            "bio": user.bio,
+            "role": member_role,
+        })
+
+    # Ensure the owner always appears in the member list
+    if not owner_found:
+        owner = db.query(User).filter(User.id == project.owner_id).first()
+        if owner:
+            members_list.insert(0, {
+                "id": owner.id,
+                "email": owner.email,
+                "display_name": owner.display_name,
+                "photo_url": resolve_storage_url(owner.photo_url),
+                "bio": owner.bio,
+                "role": "leader",
+            })
+            # Repair the join table so this doesn't keep happening
+            db.execute(
+                project_members.insert().values(
+                    project_id=project_id,
+                    user_id=owner.id,
+                    role=UserRole.LEADER,
+                )
+            )
+            db.commit()
+
+    # GPS / bounds ------------------------------------------------------
+    gps_data = None
+    gps_row = db.query(ProjectGPS).filter(ProjectGPS.project_id == project_id).first()
+    if gps_row and gps_row.data:
+        try:
+            gps_data = _json.loads(gps_row.data)
+        except Exception:
+            pass
+
+    # Cover image presigned URL -----------------------------------------
+    cover_presigned: str | None = None
+    if project.cover_image_url:
+        try:
+            cover_presigned = minio_client.get_presigned_url(project.cover_image_url, expiry=7200)
+        except Exception:
+            pass
+
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "ran_lmi_id": project.ran_lmi_id,
+        "cover_image_url": cover_presigned,
+        "owner_id": project.owner_id,
+        "created_at": project.created_at,
+        "updated_at": project.updated_at,
+        "is_active": project.is_active,
+        "is_public": project.is_public,
+        "member_count": len(members_list),
+        "members": members_list,
+        "gps": gps_data,
+    }
 
 
 # ─── Toggle project publicity ──────────────────────────────────────────────────
@@ -163,8 +265,14 @@ async def create_project(
     db.commit()
     db.refresh(project)
 
-    # Add the owner as a member with leader role
-    project.members.append(current_user)
+    # Add the owner as a member with explicit leader role
+    db.execute(
+        project_members.insert().values(
+            project_id=project.id,
+            user_id=current_user.id,
+            role=UserRole.LEADER,
+        )
+    )
     db.commit()
 
     # Create default Files root folders: Notes (locked)
@@ -240,7 +348,10 @@ async def get_project(
 
     # Build response with members including roles
     members_list = []
+    owner_found = False
     for user, role in members_with_roles:
+        if user.id == project.owner_id:
+            owner_found = True
         # Owner always has LEADER role
         member_role = (
             "leader"
@@ -257,6 +368,28 @@ async def get_project(
                 "role": member_role,
             }
         )
+
+    # Ensure the owner always appears in the member list
+    if not owner_found:
+        owner = db.query(User).filter(User.id == project.owner_id).first()
+        if owner:
+            members_list.insert(0, {
+                "id": owner.id,
+                "email": owner.email,
+                "display_name": owner.display_name,
+                "photo_url": resolve_storage_url(owner.photo_url),
+                "bio": owner.bio,
+                "role": "leader",
+            })
+            # Also repair the join table so this doesn't keep happening
+            db.execute(
+                project_members.insert().values(
+                    project_id=project_id,
+                    user_id=owner.id,
+                    role=UserRole.LEADER,
+                )
+            )
+            db.commit()
 
     # Return project with properly formatted members
     cover_presigned: str | None = None

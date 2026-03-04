@@ -178,6 +178,12 @@ class PublicProjectResponse(ProjectResponse):
     member_count: int = 0
 
 
+class PublicProjectDetailResponse(PublicProjectResponse):
+    """Full public project detail: includes members and GPS bounds."""
+    members: list[ProjectMemberResponse] = []
+    gps: dict | None = None
+
+
 # Project Member Schemas
 class ProjectMemberAdd(BaseModel):
     user_id: str

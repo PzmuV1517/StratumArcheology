@@ -35,6 +35,8 @@ export interface ProjectMember {
   user_id: string;
   email: string;
   display_name: string;
+  photo_url?: string | null;
+  bio?: string | null;
   role: "leader" | "researcher" | "guest" | "owner" | "editor" | "viewer";
   joined_at: string;
 }
@@ -112,4 +114,9 @@ export interface GpsPolygon {
 export interface GpsState {
   work?: GpsPolygon | null;
   sites?: GpsPolygon[];
+}
+
+/** Full public project detail returned by GET /projects/public/{id}. */
+export interface PublicProjectDetail extends Project {
+  gps?: GpsState | null;
 }

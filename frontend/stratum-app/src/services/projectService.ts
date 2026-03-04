@@ -38,6 +38,7 @@ import {
   InviteResponse,
   JoinResponse,
   GpsState,
+  PublicProjectDetail,
 } from "./projectService.types";
 
 /**
@@ -316,6 +317,15 @@ export const projectService = {
   },
 
   /**
+   * Get full details for a single public project (no auth required).
+   * Returns project info, members, member_count, and GPS bounds.
+   */
+  getPublicProject: async (projectId: string): Promise<PublicProjectDetail> => {
+    const res = await api.get(`/projects/public/${projectId}`);
+    return res.data;
+  },
+
+  /**
    * Toggle public visibility of a project (owner only)
    */
   togglePublicise: async (projectId: string): Promise<Project> => {
@@ -345,4 +355,5 @@ export type {
   InviteResponse,
   JoinResponse,
   GpsState,
+  PublicProjectDetail,
 } from "./projectService.types";
