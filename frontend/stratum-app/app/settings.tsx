@@ -175,12 +175,8 @@ const storageStyles = StyleSheet.create({
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, refreshUser, logout } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { replayOnboarding } = useOnboarding();
-
-  // Logout
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Storage stats
   const [stratumUsed, setStratumUsed] = useState(0);
@@ -607,18 +603,6 @@ export default function SettingsScreen() {
     );
   };
 
-  const performLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      await logout();
-      router.replace("/(auth)/login");
-    } catch (e) {
-      console.error("Logout failed:", e);
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   // ─── Help / About / Dev helpers ──────────────────────
   const handleHelpSupport = () => {
     showAlert(
@@ -951,19 +935,6 @@ export default function SettingsScreen() {
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
         </View>
-
-        {/* ── Logout ───────────────────────────────────── */}
-        <TouchableOpacity
-          style={[styles.logoutButton, isLoggingOut && { opacity: 0.7 }]}
-          onPress={() => setShowLogoutModal(true)}
-          disabled={isLoggingOut}
-        >
-          {isLoggingOut ? (
-            <ActivityIndicator color="#F5F5F5" />
-          ) : (
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          )}
-        </TouchableOpacity>
       </ScrollView>
 
       {/* ── Offline Usage Modal ────────────────────────── */}
@@ -1418,32 +1389,6 @@ export default function SettingsScreen() {
         localContent={demoLocalContent}
         remoteContent={demoRemoteContent}
       />
-
-      {/* ── Logout confirmation modal ──────────────────── */}
-      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
-        <View style={styles.logoutModalBackdrop}>
-          <View style={styles.logoutModalCard}>
-            <Text style={styles.logoutModalTitle}>Confirm logout</Text>
-            <Text style={styles.logoutModalText}>Are you sure you want to log out of STRATUM?</Text>
-            <View style={styles.logoutModalActions}>
-              <TouchableOpacity style={styles.logoutModalBtn} onPress={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
-                <Text style={styles.logoutModalBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.logoutModalBtn, styles.logoutModalDestructive, isLoggingOut && { opacity: 0.7 }]}
-                onPress={performLogout}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? (
-                  <ActivityIndicator color="#F5F5F5" />
-                ) : (
-                  <Text style={[styles.logoutModalBtnText, { color: "#FF4444" }]}>Logout</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1938,68 +1883,5 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     fontSize: 14,
     fontWeight: "600",
-  },
-  // Logout
-  logoutButton: {
-    backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  logoutButtonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  logoutModalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  logoutModalCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#333",
-    width: "100%",
-  },
-  logoutModalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  logoutModalText: {
-    fontSize: 14,
-    color: "#CCCCCC",
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  logoutModalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  logoutModalBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  logoutModalBtnText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  logoutModalDestructive: {
-    backgroundColor: "#3A0C0C",
-    borderWidth: 1,
-    borderColor: "#FF4444",
   },
 });
