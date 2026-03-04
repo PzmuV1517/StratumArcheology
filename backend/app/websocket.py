@@ -50,6 +50,9 @@ project_rooms: dict[str, set[str]] = {}
 # Format: {session_id: {"user_id": "...", "project_id": "..."}}
 user_sessions: dict[str, dict[str, str]] = {}
 
+# Reverse lookup: user_id → set of session ids (for DM delivery)
+user_sids: dict[str, set[str]] = {}
+
 
 @sio.event
 async def connect(sid, environ, auth):
@@ -74,6 +77,12 @@ async def disconnect(sid):
                 project_rooms[project_id].discard(user_id)
                 if not project_rooms[project_id]:
                     del project_rooms[project_id]
+
+        # Clean up user_sids reverse lookup
+        if user_id and user_id in user_sids:
+            user_sids[user_id].discard(sid)
+            if not user_sids[user_id]:
+                del user_sids[user_id]
 
         del user_sessions[sid]
 
@@ -118,6 +127,25 @@ async def join_project(sid, data):
 
 
 @sio.event
+async def identify(sid, data):
+    """Client identifies itself so we can route DMs.
+
+    Data: { "user_id": "uuid" }
+    Must be called immediately after connecting.
+    """
+    user_id = data.get("user_id") if data else None
+    if not user_id:
+        return {"status": "error", "message": "Missing user_id"}
+    if user_id not in user_sids:
+        user_sids[user_id] = set()
+    user_sids[user_id].add(sid)
+    # Also join a personal room so emit_to_user works even simpler
+    await sio.enter_room(sid, f"user_{user_id}")
+    logger.info(f"User {user_id} identified (sid {sid})")
+    return {"status": "success"}
+
+
+@sio.event
 async def leave_project(sid, data):
     """Client leaves a project room."""
     try:
@@ -141,6 +169,44 @@ async def leave_project(sid, data):
 
     except Exception as e:
         logger.error(f"Error in leave_project: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def join_channel(sid, data):
+    """Client joins a channel room to receive channel messages.
+
+    Data: { "channel_id": "uuid" }
+    """
+    try:
+        channel_id = data.get("channel_id") if data else None
+        if not channel_id:
+            return {"status": "error", "message": "Missing channel_id"}
+        room = f"channel_{channel_id}"
+        await sio.enter_room(sid, room)
+        logger.debug(f"sid {sid} joined channel room {room}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error in join_channel: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def leave_channel(sid, data):
+    """Client leaves a channel room.
+
+    Data: { "channel_id": "uuid" }
+    """
+    try:
+        channel_id = data.get("channel_id") if data else None
+        if not channel_id:
+            return {"status": "error", "message": "Missing channel_id"}
+        room = f"channel_{channel_id}"
+        await sio.leave_room(sid, room)
+        logger.debug(f"sid {sid} left channel room {room}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error in leave_channel: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -344,3 +410,248 @@ async def emit_timeline_update(project_id: str):
 # Create ASGI app wrapper for Socket.IO
 # socketio_path='' because we mount this at /ws in main.py
 sio_app = socketio.ASGIApp(sio, socketio_path="")
+
+
+# ── Chat WebSocket Events ────────────────────────────────────────────────────
+
+
+def _get_db():
+    """Create a throwaway DB session for WS event handlers."""
+    from app.database import SessionLocal
+
+    return SessionLocal()
+
+
+@sio.event
+async def send_message(sid, data):
+    """Client sends a chat message.
+
+    Data: {
+        "content": "...",
+        "project_id": "..." | null,
+        "channel_id": "..." | null,
+        "recipient_id": "..." | null,
+        "reply_to_id": "..." | null,
+        "mentions": [...] | null
+    }
+    Exactly one of project_id or recipient_id must be provided.
+    """
+    try:
+        content = (data.get("content") or "").strip()
+        project_id = data.get("project_id")
+        channel_id = data.get("channel_id")
+        recipient_id = data.get("recipient_id")
+        reply_to_id = data.get("reply_to_id")
+        mentions = data.get("mentions")
+
+        if not content:
+            return {"status": "error", "message": "Empty message"}
+        if not project_id and not recipient_id:
+            return {"status": "error", "message": "project_id or recipient_id required"}
+        if project_id and recipient_id:
+            return {"status": "error", "message": "Cannot set both project_id and recipient_id"}
+
+        # Resolve sender from session or identify data
+        sender_id = None
+        if sid in user_sessions:
+            sender_id = user_sessions[sid].get("user_id")
+        if not sender_id:
+            # Check user_sids reverse map
+            for uid, sids in user_sids.items():
+                if sid in sids:
+                    sender_id = uid
+                    break
+        if not sender_id:
+            return {"status": "error", "message": "Not identified. Call 'identify' first."}
+
+        from app.models import ChatMessage, User
+
+        db = _get_db()
+        try:
+            # Look up sender display info
+            sender = db.query(User).filter(User.id == sender_id).first()
+            sender_name = sender.display_name if sender else None
+            sender_username = sender.username if sender else None
+            sender_photo = sender.photo_url if sender else None
+
+            msg = ChatMessage(
+                sender_id=sender_id,
+                project_id=project_id,
+                channel_id=channel_id,
+                recipient_id=recipient_id,
+                content=content,
+                reply_to_id=reply_to_id,
+                mentions=mentions,
+            )
+            db.add(msg)
+            db.commit()
+            db.refresh(msg)
+
+            payload = {
+                "id": msg.id,
+                "sender_id": sender_id,
+                "sender_name": sender_name,
+                "sender_username": sender_username,
+                "sender_photo": sender_photo,
+                "project_id": project_id,
+                "channel_id": channel_id,
+                "recipient_id": recipient_id,
+                "content": content,
+                "mentions": mentions,
+                "reply_to_id": reply_to_id,
+                "created_at": msg.created_at.isoformat(),
+                "edited_at": None,
+                "is_deleted": False,
+            }
+
+            if channel_id:
+                # Broadcast to the specific channel room
+                await sio.emit("new_message", payload, room=f"channel_{channel_id}")
+            elif project_id:
+                # Broadcast to the project room (non-channel project messages)
+                room = f"project_{project_id}"
+                await sio.emit("new_message", payload, room=room)
+            else:
+                # DM: send to recipient's personal room and echo to sender
+                await sio.emit("new_message", payload, room=f"user_{recipient_id}")
+                await sio.emit("new_message", payload, room=f"user_{sender_id}")
+
+            logger.info(f"Chat message {msg.id} from {sender_id}")
+            return {"status": "success", "message_id": msg.id}
+        finally:
+            db.close()
+
+    except Exception as e:
+        logger.error(f"Error in send_message: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def edit_message(sid, data):
+    """Client edits an existing message.
+
+    Data: { "message_id": "...", "content": "..." }
+    """
+    try:
+        message_id = data.get("message_id")
+        content = (data.get("content") or "").strip()
+        if not message_id or not content:
+            return {"status": "error", "message": "message_id and content required"}
+
+        sender_id = None
+        if sid in user_sessions:
+            sender_id = user_sessions[sid].get("user_id")
+        if not sender_id:
+            for uid, sids in user_sids.items():
+                if sid in sids:
+                    sender_id = uid
+                    break
+        if not sender_id:
+            return {"status": "error", "message": "Not identified"}
+
+        from app.models import ChatMessage
+        from datetime import datetime
+
+        db = _get_db()
+        try:
+            msg = db.query(ChatMessage).filter(
+                ChatMessage.id == message_id,
+                ChatMessage.sender_id == sender_id,
+            ).first()
+            if not msg:
+                return {"status": "error", "message": "Message not found or not yours"}
+
+            msg.content = content
+            msg.edited_at = datetime.utcnow()
+            db.commit()
+
+            payload = {
+                "id": msg.id,
+                "content": content,
+                "edited_at": msg.edited_at.isoformat(),
+            }
+
+            if msg.project_id:
+                await sio.emit("message_edited", payload, room=f"project_{msg.project_id}")
+            else:
+                await sio.emit("message_edited", payload, room=f"user_{msg.recipient_id}")
+                await sio.emit("message_edited", payload, room=f"user_{sender_id}")
+
+            return {"status": "success"}
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error in edit_message: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def delete_message(sid, data):
+    """Soft-delete a message.
+
+    Data: { "message_id": "..." }
+    """
+    try:
+        message_id = data.get("message_id")
+        if not message_id:
+            return {"status": "error", "message": "message_id required"}
+
+        sender_id = None
+        if sid in user_sessions:
+            sender_id = user_sessions[sid].get("user_id")
+        if not sender_id:
+            for uid, sids in user_sids.items():
+                if sid in sids:
+                    sender_id = uid
+                    break
+        if not sender_id:
+            return {"status": "error", "message": "Not identified"}
+
+        from app.models import ChatMessage
+
+        db = _get_db()
+        try:
+            msg = db.query(ChatMessage).filter(
+                ChatMessage.id == message_id,
+                ChatMessage.sender_id == sender_id,
+            ).first()
+            if not msg:
+                return {"status": "error", "message": "Message not found or not yours"}
+
+            msg.is_deleted = True
+            msg.content = ""  # scrub content
+            db.commit()
+
+            payload = {"id": msg.id}
+
+            if msg.project_id:
+                await sio.emit("message_deleted", payload, room=f"project_{msg.project_id}")
+            else:
+                await sio.emit("message_deleted", payload, room=f"user_{msg.recipient_id}")
+                await sio.emit("message_deleted", payload, room=f"user_{sender_id}")
+
+            return {"status": "success"}
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error in delete_message: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@sio.event
+async def typing(sid, data):
+    """Broadcast typing indicator.
+
+    Data: { "project_id": "..." | null, "recipient_id": "..." | null, "user_id": "...", "display_name": "..." }
+    """
+    project_id = data.get("project_id")
+    recipient_id = data.get("recipient_id")
+    user_id = data.get("user_id")
+    display_name = data.get("display_name", "Someone")
+
+    payload = {"user_id": user_id, "display_name": display_name}
+
+    if project_id:
+        await sio.emit("user_typing", payload, room=f"project_{project_id}", skip_sid=sid)
+    elif recipient_id:
+        await sio.emit("user_typing", payload, room=f"user_{recipient_id}")

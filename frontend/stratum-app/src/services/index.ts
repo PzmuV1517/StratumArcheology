@@ -76,6 +76,15 @@ export type {
 // WebSocket
 export { socketService } from "./socketService";
 
+// Chat
+export { chatService } from "./chatService";
+export type {
+  ChatMessage,
+  ChatMessagePage,
+  ConversationPreview,
+  SendMessagePayload,
+} from "./chatService.types";
+
 // QR Codes
 export { qrService } from "./qrService";
 export type { QRCodeEntry, QRCodeResolved } from "./qrService";

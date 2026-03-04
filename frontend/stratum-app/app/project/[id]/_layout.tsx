@@ -29,6 +29,7 @@
  */
 import React, { useState } from "react";
 import {
+  Alert,
   Modal,
   Platform,
   Share,
@@ -43,6 +44,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import styles from "@/src/components/project/ProjectDetailStyles";
 import ProjectOverlays from "@/src/components/project/ProjectOverlays";
+import { projectService } from "@/src/services/projectService";
 import {
   ProjectDetailProvider,
   useProjectDetail,
@@ -54,15 +56,27 @@ import {
   ProjectToolsScreen,
 } from "@/src/components/project/ProjectTabsScreens";
 
+// liquid-react native components — loaded at module scope.
+// Only available in dev client / production builds (not Expo Go).
+// STRATUM uses the new React Native architecture so there is no RCTCxxBridge
+// watchdog risk; module-level require is safe and must be used here because
+// require() inside useMemo is unreliable for native modules on new arch.
 let NativeToolbar: React.FC<any> | null = null;
 let NativeToolbarButton: React.FC<any> | null = null;
 let NativeToolbarMenu: React.FC<any> | null = null;
 if (Platform.OS === "ios") {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const lr = require("liquid-react");
-  NativeToolbar = lr.NativeToolbar;
-  NativeToolbarButton = lr.NativeToolbarButton;
-  NativeToolbarMenu = lr.NativeToolbarMenu;
+  try {
+    const Constants = require("expo-constants").default;
+    const isExpoGo = Constants.executionEnvironment === "storeClient";
+    if (!isExpoGo) {
+      const lr = require("liquid-react");
+      NativeToolbar = lr.NativeToolbar;
+      NativeToolbarButton = lr.NativeToolbarButton;
+      NativeToolbarMenu = lr.NativeToolbarMenu;
+    }
+  } catch {
+    // liquid-react not available — fall back to standard header buttons
+  }
 }
 
 type FullScreenModal = "gallery" | "gps" | "history" | "tools" | null;
@@ -71,14 +85,38 @@ function ProjectStack() {
   const {
     loading,
     project,
+    isOwner,
     setShowFilesOverlay,
     setShowMenu,
     setShowMembersModal,
     onDeleteProject,
+    refreshProject,
   } = useProjectDetail();
   const showHeaderActions = !!project && !loading;
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState<FullScreenModal>(null);
+
+  const settingsChildren = [
+    { id: "edit", title: "Edit Project", icon: "pencil" },
+    { id: "members", title: "Members", icon: "person.2" },
+    ...(isOwner
+      ? [
+          {
+            id: "publicise",
+            title: project?.is_public ? "Privatise Project" : "Publicise Project",
+            icon: project?.is_public ? "eye.slash" : "eye",
+          },
+        ]
+      : []),
+    { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
+    {
+      id: "exit",
+      title: "Exit Project",
+      icon: "rectangle.portrait.and.arrow.right",
+      destructive: true,
+    },
+    { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
+  ];
 
   const moreMenuItems = [
     { id: "gallery", title: "Gallery", icon: "photo.on.rectangle" },
@@ -89,18 +127,7 @@ function ProjectStack() {
       id: "settings",
       title: "Project Settings",
       icon: "gearshape",
-      children: [
-        { id: "edit", title: "Edit Project", icon: "pencil" },
-        { id: "members", title: "Members", icon: "person.2" },
-        { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
-        {
-          id: "exit",
-          title: "Exit Project",
-          icon: "rectangle.portrait.and.arrow.right",
-          destructive: true,
-        },
-        { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
-      ],
+      children: settingsChildren,
     },
   ];
 
@@ -124,10 +151,37 @@ function ProjectStack() {
         }
         break;
       case "exit":
-        router.back();
+        router.replace("/(tabs)/projects");
         break;
       case "delete":
         onDeleteProject();
+        break;
+      case "publicise":
+        if (project?.id) {
+          const action = project.is_public ? "privatise" : "publicise";
+          const desc = project.is_public
+            ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
+            : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image.";
+          Alert.alert(
+            `${action.charAt(0).toUpperCase() + action.slice(1)} Project?`,
+            desc,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: action.charAt(0).toUpperCase() + action.slice(1),
+                style: project.is_public ? "default" : "default",
+                onPress: async () => {
+                  try {
+                    await projectService.togglePublicise(project.id);
+                    await refreshProject();
+                  } catch {
+                    // handled silently
+                  }
+                },
+              },
+            ],
+          );
+        }
         break;
       case "gallery":
       case "gps":
@@ -170,7 +224,7 @@ function ProjectStack() {
               if (Platform.OS === "ios") {
                 return (
                   <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={() => router.replace("/(tabs)/projects")}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
@@ -203,7 +257,7 @@ function ProjectStack() {
               }
               return (
                 <TouchableOpacity
-                  onPress={() => router.back()}
+                  onPress={() => router.replace("/(tabs)/projects")}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
@@ -231,8 +285,8 @@ function ProjectStack() {
             headerRight: () => {
               if (!showHeaderActions) return null;
 
-              // iOS uses standalone NativeToolbar, so no headerRight needed
-              if (Platform.OS === "ios") return null;
+              // iOS uses standalone NativeToolbar overlay, so no headerRight needed
+              if (Platform.OS === "ios" && NativeToolbar) return null;
 
               return (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -284,7 +338,6 @@ function ProjectStack() {
             <NativeToolbarMenu icon="ellipsis.circle" menuItems={moreMenuItems} />
           </NativeToolbar>
         )}
-
       {/* Full-screen modals for iOS */}
       {Platform.OS === "ios" && (
         <>

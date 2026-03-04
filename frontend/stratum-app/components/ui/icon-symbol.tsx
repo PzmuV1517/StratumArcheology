@@ -60,6 +60,11 @@ const MAPPING = {
   "chart.bar.fill": "bar-chart",
   "ellipsis.circle": "more-horiz",
   "ellipsis.circle.fill": "more-horiz",
+  "message.fill": "chat",
+  "bubble.left.and.bubble.right": "forum",
+  "bubble.left.and.bubble.right.fill": "forum",
+  "globe.americas": "public",
+  "globe.americas.fill": "public",
 } as IconMapping;
 
 /**

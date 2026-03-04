@@ -50,6 +50,8 @@ export interface Project {
   updated_at?: string;
   members: ProjectMember[];
   is_active?: boolean;
+  is_public?: boolean;
+  member_count?: number;
   ran_lmi_id?: string;
   /** Presigned URL for the project cover image (set by backend when fetching) */
   cover_image_url?: string;

@@ -42,9 +42,20 @@ import { showAlert } from "../utils/alert";
 interface User {
   id: string;
   email: string;
+  username?: string;
   display_name: string;
   photo_url?: string;
+  banner_url?: string;
   bio?: string;
+  description?: string;
+  phone?: string;
+  timezone?: string;
+  show_projects?: boolean;
+  link_x?: string;
+  link_discord?: string;
+  link_bsky?: string;
+  link_linkedin?: string;
+  link_website?: string;
   has_completed_onboarding?: boolean;
 }
 
@@ -60,6 +71,7 @@ interface AuthContextType {
     email: string,
     password: string,
     displayName: string,
+    username: string,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -136,9 +148,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const freshUser = {
             id: response.data.id,
             email: response.data.email,
+            username: response.data.username,
             display_name: response.data.display_name,
             photo_url: response.data.photo_url,
+            banner_url: response.data.banner_url,
             bio: response.data.bio,
+            description: response.data.description,
+            phone: response.data.phone,
+            timezone: response.data.timezone,
+            show_projects: response.data.show_projects,
+            link_x: response.data.link_x,
+            link_discord: response.data.link_discord,
+            link_bsky: response.data.link_bsky,
+            link_linkedin: response.data.link_linkedin,
+            link_website: response.data.link_website,
             has_completed_onboarding: response.data.has_completed_onboarding,
           };
           await authService.updateUserData(freshUser);
@@ -176,9 +199,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, displayName: string) => {
+  const register = async (email: string, password: string, displayName: string, username: string) => {
     try {
-      const result = await authService.register(email, password, displayName);
+      const result = await authService.register(email, password, displayName, username);
       if (result.success) {
         setUser(result.user || null);
         return { success: true };
@@ -206,9 +229,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const freshUser = {
           id: response.data.id,
           email: response.data.email,
+          username: response.data.username,
           display_name: response.data.display_name,
           photo_url: response.data.photo_url,
+          banner_url: response.data.banner_url,
           bio: response.data.bio,
+          description: response.data.description,
+          phone: response.data.phone,
+          timezone: response.data.timezone,
+          show_projects: response.data.show_projects,
+          link_x: response.data.link_x,
+          link_discord: response.data.link_discord,
+          link_bsky: response.data.link_bsky,
+          link_linkedin: response.data.link_linkedin,
+          link_website: response.data.link_website,
           has_completed_onboarding: response.data.has_completed_onboarding,
         };
         await authService.updateUserData(freshUser);

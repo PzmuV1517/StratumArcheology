@@ -33,9 +33,20 @@
 export interface User {
   id: string;
   email: string;
+  username?: string;
   display_name: string;
   photo_url?: string;
+  banner_url?: string;
   bio?: string;
+  description?: string;
+  phone?: string;
+  timezone?: string;
+  show_projects?: boolean;
+  link_x?: string;
+  link_discord?: string;
+  link_bsky?: string;
+  link_linkedin?: string;
+  link_website?: string;
   created_at?: string;
 }
 
@@ -58,6 +69,7 @@ export interface RegisterCredentials {
   email: string;
   password: string;
   displayName: string;
+  username: string;
 }
 
 // Storage keys

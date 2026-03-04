@@ -303,6 +303,37 @@ export const projectService = {
     const res = await api.put(`/projects/${projectId}/gps`, state);
     return res.data;
   },
+
+  /**
+   * Get publicly visible projects sorted by popularity (member count).
+   * Optionally filter by a search query matching name or description.
+   */
+  getPublicProjects: async (query?: string): Promise<Project[]> => {
+    const params: Record<string, string> = {};
+    if (query) params.q = query;
+    const res = await api.get("/projects/public", { params });
+    return res.data;
+  },
+
+  /**
+   * Toggle public visibility of a project (owner only)
+   */
+  togglePublicise: async (projectId: string): Promise<Project> => {
+    const res = await api.patch(`/projects/${projectId}/publicise`);
+    return res.data;
+  },
+
+  /**
+   * Search users by name, email, or @username
+   */
+  searchUsers: async (
+    query: string,
+  ): Promise<
+    { id: string; email: string; display_name: string | null; username: string | null; photo_url: string | null }[]
+  > => {
+    const res = await api.get("/auth/users/search", { params: { query } });
+    return res.data;
+  },
 };
 
 export type {

@@ -38,6 +38,7 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Image,
 } from "react-native";
 import { showAlert } from "../../utils/alert";
 
@@ -46,6 +47,7 @@ interface Member {
   display_name: string;
   email: string;
   role: string;
+  photo_url?: string | null;
 }
 
 interface FilePermission {
@@ -284,11 +286,15 @@ export default function MyFolderSettingsModal({
 
                     return (
                       <View key={member.id} style={styles.memberRow}>
-                        <View style={styles.memberAvatar}>
-                          <Text style={styles.memberAvatarText}>
-                            {getInitials(member.display_name)}
-                          </Text>
-                        </View>
+                        {member.photo_url ? (
+                          <Image source={{ uri: member.photo_url }} style={styles.memberAvatarImage} />
+                        ) : (
+                          <View style={styles.memberAvatar}>
+                            <Text style={styles.memberAvatarText}>
+                              {getInitials(member.display_name)}
+                            </Text>
+                          </View>
+                        )}
                         <View style={styles.memberInfo}>
                           <Text style={styles.memberName}>
                             {member.display_name}
@@ -506,6 +512,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF2A2A",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 12,
+  },
+  memberAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: 12,
   },
   memberAvatarText: {

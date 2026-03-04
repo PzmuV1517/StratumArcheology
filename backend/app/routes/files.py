@@ -112,14 +112,59 @@ async def upload_profile_picture(
     # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
-    # Get public URL
-    url = await minio_client.get_presigned_url(storage_path)
-
-    # Update user's photo_url
-    current_user.photo_url = url
+    # Store object path (NOT a presigned URL) so it never expires
+    current_user.photo_url = storage_path
     db.commit()
     db.refresh(current_user)
 
+    # Return a temporary presigned URL for immediate display
+    url = minio_client.get_presigned_url(storage_path)
+    return {"url": url, "filename": filename}
+
+
+# =============================================================================
+# BANNER IMAGE UPLOAD
+# =============================================================================
+
+
+@router.post("/banner-image")
+async def upload_banner_image(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a banner image for the current user"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}",
+        )
+
+    # Limit file size (10MB for banners)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 10MB.",
+        )
+
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"banner_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    storage_path = f"banners/{current_user.id}/{filename}"
+
+    # Upload to MinIO
+    await minio_client.upload_file(content, storage_path, file.content_type)
+
+    # Store object path (NOT a presigned URL) so it never expires
+    current_user.banner_url = storage_path
+    db.commit()
+    db.refresh(current_user)
+
+    # Return a temporary presigned URL for immediate display
+    url = minio_client.get_presigned_url(storage_path)
     return {"url": url, "filename": filename}
 
 

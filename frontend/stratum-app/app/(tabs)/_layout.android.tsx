@@ -27,15 +27,24 @@
  * SOFTWARE.
  */
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAuth } from "@/src/contexts/AuthContext";
+import UsernamePromptModal from "@/src/components/UsernamePromptModal";
 
 const ACTIVE_COLOR = "#FF2A2A";
 const INACTIVE_COLOR = "#9A9A9A";
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const [usernameSet, setUsernameSet] = useState(false);
+  const needsUsername = !!user && !user.username && !usernameSet;
+  const handleUsernameComplete = useCallback(() => setUsernameSet(true), []);
+
   return (
+    <>
+    <UsernamePromptModal visible={needsUsername} onComplete={handleUsernameComplete} />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: ACTIVE_COLOR,
@@ -60,11 +69,11 @@ export default function TabLayout() {
           letterSpacing: 0.3,
         },
       }}
-      initialRouteName="overview"
+      initialRouteName="index"
     >
       {/* Overview - Landing tab */}
       <Tabs.Screen
-        name="overview"
+        name="index"
         options={{
           title: "Overview",
           tabBarIcon: ({ color }) => (
@@ -75,7 +84,7 @@ export default function TabLayout() {
 
       {/* Projects - All projects list */}
       <Tabs.Screen
-        name="index"
+        name="projects"
         options={{
           title: "Projects",
           tabBarIcon: ({ color }) => (
@@ -95,6 +104,17 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Messages - DM Inbox */}
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="message.fill" color={color} />
+          ),
+        }}
+      />
+
       {/* Settings - App settings */}
       <Tabs.Screen
         name="settings"
@@ -106,19 +126,25 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hide GPS and Explore tabs from navigation */}
+      {/* Unearthed - Public projects & user search */}
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Unearthed",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="globe.americas.fill" color={color} />
+          ),
+        }}
+      />
+
+      {/* Hide GPS tab from navigation */}
       <Tabs.Screen
         name="gps"
         options={{
           href: null,
         }}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
+    </>
   );
 }
