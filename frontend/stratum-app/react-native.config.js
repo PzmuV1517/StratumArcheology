@@ -1,13 +1,6 @@
 module.exports = {
   dependencies: {
-    // Disable native autolinking for the npm-linked liquid-react package.
-    // All native files are already included in modules/liquid-react (the Expo module),
-    // so linking the node_modules version would cause duplicate symbol errors.
-    "liquid-react": {
-      platforms: {
-        ios: null,
-        android: null,
-      },
-    },
+    // liquid-react: autolinking is now handled by the npm package's
+    // "react-native" field (podspecPath) — no longer a local Expo module.
   },
 };

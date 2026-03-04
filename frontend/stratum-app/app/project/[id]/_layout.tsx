@@ -27,14 +27,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
+  ActionSheetIOS,
   Alert,
   Modal,
   Platform,
   Share,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
   StyleSheet,
 } from "react-native";
@@ -69,13 +71,19 @@ if (Platform.OS === "ios") {
     const Constants = require("expo-constants").default;
     const isExpoGo = Constants.executionEnvironment === "storeClient";
     if (!isExpoGo) {
-      const lr = require("liquid-react");
-      NativeToolbar = lr.NativeToolbar;
-      NativeToolbarButton = lr.NativeToolbarButton;
-      NativeToolbarMenu = lr.NativeToolbarMenu;
+      // Runtime check: verify native views are actually registered
+      // (pod installed & linked). Without this, JSX renders crash.
+      const hasNativeViews =
+        !!UIManager.getViewManagerConfig?.("LRNativeToolbar");
+      if (hasNativeViews) {
+        const lr = require("liquid-react");
+        NativeToolbar = lr.NativeToolbar;
+        NativeToolbarButton = lr.NativeToolbarButton;
+        NativeToolbarMenu = lr.NativeToolbarMenu;
+      }
     }
   } catch {
-    // liquid-react not available — fall back to standard header buttons
+    // liquid-react not available — fall back to ActionSheetIOS
   }
 }
 
@@ -131,10 +139,9 @@ function ProjectStack() {
     },
   ];
 
-  const handleMenuAction = (event: {
-    nativeEvent: { id: string; title: string };
-  }) => {
-    const { id } = event.nativeEvent;
+  /** Dispatch a menu action by id — shared by NativeToolbarMenu and ActionSheetIOS. */
+  const dispatchMenuAction = useCallback(
+    (id: string) => {
     switch (id) {
       case "edit":
         setShowMenu(true);
@@ -191,7 +198,48 @@ function ProjectStack() {
         setActiveModal(id as FullScreenModal);
         break;
     }
-  };
+  }, [project, isOwner, onDeleteProject, refreshProject, setShowMenu, setShowMembersModal, setActiveModal]);
+
+  /** Adaptor for NativeToolbarMenu events → dispatchMenuAction. */
+  const handleMenuAction = useCallback(
+    (event: { nativeEvent: { id: string; title: string } }) => {
+      dispatchMenuAction(event.nativeEvent.id);
+    },
+    [dispatchMenuAction],
+  );
+
+  /** iOS fallback: show an ActionSheet when NativeToolbar is unavailable. */
+  const showIOSActionSheet = useCallback(() => {
+    // Flatten top-level items + settings children into a single list
+    const flatItems: { id: string; title: string; destructive?: boolean }[] = [];
+    for (const item of moreMenuItems) {
+      if (item.children) {
+        for (const child of item.children) flatItems.push(child);
+      } else {
+        flatItems.push(item);
+      }
+    }
+
+    const options = [...flatItems.map((i) => i.title), "Cancel"];
+    const cancelButtonIndex = options.length - 1;
+    const destructiveIndices = flatItems
+      .map((i, idx) => (i.destructive ? idx : -1))
+      .filter((i) => i >= 0);
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex: destructiveIndices[0] ?? undefined,
+        title: "Project Options",
+      },
+      (buttonIndex) => {
+        if (buttonIndex !== cancelButtonIndex && flatItems[buttonIndex]) {
+          dispatchMenuAction(flatItems[buttonIndex].id);
+        }
+      },
+    );
+  }, [moreMenuItems, dispatchMenuAction]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -288,6 +336,12 @@ function ProjectStack() {
               // iOS uses standalone NativeToolbar overlay, so no headerRight needed
               if (Platform.OS === "ios" && NativeToolbar) return null;
 
+              // iOS fallback: native ActionSheet instead of the full-screen modal
+              const menuHandler =
+                Platform.OS === "ios"
+                  ? showIOSActionSheet
+                  : () => setShowMenu(true);
+
               return (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <TouchableOpacity
@@ -299,7 +353,7 @@ function ProjectStack() {
                     <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setShowMenu(true)}
+                    onPress={menuHandler}
                     style={styles.iconButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     activeOpacity={0.7}

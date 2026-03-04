@@ -26,3 +26,21 @@ if [ -f "$DOMEX_FILE" ]; then
     && echo "[INFO] Patched expo-2d-context DOMException" \
     || echo "[INFO] expo-2d-context DOMException patch skipped"
 fi
+
+# Patch liquid-react package.json with autolinking config for Expo/RN CLI.
+# The npm package ships without "react-native" autolinking metadata, so
+# use_native_modules! in the Podfile can't find the podspec automatically.
+LR_PKG="$DIR/node_modules/liquid-react/package.json"
+if [ -f "$LR_PKG" ]; then
+  node -e "
+    const fs = require('fs');
+    const pkg = JSON.parse(fs.readFileSync('$LR_PKG', 'utf8'));
+    if (!pkg['react-native']) {
+      pkg['react-native'] = { ios: { podspecPath: './liquid-react.podspec' } };
+      fs.writeFileSync('$LR_PKG', JSON.stringify(pkg, null, 2) + '\n');
+      console.log('[INFO] Patched liquid-react autolinking config');
+    } else {
+      console.log('[INFO] liquid-react autolinking already configured');
+    }
+  "
+fi
