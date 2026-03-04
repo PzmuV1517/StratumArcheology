@@ -245,7 +245,7 @@ function ProjectStack() {
     <View style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          headerShown: true,
+          headerShown: Platform.OS !== "web",
           headerTransparent: Platform.OS === "ios",
           headerBlurEffect: undefined,
           headerStyle:
