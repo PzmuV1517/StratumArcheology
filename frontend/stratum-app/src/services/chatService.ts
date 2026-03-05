@@ -90,15 +90,10 @@ export const chatService = {
 
   // ── Channels ───────────────────────────────────────────────────────────
 
-  /** List channels for a project (auto-creates #general). */
+  /** List channels for a project (auto-creates #general). Throws on failure. */
   getChannels: async (projectId: string): Promise<Channel[]> => {
-    try {
-      const res = await api.get(`/projects/${projectId}/channels`);
-      return res.data;
-    } catch (error: any) {
-      console.error("Failed to fetch channels:", error);
-      return [];
-    }
+    const res = await api.get(`/projects/${projectId}/channels`);
+    return res.data;
   },
 
   /** Create a new channel in a project. */

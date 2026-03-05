@@ -75,6 +75,12 @@ export default function TabLayout() {
         <Icon sf={{ default: "folder", selected: "folder.fill" }} />
       </NativeTabs.Trigger>
 
+      {/* Unearthed - Public projects & user search */}
+      <NativeTabs.Trigger name="explore">
+        <Label>Unearthed</Label>
+        <Icon sf={{ default: "globe.americas", selected: "globe.americas.fill" }} />
+      </NativeTabs.Trigger>
+
       {/* Messages - DM Inbox */}
       <NativeTabs.Trigger name="messages">
         <Label>Messages</Label>
@@ -85,12 +91,6 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="settings">
         <Label>Settings</Label>
         <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-      </NativeTabs.Trigger>
-
-      {/* Unearthed - Public projects & user search */}
-      <NativeTabs.Trigger name="explore">
-        <Label>Unearthed</Label>
-        <Icon sf={{ default: "globe.americas", selected: "globe.americas.fill" }} />
       </NativeTabs.Trigger>
 
       {/* Hidden tabs - not shown in tab bar */}

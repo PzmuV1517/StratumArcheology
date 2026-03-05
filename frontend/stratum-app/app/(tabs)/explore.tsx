@@ -169,7 +169,7 @@ export default function UnearthedScreen() {
           />
         ) : (
           <View style={styles.coverPlaceholder}>
-            <IconSymbol name="cube.fill" size={32} color="#555" />
+            <IconSymbol name="cube.fill" size={32} color="#9A9A9A" />
           </View>
         )}
         <View style={styles.cardContent}>
@@ -188,7 +188,7 @@ export default function UnearthedScreen() {
             </Text>
             {memberCount != null && memberCount > 0 && (
               <View style={styles.memberBadge}>
-                <IconSymbol name="person.2.fill" size={12} color="#999" />
+                <IconSymbol name="person.2.fill" size={12} color="#9A9A9A" />
                 <Text style={styles.memberCount}>{memberCount}</Text>
               </View>
             )}
@@ -289,13 +289,13 @@ export default function UnearthedScreen() {
         <IconSymbol
           name="magnifyingglass"
           size={18}
-          color="#777"
+          color="#9A9A9A"
           style={{ marginRight: 8 }}
         />
         <TextInput
           style={styles.searchInput}
           placeholder="Search projects or people..."
-          placeholderTextColor="#666"
+          placeholderTextColor="#9A9A9A"
           value={searchQuery}
           onChangeText={handleSearchChange}
           autoCapitalize="none"
@@ -335,7 +335,7 @@ export default function UnearthedScreen() {
           />
         ) : popularProjects.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="cube.fill" size={48} color="#555" />
+            <IconSymbol name="cube.fill" size={48} color="#9A9A9A" />
             <Text style={styles.emptyTitle}>No public projects yet</Text>
             <Text style={styles.emptySubtext}>
               When project owners publicise their excavations, they will appear
@@ -392,12 +392,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "#FFF",
+    color: "#F5F5F5",
     fontSize: 15,
     paddingVertical: 12,
   },
   clearButton: {
-    color: "#777",
+    color: "#9A9A9A",
     fontSize: 16,
     paddingLeft: 8,
   },
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#999",
+    color: "#9A9A9A",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 12,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: "100%",
     height: 100,
-    backgroundColor: "#222",
+    backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -448,12 +448,12 @@ const styles = StyleSheet.create({
   projectName: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#FFF",
+    color: "#F5F5F5",
     marginBottom: 4,
   },
   projectDescription: {
     fontSize: 13,
-    color: "#BBB",
+    color: "#CFCFCF",
     lineHeight: 18,
     marginBottom: 8,
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   },
   projectUpdated: {
     fontSize: 11,
-    color: "#777",
+    color: "#9A9A9A",
   },
   memberBadge: {
     flexDirection: "row",
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   },
   memberCount: {
     fontSize: 12,
-    color: "#999",
+    color: "#9A9A9A",
     fontWeight: "600",
   },
 
@@ -495,12 +495,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarPlaceholder: {
-    backgroundColor: "#333",
+    backgroundColor: "#2A2A2A",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarLetter: {
-    color: "#FFF",
+    color: "#F5F5F5",
     fontSize: 18,
     fontWeight: "700",
   },
@@ -508,12 +508,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    color: "#FFF",
+    color: "#F5F5F5",
     fontSize: 16,
     fontWeight: "600",
   },
   userHandle: {
-    color: "#999",
+    color: "#9A9A9A",
     fontSize: 13,
     marginTop: 2,
   },
@@ -527,13 +527,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#FFF",
+    color: "#F5F5F5",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: "#999",
+    color: "#9A9A9A",
     textAlign: "center",
     lineHeight: 20,
   },

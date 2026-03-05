@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 4 : 60,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
     paddingBottom: 16,
     backgroundColor: "#111111",
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   },
   projectDate: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
   },
   projectDescription: {
     fontSize: 14,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   timelineTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#666",
+    color: "#9A9A9A",
     marginBottom: 8,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   timelineItem: {
-    backgroundColor: "#0E0E0E",
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     padding: 12,
     marginRight: 12,
@@ -413,17 +413,17 @@ const styles = StyleSheet.create({
   },
   timelineText: {
     fontSize: 12,
-    color: "#EAEAEA",
+    color: "#CFCFCF",
     lineHeight: 16,
     marginBottom: 6,
   },
   timelineTime: {
     fontSize: 10,
-    color: "#666",
+    color: "#9A9A9A",
   },
   noActivityText: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     fontStyle: "italic",
   },
   projectFooter: {

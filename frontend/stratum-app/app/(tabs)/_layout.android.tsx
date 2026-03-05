@@ -93,6 +93,17 @@ export default function TabLayout() {
         }}
       />
 
+      {/* Unearthed - Public projects & user search */}
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: "Unearthed",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="globe.americas.fill" color={color} />
+          ),
+        }}
+      />
+
       {/* Messages - DM Inbox */}
       <Tabs.Screen
         name="messages"
@@ -111,17 +122,6 @@ export default function TabLayout() {
           title: "Settings",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={26} name="gearshape.fill" color={color} />
-          ),
-        }}
-      />
-
-      {/* Unearthed - Public projects & user search */}
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Unearthed",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={26} name="globe.americas.fill" color={color} />
           ),
         }}
       />

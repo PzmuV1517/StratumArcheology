@@ -17,7 +17,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  SafeAreaView,
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -89,7 +88,7 @@ export default function MessagesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Messages</Text>
         <Text style={styles.subtitle}>Direct messages with team members</Text>
@@ -117,12 +116,12 @@ export default function MessagesScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FFFFFF"
+              tintColor="#FF2A2A"
             />
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -158,13 +157,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#2C2C2E",
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
   },
   avatarText: {
-    color: "#FFFFFF",
+    color: "#F5F5F5",
     fontSize: 18,
     fontWeight: "600",
   },
@@ -186,11 +185,11 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 13,
-    color: "#8E8E93",
+    color: "#9A9A9A",
   },
   preview: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#9A9A9A",
     lineHeight: 18,
   },
   center: {
@@ -212,7 +211,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: "#8E8E93",
+    color: "#9A9A9A",
     textAlign: "center",
     lineHeight: 20,
   },

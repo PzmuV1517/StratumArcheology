@@ -716,7 +716,7 @@ export default function SettingsScreen() {
    *  RENDER
    * ==================================================== */
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
@@ -1013,7 +1013,7 @@ export default function SettingsScreen() {
                     styles.storageStatRow,
                     {
                       borderTopWidth: 1,
-                      borderTopColor: "#333",
+                      borderTopColor: "#2A2A2A",
                       paddingTop: 8,
                       marginTop: 8,
                     },
@@ -1173,7 +1173,7 @@ export default function SettingsScreen() {
                   />
                 ) : (
                   <View style={styles.bannerEditPlaceholder}>
-                    <Text style={{ color: "#666", fontSize: 13 }}>Tap to set banner</Text>
+                    <Text style={{ color: "#9A9A9A", fontSize: 13 }}>Tap to set banner</Text>
                   </View>
                 )}
                 <View style={styles.bannerEditBadge}>
@@ -1212,7 +1212,7 @@ export default function SettingsScreen() {
                 value={newDisplayName}
                 onChangeText={setNewDisplayName}
                 placeholder="Enter display name"
-                placeholderTextColor="#666"
+                placeholderTextColor="#9A9A9A"
                 autoCapitalize="words"
               />
             </View>
@@ -1225,7 +1225,7 @@ export default function SettingsScreen() {
                 value={editUsername}
                 onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
                 placeholder="unique_username"
-                placeholderTextColor="#666"
+                placeholderTextColor="#9A9A9A"
                 autoCapitalize="none"
                 maxLength={30}
               />
@@ -1239,7 +1239,7 @@ export default function SettingsScreen() {
                 value={newBio}
                 onChangeText={setNewBio}
                 placeholder="Tell us about yourself..."
-                placeholderTextColor="#666"
+                placeholderTextColor="#9A9A9A"
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -1256,7 +1256,7 @@ export default function SettingsScreen() {
                 value={editDescription}
                 onChangeText={setEditDescription}
                 placeholder="Tell others about yourself..."
-                placeholderTextColor="#666"
+                placeholderTextColor="#9A9A9A"
                 multiline
                 maxLength={500}
               />
@@ -1270,7 +1270,7 @@ export default function SettingsScreen() {
                 value={editPhone}
                 onChangeText={setEditPhone}
                 placeholder="+1 234 567 8900"
-                placeholderTextColor="#666"
+                placeholderTextColor="#9A9A9A"
                 keyboardType="phone-pad"
               />
             </View>
@@ -1295,7 +1295,7 @@ export default function SettingsScreen() {
                   value={editSocials[key]}
                   onChangeText={(t) => setEditSocials((p) => ({ ...p, [key]: t }))}
                   placeholder={placeholder}
-                  placeholderTextColor="#666"
+                  placeholderTextColor="#9A9A9A"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
@@ -1356,7 +1356,7 @@ export default function SettingsScreen() {
             <TextInput
               style={styles.devModalInput}
               placeholder="http://host:port/api"
-              placeholderTextColor="#777"
+              placeholderTextColor="#9A9A9A"
               value={apiInput}
               onChangeText={setApiInput}
               autoCapitalize="none"
@@ -1543,7 +1543,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   emptyText: {
-    color: "#666",
+    color: "#9A9A9A",
     fontSize: 14,
     textAlign: "center",
     marginVertical: 16,
@@ -1581,7 +1581,7 @@ const styles = StyleSheet.create({
   },
   fileSize: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     marginTop: 2,
   },
   removeButton: {
@@ -1612,7 +1612,7 @@ const styles = StyleSheet.create({
   },
   projectDate: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     marginTop: 4,
   },
   // Profile edit modal
@@ -1645,7 +1645,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#333",
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -1658,7 +1658,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   profileEditHint: {
-    color: "#666",
+    color: "#9A9A9A",
     fontSize: 13,
     marginTop: 12,
   },
@@ -1679,7 +1679,7 @@ const styles = StyleSheet.create({
   },
   bannerEditPlaceholder: {
     flex: 1,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -1690,7 +1690,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     right: 8,
-    backgroundColor: "#333",
+    backgroundColor: "#2A2A2A",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -1720,7 +1720,7 @@ const styles = StyleSheet.create({
   },
   charCount: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     textAlign: "right",
     marginTop: 4,
   },
@@ -1732,7 +1732,7 @@ const styles = StyleSheet.create({
   },
   switchHint: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     marginTop: 2,
   },
   // Connection & Sync styles
@@ -1782,7 +1782,7 @@ const styles = StyleSheet.create({
   },
   syncQueueHint: {
     fontSize: 12,
-    color: "#666",
+    color: "#9A9A9A",
     marginTop: 4,
   },
   storageStatRow: {
@@ -1820,11 +1820,11 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   tzModalCard: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#1A1A1A",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#2A2A2A",
     width: "100%",
   },
   tzModalTitle: {
@@ -1860,17 +1860,17 @@ const styles = StyleSheet.create({
   // Dev modal
   devModalText: {
     fontSize: 14,
-    color: "#CCCCCC",
+    color: "#CFCFCF",
     marginBottom: 16,
     lineHeight: 20,
   },
   devModalInput: {
-    backgroundColor: "#121212",
+    backgroundColor: "#0A0A0A",
     color: "#F5F5F5",
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#2A2A2A",
     marginBottom: 16,
   },
   devModalActions: {

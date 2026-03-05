@@ -8,7 +8,7 @@
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -21,8 +21,8 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
+import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useChat } from "@/src/hooks/useChat";
 import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
@@ -32,8 +32,11 @@ import type { Channel } from "@/src/services/chatService.types";
 
 export default function ProjectChatScreen() {
   const { id: projectId } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
-  const tabBarHeight = React.useContext(BottomTabBarHeightContext) ?? 0;
+  const { user, loading: authLoading } = useAuth();
+  // Explicit heights match the project (tabs) _layout.tsx tabBarStyle.
+  // BottomTabBarHeightContext can be 0 before the tab bar measures on first render.
+  const TAB_BAR_HEIGHT = Platform.OS === "android" ? 84 : 90;
+  const headerHeight = useHeaderHeight();
 
   /* ── Channel state ───────────────────────────────── */
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -47,26 +50,53 @@ export default function ProjectChatScreen() {
   const [creating, setCreating] = useState(false);
 
   /* ── Load channels on mount ──────────────────────── */
+  /* ── Load channels ──────────────────────────────────────────────── */
   const loadChannels = useCallback(async () => {
     if (!projectId) return;
     setChannelsLoading(true);
     setChannelsError(false);
-    const chs = await chatService.getChannels(projectId);
-    setChannels(chs);
-    if (chs.length > 0) {
-      // Default: select #general (is_default) or first channel
-      const def = chs.find((c) => c.is_default) || chs[0];
-      setActiveChannel(def);
-      setChannelsError(false);
-    } else {
-      setChannelsError(true);
+    // Retry up to 4 times with 600 ms delay.
+    // Covers two races:
+    //   1. Auth race: token not yet written to AsyncStorage on first render.
+    //   2. #general creation race: backend creates the channel async so the
+    //      first read can return []. After one retry it's always present.
+    const MAX = 4;
+    for (let attempt = 0; attempt < MAX; attempt++) {
+      try {
+        const chs = await chatService.getChannels(projectId);
+        if (chs.length > 0) {
+          setChannels(chs);
+          setActiveChannel((prev) =>
+            prev && chs.find((c) => c.id === prev.id)
+              ? prev
+              : chs.find((c) => c.is_default) ?? chs[0],
+          );
+          setChannelsError(false);
+          setChannelsLoading(false);
+          return;
+        }
+        // Empty list — channel may still be being created; retry.
+      } catch {
+        // Request error (401/403/network) — retry after delay.
+      }
+      if (attempt < MAX - 1) {
+        await new Promise((r) => setTimeout(r, 600));
+      }
     }
+    // All attempts exhausted.
+    setChannelsError(true);
     setChannelsLoading(false);
   }, [projectId]);
 
-  useEffect(() => {
-    loadChannels();
-  }, [loadChannels]);
+  // Re-load channels every time the tab comes into focus.
+  // useFocusEffect is more reliable than useEffect for tab screens because
+  // React Navigation pre-mounts tab content before focus events fire.
+  useFocusEffect(
+    useCallback(() => {
+      if (authLoading || !user || !projectId) return;
+      loadChannels();
+    }, [authLoading, user, projectId, loadChannels]),
+  );
 
   /* ── Chat hook — uses channel if available, else project room ── */
   const {
@@ -150,12 +180,12 @@ export default function ProjectChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { paddingBottom: tabBarHeight }]}
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={headerHeight + (Platform.OS === "ios" ? TAB_BAR_HEIGHT : 0)}
     >
       {/* ── Channel header bar ──────────────────────── */}
-      <View style={styles.channelBar}>
+      <View style={[styles.channelBar, { marginTop: headerHeight }]}>
         {channelsLoading ? (
           <View style={styles.channelToggle}>
             <ActivityIndicator size="small" color="#FF2A2A" />
@@ -261,23 +291,24 @@ export default function ProjectChatScreen() {
         }
       />
 
-      <TypingIndicator names={typingUsers} />
-
-      <MessageInput
-        onSend={activeChannel ? handleSend : () => {}}
-        onTyping={sendTyping}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        placeholder={
-          channelsLoading
-            ? "Loading channels…"
-            : channelsError
-              ? "Cannot send — channel unavailable"
-              : `Message #${activeChannel?.name || "general"}…`
-        }
-        projectId={projectId}
-        disabled={!activeChannel}
-      />
+      <View style={{ paddingBottom: TAB_BAR_HEIGHT }}>
+        <TypingIndicator names={typingUsers} />
+        <MessageInput
+          onSend={activeChannel ? handleSend : () => {}}
+          onTyping={sendTyping}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          placeholder={
+            channelsLoading
+              ? "Loading channels…"
+              : channelsError
+                ? "Cannot send — channel unavailable"
+                : `Message #${activeChannel?.name || "general"}…`
+          }
+          projectId={projectId}
+          disabled={!activeChannel}
+        />
+      </View>
 
       {/* ── Create channel modal ────────────────────── */}
       <Modal visible={showCreateModal} transparent animationType="fade" onRequestClose={() => setShowCreateModal(false)}>
