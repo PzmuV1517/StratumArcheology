@@ -243,7 +243,7 @@ export default function ProjectChatScreen() {
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         ListHeaderComponent={
           isLoading ? (
-            <ActivityIndicator color="#8E8E93" style={{ marginVertical: 12 }} />
+            <ActivityIndicator color="#9A9A9A" style={{ marginVertical: 12 }} />
           ) : null
         }
         ListEmptyComponent={
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   channelItemActive: { backgroundColor: "#2A2A2A" },
-  channelItemText: { fontSize: 15, color: "#CCCCCC" },
+  channelItemText: { fontSize: 15, color: "#CFCFCF" },
   channelItemTextActive: { color: "#F5F5F5", fontWeight: "600" },
   defaultBadge: {
     fontSize: 10,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 4,
   },
-  addChannelText: { fontSize: 14, color: "#007AFF", fontWeight: "600" },
+  addChannelText: { fontSize: 14, color: "#FF2A2A", fontWeight: "600" },
 
   /* Messages */
   list: { flexGrow: 1, paddingTop: 12, paddingBottom: 8 },
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
   emptyTitle: { fontSize: 18, fontWeight: "600", color: "#F5F5F5", marginBottom: 8 },
-  emptyText: { fontSize: 14, color: "#8E8E93", textAlign: "center", lineHeight: 20 },
+  emptyText: { fontSize: 14, color: "#9A9A9A", textAlign: "center", lineHeight: 20 },
 
   /* Modal */
   modalBackdrop: {
@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center", padding: 24,
   },
   modalCard: {
-    backgroundColor: "#1E1E1E", borderRadius: 16, padding: 20,
-    borderWidth: 1, borderColor: "#333", width: "100%", maxWidth: 400,
+    backgroundColor: "#1A1A1A", borderRadius: 16, padding: 20,
+    borderWidth: 1, borderColor: "#2A2A2A", width: "100%", maxWidth: 400,
   },
   modalTitle: { fontSize: 20, fontWeight: "700", color: "#F5F5F5", marginBottom: 16 },
   fieldLabel: {
@@ -413,8 +413,8 @@ const styles = StyleSheet.create({
     marginBottom: 6, marginTop: 8, textTransform: "uppercase",
   },
   input: {
-    backgroundColor: "#121212", color: "#F5F5F5", padding: 14,
-    borderRadius: 12, borderWidth: 1, borderColor: "#333", fontSize: 16,
+    backgroundColor: "#0A0A0A", color: "#F5F5F5", padding: 14,
+    borderRadius: 12, borderWidth: 1, borderColor: "#2A2A2A", fontSize: 16,
   },
   modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 20 },
   modalButton: {

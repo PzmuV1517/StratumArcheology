@@ -228,7 +228,7 @@ export function ProjectArtefactsScreen() {
         style={styles.content}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 28,
+          paddingTop: 16,
           paddingBottom: bottomContentPad,
         }}
         contentInsetAdjustmentBehavior="automatic"
@@ -267,7 +267,7 @@ export function ProjectMatrixScreen() {
           style={
             Platform.OS === "web"
               ? ({
-                  height: "calc(100vh - 340px)",
+                  flex: 1,
                   borderRadius: 12,
                   overflow: "hidden",
                   borderWidth: 1,
@@ -616,7 +616,7 @@ export function ProjectMoreScreen({
 }: {
   onNavigate: (screen: "gallery" | "gps" | "history" | "tools") => void;
 }) {
-  const { setCurrentTabName } = useProjectDetail();
+  const { setCurrentTabName, bottomContentPad } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gallery");
@@ -632,8 +632,8 @@ export function ProjectMoreScreen({
         style={styles.content}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 28,
-          paddingBottom: 120,
+          paddingTop: 16,
+          paddingBottom: bottomContentPad,
         }}
         contentInsetAdjustmentBehavior="automatic"
       >

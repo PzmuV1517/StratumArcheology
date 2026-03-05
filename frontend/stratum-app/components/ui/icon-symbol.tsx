@@ -67,6 +67,17 @@ const MAPPING = {
   "globe.americas": "public",
   "globe.americas.fill": "public",
   "rectangle.portrait.and.arrow.right": "logout",
+  "photo.on.rectangle": "photo-library",
+  map: "map",
+  "clock.arrow.circlepath": "history",
+  "chart.bar.doc.horizontal": "insert-chart-outlined",
+  "arrow.left": "arrow-back",
+  pencil: "edit",
+  "person.2": "group",
+  eye: "visibility",
+  "eye.slash": "visibility-off",
+  "square.and.arrow.up": "ios-share",
+  trash: "delete",
 } as IconMapping;
 
 /**

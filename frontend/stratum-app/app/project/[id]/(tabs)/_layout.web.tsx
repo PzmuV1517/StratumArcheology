@@ -14,7 +14,6 @@ import React, { useState, useRef, useCallback } from "react";
 import {
   Animated,
   Easing,
-  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,6 +25,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
+import EditProjectModal from "@/src/components/project/EditProjectModal";
 
 /* ─────────────────────────────────────────────
  *  Constants
@@ -46,11 +46,11 @@ const PROJECT_NAV_ITEMS: Array<{
   { name: "index",     label: "Overview",  icon: "house.fill" },
   { name: "notes",     label: "Notes",     icon: "note.text" },
   { name: "artefacts", label: "Artefacts", icon: "cube.fill" },
-  { name: "matrix",    label: "Matrix",    icon: "chart.bar.fill" },
   { name: "chat",      label: "Chat",      icon: "bubble.left.and.bubble.right.fill" },
   { name: "gallery",   label: "Gallery",   icon: "photo.on.rectangle" },
   { name: "gps",       label: "GPS Map",   icon: "map" },
   { name: "history",   label: "Time Machine", icon: "clock.arrow.circlepath" },
+  { name: "matrix",    label: "Matrix",    icon: "chart.bar.fill" },
   { name: "wheeler",   label: "Wheeler",   icon: "chart.bar.doc.horizontal" },
 ];
 
@@ -90,7 +90,10 @@ export default function ProjectTabsLayoutWeb() {
   /* ─────  Sidebar collapse state  ───── */
   const [collapsed, setCollapsed] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const widthAnim = useRef(new Animated.Value(EXPANDED_W)).current;
+  // Always tracks the real animated sidebar edge — used to anchor the More menu
+  const menuLeft = useRef(Animated.add(widthAnim, new Animated.Value(8))).current;
 
   const toggle = useCallback(() => {
     const target = collapsed ? EXPANDED_W : COLLAPSED_W;
@@ -131,7 +134,7 @@ export default function ProjectTabsLayoutWeb() {
           router.push("/(tabs)/projects");
           break;
         case "edit":
-          setShowMenu(true);
+          setShowEditModal(true);
           break;
         case "members":
           setShowMembersModal(true);
@@ -188,7 +191,6 @@ export default function ProjectTabsLayoutWeb() {
   );
 
   const moreMenuItems = [
-    { id: "back", title: "Back to Projects", icon: "arrow.left", color: "#FF2A2A" },
     { id: "edit", title: "Edit Project", icon: "pencil" },
     { id: "members", title: "Members", icon: "person.2" },
     ...(isOwner
@@ -206,6 +208,7 @@ export default function ProjectTabsLayoutWeb() {
   ];
 
   return (
+    <>
     <GestureHandlerRootView style={{ flex: 1 }}>
       {/* Outer shell — full viewport, column direction */}
       <View style={s.shell}>
@@ -299,36 +302,50 @@ export default function ProjectTabsLayoutWeb() {
         </View>
       </View>
 
-      {/* More menu modal */}
+      {/* More menu — anchored to right of sidebar */}
       {showMoreMenu && (
-        <Modal transparent visible={showMoreMenu} animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
+        <>
+          {/* Backdrop — full screen, dismisses menu */}
           <TouchableOpacity
-            style={s.moreMenuBackdrop}
+            style={[StyleSheet.absoluteFillObject, { zIndex: 100 }]}
             activeOpacity={1}
             onPress={() => setShowMoreMenu(false)}
+          />
+          {/* Card — follows the live animated sidebar edge */}
+          <Animated.View
+            style={[
+              s.moreMenuCard,
+              {
+                position: "absolute",
+                zIndex: 101,
+                left: menuLeft,
+                bottom: 16,
+              },
+            ]}
           >
-            <View style={s.moreMenuCard}>
-              {moreMenuItems.map((item, index) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    s.moreMenuItem,
-                    index < moreMenuItems.length - 1 && s.moreMenuItemBorder,
-                  ]}
-                  onPress={() => handleMoreMenuAction(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <IconSymbol name={item.icon as any} size={20} color={item.color || "#F5F5F5"} />
-                  <Text style={[s.moreMenuItemText, item.color && { color: item.color }]}>
-                    {item.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
+            {moreMenuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  s.moreMenuItem,
+                  index < moreMenuItems.length - 1 && s.moreMenuItemBorder,
+                ]}
+                onPress={() => handleMoreMenuAction(item.id)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name={item.icon as any} size={20} color={item.color || "#F5F5F5"} />
+                <Text style={[s.moreMenuItemText, item.color && { color: item.color }]}>
+                  {item.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </Animated.View>
+        </>
       )}
     </GestureHandlerRootView>
+
+      <EditProjectModal visible={showEditModal} onClose={() => setShowEditModal(false)} />
+    </>
   );
 }
 
@@ -445,17 +462,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
 
-  /* More menu modal */
-  moreMenuBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-    alignItems: "flex-start",
-    paddingLeft: EXPANDED_W + 16,
-    paddingBottom: 16,
-  },
   moreMenuCard: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#2A2A2A",
