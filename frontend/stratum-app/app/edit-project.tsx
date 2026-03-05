@@ -211,7 +211,7 @@ export default function EditProjectScreen() {
       quality: 0.8,
       // On native, allowsEditing gives system crop UI with 3:2 aspect
       allowsEditing: Platform.OS !== "web",
-      aspect: [3, 2],
+      aspect: [16, 5],
     });
 
     if (result.canceled || !result.assets?.[0]) return;

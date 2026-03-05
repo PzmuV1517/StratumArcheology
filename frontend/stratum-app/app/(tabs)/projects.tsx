@@ -36,7 +36,9 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Image,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
 import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -150,14 +152,32 @@ export default function ProjectsScreen() {
           })
         }
       >
-        <Text style={styles.projectName}>{item.name}</Text>
-        <Text style={styles.projectDescription}>
-          {item.description || "No description"}
-        </Text>
-        <View style={styles.projectMeta}>
-          <Text style={styles.dateText}>
-            Created: {new Date(item.created_at).toLocaleDateString()}
+        {item.cover_image_url && (
+          <View style={styles.coverImageWrapper}>
+            <Image
+              source={{ uri: item.cover_image_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={["#1A1A1A", "rgba(26,26,26,0.92)", "rgba(26,26,26,0.5)", "rgba(26,26,26,0.15)", "transparent"]}
+              locations={[0, 0.2, 0.35, 0.45, 0.6]}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
+        )}
+        <View style={styles.cardTextContent}>
+          <Text style={styles.projectName}>{item.name}</Text>
+          <Text style={styles.projectDescription}>
+            {item.description || "No description"}
           </Text>
+          <View style={styles.projectMeta}>
+            <Text style={styles.dateText}>
+              Created: {new Date(item.created_at).toLocaleDateString()}
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -396,7 +416,6 @@ const styles = StyleSheet.create({
   listContainer: { padding: 16 },
   projectCard: {
     backgroundColor: "#1A1A1A",
-    padding: 16,
     borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
@@ -406,6 +425,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 8,
+    overflow: "hidden",
+  },
+  coverImageWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+  },
+  coverImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  cardTextContent: {
+    padding: 16,
   },
   projectName: {
     fontSize: 18,
@@ -424,8 +459,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
   },
   roleText: {
     fontSize: 12,

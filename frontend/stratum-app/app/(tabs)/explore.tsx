@@ -41,6 +41,7 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { projectService } from "../../src/services/projectService";
 import type { Project } from "../../src/services/projectService.types";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -161,26 +162,31 @@ export default function UnearthedScreen() {
         onPress={() => router.push(`/public-project/${project.id}`)}
         activeOpacity={0.7}
       >
-        {project.cover_image_url ? (
-          <Image
-            source={{ uri: project.cover_image_url }}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.coverPlaceholder}>
-            <IconSymbol name="cube.fill" size={32} color="#9A9A9A" />
+        {project.cover_image_url && (
+          <View style={styles.coverImageWrapper}>
+            <Image
+              source={{ uri: project.cover_image_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={["#1A1A1A", "rgba(26,26,26,0.92)", "rgba(26,26,26,0.5)", "rgba(26,26,26,0.15)", "transparent"]}
+              locations={[0, 0.2, 0.35, 0.45, 0.6]}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
           </View>
         )}
-        <View style={styles.cardContent}>
+        <View style={styles.cardTextContent}>
           <Text style={styles.projectName} numberOfLines={1}>
             {project.name}
           </Text>
           <Text style={styles.projectDescription} numberOfLines={2} ellipsizeMode="tail">
             {project.description || "No description"}
           </Text>
-          <View style={styles.cardFooter}>
-            <Text style={styles.projectUpdated}>
+          <View style={styles.projectMeta}>
+            <Text style={styles.dateText}>
               Updated{" "}
               {project.updated_at
                 ? new Date(project.updated_at).toLocaleDateString()
@@ -425,46 +431,55 @@ const styles = StyleSheet.create({
   /* ── Project cards ─────────────────────────────── */
   projectCard: {
     backgroundColor: "#1A1A1A",
-    borderRadius: 14,
-    overflow: "hidden",
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  coverImageWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
   },
   coverImage: {
     width: "100%",
-    height: 140,
+    height: "100%",
+    position: "absolute",
+    right: 0,
+    top: 0,
   },
-  coverPlaceholder: {
-    width: "100%",
-    height: 100,
-    backgroundColor: "#1A1A1A",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardContent: {
-    padding: 14,
+  cardTextContent: {
+    padding: 16,
   },
   projectName: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#F5F5F5",
-    marginBottom: 4,
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   projectDescription: {
-    fontSize: 13,
-    color: "#CFCFCF",
-    lineHeight: 18,
-    marginBottom: 8,
+    fontSize: 14,
+    color: "#9A9A9A",
+    marginBottom: 12,
+    lineHeight: 20,
   },
-  cardFooter: {
+  projectMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingTop: 8,
   },
-  projectUpdated: {
-    fontSize: 11,
+  dateText: {
+    fontSize: 12,
     color: "#9A9A9A",
+    letterSpacing: 0.5,
   },
   memberBadge: {
     flexDirection: "row",

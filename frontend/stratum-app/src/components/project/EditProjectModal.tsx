@@ -114,7 +114,7 @@ export default function EditProjectModal({ visible, onClose }: Props) {
       mediaTypes: ["images"],
       quality: 0.8,
       allowsEditing: Platform.OS !== "web",
-      aspect: [3, 2],
+      aspect: [16, 5],
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];

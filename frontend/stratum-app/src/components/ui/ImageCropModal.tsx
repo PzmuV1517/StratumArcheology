@@ -23,7 +23,7 @@ import {
 } from "react-native";
 import * as ImageManipulator from "expo-image-manipulator";
 
-const ASPECT = 3 / 2;
+const ASPECT = 16 / 5;
 
 interface Props {
   visible: boolean;

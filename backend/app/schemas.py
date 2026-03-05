@@ -165,6 +165,12 @@ class ProjectResponse(ProjectBase):
     updated_at: datetime
     is_active: bool
 
+    @field_validator("cover_image_url", mode="before")
+    @classmethod
+    def _resolve_cover_url(cls, v: str | None) -> str | None:
+        from app.minio_client import resolve_storage_url
+        return resolve_storage_url(v)
+
     class Config:
         from_attributes = True
 
