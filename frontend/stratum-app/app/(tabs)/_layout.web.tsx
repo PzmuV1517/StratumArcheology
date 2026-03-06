@@ -55,6 +55,7 @@ const ANIM_MS = 200;
 const ACTIVE = "#FF2A2A";
 const INACTIVE = "#9A9A9A";
 const PAGE_BG = "#111111";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BORDER = "#2A2A2A";
 
 const NAV_ITEMS = [
