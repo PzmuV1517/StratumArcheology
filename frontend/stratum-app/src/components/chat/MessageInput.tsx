@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2A2A2A",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 3,
   },
   sendBtnActive: {
     backgroundColor: "#FF2A2A",

@@ -291,7 +291,7 @@ export default function ProjectChatScreen() {
         }
       />
 
-      <View style={{ paddingBottom: TAB_BAR_HEIGHT }}>
+      <View style={{ paddingBottom: Platform.OS === "web" ? 12 : TAB_BAR_HEIGHT }}>
         <TypingIndicator names={typingUsers} />
         <MessageInput
           onSend={activeChannel ? handleSend : () => {}}
