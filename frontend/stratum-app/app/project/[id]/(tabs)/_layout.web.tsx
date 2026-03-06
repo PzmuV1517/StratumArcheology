@@ -14,11 +14,12 @@ import React, { useState, useRef, useCallback } from "react";
 import {
   Animated,
   Easing,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
   Share,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -26,6 +27,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
 import EditProjectModal from "@/src/components/project/EditProjectModal";
+import { projectService } from "@/src/services/projectService";
+import { showAlert } from "@/src/utils/alert";
 
 /* ─────────────────────────────────────────────
  *  Constants
@@ -80,7 +83,7 @@ export default function ProjectTabsLayoutWeb() {
   const params = useLocalSearchParams<{ id: string }>();
   const projectId = params.id;
   
-  const { project, navigateToTab, setShowMenu, setShowMembersModal, onDeleteProject, isOwner } = useProjectDetail();
+  const { project, navigateToTab, setShowMenu, setShowMembersModal, onDeleteProject, onExitProject, refreshProject, isOwner, members, currentUser } = useProjectDetail();
 
   /* ─────  Remember last known project name to avoid flicker  ───── */
   const lastNameRef = useRef(project?.name || "");
@@ -91,6 +94,8 @@ export default function ProjectTabsLayoutWeb() {
   const [collapsed, setCollapsed] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferLoading, setTransferLoading] = useState(false);
   const widthAnim = useRef(new Animated.Value(EXPANDED_W)).current;
   // Always tracks the real animated sidebar edge — used to anchor the More menu
   const menuLeft = useRef(Animated.add(widthAnim, new Animated.Value(8))).current;
@@ -147,11 +152,35 @@ export default function ProjectTabsLayoutWeb() {
             }).catch(() => {});
           }
           break;
-        case "exit":
-          router.replace("/(tabs)/projects");
+        case "exit": {
+          const otherMembers = members.filter(
+            (m) => (m.user_id || m.id) !== currentUser?.id
+          );
+          if (isOwner && otherMembers.length === 0) {
+            showAlert(
+              "Cannot Leave",
+              "You are the only member of this project. Delete the project instead."
+            );
+          } else if (isOwner) {
+            setShowTransferModal(true);
+          } else {
+            showAlert(
+              "Leave Project?",
+              "Are you sure you want to leave this project?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Leave",
+                  style: "destructive",
+                  onPress: () => onExitProject?.(),
+                },
+              ]
+            );
+          }
           break;
+        }
         case "delete":
-          Alert.alert(
+          showAlert(
             "Delete Project?",
             "This action cannot be undone. All data will be permanently deleted.",
             [
@@ -159,35 +188,42 @@ export default function ProjectTabsLayoutWeb() {
               {
                 text: "Delete",
                 style: "destructive",
-                onPress: onDeleteProject,
+                onPress: () => onDeleteProject?.(),
               },
             ]
           );
           break;
-        case "publicise":
+        case "publicise": {
           if (project?.id) {
             const action = project.is_public ? "privatise" : "publicise";
+            const label = action.charAt(0).toUpperCase() + action.slice(1);
             const desc = project.is_public
               ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
               : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image.";
-            Alert.alert(
-              `${action.charAt(0).toUpperCase() + action.slice(1)} Project?`,
+            showAlert(
+              `${label} Project?`,
               desc,
               [
                 { text: "Cancel", style: "cancel" },
                 {
-                  text: action.charAt(0).toUpperCase() + action.slice(1),
+                  text: label,
                   onPress: async () => {
-                    // Toggle public status logic here
+                    try {
+                      await projectService.togglePublicise(project.id);
+                      await refreshProject();
+                    } catch {
+                      showAlert("Error", "Failed to update project visibility.");
+                    }
                   },
                 },
               ]
             );
           }
           break;
+        }
       }
     },
-    [project, router, setShowMenu, setShowMembersModal, onDeleteProject, isOwner]
+    [project, router, setShowMenu, setShowMembersModal, onDeleteProject, onExitProject, refreshProject, isOwner]
   );
 
   const moreMenuItems = [
@@ -345,6 +381,102 @@ export default function ProjectTabsLayoutWeb() {
     </GestureHandlerRootView>
 
       <EditProjectModal visible={showEditModal} onClose={() => setShowEditModal(false)} />
+
+      {/* Transfer leadership modal */}
+      <Modal
+        visible={showTransferModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTransferModal(false)}
+      >
+        <View style={tm.backdrop}>
+          <View style={tm.card}>
+            <Text style={tm.title}>Transfer Leadership</Text>
+            <Text style={tm.desc}>
+              You must transfer ownership before leaving. Pick a new leader or choose at random.
+            </Text>
+
+            <ScrollView style={tm.list}>
+              {members
+                .filter((m) => (m.user_id || m.id) !== currentUser?.id)
+                .map((m) => (
+                  <TouchableOpacity
+                    key={m.user_id || m.id}
+                    style={tm.memberRow}
+                    activeOpacity={0.7}
+                    disabled={transferLoading}
+                    onPress={async () => {
+                      const uid = m.user_id || m.id;
+                      if (!uid || !project?.id) return;
+                      setTransferLoading(true);
+                      try {
+                        await projectService.transferOwnership(project.id, uid);
+                        await projectService.removeMember(project.id, currentUser.id);
+                        setShowTransferModal(false);
+                        router.replace("/(tabs)/projects");
+                      } catch {
+                        showAlert("Error", "Failed to transfer ownership.");
+                      } finally {
+                        setTransferLoading(false);
+                      }
+                    }}
+                  >
+                    <View style={tm.avatar}>
+                      <Text style={tm.avatarText}>
+                        {m.display_name?.[0]?.toUpperCase() || "?"}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={tm.name}>{m.display_name}</Text>
+                      <Text style={tm.role}>{m.role}</Text>
+                    </View>
+                    <IconSymbol name="chevron.right" size={16} color="#666" />
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            <View style={tm.footer}>
+              <TouchableOpacity
+                style={tm.randomBtn}
+                disabled={transferLoading}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  const others = members.filter(
+                    (m) => (m.user_id || m.id) !== currentUser?.id
+                  );
+                  if (others.length === 0 || !project?.id) return;
+                  const pick = others[Math.floor(Math.random() * others.length)];
+                  const uid = pick.user_id || pick.id;
+                  if (!uid) return;
+                  setTransferLoading(true);
+                  try {
+                    await projectService.transferOwnership(project.id, uid);
+                    await projectService.removeMember(project.id, currentUser.id);
+                    setShowTransferModal(false);
+                    router.replace("/(tabs)/projects");
+                  } catch {
+                    showAlert("Error", "Failed to transfer ownership.");
+                  } finally {
+                    setTransferLoading(false);
+                  }
+                }}
+              >
+                <IconSymbol name="dice" size={18} color="#FF2A2A" />
+                <Text style={tm.randomText}>Pick Random</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={tm.cancelBtn}
+                onPress={() => setShowTransferModal(false)}
+                disabled={transferLoading}
+                activeOpacity={0.7}
+              >
+                <Text style={tm.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -489,5 +621,106 @@ const s = StyleSheet.create({
   moreMenuItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: "#2A2A2A",
+  },
+});
+
+const tm = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  card: {
+    width: 420,
+    maxHeight: "80%",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    padding: 24,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 8,
+  },
+  desc: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  list: {
+    maxHeight: 300,
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    gap: 12,
+    marginBottom: 4,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#2A2A2A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    color: "#F5F5F5",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  name: {
+    color: "#F5F5F5",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  role: {
+    color: "#9A9A9A",
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+    gap: 12,
+  },
+  randomBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 42, 42, 0.12)",
+  },
+  randomText: {
+    color: "#FF2A2A",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  cancelBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#2A2A2A",
+  },
+  cancelText: {
+    color: "#9A9A9A",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

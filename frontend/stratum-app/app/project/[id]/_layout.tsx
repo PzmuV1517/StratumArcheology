@@ -97,6 +97,7 @@ function ProjectStack() {
     setShowFilesOverlay,
     setShowMenu,
     setShowMembersModal,
+    onExitProject,
     onDeleteProject,
     refreshProject,
   } = useProjectDetail();
@@ -158,10 +159,44 @@ function ProjectStack() {
         }
         break;
       case "exit":
-        router.replace("/(tabs)/projects");
+        if (isOwner) {
+          Alert.alert(
+            "Leave Project",
+            "You are the owner. Transfer leadership first or delete the project.",
+            [{ text: "OK" }],
+          );
+        } else {
+          Alert.alert(
+            "Exit Project?",
+            "Are you sure you want to leave this project? You will need to be re-invited to rejoin.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Leave",
+                style: "destructive",
+                onPress: () => onExitProject(),
+              },
+            ],
+          );
+        }
         break;
       case "delete":
-        onDeleteProject();
+        if (!isOwner) {
+          Alert.alert("Permission Denied", "Only the project leader can delete this project.");
+        } else {
+          Alert.alert(
+            "Delete Project?",
+            "This action cannot be undone. All project data will be permanently deleted.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: () => onDeleteProject(),
+              },
+            ],
+          );
+        }
         break;
       case "publicise":
         if (project?.id) {
@@ -182,7 +217,7 @@ function ProjectStack() {
                     await projectService.togglePublicise(project.id);
                     await refreshProject();
                   } catch {
-                    // handled silently
+                    Alert.alert("Error", "Failed to change project visibility.");
                   }
                 },
               },
@@ -198,7 +233,7 @@ function ProjectStack() {
         setActiveModal(id as FullScreenModal);
         break;
     }
-  }, [project, isOwner, onDeleteProject, refreshProject, setShowMenu, setShowMembersModal, setActiveModal]);
+  }, [project, isOwner, onExitProject, onDeleteProject, refreshProject, setShowMenu, setShowMembersModal, setActiveModal]);
 
   /** Adaptor for NativeToolbarMenu events → dispatchMenuAction. */
   const handleMenuAction = useCallback(
