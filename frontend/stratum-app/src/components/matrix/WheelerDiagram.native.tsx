@@ -39,6 +39,7 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 import Svg, {
   Rect,
@@ -181,6 +182,28 @@ function createPlaceholderData(): {
   return { trenches, placements };
 }
 
+/** Extract intrinsic {w, h} from an SVG string's viewBox / width+height attrs. */
+function parseSvgSize(svg: string): { w: number; h: number } | null {
+  const vbMatch = svg.match(/viewBox=["']([^"']+)["']/);
+  if (vbMatch) {
+    const parts = vbMatch[1]
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (parts.length >= 4 && parts[2] > 0 && parts[3] > 0) {
+      return { w: parts[2], h: parts[3] };
+    }
+  }
+  const wMatch = svg.match(/\bwidth=["']([\d.]+)["']/);
+  const hMatch = svg.match(/\bheight=["']([\d.]+)["']/);
+  if (wMatch && hMatch) {
+    const w = parseFloat(wMatch[1]);
+    const h = parseFloat(hMatch[1]);
+    if (w > 0 && h > 0) return { w, h };
+  }
+  return null;
+}
+
 /* ───────────────────────── Component ───────────────────────── */
 
 /**
@@ -197,8 +220,10 @@ export default function WheelerDiagram({
 
   canEdit: _canEdit = false,
 }: WheelerDiagramProps) {
-  const { data, loading, error, dirty, version, renderUrl, renderVersion } =
+  const { data, loading, error, dirty, version, renderVersion } =
     useWheelerData(projectId);
+
+  const { width: screenWidth } = useWindowDimensions();
 
   // View mode: "diagram" (coloured grid) or "publication" (B&W SVG)
   const [viewMode, setViewMode] = useState<"diagram" | "publication">("diagram");
@@ -275,18 +300,22 @@ export default function WheelerDiagram({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, hasPending]);
 
-  // Fetch publication SVG when switching to publication mode or URL changes
+  // Fetch publication SVG when switching to publication mode or version changes
   useEffect(() => {
-    if (!renderUrl) return;
-    if (renderUrl === lastPubUrlRef.current && pubSvg) return;
-    lastPubUrlRef.current = renderUrl;
+    // Use the proxy endpoint so mobile never hits the MinIO URL directly
+    // (on physical devices, the presigned MinIO URL's hostname resolves to
+    //  the device itself, not the server, causing ERR_NETWORK).
+    if (renderVersion === null) return;
+    const proxyKey = `${projectId}:v${renderVersion}`;
+    if (proxyKey === lastPubUrlRef.current && pubSvg) return;
+    lastPubUrlRef.current = proxyKey;
 
     let cancelled = false;
     setPubLoading(true);
     setPubError(null);
 
     api
-      .get(renderUrl, { responseType: "text", baseURL: "" })
+      .get(`/projects/${projectId}/wheeler/render`, { responseType: "text" })
       .then((res: { data: string }) => {
         if (!cancelled) {
           setPubSvg(res.data);
@@ -295,7 +324,11 @@ export default function WheelerDiagram({
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setPubError((err as Error)?.message ?? "Failed to load publication SVG");
+          const msg =
+            (err as { response?: { status?: number } })?.response?.status === 404
+              ? "No publication SVG yet.\nSave the diagram on desktop to generate one."
+              : ((err as Error)?.message ?? "Failed to load publication SVG");
+          setPubError(msg);
           setPubLoading(false);
         }
       });
@@ -303,7 +336,7 @@ export default function WheelerDiagram({
     return () => {
       cancelled = true;
     };
-  }, [renderUrl, pubSvg]);
+  }, [renderVersion, projectId, pubSvg]);
 
   // Share the publication SVG via expo-sharing
   const handleShareSvg = useCallback(async () => {
@@ -468,13 +501,14 @@ export default function WheelerDiagram({
       {/* Desktop recommended banner */}
       <View style={s.banner}>
         <Text style={s.bannerText}>
-          Read-only view. Use desktop for full editing.
+          Read-only view. Use desktop for full editing. Note that preview may be
+          lower quality. You can view full quality by Exporting
         </Text>
       </View>
 
       {/* ── Publication mode ── */}
       {viewMode === "publication" && (
-        <View style={{ flex: 1, backgroundColor: "#fafaf8" }}>
+        <View style={{ flex: 1, backgroundColor: "#111111" }}>
           {/* Stale warning */}
           {(dirty || (renderVersion !== null && renderVersion !== version)) && (
             <View style={{ backgroundColor: "#92400e", padding: 10 }}>
@@ -491,28 +525,28 @@ export default function WheelerDiagram({
               justifyContent: "space-between",
               padding: 10,
               borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: "#d5d3cc",
-              backgroundColor: "#f5f4f0",
+              borderBottomColor: "#2A2A2A",
+              backgroundColor: "#1a1a1a",
             }}
           >
-            <Text style={{ fontSize: 11, color: "#9ca3af" }}>
+            <Text style={{ fontSize: 11, color: "#888888" }}>
               Wheeler 1964 style · v{renderVersion ?? "?"}
             </Text>
             <TouchableOpacity
               onPress={handleShareSvg}
               disabled={!pubSvg}
               style={{
-                backgroundColor: pubSvg ? "#292521" : "#d1d5db",
+                backgroundColor: pubSvg ? "#FF2A2A" : "#444444",
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 6,
               }}
             >
-              <Text style={{ color: "#fff", fontSize: 13 }}>⬆ Share SVG</Text>
+              <Text style={{ color: "#fff", fontSize: 13 }}>Share SVG</Text>
             </TouchableOpacity>
           </View>
           {/* SVG content */}
-          {!renderUrl && (
+          {renderVersion === null && (
             <View
               style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
             >
@@ -553,26 +587,36 @@ export default function WheelerDiagram({
               </Text>
             </View>
           )}
-          {pubSvg && !pubLoading && (
-            <ScrollView
-              contentContainerStyle={{ padding: 16, alignItems: "center" }}
-              minimumZoomScale={0.5}
-              maximumZoomScale={4}
-              scrollEnabled
-            >
-              <SvgXml xml={pubSvg} width="100%" height={undefined} />
-              <Text
-                style={{
-                  color: "#9ca3af",
-                  fontSize: 10,
-                  marginTop: 8,
-                  textAlign: "center",
-                }}
-              >
-                Vector SVG · Suitable for print and publication
-              </Text>
-            </ScrollView>
-          )}
+          {pubSvg &&
+            !pubLoading &&
+            (() => {
+              const padding = 32; // 16px each side
+              const displayW = screenWidth - padding;
+              const intrinsic = parseSvgSize(pubSvg);
+              const displayH = intrinsic
+                ? Math.round((displayW * intrinsic.h) / intrinsic.w)
+                : displayW; // fallback: square
+              return (
+                <ScrollView
+                  contentContainerStyle={{ padding: 16, alignItems: "center" }}
+                  minimumZoomScale={0.5}
+                  maximumZoomScale={4}
+                  scrollEnabled
+                >
+                  <SvgXml xml={pubSvg} width={displayW} height={displayH} />
+                  <Text
+                    style={{
+                      color: "#9ca3af",
+                      fontSize: 10,
+                      marginTop: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    Vector SVG · Suitable for print and publication
+                  </Text>
+                </ScrollView>
+              );
+            })()}
         </View>
       )}
 

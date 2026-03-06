@@ -1110,6 +1110,45 @@ async def get_wheeler_data(
         "render_version": project.wheeler_render_version,
     }
 
+@router.get("/{project_id}/wheeler/render")
+async def get_wheeler_render(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Proxy the publication SVG from MinIO so mobile clients don't need direct
+    MinIO access (their 'localhost' resolves to the device, not the server)."""
+    from fastapi.responses import Response
+    import httpx
+
+    check_project_permission(project_id, current_user, db)
+
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not project.wheeler_render_path or not minio_client.available:
+        raise HTTPException(status_code=404, detail="No publication SVG available")
+
+    try:
+        presigned = minio_client.get_presigned_url_for_bucket(
+            "wheeler-renders", project.wheeler_render_path
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not generate presigned URL: {exc}") from exc
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(presigned)
+        r.raise_for_status()
+        return Response(
+            content=r.content,
+            media_type="image/svg+xml",
+            headers={"Cache-Control": "private, max-age=300"},
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch SVG: {exc}") from exc
+
 
 @router.put("/{project_id}/wheeler")
 async def update_wheeler_data(

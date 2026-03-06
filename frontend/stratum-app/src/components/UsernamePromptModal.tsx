@@ -33,7 +33,10 @@ export default function UsernamePromptModal({ visible, onComplete }: Props) {
   const [saving, setSaving] = useState(false);
 
   const sanitize = (text: string) =>
-    text.toLowerCase().replace(/[^a-z0-9_.-]/g, "").slice(0, 30);
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9_.-]/g, "")
+      .slice(0, 30);
 
   const checkAvailability = useCallback(async (name: string) => {
     if (name.length < 3) {
@@ -43,7 +46,9 @@ export default function UsernamePromptModal({ visible, onComplete }: Props) {
     setChecking(true);
     setError(null);
     try {
-      const { data } = await api.get(`/auth/username/check?username=${encodeURIComponent(name)}`);
+      const { data } = await api.get(
+        `/auth/username/check?username=${encodeURIComponent(name)}`,
+      );
       if (!data.available) {
         setError(data.reason || "Username is taken");
       }
@@ -90,8 +95,8 @@ export default function UsernamePromptModal({ visible, onComplete }: Props) {
         <View style={styles.card}>
           <Text style={styles.title}>Choose your username</Text>
           <Text style={styles.subtitle}>
-            Pick a unique username for your STRATUM profile. This is how others
-            will @mention you in project chats.
+            Pick a unique username for your STRATUM profile. This is how others will
+            @mention you in project chats.
           </Text>
 
           <TextInput

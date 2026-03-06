@@ -337,7 +337,11 @@ export function ProjectGalleryScreen() {
   );
 }
 
-export function ProjectMapScreen() {
+export function ProjectMapScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
   const { project, canEditMap, iosHeaderPad, setCurrentTabName } =
     useProjectDetail();
 
@@ -351,7 +355,7 @@ export function ProjectMapScreen() {
         style={{
           flex: 1,
           backgroundColor: "#111111",
-          paddingTop: iosHeaderPad,
+          paddingTop: noHeaderPad ? 0 : iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
       >
@@ -371,7 +375,11 @@ export function ProjectMapScreen() {
   );
 }
 
-export function ProjectHistoryScreen() {
+export function ProjectHistoryScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
   const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
 
   useEffect(() => {
@@ -385,7 +393,7 @@ export function ProjectHistoryScreen() {
           style={{
             flex: 1,
             backgroundColor: "#111111",
-            paddingTop: iosHeaderPad,
+            paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: 0,
           }}
         >
@@ -405,7 +413,7 @@ export function ProjectHistoryScreen() {
           style={{
             flex: 1,
             backgroundColor: "#111111",
-            paddingTop: iosHeaderPad,
+            paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: Platform.OS === "android" ? 84 : 0,
           }}
         >
@@ -496,7 +504,11 @@ export function ProjectToolsScreen() {
  * Lazy-loads the platform-specific WheelerDiagram component
  * and renders it inside a project tab guard.
  */
-export function ProjectWheelerScreen() {
+export function ProjectWheelerScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
   const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
 
   const [WheelerComponent, setWheelerComponent] =
@@ -531,7 +543,7 @@ export function ProjectWheelerScreen() {
         style={{
           flex: 1,
           backgroundColor: "#111111",
-          paddingTop: iosHeaderPad,
+          paddingTop: noHeaderPad ? 0 : iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
       >
@@ -554,7 +566,14 @@ export function ProjectWheelerScreen() {
           }
         >
           {Platform.OS === "web" ? (
-            <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                height: "100%",
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               {WheelerComponent &&
                 React.createElement(WheelerComponent, {
                   projectId: project?.id as string,
