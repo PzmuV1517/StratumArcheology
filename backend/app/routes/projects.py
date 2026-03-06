@@ -239,6 +239,50 @@ async def toggle_project_publicity(
     return project
 
 
+# ─── E2EE key management ───────────────────────────────────────────────────────
+
+@router.get("/{project_id}/e2ee-key")
+async def get_e2ee_key(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the E2EE encryption key for a project. Members only."""
+    check_project_permission(project_id, current_user, db)
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"e2ee_key": project.e2ee_key}
+
+
+@router.put("/{project_id}/e2ee-key")
+async def set_e2ee_key(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    key: str = None,
+):
+    """Set or rotate the E2EE encryption key. Only set if not already set (first caller wins)."""
+    check_project_permission(project_id, current_user, db)
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.e2ee_key and key:
+        # Key already exists — only owner can rotate
+        if project.owner_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the project owner can rotate the encryption key",
+            )
+
+    if key:
+        project.e2ee_key = key
+        db.commit()
+
+    return {"e2ee_key": project.e2ee_key}
+
+
 @router.post(
     "/", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED
 )

@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../contexts/AuthContext";
 import { chatService } from "../services/chatService";
+import { encryptMessage, decryptMessage, isEncrypted } from "../utils/e2ee";
 import type { ChatMessage, SendMessagePayload, MentionRef } from "../services/chatService.types";
 
 interface UseChatOptions {
@@ -52,6 +53,27 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
   const identifiedRef = useRef(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Resolve the E2EE key scope — project ID (channels & project rooms) or DM pseudo-ID. */
+  const e2eeScope = projectId ?? (otherUserId ? `dm_${otherUserId}` : null);
+
+  /** Decrypt a single message in-place if encrypted. */
+  const tryDecrypt = useCallback(
+    async (msg: ChatMessage): Promise<ChatMessage> => {
+      if (!e2eeScope || !isEncrypted(msg.content)) return msg;
+      const plaintext = await decryptMessage(msg.content, e2eeScope);
+      return { ...msg, content: plaintext, _e2ee: true };
+    },
+    [e2eeScope],
+  );
+
+  /** Decrypt an array of messages. */
+  const decryptBatch = useCallback(
+    async (msgs: ChatMessage[]): Promise<ChatMessage[]> => {
+      return Promise.all(msgs.map(tryDecrypt));
+    },
+    [tryDecrypt],
+  );
+
   // ── Identify this socket to the server (for DM delivery) ────────────
 
   useEffect(() => {
@@ -88,12 +110,13 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
 
         // Messages come newest-first from API; reverse so oldest is first for FlatList
         const incoming = [...page.messages].reverse();
+        const decrypted = await decryptBatch(incoming);
 
         if (cursor) {
           // Prepend older messages
-          setMessages((prev) => [...incoming, ...prev]);
+          setMessages((prev) => [...decrypted, ...prev]);
         } else {
-          setMessages(incoming);
+          setMessages(decrypted);
         }
         cursorRef.current = page.next_cursor;
         setHasMore(page.has_more);
@@ -103,7 +126,7 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
         setIsLoading(false);
       }
     },
-    [channelId, projectId, otherUserId],
+    [channelId, projectId, otherUserId, decryptBatch],
   );
 
   useEffect(() => {
@@ -123,7 +146,7 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
   useEffect(() => {
     if (!socket) return;
 
-    const handleNewMessage = (data: ChatMessage) => {
+    const handleNewMessage = async (data: ChatMessage) => {
       // Filter — only accept messages for our current chat
       if (channelId && String(data.channel_id) !== String(channelId)) return;
       if (!channelId && projectId && data.project_id !== projectId) return;
@@ -139,12 +162,25 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
         if (prev.some((m) => m.id === data.id)) return prev;
         return [...prev, data];
       });
+
+      // Decrypt asynchronously and update
+      if (e2eeScope && isEncrypted(data.content)) {
+        tryDecrypt(data).then((decrypted) => {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === decrypted.id ? decrypted : m)),
+          );
+        });
+      }
     };
 
-    const handleEdited = (data: { id: string; content: string; edited_at: string }) => {
+    const handleEdited = async (data: { id: string; content: string; edited_at: string }) => {
+      let content = data.content;
+      if (e2eeScope && isEncrypted(content)) {
+        content = await decryptMessage(content, e2eeScope);
+      }
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === data.id ? { ...m, content: data.content, edited_at: data.edited_at } : m,
+          m.id === data.id ? { ...m, content, edited_at: data.edited_at } : m,
         ),
       );
     };
@@ -178,14 +214,19 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
       socket.off("message_deleted", handleDeleted);
       socket.off("user_typing", handleTyping);
     };
-  }, [socket, channelId, projectId, otherUserId, user?.id]);
+  }, [socket, channelId, projectId, otherUserId, user?.id, e2eeScope, tryDecrypt]);
 
   // ── Actions ─────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
     async (content: string, replyToId?: string, mentions?: MentionRef[]) => {
+      // Encrypt if a key is available for this scope
+      const encrypted = e2eeScope
+        ? await encryptMessage(content, e2eeScope)
+        : content;
+
       const payload: SendMessagePayload = {
-        content,
+        content: encrypted,
         project_id: projectId ?? null,
         recipient_id: otherUserId ?? null,
         channel_id: channelId ? String(channelId) : null,
@@ -207,21 +248,25 @@ export function useChat({ projectId, channelId, otherUserId }: UseChatOptions): 
         }
       }
     },
-    [socket, channelId, projectId, otherUserId],
+    [socket, channelId, projectId, otherUserId, e2eeScope],
   );
 
   const editMessage = useCallback(
     async (messageId: string, content: string) => {
+      const encrypted = e2eeScope
+        ? await encryptMessage(content, e2eeScope)
+        : content;
+
       if (socket?.connected) {
-        socket.emit("edit_message", { message_id: messageId, content });
+        socket.emit("edit_message", { message_id: messageId, content: encrypted });
       } else {
-        const msg = await chatService.editMessage(messageId, content);
+        const msg = await chatService.editMessage(messageId, encrypted);
         if (msg) {
           setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
         }
       }
     },
-    [socket],
+    [socket, e2eeScope],
   );
 
   const deleteMessage = useCallback(

@@ -24,6 +24,8 @@ export interface ChatMessage {
   created_at: string; // ISO 8601
   edited_at: string | null;
   is_deleted: boolean;
+  /** Client-only: true when this message was decrypted from E2EE ciphertext. */
+  _e2ee?: boolean;
 }
 
 /** A mention reference embedded in a message. */

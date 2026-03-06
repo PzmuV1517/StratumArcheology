@@ -8,7 +8,7 @@
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -27,6 +27,8 @@ import { useAuth } from "@/src/contexts/AuthContext";
 import { useChat } from "@/src/hooks/useChat";
 import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
 import { chatService } from "@/src/services/chatService";
+import { projectService } from "@/src/services/projectService";
+import { ensureProjectKey } from "@/src/utils/e2ee";
 import type { ChatMessage } from "@/src/services/chatService.types";
 import type { Channel } from "@/src/services/chatService.types";
 
@@ -97,6 +99,16 @@ export default function ProjectChatScreen() {
       loadChannels();
     }, [authLoading, user, projectId, loadChannels]),
   );
+
+  /* ── Ensure E2EE key is provisioned for this project ── */
+  useEffect(() => {
+    if (!projectId) return;
+    ensureProjectKey(
+      projectId,
+      () => projectService.getE2eeKey(projectId),
+      (key) => projectService.setE2eeKey(projectId, key),
+    );
+  }, [projectId]);
 
   /* ── Chat hook — uses channel if available, else project room ── */
   const {

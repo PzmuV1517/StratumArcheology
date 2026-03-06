@@ -140,6 +140,7 @@ export default function ChatBubble({
         )}
         {renderedContent}
         <View style={styles.meta}>
+          {message._e2ee && <Text style={styles.e2eeBadge}>🔒</Text>}
           <Text style={styles.time}>{formatTime(message.created_at)}</Text>
           {message.edited_at && <Text style={styles.edited}>(edited)</Text>}
         </View>
@@ -245,6 +246,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.4)",
     fontStyle: "italic",
+  },
+  e2eeBadge: {
+    fontSize: 10,
   },
   deletedText: {
     fontSize: 14,

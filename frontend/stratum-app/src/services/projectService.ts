@@ -334,6 +334,24 @@ export const projectService = {
   },
 
   /**
+   * Get the E2EE encryption key for a project.
+   */
+  getE2eeKey: async (projectId: string): Promise<string | null> => {
+    const res = await api.get(`/projects/${projectId}/e2ee-key`);
+    return res.data?.e2ee_key ?? null;
+  },
+
+  /**
+   * Set the E2EE encryption key for a project (first-caller-wins).
+   */
+  setE2eeKey: async (projectId: string, key: string): Promise<string | null> => {
+    const res = await api.put(`/projects/${projectId}/e2ee-key`, null, {
+      params: { key },
+    });
+    return res.data?.e2ee_key ?? null;
+  },
+
+  /**
    * Search users by name, email, or @username
    */
   searchUsers: async (

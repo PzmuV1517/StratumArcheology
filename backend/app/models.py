@@ -204,6 +204,9 @@ class Project(Base):
     wheeler_render_path = Column(Text, nullable=True)   # MinIO object key
     wheeler_render_version = Column(Integer, nullable=True)  # data version at render time
 
+    # E2EE encryption key for chat (base64-encoded, shared among members)
+    e2ee_key = Column(Text, nullable=True)
+
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
     members = relationship(
