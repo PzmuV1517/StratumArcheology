@@ -38,11 +38,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.requests import Request
 
 from app.config import settings
 from app.firebase_config import initialize_firebase
 from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
-from app.minio_client import minio_client
+from app.minio_client import minio_client, set_request_base_url
 from app.rate_limiter import limiter
 from app.routes import (
     activities,
@@ -101,6 +102,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Capture the request base URL so MinIO helpers can build proxy URLs
+# that are reachable from any device (instead of localhost presigned URLs).
+@app.middleware("http")
+async def _capture_base_url(request: Request, call_next):
+    set_request_base_url(str(request.base_url))
+    return await call_next(request)
 
 # Include routers
 app.include_router(auth.router, prefix="/api")

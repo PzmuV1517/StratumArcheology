@@ -169,6 +169,61 @@ async def upload_banner_image(
 
 
 # =============================================================================
+# STORAGE PROXY  –  streams MinIO objects through the API server so mobile
+# and remote clients don't need direct access to the MinIO endpoint.
+# =============================================================================
+
+# Buckets the proxy is allowed to serve (prevent probing arbitrary buckets).
+_ALLOWED_BUCKETS: set[str] = {
+    minio_client.bucket_name,  # default bucket (stratum-files)
+    "wheeler-renders",
+}
+
+
+@router.get("/storage/{bucket}/{path:path}")
+async def storage_proxy(bucket: str, path: str):
+    """Stream a MinIO object through the API.
+
+    This makes stored files reachable from any device that can reach the
+    API, avoiding direct MinIO ``localhost`` presigned URLs.
+    """
+    if bucket not in _ALLOWED_BUCKETS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if not minio_client.client:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage unavailable",
+        )
+
+    try:
+        response = minio_client.client.get_object(bucket, path)
+        content_type = response.headers.get(
+            "Content-Type", "application/octet-stream"
+        )
+
+        def _iterfile():
+            try:
+                for chunk in response.stream(8192):
+                    yield chunk
+            finally:
+                response.close()
+                response.release_conn()
+
+        return StreamingResponse(
+            _iterfile(),
+            media_type=content_type,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    except Exception as exc:
+        # Catch S3Error or anything else – return 404 for missing keys
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        ) from exc
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
