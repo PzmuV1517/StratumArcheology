@@ -197,7 +197,7 @@ export default function ProjectChatScreen() {
       keyboardVerticalOffset={headerHeight + (Platform.OS === "ios" ? TAB_BAR_HEIGHT : 0)}
     >
       {/* ── Channel header bar ──────────────────────── */}
-      <View style={[styles.channelBar, { marginTop: headerHeight }]}>
+      <View style={[styles.channelBar, Platform.OS !== "android" && { marginTop: headerHeight }]}>
         {channelsLoading ? (
           <View style={styles.channelToggle}>
             <ActivityIndicator size="small" color="#FF2A2A" />
