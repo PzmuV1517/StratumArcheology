@@ -447,9 +447,15 @@ async def send_message(sid, data):
         if not content:
             return {"status": "error", "message": "Empty message"}
         if not project_id and not recipient_id:
-            return {"status": "error", "message": "project_id or recipient_id required"}
+            return {
+                "status": "error",
+                "message": "project_id or recipient_id required",
+            }
         if project_id and recipient_id:
-            return {"status": "error", "message": "Cannot set both project_id and recipient_id"}
+            return {
+                "status": "error",
+                "message": "Cannot set both project_id and recipient_id",
+            }
 
         # Resolve sender from session or identify data
         sender_id = None
@@ -462,7 +468,10 @@ async def send_message(sid, data):
                     sender_id = uid
                     break
         if not sender_id:
-            return {"status": "error", "message": "Not identified. Call 'identify' first."}
+            return {
+                "status": "error",
+                "message": "Not identified. Call 'identify' first.",
+            }
 
         from app.models import ChatMessage, User
 
@@ -549,17 +558,25 @@ async def edit_message(sid, data):
         if not sender_id:
             return {"status": "error", "message": "Not identified"}
 
-        from app.models import ChatMessage
         from datetime import datetime
+
+        from app.models import ChatMessage
 
         db = _get_db()
         try:
-            msg = db.query(ChatMessage).filter(
-                ChatMessage.id == message_id,
-                ChatMessage.sender_id == sender_id,
-            ).first()
+            msg = (
+                db.query(ChatMessage)
+                .filter(
+                    ChatMessage.id == message_id,
+                    ChatMessage.sender_id == sender_id,
+                )
+                .first()
+            )
             if not msg:
-                return {"status": "error", "message": "Message not found or not yours"}
+                return {
+                    "status": "error",
+                    "message": "Message not found or not yours",
+                }
 
             msg.content = content
             msg.edited_at = datetime.utcnow()
@@ -572,9 +589,13 @@ async def edit_message(sid, data):
             }
 
             if msg.project_id:
-                await sio.emit("message_edited", payload, room=f"project_{msg.project_id}")
+                await sio.emit(
+                    "message_edited", payload, room=f"project_{msg.project_id}"
+                )
             else:
-                await sio.emit("message_edited", payload, room=f"user_{msg.recipient_id}")
+                await sio.emit(
+                    "message_edited", payload, room=f"user_{msg.recipient_id}"
+                )
                 await sio.emit("message_edited", payload, room=f"user_{sender_id}")
 
             return {"status": "success"}
@@ -611,12 +632,19 @@ async def delete_message(sid, data):
 
         db = _get_db()
         try:
-            msg = db.query(ChatMessage).filter(
-                ChatMessage.id == message_id,
-                ChatMessage.sender_id == sender_id,
-            ).first()
+            msg = (
+                db.query(ChatMessage)
+                .filter(
+                    ChatMessage.id == message_id,
+                    ChatMessage.sender_id == sender_id,
+                )
+                .first()
+            )
             if not msg:
-                return {"status": "error", "message": "Message not found or not yours"}
+                return {
+                    "status": "error",
+                    "message": "Message not found or not yours",
+                }
 
             msg.is_deleted = True
             msg.content = ""  # scrub content
@@ -625,9 +653,13 @@ async def delete_message(sid, data):
             payload = {"id": msg.id}
 
             if msg.project_id:
-                await sio.emit("message_deleted", payload, room=f"project_{msg.project_id}")
+                await sio.emit(
+                    "message_deleted", payload, room=f"project_{msg.project_id}"
+                )
             else:
-                await sio.emit("message_deleted", payload, room=f"user_{msg.recipient_id}")
+                await sio.emit(
+                    "message_deleted", payload, room=f"user_{msg.recipient_id}"
+                )
                 await sio.emit("message_deleted", payload, room=f"user_{sender_id}")
 
             return {"status": "success"}
@@ -652,6 +684,8 @@ async def typing(sid, data):
     payload = {"user_id": user_id, "display_name": display_name}
 
     if project_id:
-        await sio.emit("user_typing", payload, room=f"project_{project_id}", skip_sid=sid)
+        await sio.emit(
+            "user_typing", payload, room=f"project_{project_id}", skip_sid=sid
+        )
     elif recipient_id:
         await sio.emit("user_typing", payload, room=f"user_{recipient_id}")

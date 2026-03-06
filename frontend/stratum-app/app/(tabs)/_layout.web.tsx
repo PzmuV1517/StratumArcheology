@@ -49,19 +49,34 @@ import UsernamePromptModal from "@/src/components/UsernamePromptModal";
  *  Constants
  * ─────────────────────────────────────────── */
 const COLLAPSED_W = 56;
-const EXPANDED_W  = COLLAPSED_W + 188; // 244
-const ROW_H       = 72;
-const ANIM_MS     = 200;
-const ACTIVE      = "#FF2A2A";
-const INACTIVE    = "#9A9A9A";
-const PAGE_BG     = "#111111";
-const BORDER      = "#2A2A2A";
+const EXPANDED_W = COLLAPSED_W + 188; // 244
+const ROW_H = 72;
+const ANIM_MS = 200;
+const ACTIVE = "#FF2A2A";
+const INACTIVE = "#9A9A9A";
+const PAGE_BG = "#111111";
+const BORDER = "#2A2A2A";
 
 const NAV_ITEMS = [
-  { name: "index",    label: "Overview",  icon: "house.fill" as const,          path: "/"         },
-  { name: "projects", label: "Projects",  icon: "folder.fill" as const,         path: "/projects" },
-  { name: "explore",  label: "Unearthed", icon: "globe.americas.fill" as const, path: "/explore"  },
-  { name: "messages", label: "Messages",  icon: "message.fill" as const,        path: "/messages" },
+  { name: "index", label: "Overview", icon: "house.fill" as const, path: "/" },
+  {
+    name: "projects",
+    label: "Projects",
+    icon: "folder.fill" as const,
+    path: "/projects",
+  },
+  {
+    name: "explore",
+    label: "Unearthed",
+    icon: "globe.americas.fill" as const,
+    path: "/explore",
+  },
+  {
+    name: "messages",
+    label: "Messages",
+    icon: "message.fill" as const,
+    path: "/messages",
+  },
 ] as const;
 
 /* ─────────────────────────────────────────────
@@ -92,7 +107,7 @@ export default function TabLayout() {
 
   const [collapsed, setCollapsed] = useState(false);
   const widthAnim = useRef(new Animated.Value(EXPANDED_W)).current;
-  
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -108,14 +123,13 @@ export default function TabLayout() {
   }, [collapsed, widthAnim]);
 
   const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
   const isActive = useCallback(
     (path: string) => {
       if (path === "/")
         return pathname === "/" || pathname === "" || pathname === "/index";
       // Highlight messages tab when in DM conversation
-      if (path === "/messages" && pathname.includes("/dm/"))
-        return true;
+      if (path === "/messages" && pathname.includes("/dm/")) return true;
       return pathname.startsWith(path);
     },
     [pathname],
@@ -150,11 +164,13 @@ export default function TabLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <UsernamePromptModal visible={needsUsername} onComplete={handleUsernameComplete} />
+      <UsernamePromptModal
+        visible={needsUsername}
+        onComplete={handleUsernameComplete}
+      />
 
       {/* Outer shell — full viewport, column direction */}
       <View style={s.shell}>
-
         {/* ══════════════════════════════════════════
          *  HEADER ROW — burger + STRATUM (never collapses)
          * ════════════════════════════════════════ */}
@@ -165,11 +181,11 @@ export default function TabLayout() {
           <Text style={s.logoText} numberOfLines={1}>
             STRATUM
           </Text>
-          
+
           {/* Profile button on the right */}
           <View style={{ flex: 1 }} />
-          <TouchableOpacity 
-            style={s.profileBtn} 
+          <TouchableOpacity
+            style={s.profileBtn}
             onPress={() => setShowProfileMenu(!showProfileMenu)}
             activeOpacity={0.8}
           >
@@ -185,19 +201,19 @@ export default function TabLayout() {
 
         {/* Profile dropdown menu */}
         {showProfileMenu && (
-          <Modal 
-            visible={showProfileMenu} 
-            transparent 
+          <Modal
+            visible={showProfileMenu}
+            transparent
             animationType="fade"
             onRequestClose={() => setShowProfileMenu(false)}
           >
-            <TouchableOpacity 
-              style={s.menuBackdrop} 
+            <TouchableOpacity
+              style={s.menuBackdrop}
               activeOpacity={1}
               onPress={() => setShowProfileMenu(false)}
             >
               <View style={s.menuCard}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={s.menuItem}
                   onPress={handleSettingsClick}
                   activeOpacity={0.7}
@@ -205,16 +221,20 @@ export default function TabLayout() {
                   <IconSymbol name="gearshape.fill" size={20} color="#F5F5F5" />
                   <Text style={s.menuItemText}>Settings</Text>
                 </TouchableOpacity>
-                
+
                 <View style={s.menuDivider} />
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={[s.menuItem, isLoggingOut && { opacity: 0.5 }]}
                   onPress={performLogout}
                   disabled={isLoggingOut}
                   activeOpacity={0.7}
                 >
-                  <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#FF2A2A" />
+                  <IconSymbol
+                    name="rectangle.portrait.and.arrow.right"
+                    size={20}
+                    color="#FF2A2A"
+                  />
                   <Text style={[s.menuItemText, { color: "#FF2A2A" }]}>
                     {isLoggingOut ? "Logging out..." : "Logout"}
                   </Text>
@@ -228,7 +248,6 @@ export default function TabLayout() {
          *  BODY ROW  — sidebar nav + page content
          * ════════════════════════════════════════ */}
         <View style={s.bodyRow}>
-
           {/* Sidebar nav — also driven by widthAnim */}
           <Animated.View style={[s.sidebar, { width: widthAnim }]}>
             {NAV_ITEMS.map(({ name, label, icon, path }) => {
@@ -241,7 +260,11 @@ export default function TabLayout() {
                   activeOpacity={0.7}
                 >
                   <View style={s.iconSlot}>
-                    <IconSymbol name={icon} size={26} color={active ? ACTIVE : INACTIVE} />
+                    <IconSymbol
+                      name={icon}
+                      size={26}
+                      color={active ? ACTIVE : INACTIVE}
+                    />
                   </View>
                   <Text
                     style={[s.navLabel, active && s.navLabelActive]}
@@ -263,15 +286,14 @@ export default function TabLayout() {
               }}
               initialRouteName="index"
             >
-              <Tabs.Screen name="index"    options={{ title: "Overview"  }} />
-              <Tabs.Screen name="projects" options={{ title: "Projects"  }} />
-              <Tabs.Screen name="explore"  options={{ title: "Unearthed" }} />
-              <Tabs.Screen name="messages" options={{ title: "Messages"  }} />
-              <Tabs.Screen name="settings" options={{ title: "Settings"  }} />
-              <Tabs.Screen name="gps"      options={{ href: null }}         />
+              <Tabs.Screen name="index" options={{ title: "Overview" }} />
+              <Tabs.Screen name="projects" options={{ title: "Projects" }} />
+              <Tabs.Screen name="explore" options={{ title: "Unearthed" }} />
+              <Tabs.Screen name="messages" options={{ title: "Messages" }} />
+              <Tabs.Screen name="settings" options={{ title: "Settings" }} />
+              <Tabs.Screen name="gps" options={{ href: null }} />
             </Tabs>
           </View>
-
         </View>
       </View>
     </GestureHandlerRootView>

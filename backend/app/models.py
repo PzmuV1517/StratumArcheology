@@ -187,22 +187,24 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    is_public = Column(Boolean, default=False)  # Whether the project is publicly visible
+    is_public = Column(
+        Boolean, default=False
+    )  # Whether the project is publicly visible
     cover_image_url = Column(Text, nullable=True)  # MinIO object key for cover image
     harris_matrix_data = Column(
         JSON, nullable=True
     )  # Harris Matrix visualization data
-    wheeler_data = Column(
-        JSON, nullable=True
-    )  # Wheeler Stratigraphic Notation data
+    wheeler_data = Column(JSON, nullable=True)  # Wheeler Stratigraphic Notation data
 
     # Version tracking for data snapshots (Time Machine support)
     harris_matrix_version = Column(Integer, default=0, nullable=False)
     wheeler_data_version = Column(Integer, default=0, nullable=False)
 
     # Publication-quality SVG render (stored in MinIO)
-    wheeler_render_path = Column(Text, nullable=True)   # MinIO object key
-    wheeler_render_version = Column(Integer, nullable=True)  # data version at render time
+    wheeler_render_path = Column(Text, nullable=True)  # MinIO object key
+    wheeler_render_version = Column(
+        Integer, nullable=True
+    )  # data version at render time
 
     # E2EE encryption key for chat (base64-encoded, shared among members)
     e2ee_key = Column(Text, nullable=True)
@@ -547,11 +549,16 @@ class Channel(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name = Column(String, nullable=False)  # e.g. "general", "finds-log"
     description = Column(Text, nullable=True)
-    is_default = Column(Boolean, default=False, nullable=False)  # The #general channel
+    is_default = Column(
+        Boolean, default=False, nullable=False
+    )  # The #general channel
     created_by = Column(
         String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -599,7 +606,10 @@ class UserGroup(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     name = Column(String, nullable=False)  # e.g. "field-leads", "lab-team"
     created_by = Column(
@@ -617,7 +627,9 @@ class UserGroup(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("project_id", "name", name="uq_user_group_name_per_project"),
+        UniqueConstraint(
+            "project_id", "name", name="uq_user_group_name_per_project"
+        ),
     )
 
 
@@ -651,15 +663,24 @@ class ChatMessage(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     sender_id = Column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     # Channel message (primary method for project chat)
     channel_id = Column(
-        String, ForeignKey("channels.id", ondelete="CASCADE"), nullable=True, index=True
+        String,
+        ForeignKey("channels.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     # Legacy: Non-null for project room messages without channels
     project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
     )
     # Non-null for DMs
     recipient_id = Column(
@@ -709,9 +730,7 @@ class DataVersion(Base):
         nullable=False,
         index=True,
     )
-    data_type = Column(
-        String, nullable=False
-    )  # "harris_matrix" or "wheeler"
+    data_type = Column(String, nullable=False)  # "harris_matrix" or "wheeler"
     version = Column(Integer, nullable=False)
     data = Column(JSON, nullable=True)  # The snapshot payload
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -726,6 +745,8 @@ class DataVersion(Base):
     user = relationship("User", foreign_keys=[created_by])
 
     __table_args__ = (
-        UniqueConstraint("project_id", "data_type", "version", name="uq_data_version"),
+        UniqueConstraint(
+            "project_id", "data_type", "version", name="uq_data_version"
+        ),
         Index("ix_data_versions_project_type", "project_id", "data_type"),
     )

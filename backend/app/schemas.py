@@ -103,6 +103,7 @@ class UserResponse(UserBase):
     @classmethod
     def _resolve_urls(cls, v: str | None) -> str | None:
         from app.minio_client import resolve_storage_url
+
         return resolve_storage_url(v)
 
     class Config:
@@ -139,6 +140,7 @@ class ProjectMemberResponse(BaseModel):
     @classmethod
     def _resolve_urls(cls, v: str | None) -> str | None:
         from app.minio_client import resolve_storage_url
+
         return resolve_storage_url(v)
 
     class Config:
@@ -169,6 +171,7 @@ class ProjectResponse(ProjectBase):
     @classmethod
     def _resolve_cover_url(cls, v: str | None) -> str | None:
         from app.minio_client import resolve_storage_url
+
         return resolve_storage_url(v)
 
     class Config:
@@ -181,11 +184,13 @@ class ProjectWithMembers(ProjectResponse):
 
 class PublicProjectResponse(ProjectResponse):
     """Public project with member count for popularity ranking."""
+
     member_count: int = 0
 
 
 class PublicProjectDetailResponse(PublicProjectResponse):
     """Full public project detail: includes members and GPS bounds."""
+
     members: list[ProjectMemberResponse] = []
     gps: dict | None = None
 
@@ -393,7 +398,9 @@ class ChatMessageCreate(BaseModel):
     project_id: str | None = None
     recipient_id: str | None = None
     reply_to_id: str | None = None
-    mentions: list[dict] | None = None  # [{"type":"user","id":"...","display":"@name"}]
+    mentions: list[dict] | None = (
+        None  # [{"type":"user","id":"...","display":"@name"}]
+    )
 
 
 class ChatMessageEdit(BaseModel):
@@ -424,6 +431,7 @@ class ChatMessageResponse(BaseModel):
     @classmethod
     def _resolve_urls(cls, v: str | None) -> str | None:
         from app.minio_client import resolve_storage_url
+
         return resolve_storage_url(v)
 
     class Config:
@@ -453,6 +461,7 @@ class ConversationPreview(BaseModel):
     @classmethod
     def _resolve_urls(cls, v: str | None) -> str | None:
         from app.minio_client import resolve_storage_url
+
         return resolve_storage_url(v)
 
 

@@ -5,8 +5,9 @@ Revises: 011_add_chat_messages
 Create Date: 2026-03-02
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "012_username_profile_channels"
 down_revision = "011_add_chat_messages"
@@ -23,7 +24,9 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("timezone", sa.String(), nullable=True))
     op.add_column(
         "users",
-        sa.Column("show_projects", sa.Boolean(), nullable=False, server_default="true"),
+        sa.Column(
+            "show_projects", sa.Boolean(), nullable=False, server_default="true"
+        ),
     )
     op.add_column("users", sa.Column("link_x", sa.String(), nullable=True))
     op.add_column("users", sa.Column("link_discord", sa.String(), nullable=True))
@@ -44,7 +47,9 @@ def upgrade() -> None:
         ),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("is_default", sa.Boolean(), nullable=False, server_default="false"),
+        sa.Column(
+            "is_default", sa.Boolean(), nullable=False, server_default="false"
+        ),
         sa.Column(
             "created_by",
             sa.String(),
@@ -52,7 +57,9 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.UniqueConstraint("project_id", "name", name="uq_channel_name_per_project"),
+        sa.UniqueConstraint(
+            "project_id", "name", name="uq_channel_name_per_project"
+        ),
     )
     op.create_index("ix_channels_project_id", "channels", ["project_id"])
 
@@ -120,9 +127,7 @@ def upgrade() -> None:
     op.add_column(
         "chat_messages", sa.Column("channel_id", sa.String(), nullable=True)
     )
-    op.add_column(
-        "chat_messages", sa.Column("mentions", sa.JSON(), nullable=True)
-    )
+    op.add_column("chat_messages", sa.Column("mentions", sa.JSON(), nullable=True))
     op.create_foreign_key(
         "fk_chat_messages_channel_id",
         "chat_messages",

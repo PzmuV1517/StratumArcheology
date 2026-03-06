@@ -31,21 +31,20 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # ─── Layout constants ─────────────────────────────────────────────────────────
-COL_W = 160   # pixels per trench column
-ROW_H = 70    # pixels per time row
-PAD_L = 90    # left margin  (Y-axis labels)
-PAD_R = 50    # right margin
-PAD_T = 60    # top margin   (X-axis / trench labels)
-PAD_B = 55    # bottom margin
+COL_W = 160  # pixels per trench column
+ROW_H = 70  # pixels per time row
+PAD_L = 90  # left margin  (Y-axis labels)
+PAD_R = 50  # right margin
+PAD_T = 60  # top margin   (X-axis / trench labels)
+PAD_B = 55  # bottom margin
 
 # Typography / style
 FONT = "Georgia, 'Times New Roman', serif"
 STROKE = "#1a1a1a"
 STROKE_W = 1.5
 FILL_BG = "#ffffff"
-FILL_DEPOSIT = "#f0ede8"   # very light warm fill for deposit blocks
+FILL_DEPOSIT = "#f0ede8"  # very light warm fill for deposit blocks
 
 
 def generate_wheeler_svg(data: dict[str, Any]) -> str:
@@ -87,9 +86,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     )
 
     # ── Build occupancy grid  occupancy[row][col] = contextId | None ─────────
-    occupancy: list[list[str | None]] = [
-        [None] * cols for _ in range(total_rows)
-    ]
+    occupancy: list[list[str | None]] = [[None] * cols for _ in range(total_rows)]
     for p in placements:
         ctx_id: str = p.get("contextId", "?")
         row_s: int = p.get("rowStart", 0)
@@ -117,9 +114,10 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     total_h = PAD_T + graph_h + PAD_B
 
     # ── Row extents (leftmost / rightmost occupied column per row) ────────────
-    row_exts: list[tuple[int, int]] = []   # (left, right) — -1 if empty
+    row_exts: list[tuple[int, int]] = []  # (left, right) — -1 if empty
     for r in range(total_rows):
-        left = -1; right = -1
+        left = -1
+        right = -1
         for c in range(cols):
             if occupancy[r][c] is not None:
                 if left == -1:
@@ -128,25 +126,29 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
         row_exts.append((left, right))
 
     # ── Sequences (contiguous occupied rows) ──────────────────────────────────
-    sequences: list[dict] = []   # {row_start, row_end, extents: [(l, r), ...]}
+    sequences: list[dict] = []  # {row_start, row_end, extents: [(l, r), ...]}
     seq_start = -1
     for r in range(total_rows):
         if row_exts[r][0] >= 0:
             if seq_start < 0:
                 seq_start = r
         elif seq_start >= 0:
-            sequences.append({
-                "row_start": seq_start,
-                "row_end": r - 1,
-                "extents": row_exts[seq_start:r],
-            })
+            sequences.append(
+                {
+                    "row_start": seq_start,
+                    "row_end": r - 1,
+                    "extents": row_exts[seq_start:r],
+                }
+            )
             seq_start = -1
     if seq_start >= 0:
-        sequences.append({
-            "row_start": seq_start,
-            "row_end": total_rows - 1,
-            "extents": row_exts[seq_start:total_rows],
-        })
+        sequences.append(
+            {
+                "row_start": seq_start,
+                "row_end": total_rows - 1,
+                "extents": row_exts[seq_start:total_rows],
+            }
+        )
 
     # ── Build closed polygon for each sequence ───────────────────────────────
     def build_sequence_polygon(seq: dict) -> str:
@@ -187,20 +189,24 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             r_prev = rs + i - 1
             r_curr = rs + i
             if curr_l > prev_l:
-                pts = " ".join([
-                    f"{x_of(prev_l):.1f},{y_of(r_prev):.1f}",
-                    f"{x_of(curr_l):.1f},{y_of(r_curr):.1f}",
-                    f"{x_of(curr_l):.1f},{y_of(r_curr) + ROW_H:.1f}",
-                    f"{x_of(prev_l):.1f},{y_of(r_prev):.1f}",
-                ])
+                pts = " ".join(
+                    [
+                        f"{x_of(prev_l):.1f},{y_of(r_prev):.1f}",
+                        f"{x_of(curr_l):.1f},{y_of(r_curr):.1f}",
+                        f"{x_of(curr_l):.1f},{y_of(r_curr) + ROW_H:.1f}",
+                        f"{x_of(prev_l):.1f},{y_of(r_prev):.1f}",
+                    ]
+                )
                 vacuity_polys.append(pts)
             if curr_r < prev_r:
-                pts = " ".join([
-                    f"{x_of(prev_r + 1):.1f},{y_of(r_prev):.1f}",
-                    f"{x_of(curr_r + 1):.1f},{y_of(r_curr):.1f}",
-                    f"{x_of(curr_r + 1):.1f},{y_of(r_curr) + ROW_H:.1f}",
-                    f"{x_of(prev_r + 1):.1f},{y_of(r_prev):.1f}",
-                ])
+                pts = " ".join(
+                    [
+                        f"{x_of(prev_r + 1):.1f},{y_of(r_prev):.1f}",
+                        f"{x_of(curr_r + 1):.1f},{y_of(r_curr):.1f}",
+                        f"{x_of(curr_r + 1):.1f},{y_of(r_curr) + ROW_H:.1f}",
+                        f"{x_of(prev_r + 1):.1f},{y_of(r_prev):.1f}",
+                    ]
+                )
                 vacuity_polys.append(pts)
 
     # ── Context label placement (centroid of each context's cells) ────────────
@@ -246,9 +252,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
 </defs>""")
 
     # ── Background ────────────────────────────────────────────────────────────
-    parts.append(
-        f'<rect width="{total_w}" height="{total_h}" fill="{FILL_BG}"/>'
-    )
+    parts.append(f'<rect width="{total_w}" height="{total_h}" fill="{FILL_BG}"/>')
     # Graph area background
     parts.append(
         f'<rect x="{PAD_L}" y="{PAD_T}" width="{graph_w}" height="{graph_h}" '
@@ -292,7 +296,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             f'clip-path="url(#pub-graph-clip)">SEQUENCE {_esc(letter)}</text>'
         )
     # ── Hiatus zones ──────────────────────────────────────────────────────────
-    for (hs, he) in hiatus_ranges:
+    for hs, he in hiatus_ranges:
         # y1 = top edge of the top hiatus row, y2 = bottom edge of bottom row
         y_top = y_of(he)
         y_bot = y_of(hs) + ROW_H
@@ -336,8 +340,10 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             r_curr = rs + i
             # Left boundary diagonal
             if curr_l != prev_l:
-                x1 = x_of(prev_l);  y1 = y_of(r_prev)
-                x2 = x_of(curr_l);  y2 = y_of(r_curr)
+                x1 = x_of(prev_l)
+                y1 = y_of(r_prev)
+                x2 = x_of(curr_l)
+                y2 = y_of(r_curr)
                 parts.append(
                     f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
                     f'stroke="{STROKE}" stroke-width="1.2" opacity="0.6" '
@@ -345,8 +351,10 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
                 )
             # Right boundary diagonal
             if curr_r != prev_r:
-                x1 = x_of(prev_r + 1);  y1 = y_of(r_prev)
-                x2 = x_of(curr_r + 1);  y2 = y_of(r_curr)
+                x1 = x_of(prev_r + 1)
+                y1 = y_of(r_prev)
+                x2 = x_of(curr_r + 1)
+                y2 = y_of(r_curr)
                 parts.append(
                     f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
                     f'stroke="{STROKE}" stroke-width="1.2" opacity="0.6" '
@@ -357,7 +365,8 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     for lac in lacunae:
         lac_trench_ids: list[str] = lac.get("trenchIds", [])
         col_indices = sorted(
-            ci for ci in (trench_idx.get(tid) for tid in lac_trench_ids)
+            ci
+            for ci in (trench_idx.get(tid) for tid in lac_trench_ids)
             if ci is not None
         )
         if not col_indices:
@@ -368,7 +377,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
         row_e: int = lac.get("rowEnd", row_s)
         lx = x_of(left_col)
         lw = x_of(right_col + 1) - lx
-        ly = y_of(row_e)              # top edge
+        ly = y_of(row_e)  # top edge
         lh = (y_of(row_s) + ROW_H) - ly  # height
         lbl = _esc(lac.get("label") or "LACUNA")
         # Hatched fill
@@ -446,7 +455,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     graph_bottom = PAD_T + graph_h
     for i, t in enumerate(trenches):
         x_centre = PAD_L + i * COL_W + COL_W / 2
-        lbl = _esc(t.get("label") or t.get("id") or f"T{i+1}")
+        lbl = _esc(t.get("label") or t.get("id") or f"T{i + 1}")
         parts.append(
             f'<text x="{x_centre:.1f}" y="{graph_bottom + 20}" '
             f'text-anchor="middle" font-family="{FONT}" font-size="13" '
@@ -469,7 +478,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
         f'text-anchor="middle" font-family="{FONT}" font-size="12" '
         f'fill="{STROKE}" font-style="italic" '
         f'transform="rotate(-90, {y_title_x:.1f}, {y_title_y:.1f})">'
-        f'Time (oldest → youngest)</text>'
+        f"Time (oldest → youngest)</text>"
     )
     # X-axis title
     x_title_x = PAD_L + graph_w / 2
@@ -486,18 +495,19 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" '
         f'width="{total_w}" height="{total_h}" '
         f'viewBox="0 0 {total_w} {total_h}">\n'
-        f'{body}\n'
-        f'</svg>'
+        f"{body}\n"
+        f"</svg>"
     )
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _esc(text: str) -> str:
     """Minimal XML character escaping for SVG text content."""
     return (
         text.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
     )

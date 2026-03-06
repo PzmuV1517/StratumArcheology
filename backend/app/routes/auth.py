@@ -155,7 +155,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
                 detail="Username must be 3-30 characters",
             )
         import re
-        if not re.match(r'^[a-z0-9_.-]+$', username):
+
+        if not re.match(r"^[a-z0-9_.-]+$", username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
@@ -304,13 +305,14 @@ async def update_profile(
     # Handle username change with validation
     if request.username is not None:
         import re
+
         username = request.username.strip().lower()
         if len(username) < 3 or len(username) > 30:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username must be 3-30 characters",
             )
-        if not re.match(r'^[a-z0-9_.-]+$', username):
+        if not re.match(r"^[a-z0-9_.-]+$", username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
@@ -422,10 +424,14 @@ async def check_username(
 ):
     """Check if a username is available. Public endpoint (no auth required)."""
     import re
+
     username = username.strip().lower()
     if len(username) < 3 or len(username) > 30:
         return {"available": False, "reason": "Username must be 3-30 characters"}
-    if not re.match(r'^[a-z0-9_.-]+$', username):
-        return {"available": False, "reason": "Only lowercase letters, numbers, dots, hyphens, underscores"}
+    if not re.match(r"^[a-z0-9_.-]+$", username):
+        return {
+            "available": False,
+            "reason": "Only lowercase letters, numbers, dots, hyphens, underscores",
+        }
     existing = db.query(User).filter(User.username == username).first()
     return {"available": existing is None}

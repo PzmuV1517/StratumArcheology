@@ -33,7 +33,7 @@ SOFTWARE.
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, and_, func, case
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, aliased
 
 from app.database import get_db
@@ -56,7 +56,9 @@ PAGE_SIZE = 50
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _msg_to_response(msg: ChatMessage, sender: User | None = None) -> ChatMessageResponse:
+def _msg_to_response(
+    msg: ChatMessage, sender: User | None = None
+) -> ChatMessageResponse:
     """Convert an ORM ChatMessage into a Pydantic response."""
     return ChatMessageResponse(
         id=msg.id,
@@ -85,7 +87,9 @@ def _msg_to_response(msg: ChatMessage, sender: User | None = None) -> ChatMessag
 )
 async def get_project_messages(
     project_id: str,
-    cursor: str | None = Query(None, description="ISO timestamp cursor for pagination"),
+    cursor: str | None = Query(
+        None, description="ISO timestamp cursor for pagination"
+    ),
     limit: int = Query(PAGE_SIZE, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -93,9 +97,11 @@ async def get_project_messages(
     """Return paginated chat history for a project room (newest first)."""
     check_project_permission(project_id, current_user, db)
 
-    q = db.query(ChatMessage, User).outerjoin(
-        User, ChatMessage.sender_id == User.id
-    ).filter(ChatMessage.project_id == project_id)
+    q = (
+        db.query(ChatMessage, User)
+        .outerjoin(User, ChatMessage.sender_id == User.id)
+        .filter(ChatMessage.project_id == project_id)
+    )
 
     if cursor:
         try:
@@ -110,9 +116,13 @@ async def get_project_messages(
     rows = rows[:limit]
 
     messages = [_msg_to_response(msg, sender) for msg, sender in rows]
-    next_cursor = messages[-1].created_at.isoformat() if has_more and messages else None
+    next_cursor = (
+        messages[-1].created_at.isoformat() if has_more and messages else None
+    )
 
-    return ChatMessagePage(messages=messages, next_cursor=next_cursor, has_more=has_more)
+    return ChatMessagePage(
+        messages=messages, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 # ── Channel message history ─────────────────────────────────────────────────
@@ -124,7 +134,9 @@ async def get_project_messages(
 )
 async def get_channel_messages(
     channel_id: str,
-    cursor: str | None = Query(None, description="ISO timestamp cursor for pagination"),
+    cursor: str | None = Query(
+        None, description="ISO timestamp cursor for pagination"
+    ),
     limit: int = Query(PAGE_SIZE, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -135,9 +147,11 @@ async def get_channel_messages(
         raise HTTPException(status_code=404, detail="Channel not found")
     check_project_permission(ch.project_id, current_user, db)
 
-    q = db.query(ChatMessage, User).outerjoin(
-        User, ChatMessage.sender_id == User.id
-    ).filter(ChatMessage.channel_id == channel_id)
+    q = (
+        db.query(ChatMessage, User)
+        .outerjoin(User, ChatMessage.sender_id == User.id)
+        .filter(ChatMessage.channel_id == channel_id)
+    )
 
     if cursor:
         try:
@@ -151,9 +165,13 @@ async def get_channel_messages(
     rows = rows[:limit]
 
     messages = [_msg_to_response(msg, sender) for msg, sender in rows]
-    next_cursor = messages[-1].created_at.isoformat() if has_more and messages else None
+    next_cursor = (
+        messages[-1].created_at.isoformat() if has_more and messages else None
+    )
 
-    return ChatMessagePage(messages=messages, next_cursor=next_cursor, has_more=has_more)
+    return ChatMessagePage(
+        messages=messages, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 # ── DM history ──────────────────────────────────────────────────────────────
@@ -171,20 +189,22 @@ async def get_dm_messages(
     db: Session = Depends(get_db),
 ):
     """Return paginated DM history between the current user and another user."""
-    q = db.query(ChatMessage, User).outerjoin(
-        User, ChatMessage.sender_id == User.id
-    ).filter(
-        ChatMessage.project_id.is_(None),
-        or_(
-            and_(
-                ChatMessage.sender_id == current_user.id,
-                ChatMessage.recipient_id == other_user_id,
+    q = (
+        db.query(ChatMessage, User)
+        .outerjoin(User, ChatMessage.sender_id == User.id)
+        .filter(
+            ChatMessage.project_id.is_(None),
+            or_(
+                and_(
+                    ChatMessage.sender_id == current_user.id,
+                    ChatMessage.recipient_id == other_user_id,
+                ),
+                and_(
+                    ChatMessage.sender_id == other_user_id,
+                    ChatMessage.recipient_id == current_user.id,
+                ),
             ),
-            and_(
-                ChatMessage.sender_id == other_user_id,
-                ChatMessage.recipient_id == current_user.id,
-            ),
-        ),
+        )
     )
 
     if cursor:
@@ -199,9 +219,13 @@ async def get_dm_messages(
     rows = rows[:limit]
 
     messages = [_msg_to_response(msg, sender) for msg, sender in rows]
-    next_cursor = messages[-1].created_at.isoformat() if has_more and messages else None
+    next_cursor = (
+        messages[-1].created_at.isoformat() if has_more and messages else None
+    )
 
-    return ChatMessagePage(messages=messages, next_cursor=next_cursor, has_more=has_more)
+    return ChatMessagePage(
+        messages=messages, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 # ── DM inbox (conversation list) ────────────────────────────────────────────
@@ -244,7 +268,9 @@ async def get_conversations(
 
     # Join to get user info + last message
     rows = (
-        db.query(subq, OtherUser.display_name, OtherUser.photo_url, OtherUser.username)
+        db.query(
+            subq, OtherUser.display_name, OtherUser.photo_url, OtherUser.username
+        )
         .outerjoin(OtherUser, OtherUser.id == subq.c.other_user_id)
         .order_by(subq.c.last_at.desc())
         .all()
@@ -277,7 +303,9 @@ async def get_conversations(
                 other_user_name=row.display_name,
                 other_user_photo=row.photo_url,
                 other_user_username=row.username,
-                last_message="" if (last_msg and last_msg.is_deleted) else (last_msg.content if last_msg else ""),
+                last_message=""
+                if (last_msg and last_msg.is_deleted)
+                else (last_msg.content if last_msg else ""),
                 last_message_at=row.last_at,
             )
         )
@@ -307,7 +335,10 @@ async def send_message(
     if not body.content.strip():
         raise HTTPException(status_code=400, detail="Empty message")
     if not body.project_id and not body.recipient_id and not body.channel_id:
-        raise HTTPException(status_code=400, detail="channel_id, project_id, or recipient_id required")
+        raise HTTPException(
+            status_code=400,
+            detail="channel_id, project_id, or recipient_id required",
+        )
 
     if body.project_id:
         check_project_permission(body.project_id, current_user, db)
@@ -353,7 +384,9 @@ async def send_message(
         if body.channel_id:
             ch = db.query(Channel).filter(Channel.id == body.channel_id).first()
             if ch:
-                await sio.emit("new_message", payload, room=f"channel_{body.channel_id}")
+                await sio.emit(
+                    "new_message", payload, room=f"channel_{body.channel_id}"
+                )
         elif body.project_id:
             await sio.emit("new_message", payload, room=f"project_{body.project_id}")
         else:
@@ -379,10 +412,14 @@ async def edit_message(
     db: Session = Depends(get_db),
 ):
     """Edit a message you sent."""
-    msg = db.query(ChatMessage).filter(
-        ChatMessage.id == message_id,
-        ChatMessage.sender_id == current_user.id,
-    ).first()
+    msg = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.id == message_id,
+            ChatMessage.sender_id == current_user.id,
+        )
+        .first()
+    )
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found or not yours")
 
@@ -404,10 +441,14 @@ async def delete_message(
     db: Session = Depends(get_db),
 ):
     """Soft-delete a message you sent."""
-    msg = db.query(ChatMessage).filter(
-        ChatMessage.id == message_id,
-        ChatMessage.sender_id == current_user.id,
-    ).first()
+    msg = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.id == message_id,
+            ChatMessage.sender_id == current_user.id,
+        )
+        .first()
+    )
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found or not yours")
 

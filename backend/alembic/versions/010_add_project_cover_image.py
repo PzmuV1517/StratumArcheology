@@ -29,6 +29,7 @@ SOFTWARE.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "010_add_project_cover_image"

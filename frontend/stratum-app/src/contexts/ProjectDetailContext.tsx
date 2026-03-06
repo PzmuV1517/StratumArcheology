@@ -70,6 +70,7 @@ export interface Member {
   display_name: string;
   email: string;
   role: string;
+  photo_url?: string | null;
 }
 
 /** Union of valid tab identifiers for the project detail view. */

@@ -29,6 +29,7 @@ SOFTWARE.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "011_add_chat_messages"
@@ -74,7 +75,9 @@ def upgrade() -> None:
     # Indexes
     op.create_index("ix_chat_messages_sender_id", "chat_messages", ["sender_id"])
     op.create_index("ix_chat_messages_project_id", "chat_messages", ["project_id"])
-    op.create_index("ix_chat_messages_recipient_id", "chat_messages", ["recipient_id"])
+    op.create_index(
+        "ix_chat_messages_recipient_id", "chat_messages", ["recipient_id"]
+    )
     op.create_index("ix_chat_messages_created_at", "chat_messages", ["created_at"])
     op.create_index(
         "ix_chat_messages_project_created",

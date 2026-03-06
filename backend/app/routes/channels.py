@@ -32,11 +32,11 @@ from app.schemas import (
     ChannelMemberAdd,
     ChannelResponse,
     ChannelUpdate,
+    ProjectMemberResponse,
     UserGroupCreate,
     UserGroupMemberAdd,
     UserGroupResponse,
     UserGroupWithMembers,
-    ProjectMemberResponse,
 )
 
 router = APIRouter(tags=["channels"])
@@ -77,7 +77,9 @@ def _require_admin(db: Session, project_id: str, user_id: str):
             )
 
 
-def _ensure_default_channel(db: Session, project_id: str, user_id: str | None = None) -> Channel:
+def _ensure_default_channel(
+    db: Session, project_id: str, user_id: str | None = None
+) -> Channel:
     """Ensure a default #general channel exists for the project, creating it if needed."""
     ch = (
         db.query(Channel)
@@ -140,9 +142,7 @@ async def list_channels(
     result = []
     for ch in channels:
         count = (
-            db.query(ChannelMember)
-            .filter(ChannelMember.channel_id == ch.id)
-            .count()
+            db.query(ChannelMember).filter(ChannelMember.channel_id == ch.id).count()
         )
         r = ChannelResponse.model_validate(ch)
         r.member_count = count
@@ -150,7 +150,11 @@ async def list_channels(
     return result
 
 
-@router.post("/projects/{project_id}/channels", response_model=ChannelResponse, status_code=201)
+@router.post(
+    "/projects/{project_id}/channels",
+    response_model=ChannelResponse,
+    status_code=201,
+)
 async def create_channel(
     project_id: str,
     body: ChannelCreate,
@@ -214,7 +218,9 @@ async def update_channel(
             .first()
         )
         if existing:
-            raise HTTPException(status_code=400, detail="Channel name already exists")
+            raise HTTPException(
+                status_code=400, detail="Channel name already exists"
+            )
         ch.name = name
     if body.description is not None:
         ch.description = body.description
@@ -237,7 +243,9 @@ async def delete_channel(
     if not ch:
         raise HTTPException(status_code=404, detail="Channel not found")
     if ch.is_default:
-        raise HTTPException(status_code=400, detail="Cannot delete the default channel")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete the default channel"
+        )
     _require_admin(db, ch.project_id, current_user.id)
     db.delete(ch)
     db.commit()
@@ -274,7 +282,9 @@ async def add_channel_members(
     for uid in user_ids:
         existing = (
             db.query(ChannelMember)
-            .filter(ChannelMember.channel_id == channel_id, ChannelMember.user_id == uid)
+            .filter(
+                ChannelMember.channel_id == channel_id, ChannelMember.user_id == uid
+            )
             .first()
         )
         if not existing:
@@ -297,7 +307,9 @@ async def remove_channel_member(
         _require_admin(db, ch.project_id, current_user.id)
     member = (
         db.query(ChannelMember)
-        .filter(ChannelMember.channel_id == channel_id, ChannelMember.user_id == user_id)
+        .filter(
+            ChannelMember.channel_id == channel_id, ChannelMember.user_id == user_id
+        )
         .first()
     )
     if member:
@@ -367,7 +379,11 @@ async def list_user_groups(
     return result
 
 
-@router.post("/projects/{project_id}/groups", response_model=UserGroupResponse, status_code=201)
+@router.post(
+    "/projects/{project_id}/groups",
+    response_model=UserGroupResponse,
+    status_code=201,
+)
 async def create_user_group(
     project_id: str,
     body: UserGroupCreate,
@@ -432,7 +448,9 @@ async def add_group_members(
     for uid in body.user_ids:
         existing = (
             db.query(UserGroupMember)
-            .filter(UserGroupMember.group_id == group_id, UserGroupMember.user_id == uid)
+            .filter(
+                UserGroupMember.group_id == group_id, UserGroupMember.user_id == uid
+            )
             .first()
         )
         if not existing:
@@ -454,7 +472,9 @@ async def remove_group_member(
     _require_admin(db, g.project_id, current_user.id)
     member = (
         db.query(UserGroupMember)
-        .filter(UserGroupMember.group_id == group_id, UserGroupMember.user_id == user_id)
+        .filter(
+            UserGroupMember.group_id == group_id, UserGroupMember.user_id == user_id
+        )
         .first()
     )
     if member:
@@ -534,8 +554,7 @@ async def get_mentionables(
     project = db.query(Project).filter(Project.id == project_id).first()
     if q:
         members_query = members_query.filter(
-            (User.display_name.ilike(f"%{q}%"))
-            | (User.username.ilike(f"%{q}%"))
+            (User.display_name.ilike(f"%{q}%")) | (User.username.ilike(f"%{q}%"))
         )
     users = members_query.limit(20).all()
 
@@ -565,8 +584,5 @@ async def get_mentionables(
             }
             for u in users
         ],
-        "groups": [
-            {"id": g.id, "name": g.name}
-            for g in groups
-        ],
+        "groups": [{"id": g.id, "name": g.name} for g in groups],
     }

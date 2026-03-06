@@ -916,7 +916,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       lines.push(
         [
           esc(p.contextId),
-          esc(p.trenchIds.join("|"))  ,
+          esc(p.trenchIds.join("|")),
           String(p.rowStart),
           String(p.rowEnd),
           esc(p.type ?? ""),
@@ -934,7 +934,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       lines.push(
         [
           esc(l.id),
-          esc(l.trenchIds.join("|"))  ,
+          esc(l.trenchIds.join("|")),
           String(l.rowStart),
           String(l.rowEnd),
           esc(l.label ?? ""),
@@ -973,13 +973,23 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             for (let i = 0; i < line.length; i++) {
               const ch = line[i];
               if (inQ) {
-                if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-                else if (ch === '"')                    { inQ = false; }
-                else                                    { cur += ch; }
+                if (ch === '"' && line[i + 1] === '"') {
+                  cur += '"';
+                  i++;
+                } else if (ch === '"') {
+                  inQ = false;
+                } else {
+                  cur += ch;
+                }
               } else {
-                if      (ch === '"') { inQ = true; }
-                else if (ch === ",") { cells.push(cur); cur = ""; }
-                else                 { cur += ch; }
+                if (ch === '"') {
+                  inQ = true;
+                } else if (ch === ",") {
+                  cells.push(cur);
+                  cur = "";
+                } else {
+                  cur += ch;
+                }
               }
             }
             cells.push(cur);
@@ -1003,24 +1013,36 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               skipHeader = true;
               continue;
             }
-            if (skipHeader) { skipHeader = false; continue; }
+            if (skipHeader) {
+              skipHeader = false;
+              continue;
+            }
 
             const cells = parseRow(line);
 
             if (section === "TRENCHES") {
               const [id, label, order] = cells;
-              if (id) trenches.push({ id, label: label ?? id, order: Number(order ?? 0) });
+              if (id)
+                trenches.push({ id, label: label ?? id, order: Number(order ?? 0) });
             } else if (section === "PLACEMENTS") {
-              const [contextId, trenchIdsRaw, rowStart, rowEnd, type, description, notes] = cells;
+              const [
+                contextId,
+                trenchIdsRaw,
+                rowStart,
+                rowEnd,
+                type,
+                description,
+                notes,
+              ] = cells;
               if (contextId) {
                 placements.push({
                   contextId,
                   trenchIds: (trenchIdsRaw ?? "").split("|").filter(Boolean),
                   rowStart: Number(rowStart ?? 0),
-                  rowEnd:   Number(rowEnd   ?? 0),
-                  type:        type        || undefined,
+                  rowEnd: Number(rowEnd ?? 0),
+                  type: type || undefined,
                   description: description || undefined,
-                  notes:       notes       || undefined,
+                  notes: notes || undefined,
                 });
               }
             } else if (section === "LACUNAE") {
@@ -1030,7 +1052,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   id,
                   trenchIds: (trenchIdsRaw ?? "").split("|").filter(Boolean),
                   rowStart: Number(rowStart ?? 0),
-                  rowEnd:   Number(rowEnd   ?? 0),
+                  rowEnd: Number(rowEnd ?? 0),
                   label: label || undefined,
                 });
               }
@@ -2075,7 +2097,14 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
             )}
 
             {/* ── CSV divider ── */}
-            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", flexShrink: 0 }} />
+            <div
+              style={{
+                width: 1,
+                height: 20,
+                background: "rgba(255,255,255,0.08)",
+                flexShrink: 0,
+              }}
+            />
 
             {/* Export CSV */}
             <button
@@ -2083,7 +2112,9 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               style={buttonStyle}
               onClick={handleExportCSV}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#222222")
+              }
               title="Export diagram as CSV"
             >
               ↓ CSV
@@ -2095,7 +2126,9 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               style={buttonStyle}
               onClick={() => importInputRef.current?.click()}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222222")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#222222")
+              }
               title="Import diagram from CSV (replaces current data)"
             >
               ↑ CSV

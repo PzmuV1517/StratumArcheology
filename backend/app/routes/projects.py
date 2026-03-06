@@ -29,15 +29,30 @@ SOFTWARE.
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
 from app.minio_client import minio_client, resolve_storage_url
-from app.models import DataVersion, FileNode, FileNodeType, Project, User, UserRole, project_members
-from app.wheeler_renderer import generate_wheeler_svg
+from app.models import (
+    DataVersion,
+    FileNode,
+    FileNodeType,
+    Project,
+    User,
+    UserRole,
+    project_members,
+)
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -54,14 +69,18 @@ from app.websocket import (
     emit_role_changed,
     log_activity,
 )
+from app.wheeler_renderer import generate_wheeler_svg
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 # ─── Public project discovery (no auth) ────────────────────────────────────────
 
+
 @router.get("/public", response_model=list[PublicProjectResponse])
-@router.get("/public/", response_model=list[PublicProjectResponse], include_in_schema=False)
+@router.get(
+    "/public/", response_model=list[PublicProjectResponse], include_in_schema=False
+)
 async def get_public_projects(
     q: str | None = Query(None, min_length=1, description="Optional search query"),
     db: Session = Depends(get_db),
@@ -70,9 +89,7 @@ async def get_public_projects(
 
     Optionally filter by a search term that matches project name or description.
     """
-    member_count = (
-        func.count(project_members.c.user_id).label("member_count")
-    )
+    member_count = func.count(project_members.c.user_id).label("member_count")
     query = (
         db.query(Project, member_count)
         .outerjoin(project_members, Project.id == project_members.c.project_id)
@@ -86,8 +103,7 @@ async def get_public_projects(
         )
 
     rows = (
-        query
-        .group_by(Project.id)
+        query.group_by(Project.id)
         .order_by(member_count.desc(), Project.updated_at.desc())
         .limit(50)
         .all()
@@ -111,15 +127,22 @@ async def get_public_project_detail(
     Returns project info, member list, member count, and GPS bounds.
     """
     import json as _json
+
     from app.models import ProjectGPS
 
     project = (
         db.query(Project)
-        .filter(Project.id == project_id, Project.is_public.is_(True), Project.is_active.is_(True))
+        .filter(
+            Project.id == project_id,
+            Project.is_public.is_(True),
+            Project.is_active.is_(True),
+        )
         .first()
     )
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Public project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Public project not found"
+        )
 
     # Members -----------------------------------------------------------
     members_with_roles = db.execute(
@@ -134,30 +157,36 @@ async def get_public_project_detail(
         if user.id == project.owner_id:
             owner_found = True
         member_role = (
-            "leader" if user.id == project.owner_id
+            "leader"
+            if user.id == project.owner_id
             else (role.value if role else "guest")
         )
-        members_list.append({
-            "id": user.id,
-            "email": user.email,
-            "display_name": user.display_name,
-            "photo_url": resolve_storage_url(user.photo_url),
-            "bio": user.bio,
-            "role": member_role,
-        })
+        members_list.append(
+            {
+                "id": user.id,
+                "email": user.email,
+                "display_name": user.display_name,
+                "photo_url": resolve_storage_url(user.photo_url),
+                "bio": user.bio,
+                "role": member_role,
+            }
+        )
 
     # Ensure the owner always appears in the member list
     if not owner_found:
         owner = db.query(User).filter(User.id == project.owner_id).first()
         if owner:
-            members_list.insert(0, {
-                "id": owner.id,
-                "email": owner.email,
-                "display_name": owner.display_name,
-                "photo_url": resolve_storage_url(owner.photo_url),
-                "bio": owner.bio,
-                "role": "leader",
-            })
+            members_list.insert(
+                0,
+                {
+                    "id": owner.id,
+                    "email": owner.email,
+                    "display_name": owner.display_name,
+                    "photo_url": resolve_storage_url(owner.photo_url),
+                    "bio": owner.bio,
+                    "role": "leader",
+                },
+            )
             # Repair the join table so this doesn't keep happening
             db.execute(
                 project_members.insert().values(
@@ -170,7 +199,9 @@ async def get_public_project_detail(
 
     # GPS / bounds ------------------------------------------------------
     gps_data = None
-    gps_row = db.query(ProjectGPS).filter(ProjectGPS.project_id == project_id).first()
+    gps_row = (
+        db.query(ProjectGPS).filter(ProjectGPS.project_id == project_id).first()
+    )
     if gps_row and gps_row.data:
         try:
             gps_data = _json.loads(gps_row.data)
@@ -181,7 +212,9 @@ async def get_public_project_detail(
     cover_presigned: str | None = None
     if project.cover_image_url:
         try:
-            cover_presigned = minio_client.get_presigned_url(project.cover_image_url, expiry=7200)
+            cover_presigned = minio_client.get_presigned_url(
+                project.cover_image_url, expiry=7200
+            )
         except Exception:
             pass
 
@@ -203,6 +236,7 @@ async def get_public_project_detail(
 
 
 # ─── Toggle project publicity ──────────────────────────────────────────────────
+
 
 @router.patch("/{project_id}/publicise", response_model=ProjectResponse)
 async def toggle_project_publicity(
@@ -240,6 +274,7 @@ async def toggle_project_publicity(
 
 
 # ─── E2EE key management ───────────────────────────────────────────────────────
+
 
 @router.get("/{project_id}/e2ee-key")
 async def get_e2ee_key(
@@ -417,14 +452,17 @@ async def get_project(
     if not owner_found:
         owner = db.query(User).filter(User.id == project.owner_id).first()
         if owner:
-            members_list.insert(0, {
-                "id": owner.id,
-                "email": owner.email,
-                "display_name": owner.display_name,
-                "photo_url": resolve_storage_url(owner.photo_url),
-                "bio": owner.bio,
-                "role": "leader",
-            })
+            members_list.insert(
+                0,
+                {
+                    "id": owner.id,
+                    "email": owner.email,
+                    "display_name": owner.display_name,
+                    "photo_url": resolve_storage_url(owner.photo_url),
+                    "bio": owner.bio,
+                    "role": "leader",
+                },
+            )
             # Also repair the join table so this doesn't keep happening
             db.execute(
                 project_members.insert().values(
@@ -439,7 +477,9 @@ async def get_project(
     cover_presigned: str | None = None
     if project.cover_image_url:
         try:
-            cover_presigned = minio_client.get_presigned_url(project.cover_image_url, expiry=7200)
+            cover_presigned = minio_client.get_presigned_url(
+                project.cover_image_url, expiry=7200
+            )
         except Exception:
             cover_presigned = None
 
@@ -1277,7 +1317,8 @@ async def restore_data_version(
     db.commit()
 
     activity_type = (
-        "HARRIS_MATRIX_UPDATED" if data_type == "harris_matrix"
+        "HARRIS_MATRIX_UPDATED"
+        if data_type == "harris_matrix"
         else "WHEELER_DATA_UPDATED"
     )
     label = "Harris Matrix" if data_type == "harris_matrix" else "Wheeler diagram"

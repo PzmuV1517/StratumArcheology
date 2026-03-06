@@ -29,6 +29,7 @@ SOFTWARE.
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "009_add_wheeler_render_columns"

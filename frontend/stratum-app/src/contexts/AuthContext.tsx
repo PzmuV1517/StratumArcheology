@@ -199,9 +199,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, displayName: string, username: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    displayName: string,
+    username: string,
+  ) => {
     try {
-      const result = await authService.register(email, password, displayName, username);
+      const result = await authService.register(
+        email,
+        password,
+        displayName,
+        username,
+      );
       if (result.success) {
         setUser(result.user || null);
         return { success: true };

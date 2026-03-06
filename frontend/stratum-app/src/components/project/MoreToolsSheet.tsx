@@ -48,7 +48,9 @@ interface MoreToolsItem {
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat") => void;
+  onNavigate: (
+    tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat",
+  ) => void;
 }
 
 const ITEMS: {
@@ -65,7 +67,9 @@ const ITEMS: {
 ];
 
 export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) {
-  const handlePress = (tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat") => {
+  const handlePress = (
+    tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat",
+  ) => {
     onClose();
     // Small delay so the modal dismisses before navigation
     setTimeout(() => onNavigate(tab), 150);
