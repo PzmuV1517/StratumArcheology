@@ -1066,7 +1066,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       };
       reader.readAsText(file);
     },
-    [setData],
+    [data, setData],
   );
 
   const handleCellHover = useCallback(
