@@ -83,7 +83,7 @@ export default function ProjectTabsLayoutWeb() {
   const params = useLocalSearchParams<{ id: string }>();
   const projectId = params.id;
   
-  const { project, navigateToTab, setShowMenu, setShowMembersModal, onDeleteProject, onExitProject, refreshProject, isOwner, members, currentUser } = useProjectDetail();
+  const { project, navigateToTab, setShowMenu, setShowMembersModal, setShowFilesOverlay, onDeleteProject, onExitProject, refreshProject, isOwner, members, currentUser } = useProjectDetail();
 
   /* ─────  Remember last known project name to avoid flicker  ───── */
   const lastNameRef = useRef(project?.name || "");
@@ -120,6 +120,10 @@ export default function ProjectTabsLayoutWeb() {
   }, [pathname, projectId]);
 
   const handleNavigate = useCallback((tab: string) => {
+    if (tab === "files") {
+      setShowFilesOverlay(true);
+      return;
+    }
     if (tab === "index") {
       router.push(`/project/${projectId}` as any);
     } else {
@@ -295,9 +299,23 @@ export default function ProjectTabsLayoutWeb() {
               );
             })}
             
-            {/* Spacer to push More button to bottom */}
+            {/* Spacer to push Files + More to bottom */}
             <View style={{ flex: 1 }} />
-            
+
+            {/* Files button */}
+            <TouchableOpacity
+              style={s.moreBtn}
+              onPress={() => setShowFilesOverlay(true)}
+              activeOpacity={0.7}
+            >
+              <View style={s.iconSlot}>
+                <IconSymbol name="folder.fill" size={26} color={INACTIVE} />
+              </View>
+              <Text style={s.navLabel} numberOfLines={1}>
+                Files
+              </Text>
+            </TouchableOpacity>
+
             {/* More button at bottom */}
             <TouchableOpacity
               style={s.moreBtn}
