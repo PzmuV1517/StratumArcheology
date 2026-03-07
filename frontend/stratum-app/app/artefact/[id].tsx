@@ -39,6 +39,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  FlatList,
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -53,6 +54,7 @@ import {
   buildManifestFromChildren,
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
+import api from "../../src/services/api";
 
 const isIOS = Platform.OS === "ios";
 
@@ -155,6 +157,9 @@ interface ArtefactMeta {
   number: number;
   previewFileId?: string;
   createdAt?: string;
+  harrisMatrixContextId?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,6 +185,19 @@ export default function ArtefactDetail() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
 
+  // Harris Matrix context info
+  type HMContext = { id: string; type: string; description: string };
+  const [hmContextInfo, setHmContextInfo] = useState<HMContext | null>(null);
+  const [hmContexts, setHmContexts] = useState<HMContext[]>([]);
+  const [showHmPicker, setShowHmPicker] = useState(false);
+
+  // Image viewer
+  const [viewingImage, setViewingImage] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (id) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,9 +207,13 @@ export default function ArtefactDetail() {
     try {
       setLoading(true);
       // Get the folder info to extract the project_id
+      let loadedProjectId: string | null = null;
       try {
         const nodeInfo = await fileService.getNodeInfo(id as string);
-        if (nodeInfo?.project_id) setProjectId(nodeInfo.project_id);
+        if (nodeInfo?.project_id) {
+          setProjectId(nodeInfo.project_id);
+          loadedProjectId = nodeInfo.project_id;
+        }
       } catch (e) {
         console.warn("Could not fetch node info", e);
       }
@@ -202,11 +224,37 @@ export default function ArtefactDetail() {
           c.type === "file" &&
           (c.name === "artefact.json" || c.name.endsWith(".json")),
       );
+      let parsedMeta: ArtefactMeta | null = null;
       if (metaFile) {
         try {
           const res = await fileService.downloadFile(metaFile.id);
           const text = await res.blob.text();
-          if (text) setMeta(JSON.parse(text));
+          if (text) {
+            parsedMeta = JSON.parse(text);
+            setMeta(parsedMeta);
+          }
+        } catch {}
+      }
+
+      // Resolve Harris Matrix context
+      if (loadedProjectId && parsedMeta?.harrisMatrixContextId) {
+        try {
+          const hmRes = await api.get(`/projects/${loadedProjectId}/harris-matrix`);
+          const hmData = hmRes.data?.data;
+          if (hmData?.contexts) {
+            const ctxs: HMContext[] = (hmData.contexts as [string, any][]).map(
+              ([cid, ctx]) => ({
+                id: cid,
+                type: ctx.type || "layer",
+                description: ctx.description || "",
+              }),
+            );
+            setHmContexts(ctxs);
+            const found = ctxs.find(
+              (c) => c.id === parsedMeta!.harrisMatrixContextId,
+            );
+            if (found) setHmContextInfo(found);
+          }
         } catch {}
       }
       const pv = ch.find(
@@ -360,6 +408,61 @@ export default function ArtefactDetail() {
     await load();
   };
 
+  /** Patch a field in artefact.json manifest */
+  const updateManifest = async (patch: Partial<ArtefactManifest>) => {
+    try {
+      const ch = await fileService.listChildren(id as string);
+      const existingMetaFile = ch.find(
+        (c: any) =>
+          c.type === "file" &&
+          (c.name === "artefact.json" || c.name.endsWith(".json")),
+      );
+      if (!existingMetaFile) return;
+      let existing: any = {};
+      try {
+        const res = await fileService.downloadFile(existingMetaFile.id);
+        const text = await res.blob.text();
+        if (text) existing = JSON.parse(text);
+      } catch {}
+      const updated = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+      if (Platform.OS === "web") {
+        const blob = new Blob([JSON.stringify(updated, null, 2)], {
+          type: "application/json",
+        });
+        const file = new File([blob], "artefact.json", {
+          type: "application/json",
+        });
+        await fileService.replaceFile(existingMetaFile.id, file);
+      }
+    } catch (e) {
+      console.error("Failed to update manifest", e);
+    }
+  };
+
+  /** Delete a specific file from this artefact */
+  const deleteFile = async (fileId: string) => {
+    try {
+      await fileService.deleteNode(fileId);
+      await load();
+    } catch (e) {
+      console.error("Failed to delete file", e);
+      showAlert("Error", "Failed to delete file");
+    }
+  };
+
+  /** Open image viewer */
+  const openImageViewer = async (img: FileNode) => {
+    setViewingImage(img);
+    if (Platform.OS === "web") {
+      try {
+        const blobRes = await fileService.downloadFile(img.id);
+        setViewingImageUrl(URL.createObjectURL(blobRes.blob));
+      } catch {
+        setViewingImageUrl(null);
+      }
+    }
+  };
+
   const noteFiles = children.filter(
     (c) => c.type === "file" && /\.txt$/i.test(c.name),
   );
@@ -437,6 +540,180 @@ export default function ArtefactDetail() {
             `  ·  Created ${new Date(meta.createdAt).toLocaleDateString()}`}
         </Text>
 
+        {/* ── Stratigraphic Context card ── */}
+        <GlassCard style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.label}>
+              <Ionicons name="git-network" size={14} color="#9A9A9A" /> Stratigraphic
+              Context
+            </Text>
+            <TouchableOpacity
+              style={s.inlineBtn}
+              onPress={async () => {
+                if (hmContexts.length === 0 && projectId) {
+                  try {
+                    const hmRes = await api.get(
+                      `/projects/${projectId}/harris-matrix`,
+                    );
+                    const hmData = hmRes.data?.data;
+                    if (hmData?.contexts) {
+                      const ctxs: HMContext[] = (
+                        hmData.contexts as [string, any][]
+                      ).map(([cid, ctx]) => ({
+                        id: cid,
+                        type: ctx.type || "layer",
+                        description: ctx.description || "",
+                      }));
+                      setHmContexts(ctxs);
+                    }
+                  } catch {}
+                }
+                setShowHmPicker(true);
+              }}
+            >
+              <Ionicons name="link" size={16} color="#FF2A2A" />
+              <Text style={s.inlineBtnText}>
+                {hmContextInfo ? "Change" : "Link"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {hmContextInfo ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255, 255, 255, 0.08)",
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor:
+                    {
+                      layer: "#FFA726",
+                      deposit: "#66BB6A",
+                      cut: "#EF5350",
+                      fill: "#42A5F5",
+                      structure: "#AB47BC",
+                    }[hmContextInfo.type] || "#9A9A9A",
+                }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#F5F5F5", fontSize: 15, fontWeight: "600" }}>
+                  {hmContextInfo.id}
+                  <Text
+                    style={{
+                      color:
+                        {
+                          layer: "#FFA726",
+                          deposit: "#66BB6A",
+                          cut: "#EF5350",
+                          fill: "#42A5F5",
+                          structure: "#AB47BC",
+                        }[hmContextInfo.type] || "#9A9A9A",
+                      fontWeight: "400",
+                      fontSize: 12,
+                    }}
+                  >
+                    {" "}
+                    {hmContextInfo.type.toUpperCase()}
+                  </Text>
+                </Text>
+                {hmContextInfo.description ? (
+                  <Text
+                    style={{ color: "#888", fontSize: 13, marginTop: 2 }}
+                    numberOfLines={2}
+                  >
+                    {hmContextInfo.description}
+                  </Text>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  // Unlink
+                  const updatedMeta = { ...meta, harrisMatrixContextId: undefined };
+                  setMeta(updatedMeta as any);
+                  setHmContextInfo(null);
+                  await updateManifest({ harrisMatrixContextId: undefined });
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-circle" size={20} color="#9A9A9A" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={s.emptyInCard}>
+              <Ionicons name="git-network-outline" size={32} color="#555" />
+              <Text style={s.emptyText}>No context linked</Text>
+            </View>
+          )}
+        </GlassCard>
+
+        {/* ── GPS Coordinates card ── */}
+        <GlassCard style={s.card}>
+          <View style={s.sectionHeader}>
+            <Text style={s.label}>
+              <Ionicons name="location" size={14} color="#9A9A9A" /> GPS Coordinates
+            </Text>
+          </View>
+          {meta?.latitude != null && meta?.longitude != null ? (
+            <View
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              <View style={{ flexDirection: "row", gap: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#666", fontSize: 11, marginBottom: 2 }}>
+                    LAT
+                  </Text>
+                  <Text
+                    style={{
+                      color: "#F5F5F5",
+                      fontSize: 15,
+                      fontWeight: "600",
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {meta.latitude.toFixed(6)}°
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#666", fontSize: 11, marginBottom: 2 }}>
+                    LNG
+                  </Text>
+                  <Text
+                    style={{
+                      color: "#F5F5F5",
+                      fontSize: 15,
+                      fontWeight: "600",
+                      fontVariant: ["tabular-nums"],
+                    }}
+                  >
+                    {meta.longitude.toFixed(6)}°
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={s.emptyInCard}>
+              <Ionicons name="location-outline" size={32} color="#555" />
+              <Text style={s.emptyText}>No coordinates set</Text>
+            </View>
+          )}
+        </GlassCard>
+
         {/* ── Images card ── */}
         <GlassCard style={s.card}>
           <View style={s.sectionHeader}>
@@ -457,12 +734,32 @@ export default function ArtefactDetail() {
           ) : (
             <View style={{ gap: 8, marginTop: 4 }}>
               {images.map((img) => (
-                <View key={img.id} style={s.fileRow}>
+                <TouchableOpacity
+                  key={img.id}
+                  style={s.fileRow}
+                  onPress={() => openImageViewer(img)}
+                  activeOpacity={0.7}
+                >
                   <Ionicons name="image" size={18} color="#FF2A2A" />
                   <Text style={s.fileRowText} numberOfLines={1}>
                     {img.name}
                   </Text>
-                </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      showAlert("Delete Image", `Delete "${img.name}"?`, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Delete",
+                          style: "destructive",
+                          onPress: () => deleteFile(img.id),
+                        },
+                      ]);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#9A9A9A" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
               ))}
             </View>
           )}
@@ -716,6 +1013,259 @@ export default function ArtefactDetail() {
           </GlassCard>
         </View>
       </Modal>
+
+      {/* ── Harris Matrix Context picker modal ── */}
+      <Modal
+        visible={showHmPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHmPicker(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              maxHeight: "70%",
+              backgroundColor: "#1A1A1A",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              overflow: "hidden",
+            }}
+          >
+            <View
+              style={{
+                padding: 20,
+                borderBottomWidth: 1,
+                borderBottomColor: "#2A2A2A",
+              }}
+            >
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#F5F5F5" }}>
+                Select Context
+              </Text>
+              <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+                Link to a Harris Matrix stratigraphic context
+              </Text>
+            </View>
+            <FlatList
+              data={hmContexts}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ padding: 8 }}
+              renderItem={({ item }) => {
+                const isSelected = meta?.harrisMatrixContextId === item.id;
+                const typeColors: Record<string, string> = {
+                  layer: "#FFA726",
+                  deposit: "#66BB6A",
+                  cut: "#EF5350",
+                  fill: "#42A5F5",
+                  structure: "#AB47BC",
+                };
+                return (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 12,
+                      marginBottom: 4,
+                      backgroundColor: isSelected
+                        ? "rgba(255,42,42,0.15)"
+                        : "transparent",
+                    }}
+                    onPress={async () => {
+                      const updatedMeta = {
+                        ...meta,
+                        harrisMatrixContextId: item.id,
+                      };
+                      setMeta(updatedMeta as any);
+                      setHmContextInfo(item);
+                      setShowHmPicker(false);
+                      await updateManifest({
+                        harrisMatrixContextId: item.id,
+                      });
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: typeColors[item.type] || "#9A9A9A",
+                        marginRight: 12,
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          color: "#F5F5F5",
+                          fontSize: 15,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {item.id}
+                        <Text
+                          style={{
+                            color: typeColors[item.type] || "#9A9A9A",
+                            fontWeight: "400",
+                            fontSize: 12,
+                          }}
+                        >
+                          {" "}
+                          {item.type.toUpperCase()}
+                        </Text>
+                      </Text>
+                      {item.description ? (
+                        <Text
+                          style={{
+                            color: "#888",
+                            fontSize: 13,
+                            marginTop: 2,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color="#FF2A2A" />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={
+                <Text
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: 20,
+                  }}
+                >
+                  No contexts in Harris Matrix
+                </Text>
+              }
+            />
+            <TouchableOpacity
+              style={{
+                padding: 16,
+                borderTopWidth: 1,
+                borderTopColor: "#2A2A2A",
+                alignItems: "center",
+              }}
+              onPress={() => setShowHmPicker(false)}
+            >
+              <Text style={{ color: "#9A9A9A", fontWeight: "600" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Image viewer modal ── */}
+      <Modal
+        visible={!!viewingImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setViewingImage(null);
+          setViewingImageUrl(null);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.85)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <TouchableOpacity
+            style={{
+              position: "absolute",
+              top: 60,
+              right: 20,
+              zIndex: 10,
+              padding: 8,
+            }}
+            onPress={() => {
+              setViewingImage(null);
+              setViewingImageUrl(null);
+            }}
+          >
+            <Ionicons name="close" size={28} color="#F5F5F5" />
+          </TouchableOpacity>
+
+          {viewingImageUrl ? (
+            <Image
+              source={{ uri: viewingImageUrl }}
+              style={{
+                width: "90%",
+                height: "70%",
+              }}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={{ alignItems: "center", gap: 12 }}>
+              <Ionicons name="image" size={64} color="#555" />
+              <Text style={{ color: "#888", fontSize: 14 }}>
+                {viewingImage?.name}
+              </Text>
+              <Text style={{ color: "#555", fontSize: 12 }}>
+                Image preview available on web
+              </Text>
+            </View>
+          )}
+
+          {viewingImage && (
+            <View
+              style={{
+                position: "absolute",
+                bottom: 60,
+                flexDirection: "row",
+                gap: 16,
+              }}
+            >
+              <TouchableOpacity
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "rgba(255,68,68,0.15)",
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  paddingHorizontal: 20,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,68,68,0.3)",
+                  gap: 8,
+                }}
+                onPress={() => {
+                  const imgToDelete = viewingImage;
+                  setViewingImage(null);
+                  setViewingImageUrl(null);
+                  showAlert("Delete Image", `Delete "${imgToDelete.name}"?`, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: () => deleteFile(imgToDelete.id),
+                    },
+                  ]);
+                }}
+              >
+                <Ionicons name="trash" size={18} color="#FF4444" />
+                <Text style={{ color: "#FF4444", fontWeight: "600" }}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -737,10 +1287,11 @@ const s = StyleSheet.create({
   // Header
   headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
   heroPreview: {
-    width: 96,
-    height: 96,
+    width: "100%" as any,
+    aspectRatio: 4 / 3,
     borderRadius: 20,
     backgroundColor: "#0A0A0A",
+    maxHeight: 280,
   },
   title: {
     fontSize: 28,

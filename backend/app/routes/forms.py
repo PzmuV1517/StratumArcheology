@@ -615,6 +615,9 @@ async def append_artefact(
         "stratigraphicUnit",
         "quantity",
         "otherObservations",
+        "harrisMatrixContextId",
+        "latitude",
+        "longitude",
     ]
 
     row = [
@@ -628,6 +631,9 @@ async def append_artefact(
         payload.get("stratigraphicUnit", ""),
         str(payload.get("quantity") or ""),
         payload.get("otherObservations", ""),
+        payload.get("harrisMatrixContextId", ""),
+        str(payload.get("latitude") or ""),
+        str(payload.get("longitude") or ""),
     ]
 
     node, existing = _ensure_locked_csv_file(

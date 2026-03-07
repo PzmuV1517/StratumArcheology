@@ -32,6 +32,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -44,7 +45,9 @@ import MapView, {
 } from "react-native-maps";
 import type { LatLng as RNLatLng } from "react-native-maps";
 
+import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../../services/projectService";
+import { fileService } from "../../services/fileService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +59,21 @@ type Shape = {
   points: LatLng[];
   closed: boolean;
   color: string;
+};
+
+type ArtefactPin = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+};
+
+type SelectedPoint = {
+  shapeType: "work" | "site";
+  siteIndex?: number;
+  pointIndex: number;
+  lat: number;
+  lng: number;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -113,6 +131,14 @@ export const MapEditorMobile: React.FC<{
   const [activeSite, _setActiveSite] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapReady, setMapReady] = useState(false);
+
+  // Artefact pins from manifests with GPS coordinates
+  const [artefactPins, setArtefactPins] = useState<ArtefactPin[]>([]);
+
+  // Selected point for coordinate editing (Feature 4)
+  const [selectedPoint, setSelectedPoint] = useState<SelectedPoint | null>(null);
+  const [editLat, setEditLat] = useState("");
+  const [editLng, setEditLng] = useState("");
 
   // Refs to avoid stale closures in callbacks
   const workRef = useRef<Shape | null>(null);
@@ -207,6 +233,56 @@ export const MapEditorMobile: React.FC<{
         }
       } catch {}
       if (!cancelled) setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // ─── Load artefact pins from manifests ────────────────────────────────────
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const root = await fileService.listRoot(projectId);
+        const artefactsFolder = root.find(
+          (n: any) => n.type === "folder" && n.name === "Artefacts",
+        );
+        if (!artefactsFolder) return;
+        const folders = await fileService.listChildren(artefactsFolder.id);
+        const pins: ArtefactPin[] = [];
+        for (const folder of folders.filter((f: any) => f.type === "folder")) {
+          try {
+            const ch = await fileService.listChildren(folder.id);
+            const metaFile = ch.find(
+              (c: any) =>
+                c.type === "file" &&
+                (c.name === "artefact.json" || c.name.endsWith(".json")),
+            );
+            if (!metaFile) continue;
+            const res = await fileService.downloadFile(metaFile.id);
+            const text = await res.blob.text();
+            if (!text) continue;
+            const manifest = JSON.parse(text);
+            if (
+              manifest.latitude != null &&
+              manifest.longitude != null &&
+              !isNaN(manifest.latitude) &&
+              !isNaN(manifest.longitude)
+            ) {
+              pins.push({
+                id: folder.id,
+                name: manifest.name || folder.name,
+                lat: manifest.latitude,
+                lng: manifest.longitude,
+              });
+            }
+          } catch {}
+        }
+        if (!cancelled) setArtefactPins(pins);
+      } catch {}
     })();
     return () => {
       cancelled = true;
@@ -328,6 +404,66 @@ export const MapEditorMobile: React.FC<{
     saveNow();
   }, [saveNow]);
 
+  // ─── Point tap: show exact coordinates ────────────────────────────────────
+
+  const onWorkPointTap = useCallback((markerIndex: number) => {
+    const curWork = workRef.current;
+    if (!curWork) return;
+    const pt = curWork.points[markerIndex];
+    setSelectedPoint({
+      shapeType: "work",
+      pointIndex: markerIndex,
+      lat: pt.lat,
+      lng: pt.lng,
+    });
+    setEditLat(pt.lat.toFixed(8));
+    setEditLng(pt.lng.toFixed(8));
+  }, []);
+
+  const onSitePointTap = useCallback((siteIndex: number, markerIndex: number) => {
+    const curSites = sitesRef.current;
+    const cur = curSites[siteIndex];
+    if (!cur) return;
+    const pt = cur.points[markerIndex];
+    setSelectedPoint({
+      shapeType: "site",
+      siteIndex,
+      pointIndex: markerIndex,
+      lat: pt.lat,
+      lng: pt.lng,
+    });
+    setEditLat(pt.lat.toFixed(8));
+    setEditLng(pt.lng.toFixed(8));
+  }, []);
+
+  const applyCoordinateEdit = useCallback(() => {
+    if (!selectedPoint || !canEdit) return;
+    const newLat = parseFloat(editLat);
+    const newLng = parseFloat(editLng);
+    if (isNaN(newLat) || isNaN(newLng)) return;
+
+    if (selectedPoint.shapeType === "work") {
+      const curWork = workRef.current;
+      if (!curWork) return;
+      const pts = curWork.points.slice();
+      pts[selectedPoint.pointIndex] = { lat: newLat, lng: newLng };
+      setWorkSync({ ...curWork, points: pts });
+      scheduleSave();
+    } else {
+      const curSites = sitesRef.current;
+      const si = selectedPoint.siteIndex ?? 0;
+      const cur = curSites[si];
+      if (!cur) return;
+      const pts = cur.points.slice();
+      pts[selectedPoint.pointIndex] = { lat: newLat, lng: newLng };
+      const updated = curSites.slice();
+      updated[si] = { ...cur, points: pts };
+      setSitesSync(updated);
+      scheduleSave();
+    }
+    setSelectedPoint(null);
+  }, [selectedPoint, editLat, editLng, canEdit, scheduleSave]);
+
   // ─── Derived UI flags ─────────────────────────────────────────────────────
 
   const canCloseWork =
@@ -387,6 +523,7 @@ export const MapEditorMobile: React.FC<{
                 anchor={{ x: 0.5, y: 0.5 }}
                 draggable={canEdit}
                 onDragEnd={(e) => onWorkMarkerDragEnd(i, e.nativeEvent.coordinate)}
+                onPress={() => onWorkPointTap(i)}
                 tracksViewChanges={false}
               >
                 <DotMarker color={WORK_COLOR} />
@@ -420,12 +557,24 @@ export const MapEditorMobile: React.FC<{
                   onDragEnd={(e) =>
                     onSiteMarkerDragEnd(si, pi, e.nativeEvent.coordinate)
                   }
+                  onPress={() => onSitePointTap(si, pi)}
                   tracksViewChanges={false}
                 >
                   <DotMarker color={SITE_COLOR} />
                 </Marker>
               ))}
             </React.Fragment>
+          ))}
+
+          {/* ── Artefact pins ── */}
+          {artefactPins.map((pin) => (
+            <Marker
+              key={`artefact-${pin.id}`}
+              coordinate={{ latitude: pin.lat, longitude: pin.lng }}
+              title={pin.name}
+              description={`${pin.lat.toFixed(6)}, ${pin.lng.toFixed(6)}`}
+              pinColor="#FFA726"
+            />
           ))}
         </MapView>
       )}
@@ -483,19 +632,101 @@ export const MapEditorMobile: React.FC<{
       )}
 
       {/* ── Hint label ── */}
-      {canEdit && !loading && (
+      {canEdit && !loading && !selectedPoint && (
         <View style={styles.hint}>
           <Text style={styles.hintText}>
             {mode === "work"
               ? work
                 ? work.closed
-                  ? "Zonă lucru finalizată · Glisează markeri pentru a ajusta"
+                  ? "Zonă lucru finalizată · Glisează markeri / Apasă pe punct pt coordonate exacte"
                   : `${work.points.length} puncte · Apasă «Închide» când ai ≥3 puncte`
                 : "Apasă pe hartă pentru a începe zona de lucru"
               : activeSite != null && sites[activeSite] && !sites[activeSite].closed
                 ? `${sites[activeSite].points.length} puncte · Apasă «Închide» când ai ≥3 puncte`
                 : "Apasă pe hartă pentru a adăuga un sit"}
           </Text>
+        </View>
+      )}
+
+      {/* ── Coordinate edit panel ── */}
+      {selectedPoint && (
+        <View style={styles.coordPanel}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 10,
+              justifyContent: "space-between",
+            }}
+          >
+            <Text style={{ color: "#F5F5F5", fontWeight: "700", fontSize: 14 }}>
+              <Ionicons
+                name="location"
+                size={14}
+                color={selectedPoint.shapeType === "work" ? WORK_COLOR : SITE_COLOR}
+              />{" "}
+              {selectedPoint.shapeType === "work" ? "Work" : "Site"} Point #
+              {selectedPoint.pointIndex + 1}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedPoint(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={20} color="#9A9A9A" />
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#666", fontSize: 11, marginBottom: 3 }}>
+                Latitude
+              </Text>
+              <TextInput
+                style={styles.coordInput}
+                value={editLat}
+                onChangeText={setEditLat}
+                keyboardType="numeric"
+                selectTextOnFocus
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#666", fontSize: 11, marginBottom: 3 }}>
+                Longitude
+              </Text>
+              <TextInput
+                style={styles.coordInput}
+                value={editLng}
+                onChangeText={setEditLng}
+                keyboardType="numeric"
+                selectTextOnFocus
+              />
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            <TouchableOpacity
+              style={[styles.btn, { flex: 1, alignItems: "center" }]}
+              onPress={() => setSelectedPoint(null)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.btnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.btn,
+                {
+                  flex: 1,
+                  alignItems: "center",
+                  backgroundColor:
+                    selectedPoint.shapeType === "work" ? WORK_COLOR : SITE_COLOR,
+                  borderColor:
+                    selectedPoint.shapeType === "work" ? WORK_COLOR : SITE_COLOR,
+                },
+              ]}
+              onPress={applyCoordinateEdit}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.btnText, { color: "#111111" }]}>Apply</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -606,6 +837,27 @@ const styles = StyleSheet.create({
     color: "#999999",
     fontSize: 12,
     textAlign: "center",
+  },
+  coordPanel: {
+    position: "absolute",
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: "rgba(17,17,17,0.95)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    padding: 16,
+  },
+  coordInput: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 14,
+    color: "#F5F5F5",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    fontVariant: ["tabular-nums"] as any,
   },
 });
 
