@@ -65,7 +65,7 @@ export interface SendMessagePayload {
 
 /** A channel within a project. */
 export interface Channel {
-  id: number;
+  id: string;
   project_id: string;
   name: string;
   description: string | null;

@@ -7,6 +7,8 @@
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
+// Must be imported BEFORE tweetnacl — polyfills crypto.getRandomValues
+import "react-native-get-random-values";
 import nacl from "tweetnacl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -49,7 +51,10 @@ export function generateProjectKey(): string {
 }
 
 /** Store a project's encryption key locally. */
-export async function storeProjectKey(projectId: string, keyB64: string): Promise<void> {
+export async function storeProjectKey(
+  projectId: string,
+  keyB64: string,
+): Promise<void> {
   await AsyncStorage.setItem(`${KEY_PREFIX}${projectId}`, keyB64);
 }
 

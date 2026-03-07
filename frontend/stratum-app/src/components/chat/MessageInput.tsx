@@ -19,7 +19,11 @@ import {
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
 } from "react-native";
-import type { ChatMessage, MentionRef, Mentionable } from "../../services/chatService.types";
+import type {
+  ChatMessage,
+  MentionRef,
+  Mentionable,
+} from "../../services/chatService.types";
 import { chatService } from "../../services/chatService";
 
 interface MessageInputProps {
@@ -48,11 +52,13 @@ export default function MessageInput({
   disabled = false,
 }: MessageInputProps) {
   const [text, setText] = useState("");
-  const [inputHeight, setInputHeight] = useState(40);
   const inputRef = useRef<TextInput>(null);
   /** @mention autocomplete state */
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionResults, setMentionResults] = useState<Mentionable>({ users: [], groups: [] });
+  const [mentionResults, setMentionResults] = useState<Mentionable>({
+    users: [],
+    groups: [],
+  });
   const [pendingMentions, setPendingMentions] = useState<MentionRef[]>([]);
   const mentionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,7 +112,6 @@ export default function MessageInput({
     if (!t) return;
     onSend(t, replyTo?.id, pendingMentions.length > 0 ? pendingMentions : undefined);
     setText("");
-    setInputHeight(40); // Reset to minimum height
     setPendingMentions([]);
     // Clear reply or edit mode after sending
     if (editingMessage) {
@@ -131,16 +136,6 @@ export default function MessageInput({
     setText(t);
     detectMention(t);
     onTyping?.();
-    // Reset height when text is cleared
-    if (t === "") {
-      setInputHeight(40);
-    }
-  };
-
-  const handleContentSizeChange = (event: any) => {
-    const height = event.nativeEvent.contentSize.height;
-    // Min height 40, max height 120
-    setInputHeight(Math.max(40, Math.min(120, height)));
   };
 
   const showMentions =
@@ -158,7 +153,11 @@ export default function MessageInput({
               ...mentionResults.users.map((u) => ({
                 key: `user-${u.id}`,
                 label: u.display_name + (u.username ? ` (@${u.username})` : ""),
-                ref: { type: "user" as const, id: u.id, name: u.username || u.display_name },
+                ref: {
+                  type: "user" as const,
+                  id: u.id,
+                  name: u.username || u.display_name,
+                },
               })),
               ...mentionResults.groups.map((g) => ({
                 key: `group-${g.id}`,
@@ -190,7 +189,10 @@ export default function MessageInput({
               {replyTo.content}
             </Text>
           </View>
-          <TouchableOpacity onPress={onCancelReply} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={onCancelReply}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Text style={styles.replyCancel}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -206,7 +208,10 @@ export default function MessageInput({
               {editingMessage.content}
             </Text>
           </View>
-          <TouchableOpacity onPress={onCancelEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={onCancelEdit}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Text style={styles.replyCancel}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -215,10 +220,9 @@ export default function MessageInput({
       <View style={[styles.row, disabled && styles.rowDisabled]}>
         <TextInput
           ref={inputRef}
-          style={[styles.input, { height: inputHeight }]}
+          style={styles.input}
           value={text}
           onChangeText={handleChange}
-          onContentSizeChange={handleContentSizeChange}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
           placeholderTextColor="#9A9A9A"
@@ -231,9 +235,17 @@ export default function MessageInput({
         <TouchableOpacity
           onPress={handleSend}
           disabled={!text.trim() || disabled}
-          style={[styles.sendBtn, !!text.trim() && !disabled && styles.sendBtnActive]}
+          style={[
+            styles.sendBtn,
+            !!text.trim() && !disabled && styles.sendBtnActive,
+          ]}
         >
-          <Text style={[styles.sendText, !!text.trim() && !disabled && styles.sendTextActive]}>
+          <Text
+            style={[
+              styles.sendText,
+              !!text.trim() && !disabled && styles.sendTextActive,
+            ]}
+          >
             ↑
           </Text>
         </TouchableOpacity>
@@ -261,10 +273,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: Platform.OS === "ios" ? 10 : 8,
+    paddingBottom: Platform.OS === "ios" ? 10 : 8,
     fontSize: 15,
     color: "#F5F5F5",
+    minHeight: 40,
     maxHeight: 120,
     ...(Platform.OS === "web" ? { outlineStyle: "none" } : {}),
   } as any,
