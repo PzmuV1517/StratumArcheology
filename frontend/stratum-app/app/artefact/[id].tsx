@@ -257,13 +257,27 @@ export default function ArtefactDetail() {
           }
         } catch {}
       }
+      // Load preview image — prefer preview.* file, fall back to first image
       const pv = ch.find(
         (c: any) =>
           c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
       );
-      if (pv && Platform.OS === "web") {
-        const blobRes = await fileService.downloadFile(pv.id);
-        setPreviewUrl(URL.createObjectURL(blobRes.blob));
+      const firstImg =
+        pv ||
+        ch.find(
+          (c: any) =>
+            c.type === "file" &&
+            (c.mime_type?.startsWith("image/") ||
+              /\.(png|jpg|jpeg|gif|webp|heic)$/i.test(c.name)) &&
+            c.name !== "artefact.json",
+        );
+      if (firstImg) {
+        try {
+          const url = await fileService.getDownloadUrl(firstImg.id);
+          setPreviewUrl(url);
+        } catch (e) {
+          console.warn("Failed to load preview image", e);
+        }
       }
       if (Platform.OS === "web" && typeof window !== "undefined") {
         setQrUrl(`${window.location.origin}/artefact/${id}`);
@@ -453,13 +467,11 @@ export default function ArtefactDetail() {
   /** Open image viewer */
   const openImageViewer = async (img: FileNode) => {
     setViewingImage(img);
-    if (Platform.OS === "web") {
-      try {
-        const blobRes = await fileService.downloadFile(img.id);
-        setViewingImageUrl(URL.createObjectURL(blobRes.blob));
-      } catch {
-        setViewingImageUrl(null);
-      }
+    try {
+      const url = await fileService.getDownloadUrl(img.id);
+      setViewingImageUrl(url);
+    } catch {
+      setViewingImageUrl(null);
     }
   };
 
@@ -504,9 +516,37 @@ export default function ArtefactDetail() {
           headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
-          headerBackTitle: "Project",
+          headerBackTitle: "Artefacts",
           headerShown: true,
           presentation: "card",
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (projectId) {
+                  router.replace(`/project/${projectId}/artefacts` as any);
+                } else {
+                  router.back();
+                }
+              }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingLeft: Platform.OS === "ios" ? 0 : 8,
+                paddingRight: 16,
+              }}
+              activeOpacity={0.6}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="chevron-back" size={22} color="#FF2A2A" />
+              {Platform.OS === "ios" && (
+                <Text
+                  style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 4 }}
+                >
+                  Artefacts
+                </Text>
+              )}
+            </TouchableOpacity>
+          ),
         }}
       />
 
@@ -517,9 +557,13 @@ export default function ArtefactDetail() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header icon */}
-        <View style={s.headerIcon}>
+        <View style={[s.headerIcon, previewUrl && { alignSelf: "stretch" }]}>
           {previewUrl ? (
-            <TouchableOpacity onPress={() => setShowPreviewModal(true)}>
+            <TouchableOpacity
+              onPress={() => setShowPreviewModal(true)}
+              style={{ width: "100%" } as any}
+              activeOpacity={0.8}
+            >
               <Image
                 source={{ uri: previewUrl }}
                 style={s.heroPreview}
@@ -936,7 +980,11 @@ export default function ArtefactDetail() {
                     setDeleting(true);
                     await fileService.deleteNode(id as string);
                     setShowDeleteModal(false);
-                    router.back();
+                    if (projectId) {
+                      router.replace(`/project/${projectId}/artefacts` as any);
+                    } else {
+                      router.back();
+                    }
                   } catch (e) {
                     console.error("Failed to delete artefact", e);
                     showAlert("Error", "Failed to delete artefact");
