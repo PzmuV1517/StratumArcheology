@@ -164,6 +164,7 @@ src/config/
 ```
 
 **Configuration priority (config.ts):**
+
 1. `EXPO_PUBLIC_API_URL` environment variable
 2. `app.json` extra.apiBaseUrl
 3. Platform-specific defaults (localhost, 10.0.2.2, etc.)
@@ -283,6 +284,7 @@ import { projectService } from "@/services/projectService";
 ```
 
 Configured in `tsconfig.json`:
+
 ```json
 {
   "compilerOptions": {
@@ -297,14 +299,14 @@ Configured in `tsconfig.json`:
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `app.json` | Expo configuration, Firebase keys |
-| `tsconfig.json` | TypeScript configuration |
-| `package.json` | Dependencies and scripts |
-| `tailwind.config.js` | Tailwind CSS (web) |
-| `eas.json` | EAS Build configuration |
-| `.env.example` | Environment variable template |
+| File                 | Purpose                           |
+| -------------------- | --------------------------------- |
+| `app.json`           | Expo configuration, Firebase keys |
+| `tsconfig.json`      | TypeScript configuration          |
+| `package.json`       | Dependencies and scripts          |
+| `tailwind.config.js` | Tailwind CSS (web)                |
+| `eas.json`           | EAS Build configuration           |
+| `.env.example`       | Environment variable template     |
 
 ---
 

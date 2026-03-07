@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Personal folder settings modal.
+ *
+ * Allows users to configure privacy and sharing settings
+ * for their personal project folder.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -9,6 +38,7 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Image,
 } from "react-native";
 import { showAlert } from "../../utils/alert";
 
@@ -17,6 +47,7 @@ interface Member {
   display_name: string;
   email: string;
   role: string;
+  photo_url?: string | null;
 }
 
 interface FilePermission {
@@ -255,11 +286,15 @@ export default function MyFolderSettingsModal({
 
                     return (
                       <View key={member.id} style={styles.memberRow}>
-                        <View style={styles.memberAvatar}>
-                          <Text style={styles.memberAvatarText}>
-                            {getInitials(member.display_name)}
-                          </Text>
-                        </View>
+                        {member.photo_url ? (
+                          <Image source={{ uri: member.photo_url }} style={styles.memberAvatarImage} />
+                        ) : (
+                          <View style={styles.memberAvatar}>
+                            <Text style={styles.memberAvatarText}>
+                              {getInitials(member.display_name)}
+                            </Text>
+                          </View>
+                        )}
                         <View style={styles.memberInfo}>
                           <Text style={styles.memberName}>
                             {member.display_name}
@@ -477,6 +512,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF2A2A",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: 12,
+  },
+  memberAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: 12,
   },
   memberAvatarText: {

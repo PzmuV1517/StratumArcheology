@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Authentication context provider.
+ *
+ * Provides authentication state (user, token, loading) and actions
+ * (login, register, logout) to all child components via React Context.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, {
   createContext,
   useState,
@@ -13,9 +42,20 @@ import { showAlert } from "../utils/alert";
 interface User {
   id: string;
   email: string;
+  username?: string;
   display_name: string;
   photo_url?: string;
+  banner_url?: string;
   bio?: string;
+  description?: string;
+  phone?: string;
+  timezone?: string;
+  show_projects?: boolean;
+  link_x?: string;
+  link_discord?: string;
+  link_bsky?: string;
+  link_linkedin?: string;
+  link_website?: string;
   has_completed_onboarding?: boolean;
 }
 
@@ -31,6 +71,7 @@ interface AuthContextType {
     email: string,
     password: string,
     displayName: string,
+    username: string,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -48,6 +89,11 @@ const AuthContext = createContext<AuthContextType>({
   clearSessionExpired: () => {},
 });
 
+/**
+ * Provides authentication state and actions to all child components.
+ * @param props - Component props containing children to wrap
+ * @returns A context provider wrapping children with auth state
+ */
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,11 +104,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("[AuthContext] Session expired event received");
     setUser(null);
     setSessionExpired(true);
-    showAlert(
-      "Session Expired",
-      "Your session has expired. Please log in again.",
-      [{ text: "OK" }],
-    );
+    showAlert("Session Expired", "Your session has expired. Please log in again.", [
+      { text: "OK" },
+    ]);
   }, []);
 
   // Clear session expired flag (after user acknowledges or logs in)
@@ -104,15 +148,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const freshUser = {
             id: response.data.id,
             email: response.data.email,
+            username: response.data.username,
             display_name: response.data.display_name,
             photo_url: response.data.photo_url,
+            banner_url: response.data.banner_url,
             bio: response.data.bio,
+            description: response.data.description,
+            phone: response.data.phone,
+            timezone: response.data.timezone,
+            show_projects: response.data.show_projects,
+            link_x: response.data.link_x,
+            link_discord: response.data.link_discord,
+            link_bsky: response.data.link_bsky,
+            link_linkedin: response.data.link_linkedin,
+            link_website: response.data.link_website,
             has_completed_onboarding: response.data.has_completed_onboarding,
           };
           await authService.updateUserData(freshUser);
           setUser(freshUser);
         }
-      } catch (apiError: any) {
+      } catch (_apiError: any) {
         // Token is invalid or expired (401), already cleared by api interceptor
         console.log("[AuthContext] Token validation failed, clearing session");
         setUser(null);
@@ -144,9 +199,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, displayName: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    displayName: string,
+    username: string,
+  ) => {
     try {
-      const result = await authService.register(email, password, displayName);
+      const result = await authService.register(
+        email,
+        password,
+        displayName,
+        username,
+      );
       if (result.success) {
         setUser(result.user || null);
         return { success: true };
@@ -174,9 +239,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const freshUser = {
           id: response.data.id,
           email: response.data.email,
+          username: response.data.username,
           display_name: response.data.display_name,
           photo_url: response.data.photo_url,
+          banner_url: response.data.banner_url,
           bio: response.data.bio,
+          description: response.data.description,
+          phone: response.data.phone,
+          timezone: response.data.timezone,
+          show_projects: response.data.show_projects,
+          link_x: response.data.link_x,
+          link_discord: response.data.link_discord,
+          link_bsky: response.data.link_bsky,
+          link_linkedin: response.data.link_linkedin,
+          link_website: response.data.link_website,
           has_completed_onboarding: response.data.has_completed_onboarding,
         };
         await authService.updateUserData(freshUser);
@@ -205,4 +281,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * Consumes the AuthContext to access authentication state and actions.
+ * @returns The current authentication context value
+ */
 export const useAuth = () => useContext(AuthContext);

@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Application configuration constants.
+ *
+ * Defines API base URLs, feature flags, and environment-specific
+ * settings for the STRATUM mobile and web application.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
@@ -97,9 +126,21 @@ const getApiBaseUrl = (): string => {
   }
 
   if (Platform.OS === "android") {
-    // Android emulator uses 10.0.2.2 to reach host machine's localhost
+    // Physical device: use the Expo dev server's host IP (same LAN)
+    const debuggerHost =
+      Constants.expoConfig?.hostUri ||
+      Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    const hostIp = debuggerHost?.split(":")[0];
+
+    if (hostIp && hostIp !== "localhost" && hostIp !== "127.0.0.1") {
+      const url = `http://${hostIp}:${port}/api`;
+      console.log("[Config] Android physical device, using debuggerHost IP:", url);
+      return url;
+    }
+
+    // Emulator fallback: 10.0.2.2 is a special alias for host machine's localhost
     const url = `http://10.0.2.2:${port}/api`;
-    console.log("[Config] Android platform, using:", url);
+    console.log("[Config] Android emulator, using:", url);
     return url;
   }
 

@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project menu modal component.
+ *
+ * Displays project-level actions (edit, invite, delete)
+ * in a modal menu.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useState } from "react";
 import {
   Modal,
@@ -21,6 +50,8 @@ interface Props {
   onDeleteProject?: () => void;
   onTransferLeadership?: () => void;
   isOwner?: boolean;
+  isPublic?: boolean;
+  onTogglePublicise?: () => void;
   canChangeSettings?: boolean;
 }
 
@@ -30,14 +61,17 @@ export default function ProjectMenuModal({
   onClose,
   onOpenMembers,
   onOpenSettings,
-  currentTabName,
+  currentTabName: _currentTabName,
   onExitProject,
   onDeleteProject,
   onTransferLeadership,
   isOwner = false,
+  isPublic = false,
+  onTogglePublicise,
   canChangeSettings = true,
 }: Props) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showPubliciseConfirm, setShowPubliciseConfirm] = useState(false);
 
   const handleExitPress = () => {
     setShowExitConfirm(true);
@@ -73,56 +107,67 @@ export default function ProjectMenuModal({
           {/* Click outside to close */}
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           <View style={styles.menuCard}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                onClose();
+                onOpenMembers();
+              }}
+            >
+              <Text style={styles.menuItemText}>Members ({membersCount})</Text>
+            </TouchableOpacity>
+            {canChangeSettings ? (
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
                   onClose();
-                  onOpenMembers();
+                  onOpenSettings();
                 }}
               >
-                <Text style={styles.menuItemText}>Members ({membersCount})</Text>
+                <Text style={styles.menuItemText}>Settings</Text>
               </TouchableOpacity>
-              {canChangeSettings ? (
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => {
-                    onClose();
-                    onOpenSettings();
-                  }}
-                >
-                  <Text style={styles.menuItemText}>Settings</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={[styles.menuItem, styles.disabledMenuItem]}>
-                  <Text style={[styles.menuItemText, styles.disabledText]}>
-                    Settings
-                  </Text>
-                  <Text style={styles.permissionHint}>
-                    Only the leader can change settings
-                  </Text>
-                </View>
-              )}
-              {onExitProject && (
-                <TouchableOpacity
-                  style={[styles.menuItem]}
-                  onPress={handleExitPress}
-                >
-                  <Text style={[styles.menuItemText, styles.exitButtonText]}>
-                    Exit Project
-                  </Text>
-                </TouchableOpacity>
-              )}
+            ) : (
+              <View style={[styles.menuItem, styles.disabledMenuItem]}>
+                <Text style={[styles.menuItemText, styles.disabledText]}>
+                  Settings
+                </Text>
+                <Text style={styles.permissionHint}>
+                  Only the leader can change settings
+                </Text>
+              </View>
+            )}
+            {isOwner && onTogglePublicise && (
               <TouchableOpacity
-                style={[
-                  styles.menuItem,
-                  styles.closeButton,
-                  { justifyContent: "center" },
-                ]}
-                onPress={onClose}
+                style={styles.menuItem}
+                onPress={() => {
+                  onClose();
+                  setShowPubliciseConfirm(true);
+                }}
               >
-                <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
+                <Text style={styles.menuItemText}>
+                  {isPublic ? "Privatise Project" : "Publicise Project"}
+                </Text>
               </TouchableOpacity>
-          </View>        </View>
+            )}
+            {onExitProject && (
+              <TouchableOpacity style={[styles.menuItem]} onPress={handleExitPress}>
+                <Text style={[styles.menuItemText, styles.exitButtonText]}>
+                  Exit Project
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.menuItem,
+                styles.closeButton,
+                { justifyContent: "center" },
+              ]}
+              onPress={onClose}
+            >
+              <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
       {/* Exit confirmation modal */}
       <Modal
@@ -179,6 +224,47 @@ export default function ProjectMenuModal({
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowExitConfirm(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* Publicise / Privatise confirmation modal */}
+      <Modal
+        visible={showPubliciseConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPubliciseConfirm(false)}
+      >
+        <View style={styles.menuBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowPubliciseConfirm(false)}
+          />
+          <View style={styles.menuCard}>
+            <Text style={styles.confirmTitle}>
+              {isPublic ? "Privatise Project?" : "Publicise Project?"}
+            </Text>
+            <Text style={styles.confirmText}>
+              {isPublic
+                ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
+                : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image."}
+            </Text>
+            <TouchableOpacity
+              style={[styles.confirmButton, !isPublic && { backgroundColor: "#1A2E1A", borderWidth: 1, borderColor: "#44AA44" }]}
+              onPress={() => {
+                setShowPubliciseConfirm(false);
+                onTogglePublicise?.();
+              }}
+            >
+              <Text style={[styles.confirmButtonText, !isPublic && { color: "#44AA44" }]}>
+                {isPublic ? "Privatise" : "Publicise"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowPubliciseConfirm(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>

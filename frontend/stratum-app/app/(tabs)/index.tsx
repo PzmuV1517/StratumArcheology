@@ -1,326 +1,285 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+/**
+ * @file
+ * Overview tab screen.
+ *
+ * Displays a high-level overview of all projects
+ * and recent activity.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Platform,
 } from "react-native";
 import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
+import { OverviewSkeleton, Skeleton } from "../../src/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "../../src/services/projectService";
 import { activityService } from "../../src/services/activityService";
-import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "../../src/contexts/AuthContext";
-import {
-  useOnboarding,
-  DEV_ALWAYS_SHOW_ONBOARDING,
-} from "../../src/contexts/OnboardingContext";
 import type { Project } from "../../src/services/projectService.types";
-import type { ProjectActivity } from "../../src/services/activityService.types";
 
-type MyActivity = ProjectActivity & {
-  project_name?: string;
-};
+interface Activity {
+  id: string;
+  activity_type: string;
+  description: string;
+  created_at: string;
+  user_id?: string;
+  project_id: string;
+}
 
-export default function ProjectsScreen() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activities, setActivities] = useState<MyActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const showSkeleton = useDelayedLoading(loading);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<"projects" | "mystuff">(
-    "projects",
-  );
-  const router = useRouter();
+/**
+ * Overview Tab - Main landing page showing:
+ * - User welcome
+ * - Top 3 recent projects with interactive timelines
+ */
+export default function OverviewScreen() {
   const { user } = useAuth();
-  const { triggerPrompt, showPrompt, showOnboarding } = useOnboarding();
-  const hasTriggeredPrompt = useRef(false);
+  const router = useRouter();
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [projectActivities, setProjectActivities] = useState<
+    Record<string, Activity[]>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
+  const showSkeleton = useDelayedLoading(loading);
+  const showActivitiesSkeleton = useDelayedLoading(activitiesLoading);
 
-  // Show onboarding prompt once for new users (or always in dev mode)
-  useEffect(() => {
-    if (!user) return;
-    // Don't retrigger if already triggered this session (unless dev mode forces it)
-    if (!DEV_ALWAYS_SHOW_ONBOARDING && hasTriggeredPrompt.current) return;
-    // Don't retrigger if prompt/onboarding is already showing
-    if (showPrompt || showOnboarding) return;
-
-    if (DEV_ALWAYS_SHOW_ONBOARDING || !user.has_completed_onboarding) {
-      hasTriggeredPrompt.current = true;
-      const timer = setTimeout(() => triggerPrompt(), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadProjects = useCallback(async () => {
+  const loadRecentProjects = useCallback(async () => {
     try {
-      const data = await projectService.getProjects();
-      setProjects(data);
+      setLoading(true);
+      const projects = await projectService.getProjects();
+
+      // Sort by updated_at/created_at and get top 3
+      const sorted = projects.sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at).getTime();
+        const dateB = new Date(b.updated_at || b.created_at).getTime();
+        return dateB - dateA;
+      });
+
+      const top3 = sorted.slice(0, 3);
+      setRecentProjects(top3);
+
+      // Load activities for each project
+      if (top3.length > 0) {
+        loadProjectActivities(top3);
+      }
     } catch (error) {
-      // Silent fail - user can see offline icon if they're offline
       console.error("Failed to load projects:", error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
-  const loadMyActivities = useCallback(async () => {
-    try {
-      // Use the dedicated endpoint for personal activities
-      const myActivities = await activityService.getMyActivities(50);
-      setActivities(myActivities);
-    } catch (error) {
-      console.error("Failed to load activities:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
-  // Reload projects when screen comes back into focus (after creating a project)
+  // Load projects on mount and focus
   useFocusEffect(
     useCallback(() => {
-      loadProjects();
-      if (activeSubTab === "mystuff") {
-        loadMyActivities();
-      }
-    }, [loadProjects, loadMyActivities, activeSubTab]),
+      loadRecentProjects();
+    }, [loadRecentProjects]),
   );
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadProjects();
-    if (activeSubTab === "mystuff") {
-      loadMyActivities();
+  const loadProjectActivities = async (projects: Project[]) => {
+    setActivitiesLoading(true);
+    const activitiesMap: Record<string, Activity[]> = {};
+
+    try {
+      // Load activities in parallel using activityService
+      await Promise.all(
+        projects.map(async (project) => {
+          try {
+            const activities = await activityService.getActivities(project.id, 5, 0);
+            activitiesMap[project.id] = activities as unknown as Activity[];
+          } catch (err) {
+            console.error(
+              `Failed to load activities for project ${project.id}:`,
+              err,
+            );
+            activitiesMap[project.id] = [];
+          }
+        }),
+      );
+
+      setProjectActivities(activitiesMap);
+    } finally {
+      setActivitiesLoading(false);
     }
   };
 
-  const handleSubTabChange = (tab: "projects" | "mystuff") => {
-    setActiveSubTab(tab);
-    if (tab === "mystuff" && activities.length === 0) {
-      loadMyActivities();
-    }
+  const formatTimeAgo = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
-  const renderProject = ({ item, index }: any) => {
-    // During onboarding, tag the demo project card (or first card as fallback)
+  // Use the comprehensive icon mapping from activityService
+  const getActivityIcon = (type: string): string => {
+    return activityService.getActivityIcon(type);
+  };
+
+  const renderProjectCard = (project: Project) => {
+    const activities = projectActivities[project.id] || [];
+
     return (
       <TouchableOpacity
+        key={project.id}
         style={styles.projectCard}
-        onPress={() =>
-          router.push({
-            pathname: "/project/[id]",
-            params: { id: String(item.id) },
-          })
-        }
+        onPress={() => router.push(`/project/${project.id}`)}
+        activeOpacity={0.8}
       >
-        <Text style={styles.projectName}>{item.name}</Text>
-        <Text style={styles.projectDescription}>
-          {item.description || "No description"}
-        </Text>
-        <View style={styles.projectMeta}>
-          <Text style={styles.dateText}>
-            Created: {new Date(item.created_at).toLocaleDateString()}
+        <View style={styles.projectHeader}>
+          <Text style={styles.projectName} numberOfLines={1}>
+            {project.name}
           </Text>
+          <Text style={styles.projectDate}>
+            {formatTimeAgo(project.updated_at || project.created_at)}
+          </Text>
+        </View>
+
+        {project.description && (
+          <Text style={styles.projectDescription} numberOfLines={2}>
+            {project.description}
+          </Text>
+        )}
+
+        {/* Interactive Timeline */}
+        <View style={styles.timelineContainer}>
+          <Text style={styles.timelineTitle}>Recent Activity</Text>
+          {showActivitiesSkeleton ? (
+            <View style={{ flexDirection: "row", gap: 8, marginVertical: 4 }}>
+              <Skeleton width={100} height={60} borderRadius={10} />
+              <Skeleton width={100} height={60} borderRadius={10} />
+              <Skeleton width={100} height={60} borderRadius={10} />
+            </View>
+          ) : activities.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.timelineScroll}
+              contentContainerStyle={styles.timelineContent}
+            >
+              {activities.map((activity, index) => (
+                <View key={activity.id || index} style={styles.timelineItem}>
+                  <Text style={styles.timelineIcon}>
+                    {getActivityIcon(activity.activity_type)}
+                  </Text>
+                  <Text style={styles.timelineText} numberOfLines={2}>
+                    {activity.description}
+                  </Text>
+                  <Text style={styles.timelineTime}>
+                    {formatTimeAgo(activity.created_at)}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.noActivityText}>No recent activity</Text>
+          )}
+        </View>
+
+        <View style={styles.projectFooter}>
+          <Text style={styles.viewProjectText}>View Project →</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
-  const renderActivity = ({ item }: { item: MyActivity }) => (
-    <TouchableOpacity
-      style={styles.activityCard}
-      onPress={() =>
-        router.push({
-          pathname: "/project/[id]",
-          params: { id: String(item.project_id) },
-        })
-      }
-    >
-      <View style={styles.activityHeader}>
-        <Text style={styles.activityProjectName}>
-          {item.project_name || "Project"}
-        </Text>
-        <Text style={styles.activityDate}>
-          {activityService.formatTimestamp(item.created_at)}
-        </Text>
-      </View>
-      <Text style={styles.activityDescription}>
-        {activityService.getActivityDescription(item)}
-      </Text>
-      {item.user_name && (
-        <Text style={styles.activityUser}>by {item.user_name}</Text>
-      )}
-    </TouchableOpacity>
-  );
-
   if (showSkeleton) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Projects</Text>
-        </View>
-        <ProjectListSkeleton count={4} />
-      </View>
-    );
+    return <OverviewSkeleton />;
   }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Projects</Text>
+        <Text style={styles.headerTitle}>Overview</Text>
+        <Text style={styles.headerSubtitle}>
+          Welcome back{user?.display_name ? `,${user.display_name.split(" ")[0]}` : ""}
+        </Text>
       </View>
 
-      {/* Sub-tab selector */}
-      <View style={styles.subTabContainer}>
-        <TouchableOpacity
-          style={[styles.subTab, activeSubTab === "projects" && styles.subTabActive]}
-          onPress={() => handleSubTabChange("projects")}
-        >
-          <Text
-            style={[
-              styles.subTabText,
-              activeSubTab === "projects" && styles.subTabTextActive,
-            ]}
-          >
-            All Projects
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.subTab, activeSubTab === "mystuff" && styles.subTabActive]}
-          onPress={() => handleSubTabChange("mystuff")}
-        >
-          <Text
-            style={[
-              styles.subTabText,
-              activeSubTab === "mystuff" && styles.subTabTextActive,
-            ]}
-          >
-            My Stuff
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+      >
 
-      {activeSubTab === "projects" ? (
-        <>
-          {projects.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No projects yet</Text>
-              <Text style={styles.emptySubtext}>
-                Create your first project to get started
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={projects}
-              renderItem={renderProject}
-              keyExtractor={(item: any) => item.id}
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              contentContainerStyle={styles.listContainer}
-            />
-          )}
-        </>
-      ) : (
-        <ScrollView
-          style={styles.myStuffContainer}
-          contentContainerStyle={styles.myStuffContent}
-        >
-          {/* My Folder quick access - shows folders from all projects */}
-          <View style={styles.myFolderSection}>
-            <Text style={styles.myFolderSectionTitle}>My Folders</Text>
-            <Text style={styles.myFolderSectionSubtitle}>
-              Access your private folders from each project
+      {/* Recent Projects Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Projects</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)")}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {recentProjects.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateEmoji}>📁</Text>
+            <Text style={styles.emptyStateTitle}>No projects yet</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              Create your first project to get started
             </Text>
-            {projects.length === 0 ? (
-              <View style={styles.emptyTimeline}>
-                <Text style={styles.emptyTimelineText}>No projects yet</Text>
-                <Text style={styles.emptyTimelineSubtext}>
-                  Join or create a project to get your personal folder
-                </Text>
-              </View>
-            ) : (
-              projects.map((project) => (
-                <TouchableOpacity
-                  key={project.id}
-                  style={styles.myFolderButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/project/[id]",
-                      params: { id: String(project.id), openFiles: "myFolder" },
-                    })
-                  }
-                >
-                  <Text style={styles.myFolderIcon}>📁</Text>
-                  <View style={styles.myFolderInfo}>
-                    <Text style={styles.myFolderTitle}>{project.name}</Text>
-                    <Text style={styles.myFolderSubtitle}>
-                      Open your private folder
-                    </Text>
-                  </View>
-                  <Text style={styles.myFolderArrow}>→</Text>
-                </TouchableOpacity>
-              ))
-            )}
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() => router.push("/modal")}
+            >
+              <Text style={styles.createButtonText}>Create Project</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Activity timeline */}
-          <View style={styles.timelineSection}>
-            <Text style={styles.timelineSectionTitle}>Recent Activity</Text>
-            {activities.length === 0 ? (
-              <View style={styles.emptyTimeline}>
-                <Text style={styles.emptyTimelineText}>No recent activity</Text>
-                <Text style={styles.emptyTimelineSubtext}>
-                  Your actions across all projects will appear here
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={activities}
-                renderItem={renderActivity}
-                keyExtractor={(item) => String(item.id)}
-                scrollEnabled={false}
-              />
-            )}
+        ) : (
+          <View style={styles.projectsGrid}>
+            {recentProjects.map(renderProjectCard)}
           </View>
-        </ScrollView>
-      )}
-
-      <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
-        <IconSymbol name="plus" size={28} color="#F5F5F5" />
-      </TouchableOpacity>
-
-      <ProjectActionModal
-        visible={showActionModal}
-        onClose={() => setShowActionModal(false)}
-        onCreateProject={() => router.push("/modal")}
-        onJoinProject={() => router.push("/join-project")}
-      />
+        )}
+      </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  centerContainer: {
+  container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
     backgroundColor: "#111111",
   },
   header: {
-    padding: 24,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 16,
     backgroundColor: "#111111",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
   },
   headerTitle: {
     fontSize: 32,
@@ -328,56 +287,91 @@ const styles = StyleSheet.create({
     color: "#F5F5F5",
     letterSpacing: 0.5,
   },
-  // Sub-tab styles
-  subTabContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+  headerSubtitle: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginTop: 6,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 120,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#111111",
   },
-  subTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  subTabActive: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  subTabText: {
-    fontSize: 14,
-    fontWeight: "600",
+  loadingText: {
+    marginTop: 16,
     color: "#9A9A9A",
-    letterSpacing: 0.3,
+    fontSize: 14,
   },
-  subTabTextActive: {
+  welcomeSection: {
+    padding: 24,
+    paddingTop: Platform.OS === "ios" ? 120 : 100,
+    paddingBottom: 8,
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: "700",
     color: "#F5F5F5",
+    letterSpacing: 0.5,
   },
-
-  listContainer: { padding: 16 },
+  subtitleText: {
+    fontSize: 16,
+    color: "#9A9A9A",
+    marginTop: 8,
+  },
+  section: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: "#FF2A2A",
+    fontWeight: "500",
+  },
+  projectsGrid: {
+    gap: 16,
+  },
   projectCard: {
     backgroundColor: "#1A1A1A",
-    padding: 16,
     borderRadius: 16,
-    marginBottom: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 8,
+  },
+  projectHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
   projectName: {
     fontSize: 18,
     fontWeight: "600",
     color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.5,
+    flex: 1,
+    marginRight: 12,
+  },
+  projectDate: {
+    fontSize: 12,
+    color: "#9A9A9A",
   },
   projectDescription: {
     fontSize: 14,
@@ -385,179 +379,98 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 20,
   },
-  projectMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 8,
+  timelineContainer: {
+    marginTop: 8,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#2A2A2A",
   },
-  roleText: {
+  timelineTitle: {
     fontSize: 12,
-    color: "#FF2A2A",
     fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  dateText: { fontSize: 12, color: "#9A9A9A", letterSpacing: 0.5 },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#F5F5F5",
-    marginBottom: 10,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  emptySubtext: {
-    fontSize: 14,
     color: "#9A9A9A",
-    textAlign: "center",
-    letterSpacing: 0.5,
-  },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: Platform.OS === "android" ? 110 : 100,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#FF2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-    zIndex: 999,
-  },
-
-  // My Stuff styles
-  myStuffContainer: {
-    flex: 1,
-  },
-  myStuffContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  myFolderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  myFolderIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  myFolderInfo: {
-    flex: 1,
-  },
-  myFolderTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  myFolderSubtitle: {
-    fontSize: 13,
-    color: "#9A9A9A",
-    letterSpacing: 0.3,
-  },
-  myFolderArrow: {
-    fontSize: 18,
-    color: "#FF2A2A",
-    fontWeight: "600",
-  },
-  myFolderSection: {
-    marginBottom: 24,
-  },
-  myFolderSectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  myFolderSectionSubtitle: {
-    fontSize: 13,
-    color: "#9A9A9A",
-    marginBottom: 16,
-    letterSpacing: 0.3,
-  },
-  timelineSection: {
-    marginBottom: 16,
-  },
-  timelineSectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 16,
-    letterSpacing: 0.5,
-  },
-  emptyTimeline: {
-    alignItems: "center",
-    paddingVertical: 32,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  emptyTimelineText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
     marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  emptyTimelineSubtext: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
+  timelineScroll: {
+    marginHorizontal: -4,
   },
-  activityCard: {
+  timelineContent: {
+    paddingHorizontal: 4,
+  },
+  timelineItem: {
     backgroundColor: "#1A1A1A",
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginRight: 12,
+    width: 140,
+    minHeight: 80,
+  },
+  timelineIcon: {
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  timelineText: {
+    fontSize: 12,
+    color: "#CFCFCF",
+    lineHeight: 16,
+    marginBottom: 6,
+  },
+  timelineTime: {
+    fontSize: 10,
+    color: "#9A9A9A",
+  },
+  noActivityText: {
+    fontSize: 12,
+    color: "#9A9A9A",
+    fontStyle: "italic",
+  },
+  projectFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
+    alignItems: "flex-end",
+  },
+  viewProjectText: {
+    fontSize: 14,
+    color: "#FF2A2A",
+    fontWeight: "500",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#2A2A2A",
   },
-  activityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  emptyStateEmoji: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#F5F5F5",
     marginBottom: 8,
   },
-  activityProjectName: {
+  emptyStateSubtitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#FF2A2A",
-    letterSpacing: 0.3,
-  },
-  activityDate: {
-    fontSize: 12,
     color: "#9A9A9A",
-    letterSpacing: 0.3,
+    textAlign: "center",
+    marginBottom: 24,
   },
-  activityDescription: {
-    fontSize: 15,
+  createButton: {
+    backgroundColor: "#FF2A2A",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  createButtonText: {
     color: "#F5F5F5",
-    lineHeight: 22,
-    letterSpacing: 0.3,
-  },
-  activityUser: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 8,
-    letterSpacing: 0.3,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

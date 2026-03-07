@@ -1,3 +1,32 @@
+"""
+Project activity timeline API routes.
+
+Handles retrieving project activities in reverse chronological order
+and personal activity feeds across all user projects.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import json
 from datetime import datetime
 
@@ -13,6 +42,20 @@ router = APIRouter(prefix="/activities", tags=["activities"])
 
 
 class ActivityResponse(BaseModel):
+    """Response model for a single project activity entry.
+
+    Attributes:
+        id: Unique activity identifier.
+        project_id: The project this activity belongs to.
+        project_name: Human-readable project name (populated for cross-project feeds).
+        user_id: ID of the user who performed the action.
+        user_name: Display name of the acting user.
+        activity_type: Machine-readable activity type string.
+        description: Human-readable description of what happened.
+        extra_data: Optional metadata dict with additional context.
+        created_at: Timestamp when the activity was recorded.
+    """
+
     id: str
     project_id: str
     project_name: str | None = None

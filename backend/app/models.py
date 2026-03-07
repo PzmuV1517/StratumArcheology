@@ -1,3 +1,30 @@
+"""
+SQLAlchemy ORM models for the STRATUM database. Defines all the tables:
+users, projects, notes, files, GPS data, invites, activities, QR codes, etc.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import enum
 import uuid
 from datetime import datetime
@@ -22,10 +49,17 @@ from app.database import Base
 
 
 def generate_uuid():
+    """Generate a random UUID4 string for use as a primary key default.
+
+    Returns:
+        str: A new UUID4 string.
+    """
     return str(uuid.uuid4())
 
 
 class UserRole(str, enum.Enum):
+    """Roles a user can hold within a project."""
+
     LEADER = "leader"
     RESEARCHER = "researcher"
     GUEST = "guest"
@@ -41,9 +75,12 @@ class PrivacyLevel(str, enum.Enum):
 
 
 class ActivityType(str, enum.Enum):
+    """Categories of actions recorded in the project activity feed."""
+
     # Project activities
     PROJECT_CREATED = "project_created"
     PROJECT_UPDATED = "project_updated"
+    PROJECT_PUBLICITY_CHANGED = "project_publicity_changed"
 
     # Member activities
     MEMBER_JOINED = "member_joined"
@@ -77,6 +114,12 @@ class ActivityType(str, enum.Enum):
     # Harris Matrix activities
     HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
 
+    # Wheeler Diagram activities
+    WHEELER_DATA_UPDATED = "wheeler_data_updated"
+
+    # Chat activities
+    MESSAGE_SENT = "message_sent"
+
 
 # Association table for project members
 project_members = Table(
@@ -90,14 +133,28 @@ project_members = Table(
 
 
 class User(Base):
+    """Registered user account, linked to a Firebase UID."""
+
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     firebase_uid = Column(String, unique=True, nullable=False, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
+    username = Column(String, unique=True, nullable=True, index=True)
     display_name = Column(String, nullable=True)
     photo_url = Column(String, nullable=True)
+    banner_url = Column(String, nullable=True)
     bio = Column(Text, nullable=True)  # User bio/about me
+    description = Column(Text, nullable=True)  # Extended profile description
+    phone = Column(String, nullable=True)
+    timezone = Column(String, nullable=True)  # e.g. "Europe/Bucharest"
+    show_projects = Column(Boolean, default=True, nullable=False)
+    # Social links
+    link_x = Column(String, nullable=True)  # X (Twitter)
+    link_discord = Column(String, nullable=True)
+    link_bsky = Column(String, nullable=True)  # Bluesky
+    link_linkedin = Column(String, nullable=True)
+    link_website = Column(String, nullable=True)  # Personal website
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -116,6 +173,8 @@ class User(Base):
 
 
 class Project(Base):
+    """Archaeological project that groups notes, files, GPS data, and members."""
+
     __tablename__ = "projects"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -128,7 +187,27 @@ class Project(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    harris_matrix_data = Column(JSON, nullable=True)  # Harris Matrix visualization data
+    is_public = Column(
+        Boolean, default=False
+    )  # Whether the project is publicly visible
+    cover_image_url = Column(Text, nullable=True)  # MinIO object key for cover image
+    harris_matrix_data = Column(
+        JSON, nullable=True
+    )  # Harris Matrix visualization data
+    wheeler_data = Column(JSON, nullable=True)  # Wheeler Stratigraphic Notation data
+
+    # Version tracking for data snapshots (Time Machine support)
+    harris_matrix_version = Column(Integer, default=0, nullable=False)
+    wheeler_data_version = Column(Integer, default=0, nullable=False)
+
+    # Publication-quality SVG render (stored in MinIO)
+    wheeler_render_path = Column(Text, nullable=True)  # MinIO object key
+    wheeler_render_version = Column(
+        Integer, nullable=True
+    )  # data version at render time
+
+    # E2EE encryption key for chat (base64-encoded, shared among members)
+    e2ee_key = Column(Text, nullable=True)
 
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
@@ -144,6 +223,8 @@ class Project(Base):
 
 
 class Note(Base):
+    """User-authored note belonging to a project, with versioning and privacy support."""
+
     __tablename__ = "notes"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -179,12 +260,16 @@ class Note(Base):
 
 
 class FileNodeType(str, enum.Enum):
+    """Discriminator for entries in the file tree (folder, file, or note)."""
+
     FOLDER = "folder"
     FILE = "file"
     NOTE = "note"
 
 
 class FileNode(Base):
+    """Node in the hierarchical file tree (file, folder, or note-backed entry)."""
+
     __tablename__ = "file_nodes"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -291,6 +376,8 @@ class FileVersion(Base):
 
 
 class NoteFileLink(Base):
+    """Association linking a Note to its corresponding FileNode in the file tree."""
+
     __tablename__ = "note_file_links"
 
     note_id = Column(
@@ -315,6 +402,8 @@ class NoteFileLink(Base):
 
 
 class NoteAttachment(Base):
+    """Image or file attached to a note, stored in MinIO."""
+
     __tablename__ = "note_attachments"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -332,6 +421,8 @@ class NoteAttachment(Base):
 
 
 class ProjectGPS(Base):
+    """GPS/GIS polygon data for a project (work area and site boundaries)."""
+
     __tablename__ = "project_gps"
 
     # One row per project
@@ -351,6 +442,8 @@ class ProjectGPS(Base):
 
 
 class ProjectInvite(Base):
+    """Invitation token/code that grants a user membership in a project."""
+
     __tablename__ = "project_invites"
 
     token = Column(String, primary_key=True, default=generate_uuid)
@@ -385,6 +478,8 @@ class ProjectInvite(Base):
 
 
 class ProjectActivity(Base):
+    """Timestamped activity log entry for audit and feed display."""
+
     __tablename__ = "project_activities"
 
     id = Column(String, primary_key=True, default=generate_uuid)
@@ -439,4 +534,219 @@ class QRCode(Base):
     )
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    project = relationship("Project", backref=backref("qr_codes", cascade="all, delete-orphan"))
+    project = relationship(
+        "Project", backref=backref("qr_codes", cascade="all, delete-orphan")
+    )
+
+
+# ── Channels & User Groups ───────────────────────────────────────────────────
+
+
+class Channel(Base):
+    """A named chat channel within a project (like Slack channels)."""
+
+    __tablename__ = "channels"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String, nullable=False)  # e.g. "general", "finds-log"
+    description = Column(Text, nullable=True)
+    is_default = Column(
+        Boolean, default=False, nullable=False
+    )  # The #general channel
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("channels", cascade="all, delete-orphan")
+    )
+    creator = relationship("User", foreign_keys=[created_by])
+    members = relationship(
+        "ChannelMember", back_populates="channel", cascade="all, delete-orphan"
+    )
+    messages = relationship(
+        "ChatMessage", back_populates="channel", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_channel_name_per_project"),
+    )
+
+
+class ChannelMember(Base):
+    """Membership of a user in a channel."""
+
+    __tablename__ = "channel_members"
+
+    channel_id = Column(
+        String, ForeignKey("channels.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    channel = relationship("Channel", back_populates="members")
+    user = relationship("User")
+
+
+class UserGroup(Base):
+    """Named group of users within a project (for permissions and @mentions)."""
+
+    __tablename__ = "user_groups"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String, nullable=False)  # e.g. "field-leads", "lab-team"
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("user_groups", cascade="all, delete-orphan")
+    )
+    creator = relationship("User", foreign_keys=[created_by])
+    members = relationship(
+        "UserGroupMember", back_populates="group", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "name", name="uq_user_group_name_per_project"
+        ),
+    )
+
+
+class UserGroupMember(Base):
+    """Membership of a user in a user group."""
+
+    __tablename__ = "user_group_members"
+
+    group_id = Column(
+        String, ForeignKey("user_groups.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    group = relationship("UserGroup", back_populates="members")
+    user = relationship("User")
+
+
+class ChatMessage(Base):
+    """A single chat message — channel message, project room message, or DM.
+
+    * channel_id set  → channel message (Slack-like)
+    * project_id set + channel_id NULL + recipient_id NULL  → legacy project room
+    * recipient_id set  → direct message
+    """
+
+    __tablename__ = "chat_messages"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    sender_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # Channel message (primary method for project chat)
+    channel_id = Column(
+        String,
+        ForeignKey("channels.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    # Legacy: Non-null for project room messages without channels
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    # Non-null for DMs
+    recipient_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    content = Column(Text, nullable=False)
+    # @ mentions stored as JSON: [{"type":"user","id":"...", "display":"@name"}, {"type":"group","id":"...","display":"@group"}]
+    mentions = Column(JSON, nullable=True)
+    # Optional reply-to support (like Slack threads)
+    reply_to_id = Column(
+        String, ForeignKey("chat_messages.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    edited_at = Column(DateTime, nullable=True)
+    is_deleted = Column(Boolean, default=False)
+
+    # Relationships
+    sender = relationship("User", foreign_keys=[sender_id])
+    recipient = relationship("User", foreign_keys=[recipient_id])
+    channel = relationship("Channel", back_populates="messages")
+    project = relationship(
+        "Project", backref=backref("chat_messages", cascade="all, delete-orphan")
+    )
+    reply_to = relationship("ChatMessage", remote_side="ChatMessage.id")
+
+    __table_args__ = (
+        Index("ix_chat_messages_channel_created", "channel_id", "created_at"),
+        Index("ix_chat_messages_project_created", "project_id", "created_at"),
+        Index("ix_chat_messages_dm", "sender_id", "recipient_id", "created_at"),
+    )
+
+
+class DataVersion(Base):
+    """Versioned snapshot of project JSON data (Harris Matrix, Wheeler diagram).
+
+    Each time the harris_matrix_data or wheeler_data JSON column is updated,
+    the previous value is stored here, enabling the Time Machine to browse
+    and restore earlier revisions.
+    """
+
+    __tablename__ = "data_versions"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    data_type = Column(String, nullable=False)  # "harris_matrix" or "wheeler"
+    version = Column(Integer, nullable=False)
+    data = Column(JSON, nullable=True)  # The snapshot payload
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    project = relationship(
+        "Project", backref=backref("data_versions", cascade="all, delete-orphan")
+    )
+    user = relationship("User", foreign_keys=[created_by])
+
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "data_type", "version", name="uq_data_version"
+        ),
+        Index("ix_data_versions_project_type", "project_id", "data_type"),
+    )

@@ -69,7 +69,7 @@ export const authService = {
     try {
       const userDataString = await AsyncStorage.getItem("userData");
       return userDataString ? JSON.parse(userDataString) : null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   },

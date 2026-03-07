@@ -1,0 +1,7 @@
+{
+  "name": "domexception",
+  "version": "9.0.0",
+  "description": "Local shim – delegates to the native DOMException available since Node 17",
+  "main": "index.js",
+  "license": "MIT"
+}

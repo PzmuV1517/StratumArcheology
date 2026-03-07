@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Data file preview screen.
+ *
+ * Routes data files to the appropriate viewer panel based
+ * on MIME type (photo, video, audio, PDF, etc.).
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   View,
@@ -368,13 +397,11 @@ export default function DataPreviewScreen() {
           if (!Papa)
             Papa =
               (await import("papaparse")).default || (await import("papaparse"));
-          if (!XLSX) XLSX = await import("xlsx");
-          if (!AutoSizer)
-            AutoSizer = (await import("react-virtualized-auto-sizer")).default;
-          if (!VariableSizeGrid)
-            VariableSizeGrid = (await import("react-window")).VariableSizeGrid;
-
-          // (moved markdown preloading to the txt/md branch above)
+          try {
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
 
           if (ext.endsWith(".csv")) {
             const text = await blob.text();
@@ -382,12 +409,16 @@ export default function DataPreviewScreen() {
             if (parsed?.data) setTable(parsed.data as any);
             else setTextContent(text);
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-            const arrayBuffer = await blob.arrayBuffer();
-            const wb = XLSX.read(arrayBuffer, { type: "array" });
-            const firstSheet = wb.SheetNames[0];
-            const ws = wb.Sheets[firstSheet];
-            const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
-            setTable(json as string[][]);
+            if (!XLSX) {
+              setTextContent("[xlsx library not installed – install \"xlsx\" to preview Excel files]");
+            } else {
+              const arrayBuffer = await blob.arrayBuffer();
+              const wb = XLSX.read(arrayBuffer, { type: "array" });
+              const firstSheet = wb.SheetNames[0];
+              const ws = wb.Sheets[firstSheet];
+              const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+              setTable(json as string[][]);
+            }
           } else {
             // Try CSV by MIME fallback
             try {
@@ -571,7 +602,15 @@ export default function DataPreviewScreen() {
           const csv = Papa.unparse(trimmed);
           blob = new Blob([csv], { type: "text/csv" });
         } else {
-          if (!XLSX) XLSX = await import("xlsx");
+          try {
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
+          if (!XLSX) {
+            showAlert("Error", "xlsx library not installed – cannot save Excel files");
+            return;
+          }
           const ws = XLSX.utils.aoa_to_sheet(trimmed);
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
@@ -764,7 +803,8 @@ export default function DataPreviewScreen() {
         options={{
           title: header,
           headerTransparent: Platform.OS === "ios",
-          headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+          headerBlurEffect:
+            Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
           headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: { color: "#F5F5F5" },

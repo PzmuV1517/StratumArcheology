@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project tools tab component.
+ *
+ * Provides access to project tools like forms, GPS mapping,
+ * and Harris Matrix visualization.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -49,7 +78,9 @@ let cachedHeadingSubscription: { remove: () => void } | null = null;
 let lastHeading = 0;
 
 export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(cachedLocationPermission);
+  const [locationPermission, setLocationPermission] = useState<boolean | null>(
+    cachedLocationPermission,
+  );
   const [location, setLocation] = useState<LocationData | null>(cachedLocation);
   const [heading, setHeading] = useState<number>(lastHeading);
   const [loading, setLoading] = useState(cachedLocationPermission === null);
@@ -62,7 +93,9 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   const compassRotation = useRef(new Animated.Value(-lastHeading)).current;
   const currentRotation = useRef(-lastHeading); // Track actual rotation value for shortest path calculation
   const locationSubscription = useRef<LocationSubscription | null>(null);
-  const headingSubscription = useRef<{ remove: () => void } | null>(cachedHeadingSubscription);
+  const headingSubscription = useRef<{ remove: () => void } | null>(
+    cachedHeadingSubscription,
+  );
 
   // Load expo-location dynamically on native only
   useEffect(() => {
@@ -72,7 +105,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         setLocationModule(cachedLocationModule);
         return;
       }
-      
+
       import("expo-location")
         .then((module) => {
           cachedLocationModule = module;
@@ -95,7 +128,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
         setLoading(false);
         return;
       }
-      
+
       requestPermissions();
     }
 
@@ -114,16 +147,16 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
     // Animate compass rotation - take shortest path when crossing 0/360 boundary
     const targetHeading = -heading;
     const current = currentRotation.current;
-    
+
     // Calculate the difference and normalize to [-180, 180]
     let diff = targetHeading - current;
     while (diff > 180) diff -= 360;
     while (diff < -180) diff += 360;
-    
+
     // Calculate new rotation value (continuous, not bounded to 0-360)
     const newRotation = current + diff;
     currentRotation.current = newRotation;
-    
+
     Animated.timing(compassRotation, {
       toValue: newRotation,
       duration: 200,
@@ -177,7 +210,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       if (Platform.OS !== "web" && !cachedHeadingSubscription) {
         const headingSub = await LocationModule.watchHeadingAsync(
           (headingData: HeadingObject) => {
-            const newHeading = headingData.trueHeading || headingData.magHeading || 0;
+            const newHeading =
+              headingData.trueHeading || headingData.magHeading || 0;
             lastHeading = newHeading;
             setHeading(newHeading);
           },

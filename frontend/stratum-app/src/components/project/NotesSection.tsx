@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Project notes section component.
+ *
+ * Displays a searchable, sortable list of project notes
+ * with create and edit actions.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -59,7 +88,15 @@ export default function NotesSection({
 }: Props) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const MiniAudio = ({ url, noteId, attachmentId }: { url?: string; noteId?: string; attachmentId?: string }) => {
+  const MiniAudio = ({
+    url,
+    noteId,
+    attachmentId,
+  }: {
+    url?: string;
+    noteId?: string;
+    attachmentId?: string;
+  }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const ctxRef = useRef<AudioContext | null>(null);
@@ -76,7 +113,9 @@ export default function NotesSection({
       if (Platform.OS !== "web" && noteId && attachmentId) {
         getApiBaseUrl().then((baseUrl) => {
           // baseUrl already ends with /api, so just append /notes/...
-          setStreamUrl(`${baseUrl}/notes/${noteId}/attachments/${attachmentId}/stream`);
+          setStreamUrl(
+            `${baseUrl}/notes/${noteId}/attachments/${attachmentId}/stream`,
+          );
         });
       }
     }, [noteId, attachmentId]);
@@ -92,13 +131,13 @@ export default function NotesSection({
           await soundRef.current.unloadAsync();
           soundRef.current = null;
         }
-        
+
         // Get auth token for the streaming request
         const token = await AsyncStorage.getItem("authToken");
-        
+
         // Create and play new sound
-        const { sound, status } = await Audio.Sound.createAsync(
-          { 
+        const { sound, status: _status } = await Audio.Sound.createAsync(
+          {
             uri: audioUrl,
             headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           },
@@ -113,7 +152,7 @@ export default function NotesSection({
                 setPosition(0);
               }
             }
-          }
+          },
         );
         soundRef.current = sound;
         setIsLoading(false);
@@ -204,7 +243,11 @@ export default function NotesSection({
             {isLoading ? (
               <ActivityIndicator size="small" color="#FF2A2A" />
             ) : (
-              <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#FF2A2A" />
+              <Ionicons
+                name={isPlaying ? "pause" : "play"}
+                size={20}
+                color="#FF2A2A"
+              />
             )}
           </TouchableOpacity>
           <View style={styles.audioProgress}>
@@ -274,9 +317,9 @@ export default function NotesSection({
             </Text>
           )}
           {isVoice && audioAtt?.url && (
-            <MiniAudio 
-              url={audioAtt.url} 
-              noteId={item.id} 
+            <MiniAudio
+              url={audioAtt.url}
+              noteId={item.id}
               attachmentId={audioAtt.id}
             />
           )}

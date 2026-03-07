@@ -1,5 +1,44 @@
+/**
+ * @file
+ * Project detail tab screens container.
+ *
+ * Organizes project detail content into tab views for
+ * notes, files, tools, and timeline.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect } from "react";
-import { ScrollView, View, Text, Platform, TouchableOpacity, StyleSheet as RNStyleSheet } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  Image,
+  ImageBackground,
+  Platform,
+  TouchableOpacity,
+  StyleSheet as RNStyleSheet,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -33,8 +72,14 @@ function ProjectTabGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function ProjectOverviewScreen() {
-  const { project, members, notes, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    members,
+    notes,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("overview");
@@ -49,14 +94,40 @@ export function ProjectOverviewScreen() {
         refreshControl={maybeRefreshControl}
       >
         <View style={styles.overviewContainer}>
-          <View style={styles.overviewHero}>
-            <Text style={styles.overviewTitle}>{project?.name}</Text>
-            {!!project?.ran_lmi_id && (
-              <View style={styles.overviewBadge}>
-                <Text style={styles.overviewBadgeText}>RAN/LMI: {project?.ran_lmi_id}</Text>
-              </View>
-            )}
-          </View>
+          {project?.cover_image_url ? (
+            <View style={overviewLocalStyles.heroBanner}>
+              <ImageBackground
+                source={{ uri: project.cover_image_url }}
+                style={overviewLocalStyles.heroBannerImage}
+                resizeMode="cover"
+              >
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.75)"]}
+                  style={overviewLocalStyles.heroBannerGradient}
+                >
+                  <Text style={styles.overviewTitle}>{project?.name}</Text>
+                  {!!project?.ran_lmi_id && (
+                    <View style={styles.overviewBadge}>
+                      <Text style={styles.overviewBadgeText}>
+                        RAN/LMI: {project?.ran_lmi_id}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </ImageBackground>
+            </View>
+          ) : (
+            <View style={styles.overviewHero}>
+              <Text style={styles.overviewTitle}>{project?.name}</Text>
+              {!!project?.ran_lmi_id && (
+                <View style={styles.overviewBadge}>
+                  <Text style={styles.overviewBadgeText}>
+                    RAN/LMI: {project?.ran_lmi_id}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           <View style={styles.overviewStatsGrid}>
             <View style={styles.overviewStatCard}>
@@ -139,8 +210,13 @@ export function ProjectNotesScreen() {
 }
 
 export function ProjectArtefactsScreen() {
-  const { project, canEditFiles, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    canEditFiles,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("artefacts");
@@ -152,7 +228,7 @@ export function ProjectArtefactsScreen() {
         style={styles.content}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 28,
+          paddingTop: 16,
           paddingBottom: bottomContentPad,
         }}
         contentInsetAdjustmentBehavior="automatic"
@@ -165,8 +241,13 @@ export function ProjectArtefactsScreen() {
 }
 
 export function ProjectMatrixScreen() {
-  const { project, HarrisMatrixComponent, canEditMatrix, iosHeaderPad, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    HarrisMatrixComponent,
+    canEditMatrix,
+    iosHeaderPad,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("matrix");
@@ -186,7 +267,7 @@ export function ProjectMatrixScreen() {
           style={
             Platform.OS === "web"
               ? ({
-                  height: "calc(100vh - 340px)",
+                  flex: 1,
                   borderRadius: 12,
                   overflow: "hidden",
                   borderWidth: 1,
@@ -223,8 +304,13 @@ export function ProjectMatrixScreen() {
 }
 
 export function ProjectGalleryScreen() {
-  const { project, openGalleryItem, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
-    useProjectDetail();
+  const {
+    project,
+    openGalleryItem,
+    bottomContentPad,
+    maybeRefreshControl,
+    setCurrentTabName,
+  } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gallery");
@@ -242,14 +328,22 @@ export function ProjectGalleryScreen() {
         contentInsetAdjustmentBehavior="automatic"
         refreshControl={maybeRefreshControl}
       >
-        <FileGallery projectId={project?.id as string} onOpenItem={openGalleryItem} />
+        <FileGallery
+          projectId={project?.id as string}
+          onOpenItem={openGalleryItem}
+        />
       </ScrollView>
     </ProjectTabGuard>
   );
 }
 
-export function ProjectMapScreen() {
-  const { project, canEditMap, iosHeaderPad, setCurrentTabName } = useProjectDetail();
+export function ProjectMapScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
+  const { project, canEditMap, iosHeaderPad, setCurrentTabName } =
+    useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gps");
@@ -261,7 +355,7 @@ export function ProjectMapScreen() {
         style={{
           flex: 1,
           backgroundColor: "#111111",
-          paddingTop: iosHeaderPad,
+          paddingTop: noHeaderPad ? 0 : iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
       >
@@ -281,7 +375,11 @@ export function ProjectMapScreen() {
   );
 }
 
-export function ProjectHistoryScreen() {
+export function ProjectHistoryScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
   const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
 
   useEffect(() => {
@@ -295,7 +393,7 @@ export function ProjectHistoryScreen() {
           style={{
             flex: 1,
             backgroundColor: "#111111",
-            paddingTop: iosHeaderPad,
+            paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: 0,
           }}
         >
@@ -315,7 +413,7 @@ export function ProjectHistoryScreen() {
           style={{
             flex: 1,
             backgroundColor: "#111111",
-            paddingTop: iosHeaderPad,
+            paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: Platform.OS === "android" ? 84 : 0,
           }}
         >
@@ -341,7 +439,8 @@ export function ProjectHistoryScreen() {
 }
 
 export function ProjectToolsScreen() {
-  const { project, bottomContentPad, maybeRefreshControl, setCurrentTabName } = useProjectDetail();
+  const { project, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
+    useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("tools");
@@ -399,6 +498,103 @@ export function ProjectToolsScreen() {
   );
 }
 
+/**
+ * Wheeler Stratigraphic Notation screen.
+ *
+ * Lazy-loads the platform-specific WheelerDiagram component
+ * and renders it inside a project tab guard.
+ */
+export function ProjectWheelerScreen({
+  noHeaderPad = false,
+}: {
+  noHeaderPad?: boolean;
+}) {
+  const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
+
+  const [WheelerComponent, setWheelerComponent] =
+    React.useState<React.ComponentType<{
+      projectId: string;
+      canEdit?: boolean;
+    }> | null>(null);
+
+  useEffect(() => {
+    setCurrentTabName("wheeler");
+  }, [setCurrentTabName]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      import("@/src/components/matrix/WheelerDiagram.web")
+        .then((mod) => setWheelerComponent(() => mod.default))
+        .catch(() => {
+          /* WheelerDiagram web not available */
+        });
+    } else {
+      import("@/src/components/matrix/WheelerDiagram.native")
+        .then((mod) => setWheelerComponent(() => mod.default))
+        .catch(() => {
+          /* WheelerDiagram native not available */
+        });
+    }
+  }, []);
+
+  return (
+    <ProjectTabGuard>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#111111",
+          paddingTop: noHeaderPad ? 0 : iosHeaderPad,
+          paddingBottom: Platform.OS === "android" ? 84 : 0,
+        }}
+      >
+        <View
+          style={
+            Platform.OS === "web"
+              ? ({
+                  flex: 1,
+                  minHeight: 0,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "#2A2A2A",
+                  backgroundColor: "#0A0A0A",
+                } as any)
+              : {
+                  flex: 1,
+                  backgroundColor: "#0A0A0A",
+                }
+          }
+        >
+          {Platform.OS === "web" ? (
+            <div
+              style={{
+                height: "100%",
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {WheelerComponent &&
+                React.createElement(WheelerComponent, {
+                  projectId: project?.id as string,
+                  canEdit: true,
+                })}
+            </div>
+          ) : (
+            <View style={{ flex: 1, width: "100%" }}>
+              {WheelerComponent &&
+                React.createElement(WheelerComponent, {
+                  projectId: project?.id as string,
+                  canEdit: false,
+                })}
+            </View>
+          )}
+        </View>
+      </View>
+    </ProjectTabGuard>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // More Hub Screen (iOS)
 // ---------------------------------------------------------------------------
@@ -408,10 +604,30 @@ const MORE_ITEMS: {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { key: "gallery", label: "Gallery", subtitle: "Browse project photos & files", icon: "images" },
-  { key: "gps", label: "GPS Map", subtitle: "View and edit site locations", icon: "map" },
-  { key: "history", label: "Time Machine", subtitle: "Browse file version history", icon: "time" },
-  { key: "tools", label: "Tools", subtitle: "Compass, GPS coordinates & more", icon: "construct" },
+  {
+    key: "gallery",
+    label: "Gallery",
+    subtitle: "Browse project photos & files",
+    icon: "images",
+  },
+  {
+    key: "gps",
+    label: "GPS Map",
+    subtitle: "View and edit site locations",
+    icon: "map",
+  },
+  {
+    key: "history",
+    label: "Time Machine",
+    subtitle: "Browse file version history",
+    icon: "time",
+  },
+  {
+    key: "tools",
+    label: "Tools",
+    subtitle: "Compass, GPS coordinates & more",
+    icon: "construct",
+  },
 ];
 
 export function ProjectMoreScreen({
@@ -419,7 +635,7 @@ export function ProjectMoreScreen({
 }: {
   onNavigate: (screen: "gallery" | "gps" | "history" | "tools") => void;
 }) {
-  const { setCurrentTabName } = useProjectDetail();
+  const { setCurrentTabName, bottomContentPad } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("gallery");
@@ -435,15 +651,13 @@ export function ProjectMoreScreen({
         style={styles.content}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: 28,
-          paddingBottom: 120,
+          paddingTop: 16,
+          paddingBottom: bottomContentPad,
         }}
         contentInsetAdjustmentBehavior="automatic"
       >
         <Text style={moreStyles.title}>More</Text>
-        <Text style={moreStyles.subtitle}>
-          Additional project tools and views
-        </Text>
+        <Text style={moreStyles.subtitle}>Additional project tools and views</Text>
 
         <View style={moreStyles.grid}>
           {MORE_ITEMS.map((item) => (
@@ -516,5 +730,27 @@ const moreStyles = RNStyleSheet.create({
     color: "#9A9A9A",
     textAlign: "center",
     lineHeight: 16,
+  },
+});
+
+const overviewLocalStyles = RNStyleSheet.create({
+  heroBanner: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    maxWidth: 600,
+    width: "100%",
+    alignSelf: "center",
+  },
+  heroBannerImage: {
+    width: "100%",
+    aspectRatio: 16 / 5,
+  },
+  heroBannerGradient: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 16,
   },
 });

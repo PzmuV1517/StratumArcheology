@@ -1,15 +1,30 @@
 /**
- * LiquidGlassButton
+ * @file
+ * Liquid Glass button component.
  *
- * Maps to UIButton on iOS — on iOS 26+ UIKit buttons inside navigation bars
- * (like the back button) automatically adopt Liquid Glass. For standalone
- * buttons, we use BlurView to approximate the UIButton.glass /
- * UIButton.glassProminent appearance since React Native doesn't expose
- * native UIButton configurations directly.
+ * A button styled with the Liquid Glass design language.
  *
- * No @callstack/liquid-glass dependency — uses native UIKit rendering.
+ * MIT License
  *
- * Apple reference: UIButton, PrimitiveButtonStyle/glass, glassProminent
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React from "react";
 import {
@@ -49,6 +64,11 @@ interface LiquidGlassButtonProps {
   haptic?: boolean;
 }
 
+/**
+ * Button styled with the Liquid Glass design language.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidGlassButton({
   title = "",
   onPress,
@@ -104,12 +124,22 @@ export function LiquidGlassButton({
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.7}
-        style={[styles.touchable, sizeStyles.container, disabled && styles.disabled, style]}
+        style={[
+          styles.touchable,
+          sizeStyles.container,
+          disabled && styles.disabled,
+          style,
+        ]}
       >
         <BlurView
           intensity={variantConfig.blurIntensity}
           tint={variantConfig.blurTint}
-          style={[styles.blurContainer, sizeStyles.container, variantConfig.blurStyle, style]}
+          style={[
+            styles.blurContainer,
+            sizeStyles.container,
+            variantConfig.blurStyle,
+            style,
+          ]}
         >
           {content}
         </BlurView>
@@ -123,7 +153,13 @@ export function LiquidGlassButton({
       onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.7}
-      style={[styles.solidContainer, sizeStyles.container, variantConfig.solidContainer, disabled && styles.disabled, style]}
+      style={[
+        styles.solidContainer,
+        sizeStyles.container,
+        variantConfig.solidContainer,
+        disabled && styles.disabled,
+        style,
+      ]}
     >
       {content}
     </TouchableOpacity>
@@ -194,7 +230,11 @@ const VARIANT_STYLES: Record<
   glassProminent: {
     blurIntensity: 50,
     blurTint: "light",
-    blurStyle: { backgroundColor: "rgba(255, 255, 255, 0.15)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255, 255, 255, 0.25)" },
+    blurStyle: {
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.25)",
+    },
     solidContainer: { backgroundColor: "rgba(255, 255, 255, 0.15)" },
     text: { color: "#FFFFFF" },
   },
@@ -210,7 +250,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255, 255, 255, 0.2)",
   },
-  solidContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  solidContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   text: { fontWeight: "600", letterSpacing: 0.3 },
   textDisabled: { opacity: 0.5 },
   disabled: { opacity: 0.5 },

@@ -1,15 +1,31 @@
 /**
- * LiquidGlassCard
+ * @file
+ * Liquid Glass card component.
  *
- * Maps to the refreshed Lists / Forms / Sidebar cell appearance on iOS 26+.
- * UITableView and UICollectionView sections automatically adopt glass
- * containers. Since React Native doesn't expose these as card components,
- * we use BlurView (UIVisualEffectView) to approximate the native glass
- * section appearance.
+ * A card with frosted glass visual effect following Apple's
+ * Liquid Glass design language.
  *
- * No @callstack/liquid-glass dependency — uses native UIKit rendering.
+ * MIT License
  *
- * Apple reference: Lists, Forms, Sidebar cells — automatic glass sections.
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 import React from "react";
 import {
@@ -27,6 +43,7 @@ const isIOS = Platform.OS === "ios";
 
 /* ------------------------------------------------------------------ */
 
+/** Props for the LiquidGlassCard component. */
 export interface LiquidGlassCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -41,6 +58,11 @@ export interface LiquidGlassCardProps {
 
 const PADDING_MAP = { none: 0, sm: 10, md: 16, lg: 24 } as const;
 
+/**
+ * Card with frosted glass visual effect following Apple's Liquid Glass design.
+ * @param props - Component props
+ * @returns The rendered component
+ */
 export function LiquidGlassCard({
   children,
   style,
@@ -51,28 +73,33 @@ export function LiquidGlassCard({
 }: LiquidGlassCardProps) {
   const padValue = PADDING_MAP[padding];
 
-  const innerContent = (
-    <View style={{ padding: padValue }}>{children}</View>
-  );
+  const innerContent = <View style={{ padding: padValue }}>{children}</View>;
 
   const containerStyle: ViewStyle[] = [styles.container, { borderRadius: radius }];
 
   const renderCard = (content: React.ReactNode) => {
     if (isIOS) {
       return (
-        <BlurView intensity={20} tint="dark" style={[...containerStyle, styles.blurCard, style]}>
+        <BlurView
+          intensity={20}
+          tint="dark"
+          style={[...containerStyle, styles.blurCard, style]}
+        >
           {content}
         </BlurView>
       );
     }
-    return <View style={[...containerStyle, styles.fallback, style]}>{content}</View>;
+    return (
+      <View style={[...containerStyle, styles.fallback, style]}>{content}</View>
+    );
   };
 
   if (onPress) {
     return renderCard(
       <Pressable
         onPress={() => {
-          if (haptic && isIOS) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (haptic && isIOS)
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
         style={({ pressed }) => [pressed && styles.pressed]}

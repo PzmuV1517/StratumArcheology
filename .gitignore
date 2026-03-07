@@ -90,3 +90,4 @@ frontend/stratum-app/package-lock.json
 # Testing
 coverage/
 .nyc_output/
+frontend/stratum-app/package-lock.json

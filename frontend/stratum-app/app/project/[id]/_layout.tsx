@@ -1,10 +1,43 @@
-import React, { useState } from "react";
+/* eslint-disable @typescript-eslint/no-require-imports */
+/**
+ * @file
+ * Project detail layout.
+ *
+ * Configures the navigation structure for individual
+ * project detail views.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActionSheetIOS,
+  Alert,
   Modal,
   Platform,
   Share,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
   StyleSheet,
 } from "react-native";
@@ -14,6 +47,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import styles from "@/src/components/project/ProjectDetailStyles";
 import ProjectOverlays from "@/src/components/project/ProjectOverlays";
+import { projectService } from "@/src/services/projectService";
 import {
   ProjectDetailProvider,
   useProjectDetail,
@@ -23,97 +57,253 @@ import {
   ProjectMapScreen,
   ProjectHistoryScreen,
   ProjectToolsScreen,
+  ProjectWheelerScreen,
 } from "@/src/components/project/ProjectTabsScreens";
 
+// liquid-react native components — loaded at module scope.
+// Only available in dev client / production builds (not Expo Go).
+// STRATUM uses the new React Native architecture so there is no RCTCxxBridge
+// watchdog risk; module-level require is safe and must be used here because
+// require() inside useMemo is unreliable for native modules on new arch.
 let NativeToolbar: React.FC<any> | null = null;
 let NativeToolbarButton: React.FC<any> | null = null;
 let NativeToolbarMenu: React.FC<any> | null = null;
 if (Platform.OS === "ios") {
-  const lr = require("liquid-react");
-  NativeToolbar = lr.NativeToolbar;
-  NativeToolbarButton = lr.NativeToolbarButton;
-  NativeToolbarMenu = lr.NativeToolbarMenu;
+  try {
+    const Constants = require("expo-constants").default;
+    const isExpoGo = Constants.executionEnvironment === "storeClient";
+    if (!isExpoGo) {
+      // Runtime check: verify native views are actually registered
+      // (pod installed & linked). Without this, JSX renders crash.
+      const hasNativeViews = !!UIManager.getViewManagerConfig?.("LRNativeToolbar");
+      if (hasNativeViews) {
+        const lr = require("liquid-react");
+        NativeToolbar = lr.NativeToolbar;
+        NativeToolbarButton = lr.NativeToolbarButton;
+        NativeToolbarMenu = lr.NativeToolbarMenu;
+      }
+    }
+  } catch {
+    // liquid-react not available — fall back to ActionSheetIOS
+  }
 }
 
-type FullScreenModal = "gallery" | "gps" | "history" | "tools" | null;
+type FullScreenModal = "gallery" | "gps" | "history" | "tools" | "wheeler" | null;
 
 function ProjectStack() {
   const {
     loading,
     project,
+    isOwner,
     setShowFilesOverlay,
     setShowMenu,
     setShowMembersModal,
+    onExitProject,
     onDeleteProject,
+    refreshProject,
   } = useProjectDetail();
   const showHeaderActions = !!project && !loading;
   const insets = useSafeAreaInsets();
   const [activeModal, setActiveModal] = useState<FullScreenModal>(null);
 
-  const moreMenuItems = [
-    { id: "gallery", title: "Gallery", icon: "photo.on.rectangle" },
-    { id: "gps", title: "GPS Map", icon: "map" },
-    { id: "history", title: "Time Machine", icon: "clock.arrow.circlepath" },
-    { id: "tools", title: "Tools", icon: "wrench.and.screwdriver" },
-    {
-      id: "settings",
-      title: "Project Settings",
-      icon: "gearshape",
-      children: [
-        { id: "edit", title: "Edit Project", icon: "pencil" },
-        { id: "members", title: "Members", icon: "person.2" },
-        { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
-        {
-          id: "exit",
-          title: "Exit Project",
-          icon: "rectangle.portrait.and.arrow.right",
-          destructive: true,
-        },
-        { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
-      ],
-    },
-  ];
+  const settingsChildren = useMemo(
+    () => [
+      { id: "edit", title: "Edit Project", icon: "pencil" },
+      { id: "members", title: "Members", icon: "person.2" },
+      ...(isOwner
+        ? [
+            {
+              id: "publicise",
+              title: project?.is_public ? "Privatise Project" : "Publicise Project",
+              icon: project?.is_public ? "eye.slash" : "eye",
+            },
+          ]
+        : []),
+      { id: "export", title: "Export Project", icon: "square.and.arrow.up" },
+      {
+        id: "exit",
+        title: "Exit Project",
+        icon: "rectangle.portrait.and.arrow.right",
+        destructive: true,
+      },
+      { id: "delete", title: "Delete Project", icon: "trash", destructive: true },
+    ],
+    [isOwner, project?.is_public],
+  );
 
-  const handleMenuAction = (event: {
-    nativeEvent: { id: string; title: string };
-  }) => {
-    const { id } = event.nativeEvent;
-    switch (id) {
-      case "edit":
-        setShowMenu(true);
-        break;
-      case "members":
-        setShowMembersModal(true);
-        break;
-      case "export":
-        if (project) {
-          Share.share({
-            title: project.name,
-            message: `Check out the project "${project.name}" on Stratum!`,
-          }).catch(() => {});
-        }
-        break;
-      case "exit":
-        router.back();
-        break;
-      case "delete":
-        onDeleteProject();
-        break;
-      case "gallery":
-      case "gps":
-      case "history":
-      case "tools":
-        // Open full-screen modal on iOS
-        setActiveModal(id as FullScreenModal);
-        break;
+  const moreMenuItems = useMemo(
+    () => [
+      { id: "gallery", title: "Gallery", icon: "photo.on.rectangle" },
+      { id: "gps", title: "GPS Map", icon: "map" },
+      { id: "history", title: "Time Machine", icon: "clock.arrow.circlepath" },
+      { id: "tools", title: "Tools", icon: "wrench.and.screwdriver" },
+      { id: "wheeler", title: "Wheeler Notation", icon: "chart.bar.xaxis" },
+      {
+        id: "settings",
+        title: "Project Settings",
+        icon: "gearshape",
+        children: settingsChildren,
+      },
+    ],
+    [settingsChildren],
+  );
+
+  /** Dispatch a menu action by id — shared by NativeToolbarMenu and ActionSheetIOS. */
+  const dispatchMenuAction = useCallback(
+    (id: string) => {
+      switch (id) {
+        case "edit":
+          setShowMenu(true);
+          break;
+        case "members":
+          setShowMembersModal(true);
+          break;
+        case "export":
+          if (project) {
+            Share.share({
+              title: project.name,
+              message: `Check out the project "${project.name}" on Stratum!`,
+            }).catch(() => {});
+          }
+          break;
+        case "exit":
+          if (isOwner) {
+            Alert.alert(
+              "Leave Project",
+              "You are the owner. Transfer leadership first or delete the project.",
+              [{ text: "OK" }],
+            );
+          } else {
+            Alert.alert(
+              "Exit Project?",
+              "Are you sure you want to leave this project? You will need to be re-invited to rejoin.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Leave",
+                  style: "destructive",
+                  onPress: () => onExitProject(),
+                },
+              ],
+            );
+          }
+          break;
+        case "delete":
+          if (!isOwner) {
+            Alert.alert(
+              "Permission Denied",
+              "Only the project leader can delete this project.",
+            );
+          } else {
+            Alert.alert(
+              "Delete Project?",
+              "This action cannot be undone. All project data will be permanently deleted.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => onDeleteProject(),
+                },
+              ],
+            );
+          }
+          break;
+        case "publicise":
+          if (project?.id) {
+            const action = project.is_public ? "privatise" : "publicise";
+            const desc = project.is_public
+              ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
+              : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image.";
+            Alert.alert(
+              `${action.charAt(0).toUpperCase() + action.slice(1)} Project?`,
+              desc,
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: action.charAt(0).toUpperCase() + action.slice(1),
+                  style: project.is_public ? "default" : "default",
+                  onPress: async () => {
+                    try {
+                      await projectService.togglePublicise(project.id);
+                      await refreshProject();
+                    } catch {
+                      Alert.alert("Error", "Failed to change project visibility.");
+                    }
+                  },
+                },
+              ],
+            );
+          }
+          break;
+        case "gallery":
+        case "gps":
+        case "history":
+        case "tools":
+        case "wheeler":
+          // Open full-screen modal on iOS
+          setActiveModal(id as FullScreenModal);
+          break;
+      }
+    },
+    [
+      project,
+      isOwner,
+      onExitProject,
+      onDeleteProject,
+      refreshProject,
+      setShowMenu,
+      setShowMembersModal,
+      setActiveModal,
+    ],
+  );
+
+  /** Adaptor for NativeToolbarMenu events → dispatchMenuAction. */
+  const handleMenuAction = useCallback(
+    (event: { nativeEvent: { id: string; title: string } }) => {
+      dispatchMenuAction(event.nativeEvent.id);
+    },
+    [dispatchMenuAction],
+  );
+
+  /** iOS fallback: show an ActionSheet when NativeToolbar is unavailable. */
+  const showIOSActionSheet = useCallback(() => {
+    // Flatten top-level items + settings children into a single list
+    const flatItems: { id: string; title: string; destructive?: boolean }[] = [];
+    for (const item of moreMenuItems) {
+      if (item.children) {
+        for (const child of item.children) flatItems.push(child);
+      } else {
+        flatItems.push(item);
+      }
     }
-  };
+
+    const options = [...flatItems.map((i) => i.title), "Cancel"];
+    const cancelButtonIndex = options.length - 1;
+    const destructiveIndices = flatItems
+      .map((i, idx) => (i.destructive ? idx : -1))
+      .filter((i) => i >= 0);
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex: destructiveIndices[0] ?? undefined,
+        title: "Project Options",
+      },
+      (buttonIndex) => {
+        if (buttonIndex !== cancelButtonIndex && flatItems[buttonIndex]) {
+          dispatchMenuAction(flatItems[buttonIndex].id);
+        }
+      },
+    );
+  }, [moreMenuItems, dispatchMenuAction]);
 
   return (
     <View style={{ flex: 1 }}>
       <Stack
         screenOptions={{
-          headerShown: true,
+          headerShown: Platform.OS !== "web",
           headerTransparent: Platform.OS === "ios",
           headerBlurEffect: undefined,
           headerStyle:
@@ -140,7 +330,7 @@ function ProjectStack() {
               if (Platform.OS === "ios") {
                 return (
                   <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={() => router.replace("/(tabs)/projects")}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
@@ -173,7 +363,7 @@ function ProjectStack() {
               }
               return (
                 <TouchableOpacity
-                  onPress={() => router.back()}
+                  onPress={() => router.replace("/(tabs)/projects")}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
@@ -201,8 +391,12 @@ function ProjectStack() {
             headerRight: () => {
               if (!showHeaderActions) return null;
 
-              // iOS uses standalone NativeToolbar, so no headerRight needed
-              if (Platform.OS === "ios") return null;
+              // iOS uses standalone NativeToolbar overlay, so no headerRight needed
+              if (Platform.OS === "ios" && NativeToolbar) return null;
+
+              // iOS fallback: native ActionSheet instead of the full-screen modal
+              const menuHandler =
+                Platform.OS === "ios" ? showIOSActionSheet : () => setShowMenu(true);
 
               return (
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -215,7 +409,7 @@ function ProjectStack() {
                     <IconSymbol name="folder.fill" size={20} color="#FF2A2A" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setShowMenu(true)}
+                    onPress={menuHandler}
                     style={styles.iconButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     activeOpacity={0.7}
@@ -254,7 +448,6 @@ function ProjectStack() {
             <NativeToolbarMenu icon="ellipsis.circle" menuItems={moreMenuItems} />
           </NativeToolbar>
         )}
-
       {/* Full-screen modals for iOS */}
       {Platform.OS === "ios" && (
         <>
@@ -278,7 +471,7 @@ function ProjectStack() {
           >
             <View style={modalStyles.container}>
               <ModalHeader title="GPS Map" onBack={() => setActiveModal(null)} />
-              <ProjectMapScreen />
+              <ProjectMapScreen noHeaderPad />
             </View>
           </Modal>
 
@@ -293,7 +486,7 @@ function ProjectStack() {
                 title="Time Machine"
                 onBack={() => setActiveModal(null)}
               />
-              <ProjectHistoryScreen />
+              <ProjectHistoryScreen noHeaderPad />
             </View>
           </Modal>
 
@@ -306,6 +499,21 @@ function ProjectStack() {
             <View style={modalStyles.container}>
               <ModalHeader title="Tools" onBack={() => setActiveModal(null)} />
               <ProjectToolsScreen />
+            </View>
+          </Modal>
+
+          <Modal
+            visible={activeModal === "wheeler"}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setActiveModal(null)}
+          >
+            <View style={modalStyles.container}>
+              <ModalHeader
+                title="Wheeler Notation"
+                onBack={() => setActiveModal(null)}
+              />
+              <ProjectWheelerScreen noHeaderPad />
             </View>
           </Modal>
         </>

@@ -1,16 +1,32 @@
 /**
- * STRATUM Sync Service
+ * @file
+ * Data synchronization service.
  *
- * Handles synchronization between local database and server:
- * - Queue management for offline requests
- * - Conflict detection and resolution
- * - Background sync when connection restored (auto-sync)
- * - Timestamp-based last-write-wins with conflict detection
- * - Integration with offlineQueueService for file operations
+ * Handles syncing local data with the backend, managing conflicts,
+ * and maintaining data consistency across sessions.
  *
- * Cross-platform: Works on both web and native
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-
 import { Platform } from "react-native";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import api from "../services/api";
@@ -443,7 +459,7 @@ async function processRequest(request: QueuedRequest): Promise<void> {
     const data = request.data ? JSON.parse(request.data) : undefined;
 
     // Execute the request
-    const response = await api.request({
+    const _response = await api.request({
       method: request.method,
       url: request.url,
       data,

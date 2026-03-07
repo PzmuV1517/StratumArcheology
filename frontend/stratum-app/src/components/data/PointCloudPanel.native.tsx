@@ -1,3 +1,31 @@
+/**
+ * @file
+ * Point cloud viewer panel for React Native.
+ *
+ * Renders point cloud data using a WebView-based viewer.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useRef, useState } from "react";
 import {
   View,
@@ -66,7 +94,10 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           const dy = touches[0].pageY - touches[1].pageY;
           const distance = Math.sqrt(dx * dx + dy * dy);
           const scaleFactor = distance / lastDistanceRef.current;
-          scaleRef.current = Math.max(0.3, Math.min(5, scaleRef.current * scaleFactor));
+          scaleRef.current = Math.max(
+            0.3,
+            Math.min(5, scaleRef.current * scaleFactor),
+          );
           lastDistanceRef.current = distance;
 
           if (pointsRef.current) {
@@ -74,7 +105,7 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           }
         }
       },
-    })
+    }),
   ).current;
 
   const resetView = () => {
@@ -225,7 +256,11 @@ export default function PointCloudPanel({ src, name }: PointCloudPanelProps) {
           </TouchableOpacity>
         </View>
       ) : (
-        <GLView style={styles.glView} onContextCreate={onContextCreate} ref={glRef} />
+        <GLView
+          style={styles.glView}
+          onContextCreate={onContextCreate}
+          ref={glRef}
+        />
       )}
 
       {/* Control buttons */}

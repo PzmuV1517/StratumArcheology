@@ -1,3 +1,31 @@
+/**
+ * @file
+ * Icon symbol component (root level).
+ *
+ * Legacy icon rendering component.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 // Fallback for using MaterialIcons on Android and web.
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -21,17 +49,35 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
+  "chevron.left": "chevron-left",
   "chevron.backward": "arrow-back",
   "folder.fill": "folder",
   "line.3.horizontal": "menu",
   "person.fill": "person",
   "gearshape.fill": "settings",
-  "plus": "add",
+  plus: "add",
   "note.text": "description",
   "cube.fill": "category",
   "chart.bar.fill": "bar-chart",
   "ellipsis.circle": "more-horiz",
   "ellipsis.circle.fill": "more-horiz",
+  "message.fill": "chat",
+  "bubble.left.and.bubble.right": "forum",
+  "bubble.left.and.bubble.right.fill": "forum",
+  "globe.americas": "public",
+  "globe.americas.fill": "public",
+  "rectangle.portrait.and.arrow.right": "logout",
+  "photo.on.rectangle": "photo-library",
+  map: "map",
+  "clock.arrow.circlepath": "history",
+  "chart.bar.doc.horizontal": "insert-chart-outlined",
+  "arrow.left": "arrow-back",
+  pencil: "edit",
+  "person.2": "group",
+  eye: "visibility",
+  "eye.slash": "visibility-off",
+  "square.and.arrow.up": "ios-share",
+  trash: "delete",
 } as IconMapping;
 
 /**

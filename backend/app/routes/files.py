@@ -1,3 +1,33 @@
+"""
+File management API routes.
+
+Handles file uploads, downloads, folder creation, file versioning (Time Machine),
+privacy controls, profile pictures, personal folders, and streaming with
+HTTP Range support.
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import hashlib
 import uuid
 from collections import defaultdict
@@ -82,20 +112,121 @@ async def upload_profile_picture(
     # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
-    # Get public URL
-    url = await minio_client.get_presigned_url(storage_path)
-
-    # Update user's photo_url
-    current_user.photo_url = url
+    # Store object path (NOT a presigned URL) so it never expires
+    current_user.photo_url = storage_path
     db.commit()
     db.refresh(current_user)
 
+    # Return a temporary presigned URL for immediate display
+    url = minio_client.get_presigned_url(storage_path)
     return {"url": url, "filename": filename}
+
+
+# =============================================================================
+# BANNER IMAGE UPLOAD
+# =============================================================================
+
+
+@router.post("/banner-image")
+async def upload_banner_image(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a banner image for the current user"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file type. Allowed: {', '.join(allowed_types)}",
+        )
+
+    # Limit file size (10MB for banners)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 10MB.",
+        )
+
+    # Generate unique filename
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"banner_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    storage_path = f"banners/{current_user.id}/{filename}"
+
+    # Upload to MinIO
+    await minio_client.upload_file(content, storage_path, file.content_type)
+
+    # Store object path (NOT a presigned URL) so it never expires
+    current_user.banner_url = storage_path
+    db.commit()
+    db.refresh(current_user)
+
+    # Return a temporary presigned URL for immediate display
+    url = minio_client.get_presigned_url(storage_path)
+    return {"url": url, "filename": filename}
+
+
+# =============================================================================
+# STORAGE PROXY  –  streams MinIO objects through the API server so mobile
+# and remote clients don't need direct access to the MinIO endpoint.
+# =============================================================================
+
+# Buckets the proxy is allowed to serve (prevent probing arbitrary buckets).
+_ALLOWED_BUCKETS: set[str] = {
+    minio_client.bucket_name,  # default bucket (stratum-files)
+    "wheeler-renders",
+}
+
+
+@router.get("/storage/{bucket}/{path:path}")
+async def storage_proxy(bucket: str, path: str):
+    """Stream a MinIO object through the API.
+
+    This makes stored files reachable from any device that can reach the
+    API, avoiding direct MinIO ``localhost`` presigned URLs.
+    """
+    if bucket not in _ALLOWED_BUCKETS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if not minio_client.client:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Storage unavailable",
+        )
+
+    try:
+        response = minio_client.client.get_object(bucket, path)
+        content_type = response.headers.get(
+            "Content-Type", "application/octet-stream"
+        )
+
+        def _iterfile():
+            try:
+                for chunk in response.stream(8192):
+                    yield chunk
+            finally:
+                response.close()
+                response.release_conn()
+
+        return StreamingResponse(
+            _iterfile(),
+            media_type=content_type,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    except Exception as exc:
+        # Catch S3Error or anything else – return 404 for missing keys
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        ) from exc
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def __compute_checksum(file: UploadFile) -> str:
     """Compute SHA256 checksum of an uploaded file"""
@@ -105,6 +236,7 @@ def __compute_checksum(file: UploadFile) -> str:
     # Reset file pointer to the beginning after reading
     file.file.seek(0)
     return hash_sha256.hexdigest()
+
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
     """Check if a user can access a file based on privacy settings"""
@@ -161,7 +293,14 @@ class FileWithVersionsResponse(BaseModel):
 
 
 class TimeMachineResponse(BaseModel):
-    """Project files grouped by category with versions"""
+    """Project files grouped by category with versions.
+
+    Attributes:
+        project_id: The project UUID.
+        total_files: Count of files in the project (or filtered subset).
+        total_versions: Aggregate count of all file versions.
+        categories: Files grouped by their detected category.
+    """
 
     project_id: str
     total_files: int
@@ -424,6 +563,14 @@ async def create_my_folder(
 
 # Request model for folder permission settings
 class FolderPermissionSettings(BaseModel):
+    """Request body for updating personal folder permission settings.
+
+    Attributes:
+        default_can_view: Whether all project members can view the folder by default.
+        default_can_edit: Whether all project members can edit the folder by default.
+        member_permissions: Per-member permission overrides with user_id, can_view, and can_edit.
+    """
+
     default_can_view: bool = True
     default_can_edit: bool = False
     member_permissions: list[dict[str, Any]] = []  # [{user_id, can_view, can_edit}]
@@ -643,6 +790,19 @@ async def list_children(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """List child file nodes of a folder, filtered by privacy settings.
+
+    Args:
+        node_id: The parent folder's UUID.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        List of accessible child file nodes ordered by type then name.
+
+    Raises:
+        HTTPException: 404 if folder not found, 403 if access denied.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Folder not found")
@@ -678,6 +838,22 @@ async def create_folder(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Create a new folder in a project.
+
+    Handles duplicate folder names by appending (1), (2), etc.
+
+    Args:
+        project_id: The project UUID.
+        folder: Folder creation data including name and optional parent_id.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The newly created FileNode folder.
+
+    Raises:
+        HTTPException: 404 if parent folder not found, 400 if parent is not a folder.
+    """
     check_project_permission(project_id, current_user, db)
     parent = None
     if folder.parent_id:
@@ -759,6 +935,21 @@ async def move_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Move a file or folder to a new parent folder.
+
+    Args:
+        node_id: The UUID of the node to move.
+        move: Request body containing the new parent folder ID.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The updated FileNode.
+
+    Raises:
+        HTTPException: 404 if node or new parent not found, 400 if node is
+            locked or new parent is not a folder.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -811,6 +1002,24 @@ async def rename_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Rename a file or folder.
+
+    For files, the original extension is preserved regardless of what the
+    user supplies. If the node is linked to a Note, the note title is
+    updated to match the new filename.
+
+    Args:
+        node_id: The UUID of the node to rename.
+        payload: Request body containing the new name.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The updated FileNode.
+
+    Raises:
+        HTTPException: 404 if node not found, 400 if node is locked.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -877,6 +1086,19 @@ async def delete_node(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Delete a file or folder and all its descendants.
+
+    Recursively removes child nodes and their associated storage objects
+    from MinIO before deleting the database records.
+
+    Args:
+        node_id: The UUID of the node to delete.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Raises:
+        HTTPException: 404 if node not found, 400 if node is locked.
+    """
     node = db.query(FileNode).filter(FileNode.id == node_id).first()
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -930,6 +1152,25 @@ async def upload_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Upload a file to a project.
+
+    Parses multipart form data tolerantly, stores the file in MinIO, and
+    creates a corresponding FileNode. Duplicate filenames are handled by
+    appending (1), (2), etc.
+
+    Args:
+        project_id: The project UUID.
+        request: The incoming HTTP request containing multipart form data.
+        current_user: The authenticated user.
+        db: Database session.
+
+    Returns:
+        The newly created FileNode.
+
+    Raises:
+        HTTPException: 422 if no file found in form, 404 if parent folder
+            not found, 400 if parent is not a folder.
+    """
     check_project_permission(project_id, current_user, db)
 
     # Parse form manually to be more tolerant
@@ -1627,4 +1868,3 @@ async def get_files_info_batch(
     accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
 
     return accessible_nodes
-

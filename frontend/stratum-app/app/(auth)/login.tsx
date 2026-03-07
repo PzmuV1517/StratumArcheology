@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Login screen.
+ *
+ * User authentication form with email/password fields
+ * and sign-in action.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
@@ -28,6 +57,8 @@ import RAnimated, {
   interpolate,
 } from "react-native-reanimated";
 
+import NativeTerminalBg from "../../components/NativeTerminalBg";
+
 // Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
 let FaEyeSlash: any = null;
 let FaEye: any = null;
@@ -35,19 +66,20 @@ let MemoFaultyTerminal: any = null;
 
 if (Platform.OS === "web") {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fa = require("react-icons/fa");
     FaEyeSlash = fa.FaEyeSlash;
     FaEye = fa.FaEye;
   } catch {}
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
     MemoFaultyTerminal = React.memo(FaultyTerminal);
     // @ts-ignore - CSS handled by web bundler
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("../../components/FaultyTerminal.css");
   } catch {}
 }
-
-import NativeTerminalBg from "../../components/NativeTerminalBg";
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
@@ -84,31 +116,53 @@ export default function LoginScreen() {
   const loginHeightSV = useSharedValue(400);
   const registerHeightSV = useSharedValue(500);
 
-  const onLoginLayout = useCallback((e: any) => {
-    loginHeightSV.value = e.nativeEvent.layout.height;
-  }, [loginHeightSV]);
-  const onRegisterLayout = useCallback((e: any) => {
-    registerHeightSV.value = e.nativeEvent.layout.height;
-  }, [registerHeightSV]);
+  const onLoginLayout = useCallback(
+    (e: any) => {
+      loginHeightSV.value = e.nativeEvent.layout.height;
+    },
+    [loginHeightSV],
+  );
+  const onRegisterLayout = useCallback(
+    (e: any) => {
+      registerHeightSV.value = e.nativeEvent.layout.height;
+    },
+    [registerHeightSV],
+  );
 
   const stackAnimStyle = useAnimatedStyle(() => ({
-    height: interpolate(cardProgress.value, [0, 1], [loginHeightSV.value, registerHeightSV.value]),
+    height: interpolate(
+      cardProgress.value,
+      [0, 1],
+      [loginHeightSV.value, registerHeightSV.value],
+    ),
   }));
 
   const switchToRegister = useCallback(() => {
     if (isAnimating || activeCard === "register") return;
     setIsAnimating(true);
     setActiveCard("register");
-    cardProgress.value = withTiming(1, { duration: SWAP_DURATION, easing: SWAP_EASING });
-    setTimeout(() => { setIsAnimating(false); }, SWAP_DURATION);
+    cardProgress.value = withTiming(1, {
+      duration: SWAP_DURATION,
+      easing: SWAP_EASING,
+    });
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, SWAP_DURATION);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnimating, activeCard, cardProgress]);
 
   const switchToLogin = useCallback(() => {
     if (isAnimating || activeCard === "login") return;
     setIsAnimating(true);
     setActiveCard("login");
-    cardProgress.value = withTiming(0, { duration: SWAP_DURATION, easing: SWAP_EASING });
-    setTimeout(() => { setIsAnimating(false); }, SWAP_DURATION);
+    cardProgress.value = withTiming(0, {
+      duration: SWAP_DURATION,
+      easing: SWAP_EASING,
+    });
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, SWAP_DURATION);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAnimating, activeCard, cardProgress]);
 
   // Login card: front at 0, behind at 1
@@ -139,12 +193,14 @@ export default function LoginScreen() {
 
   // Refs for iOS AutoFill focus chaining
   const loginPasswordRef = useRef<TextInput>(null);
+  const regUsernameRef = useRef<TextInput>(null);
   const regEmailRef = useRef<TextInput>(null);
   const regPasswordRef = useRef<TextInput>(null);
   const regConfirmRef = useRef<TextInput>(null);
 
   // Register form state
   const [regDisplayName, setRegDisplayName] = useState("");
+  const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
@@ -211,7 +267,7 @@ export default function LoginScreen() {
       api.defaults.baseURL = apiInput;
       setShowDevModal(false);
       showAlert("Applied", "Backend API base URL updated for this app.");
-    } catch (e) {
+    } catch (_e) {
       showAlert("Error", "Failed to save API URL override");
     } finally {
       setSavingApi(false);
@@ -226,7 +282,7 @@ export default function LoginScreen() {
       setApiInput(config.apiBaseUrl);
       setShowDevModal(false);
       showAlert("Reset", "Reverted to default backend API URL.");
-    } catch (e) {
+    } catch (_e) {
       showAlert("Error", "Failed to reset API URL override");
     } finally {
       setSavingApi(false);
@@ -245,7 +301,10 @@ export default function LoginScreen() {
       return;
     }
     if (!isValidEmail(email)) {
-      showAlert("Invalid Email", "Please enter a valid email address (e.g., user@example.com)");
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address (e.g., user@example.com)",
+      );
       return;
     }
     setLoading(true);
@@ -260,12 +319,24 @@ export default function LoginScreen() {
   };
 
   const handleRegister = async () => {
-    if (!regEmail || !regPassword || !regDisplayName) {
+    if (!regEmail || !regPassword || !regDisplayName || !regUsername) {
       showAlert("Error", "Please fill in all fields");
       return;
     }
     if (!isValidEmail(regEmail)) {
-      showAlert("Invalid Email", "Please enter a valid email address (e.g., user@example.com)");
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address (e.g., user@example.com)",
+      );
+      return;
+    }
+    const trimmedUsername = regUsername.trim().toLowerCase();
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      showAlert("Error", "Username must be 3-30 characters");
+      return;
+    }
+    if (!/^[a-z0-9_.-]+$/.test(trimmedUsername)) {
+      showAlert("Error", "Username can only contain lowercase letters, numbers, dots, hyphens, and underscores");
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -277,14 +348,22 @@ export default function LoginScreen() {
       return;
     }
     setRegLoading(true);
-    const result = await register(regEmail, regPassword, regDisplayName);
+    const result = await register(regEmail, regPassword, regDisplayName, trimmedUsername);
     setRegLoading(false);
     if (!result.success) {
       showAlert("Registration Failed", result.error);
     }
   };
 
-  const EyeToggle = ({ visible, onPress, disabled }: { visible: boolean; onPress: () => void; disabled?: boolean }) => (
+  const EyeToggle = ({
+    visible,
+    onPress,
+    disabled,
+  }: {
+    visible: boolean;
+    onPress: () => void;
+    disabled?: boolean;
+  }) => (
     <TouchableOpacity
       style={styles.passwordToggle}
       onPress={onPress}
@@ -293,7 +372,11 @@ export default function LoginScreen() {
       accessibilityLabel={visible ? "Hide password" : "Show password"}
     >
       {Platform.OS === "web" ? (
-        visible ? <FaEyeSlash size={18} color="#FF2A2A" /> : <FaEye size={18} color="#FF2A2A" />
+        visible ? (
+          <FaEyeSlash size={18} color="#FF2A2A" />
+        ) : (
+          <FaEye size={18} color="#FF2A2A" />
+        )
       ) : (
         <Ionicons name={visible ? "eye-off" : "eye"} size={20} color="#FF2A2A" />
       )}
@@ -344,7 +427,11 @@ export default function LoginScreen() {
             returnKeyType="go"
             onSubmitEditing={handleLogin}
           />
-          <EyeToggle visible={showPassword} onPress={() => setShowPassword((v) => !v)} disabled={loading} />
+          <EyeToggle
+            visible={showPassword}
+            onPress={() => setShowPassword((v) => !v)}
+            disabled={loading}
+          />
         </View>
       </View>
 
@@ -381,6 +468,26 @@ export default function LoginScreen() {
           onChangeText={setRegDisplayName}
           autoComplete="name"
           textContentType="name"
+          returnKeyType="next"
+          onSubmitEditing={() => regUsernameRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+      </View>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>USERNAME</Text>
+        <TextInput
+          ref={regUsernameRef}
+          style={styles.input}
+          placeholder="e.g. john.doe (unique, lowercase)"
+          placeholderTextColor="#4A4A4A"
+          value={regUsername}
+          onChangeText={(text) => setRegUsername(text.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+          autoCapitalize="none"
+          autoCorrect={false}
+          spellCheck={false}
+          autoComplete="username"
+          textContentType="username"
+          maxLength={30}
           returnKeyType="next"
           onSubmitEditing={() => regEmailRef.current?.focus()}
           blurOnSubmit={false}
@@ -426,7 +533,10 @@ export default function LoginScreen() {
             onSubmitEditing={() => regPasswordRef.current?.focus()}
             blurOnSubmit={false}
           />
-          <EyeToggle visible={showRegPassword} onPress={() => setShowRegPassword((v) => !v)} />
+          <EyeToggle
+            visible={showRegPassword}
+            onPress={() => setShowRegPassword((v) => !v)}
+          />
         </View>
       </View>
       <View style={styles.inputGroup}>
@@ -448,10 +558,17 @@ export default function LoginScreen() {
             returnKeyType="go"
             onSubmitEditing={handleRegister}
           />
-          <EyeToggle visible={showRegConfirmPassword} onPress={() => setShowRegConfirmPassword((v) => !v)} />
+          <EyeToggle
+            visible={showRegConfirmPassword}
+            onPress={() => setShowRegConfirmPassword((v) => !v)}
+          />
         </View>
       </View>
-      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={regLoading}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleRegister}
+        disabled={regLoading}
+      >
         {regLoading ? (
           <ActivityIndicator color="#F5F5F5" />
         ) : (
@@ -461,17 +578,31 @@ export default function LoginScreen() {
     </View>
   );
 
-  const wrapForm = (content: React.ReactNode, onSubmit: () => void, isLoading: boolean) =>
+  const wrapForm = (
+    content: React.ReactNode,
+    onSubmit: () => void,
+    isLoading: boolean,
+  ) =>
     Platform.OS === "web" ? (
-      <form onSubmit={(e: any) => { e.preventDefault(); if (!isLoading) onSubmit(); }} style={{ display: "contents" }}>
+      <form
+        onSubmit={(e: any) => {
+          e.preventDefault();
+          if (!isLoading) onSubmit();
+        }}
+        style={{ display: "contents" }}
+      >
         {content}
       </form>
-    ) : content;
+    ) : (
+      content
+    );
 
   return (
     <View style={styles.container}>
       {Platform.OS === "web" && MemoFaultyTerminal ? (
-        <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
+        >
           <div style={{ position: "absolute", inset: 0 }}>
             {React.createElement(MemoFaultyTerminal as any, terminalProps as any)}
           </div>
@@ -488,53 +619,67 @@ export default function LoginScreen() {
         ]}
       >
         <RAnimated.View style={stackAnimStyle}>
-        {/* Login card */}
-        <RAnimated.View
-          onLayout={onLoginLayout}
-          style={[styles.card, styles.cardAbsolute, loginCardStyle]}
-          pointerEvents={activeCard === "login" ? "auto" : "none"}
-        >
-          <ScrollView contentContainerStyle={styles.cardContent} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-            <View style={styles.header}>
-              <Text style={styles.logo}>STRATUM</Text>
-            </View>
-            {activeCard === "login" ? wrapForm(renderForm(), handleLogin, loading) : null}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
-              <TouchableOpacity onPress={switchToRegister}>
-                <Text style={styles.linkText}>Register</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </RAnimated.View>
-
-        {/* Register card */}
-        <RAnimated.View
-          onLayout={onRegisterLayout}
-          style={[styles.card, styles.cardAbsolute, registerCardStyle]}
-          pointerEvents={activeCard === "register" ? "auto" : "none"}
-        >
-          <ScrollView contentContainerStyle={styles.cardContent} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
-            <View style={styles.header}>
-              <Text style={styles.logo}>STRATUM</Text>
-            </View>
-            {activeCard === "register" ? wrapForm(renderRegisterForm(), handleRegister, regLoading) : null}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account?</Text>
-              <TouchableOpacity onPress={switchToLogin}>
-                <Text style={styles.linkText}>Login</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={styles.docsLink}
-              onPress={() => Linking.openURL("https://stratumapp.readthedocs.io")}
-              activeOpacity={0.7}
+          {/* Login card */}
+          <RAnimated.View
+            onLayout={onLoginLayout}
+            style={[styles.card, styles.cardAbsolute, loginCardStyle]}
+            pointerEvents={activeCard === "login" ? "auto" : "none"}
+          >
+            <ScrollView
+              contentContainerStyle={styles.cardContent}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.docsLinkText}>Begin Now →</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              <View style={styles.header}>
+                <Text style={styles.logo}>STRATUM</Text>
+              </View>
+              {activeCard === "login"
+                ? wrapForm(renderForm(), handleLogin, loading)
+                : null}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account?</Text>
+                <TouchableOpacity onPress={switchToRegister}>
+                  <Text style={styles.linkText}>Register</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </RAnimated.View>
+
+          {/* Register card */}
+          <RAnimated.View
+            onLayout={onRegisterLayout}
+            style={[styles.card, styles.cardAbsolute, registerCardStyle]}
+            pointerEvents={activeCard === "register" ? "auto" : "none"}
+          >
+            <ScrollView
+              contentContainerStyle={styles.cardContent}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.header}>
+                <Text style={styles.logo}>STRATUM</Text>
+              </View>
+              {activeCard === "register"
+                ? wrapForm(renderRegisterForm(), handleRegister, regLoading)
+                : null}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account?</Text>
+                <TouchableOpacity onPress={switchToLogin}>
+                  <Text style={styles.linkText}>Login</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.docsLink}
+                onPress={() => Linking.openURL("https://stratumapp.readthedocs.io")}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.docsLinkText}>Begin Now →</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </RAnimated.View>
         </RAnimated.View>
-      </RAnimated.View>
       </Animated.View>
 
       {/* Dev modal for API override */}

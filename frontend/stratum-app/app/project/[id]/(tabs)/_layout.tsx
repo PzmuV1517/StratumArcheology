@@ -1,4 +1,33 @@
-import React, { useState, useCallback } from "react";
+/**
+ * @file
+ * Project detail tabs layout.
+ *
+ * Configures the tab navigation within individual
+ * project detail views.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import React, { useState } from "react";
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -77,6 +106,19 @@ export default function ProjectTabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="chat"
+          options={{
+            title: "Chat",
+            tabBarIcon: ({ color }) => (
+              <IconSymbol
+                size={26}
+                name="bubble.left.and.bubble.right.fill"
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="gallery"
           listeners={{
             tabPress: (e) => {
@@ -97,6 +139,7 @@ export default function ProjectTabsLayout() {
           options={{ title: "Time Machine", href: null }}
         />
         <Tabs.Screen name="tools" options={{ title: "Tools", href: null }} />
+        <Tabs.Screen name="wheeler" options={{ title: "Wheeler", href: null }} />
       </Tabs>
 
       <MoreToolsSheet

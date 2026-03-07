@@ -9,18 +9,47 @@ Main FastAPI application entry point with:
 
 IMPORTANT: Database migrations are handled by Alembic, NOT create_all().
 Run migrations with: alembic upgrade head
+
+MIT License
+
+Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.requests import Request
 
 from app.config import settings
 from app.firebase_config import initialize_firebase
 from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
-from app.minio_client import minio_client
+from app.minio_client import minio_client, set_request_base_url
+from app.rate_limiter import limiter
 from app.routes import (
     activities,
     auth,
+    channels,
+    chat,
     convert,
     files,
     forms,
@@ -43,20 +72,9 @@ logger.info("Firebase initialized")
 # =============================================================================
 # DATABASE MIGRATIONS
 # =============================================================================
-# REMOVED: Base.metadata.create_all(bind=engine)
-#
-# Database schema is now managed by Alembic migrations.
-#
-# To apply migrations:
-#   cd backend
-#   alembic upgrade head
-#
-# To create a new migration after model changes:
-#   alembic revision --autogenerate -m "description of changes"
-#
-# To downgrade:
-#   alembic downgrade -1  (one step back)
-#   alembic downgrade base  (all the way back)
+# IMPORTANT: Do NOT call Base.metadata.create_all() here.
+# Database schema is managed by Alembic migrations.
+# Run migrations with: alembic upgrade head
 # =============================================================================
 
 # Create FastAPI app
@@ -66,13 +84,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Attach the rate limiter to the app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Add error handling middleware (must be first to catch all errors)
-# This provides:
-# - Structured error logging with request context
-# - Database transaction rollback on errors
-# - MinIO upload cleanup on errors
-# - User-friendly error responses
 app.add_middleware(ErrorHandlingMiddleware, minio_client=minio_client)
+
+# Add rate limiting middleware
+app.add_middleware(SlowAPIMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -82,6 +102,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Capture the request base URL so MinIO helpers can build proxy URLs
+# that are reachable from any device (instead of localhost presigned URLs).
+@app.middleware("http")
+async def _capture_base_url(request: Request, call_next):
+    set_request_base_url(str(request.base_url))
+    return await call_next(request)
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -94,6 +122,8 @@ app.include_router(forms.router, prefix="/api")
 app.include_router(invites.router, prefix="/api")
 app.include_router(qrcodes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
+app.include_router(channels.router, prefix="/api")
 
 logger.info(
     "STRATUM API started",

@@ -1,9 +1,45 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Platform, RefreshControl, View, Text, ActivityIndicator } from "react-native";
+/**
+ * @file
+ * Project detail context provider.
+ *
+ * Provides project-specific state (members, files, notes) and actions
+ * to all components within a project detail view.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Platform, RefreshControl, View, Text, Image } from "react-native";
 import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useGlobalSearchParams, useLocalSearchParams, useRouter, useNavigation } from "expo-router";
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
@@ -17,6 +53,7 @@ import { useWebSocket } from "@/src/contexts/WebSocketContext";
 import type { Project as ServiceProject } from "@/src/services/projectService.types";
 import styles from "@/src/components/project/ProjectDetailStyles";
 
+/** Represents a project note with title, content, and metadata. */
 export interface Note {
   id: string;
   title: string;
@@ -26,14 +63,17 @@ export interface Note {
   updated_at?: string;
 }
 
+/** Represents a project member with display name, email, and assigned role. */
 export interface Member {
   id?: string;
   user_id?: string;
   display_name: string;
   email: string;
   role: string;
+  photo_url?: string | null;
 }
 
+/** Union of valid tab identifiers for the project detail view. */
 export type ProjectTabName =
   | "overview"
   | "notes"
@@ -42,8 +82,11 @@ export type ProjectTabName =
   | "gallery"
   | "gps"
   | "history"
-  | "tools";
+  | "tools"
+  | "wheeler"
+  | "chat";
 
+/** Extended project type that includes the optional members array. */
 export type Project = ServiceProject & {
   members?: Member[];
 };
@@ -59,7 +102,9 @@ type ProjectDetailContextValue = {
   setCurrentTabName: (tab: ProjectTabName) => void;
   bottomContentPad: number;
   iosHeaderPad: number;
-  maybeRefreshControl?: React.ReactElement<React.ComponentProps<typeof RefreshControl>>;
+  maybeRefreshControl?: React.ReactElement<
+    React.ComponentProps<typeof RefreshControl>
+  >;
   isGuest: boolean;
   isOwner: boolean;
   canChangeSettings: boolean;
@@ -87,7 +132,10 @@ type ProjectDetailContextValue = {
   fileLoading: boolean;
   currentFolder: { id: string | null; name: string };
   breadcrumbs: { id: string | null; name: string }[];
-  openFolder: (node: any, customBreadcrumbs?: { id: string | null; name: string }[]) => Promise<void>;
+  openFolder: (
+    node: any,
+    customBreadcrumbs?: { id: string | null; name: string }[],
+  ) => Promise<void>;
   navigateBreadcrumb: (index: number) => Promise<void>;
   loadRootFiles: () => Promise<void>;
   uploadIntoCurrent: () => Promise<void>;
@@ -107,7 +155,9 @@ type ProjectDetailContextValue = {
   projectConflicts: FileConflict[];
   currentConflict: FileConflict | null;
   showConflictModal: boolean;
-  handleResolveConflict: (resolution: "keep_local" | "keep_remote" | "keep_both") => Promise<void>;
+  handleResolveConflict: (
+    resolution: "keep_local" | "keep_remote" | "keep_both",
+  ) => Promise<void>;
   setShowConflictModal: (value: boolean) => void;
   setCurrentConflict: (value: FileConflict | null) => void;
   onExitProject: () => Promise<void>;
@@ -115,10 +165,17 @@ type ProjectDetailContextValue = {
   onTransferLeadership: () => void;
   goToProjects: () => void;
   navigateToTab: (tab: ProjectTabName) => void;
+  refreshProject: () => Promise<void>;
 };
 
 const ProjectDetailContext = createContext<ProjectDetailContextValue | null>(null);
 
+/**
+ * Provides project-specific state and actions (members, files, notes, navigation)
+ * to all components within a project detail view.
+ * @param props - Component props containing children to wrap
+ * @returns A context provider wrapping children with project detail state
+ */
 export function ProjectDetailProvider({ children }: { children: React.ReactNode }) {
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -136,13 +193,16 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   const [loading, setLoading] = useState(true);
   const [currentTabName, setCurrentTabName] = useState<ProjectTabName>("overview");
   const [fileNodes, setFileNodes] = useState<any[]>([]);
-  const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string }>({
+  const [currentFolder, setCurrentFolder] = useState<{
+    id: string | null;
+    name: string;
+  }>({
     id: null,
     name: "Root",
   });
-  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string | null; name: string }[]>([
-    { id: null, name: "Root" },
-  ]);
+  const [breadcrumbs, setBreadcrumbs] = useState<
+    { id: string | null; name: string }[]
+  >([{ id: null, name: "Root" }]);
   const [fileLoading, setFileLoading] = useState(false);
   const [renameNode, setRenameNode] = useState<any | null>(null);
   const [, setRenameText] = useState("");
@@ -212,7 +272,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
           guest: 1,
         };
         const newRoleLevel = roleHierarchy[data.new_role?.toLowerCase()] || 0;
-        const currentRoleLevel = roleHierarchy[getCurrentUserRole()?.toLowerCase() || ""] || 0;
+        const currentRoleLevel =
+          roleHierarchy[getCurrentUserRole()?.toLowerCase() || ""] || 0;
 
         (async () => {
           try {
@@ -366,7 +427,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       setMembers(projectData.members || []);
 
       try {
-        const { recentProjectsCache } = await import("@/src/services/offlineService");
+        const { recentProjectsCache } =
+          await import("@/src/services/offlineService");
         await recentProjectsCache.saveRecentProject(
           id,
           projectData,
@@ -378,14 +440,18 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       }
     } catch {
       try {
-        const { recentProjectsCache } = await import("@/src/services/offlineService");
+        const { recentProjectsCache } =
+          await import("@/src/services/offlineService");
         const cached = await recentProjectsCache.getCachedProject(id);
         if (cached) {
           setProject(cached.project);
           setNotes(cached.notes);
           setMembers(cached.members);
         } else {
-          showAlert("Error", "Failed to load project details and no offline cache available.");
+          showAlert(
+            "Error",
+            "Failed to load project details and no offline cache available.",
+          );
         }
       } catch {
         showAlert("Error", "Failed to load project details");
@@ -453,7 +519,9 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       setFileLoading(true);
       const nodes = await fileService.listRoot(id as string);
       const decorated = nodes.map((n: any) =>
-        n.type === "folder" && n.name === "Artefacts" ? { ...n, is_locked: true } : n,
+        n.type === "folder" && n.name === "Artefacts"
+          ? { ...n, is_locked: true }
+          : n,
       );
       setFileNodes(decorated);
       setCurrentFolder({ id: null, name: "Root" });
@@ -505,7 +573,10 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const uploadIntoCurrent = async () => {
     if (isGuest) {
-      showAlert("Permission Denied", "Guests can only view files. Upload is not permitted.");
+      showAlert(
+        "Permission Denied",
+        "Guests can only view files. Upload is not permitted.",
+      );
       return;
     }
 
@@ -555,7 +626,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
           if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
           if (lower.endsWith(".gif")) return "image/gif";
           if (lower.endsWith(".webp")) return "image/webp";
-          if (lower.endsWith(".heic") || lower.endsWith(".heif")) return "image/heic";
+          if (lower.endsWith(".heic") || lower.endsWith(".heif"))
+            return "image/heic";
           if (lower.endsWith(".svg")) return "image/svg+xml";
           if (lower.endsWith(".bmp")) return "image/bmp";
           if (lower.endsWith(".ico")) return "image/x-icon";
@@ -580,7 +652,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
           if (lower.endsWith(".m4a")) return "audio/mp4";
           if (lower.endsWith(".aac")) return "audio/aac";
           if (lower.endsWith(".ogg") && !lower.includes("video")) return "audio/ogg";
-          if (lower.endsWith(".webm") && !lower.includes("video")) return "audio/webm";
+          if (lower.endsWith(".webm") && !lower.includes("video"))
+            return "audio/webm";
           if (lower.endsWith(".mp4")) return "video/mp4";
           if (lower.endsWith(".mov")) return "video/quicktime";
           if (lower.endsWith(".avi")) return "video/x-msvideo";
@@ -610,7 +683,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
       await fileService.uploadFormData(id as string, formData);
 
-      if (currentFolder?.id) await openFolder({ id: currentFolder.id, name: currentFolder.name });
+      if (currentFolder?.id)
+        await openFolder({ id: currentFolder.id, name: currentFolder.name });
       else await loadRootFiles();
     } catch (e: any) {
       const message =
@@ -684,7 +758,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       node.mime_type === "application/json";
     const isPdf = node.mime_type === "application/pdf" || lower2.endsWith(".pdf");
     const isVideo =
-      node.mime_type?.startsWith("video/") || /(\.mp4|\.webm|\.ogg|\.mov)$/i.test(lower2);
+      node.mime_type?.startsWith("video/") ||
+      /(\.mp4|\.webm|\.ogg|\.mov)$/i.test(lower2);
     const isPoint = /\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower2);
     const isMesh = /\.(glb|gltf)$/i.test(lower2);
     const isUnsupported3D = /\.(obj|fbx|dae|3ds|stl)$/i.test(lower2);
@@ -756,7 +831,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     if (node.type === "folder") return;
     const lower = (node.name || "").toLowerCase();
     const isAudio =
-      node.mime_type?.startsWith("audio/") || /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
+      node.mime_type?.startsWith("audio/") ||
+      /\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower);
     if (isAudio) {
       setShowFilesOverlay(false);
       if (node.note_id) {
@@ -783,7 +859,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     const lower2 = (node.name || "").toLowerCase();
     const isCsv = node.mime_type === "text/csv" || lower2.endsWith(".csv");
     const isExcel =
-      node.mime_type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      node.mime_type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
       node.mime_type === "application/vnd.ms-excel" ||
       lower2.endsWith(".xlsx") ||
       lower2.endsWith(".xls");
@@ -820,7 +897,10 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const handleCreateNote = () => {
     if (isGuest) {
-      showAlert("Permission Denied", "Guests can only view notes. Creating notes is not permitted.");
+      showAlert(
+        "Permission Denied",
+        "Guests can only view notes. Creating notes is not permitted.",
+      );
       return;
     }
 
@@ -862,7 +942,10 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const handleDeleteNote = async (noteId: string) => {
     if (isGuest) {
-      showAlert("Permission Denied", "Guests can only view notes. Deleting notes is not permitted.");
+      showAlert(
+        "Permission Denied",
+        "Guests can only view notes. Deleting notes is not permitted.",
+      );
       return;
     }
 
@@ -871,7 +954,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       showAlert("Deleted", "Note has been removed.");
       await loadNotes();
     } catch (e: any) {
-      const message = e?.detail || e?.message || "Failed to delete note. Please try again.";
+      const message =
+        e?.detail || e?.message || "Failed to delete note. Please try again.";
       showAlert("Error", message);
     }
   };
@@ -902,7 +986,10 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
                   }
                 }
               } catch (downloadError: any) {
-                showAlert("Download Failed", downloadError.message || "Failed to download file");
+                showAlert(
+                  "Download Failed",
+                  downloadError.message || "Failed to download file",
+                );
               }
             },
           },
@@ -935,11 +1022,15 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
   const renderMember = ({ item }: { item: Member }) => (
     <View style={styles.memberCardInner}>
-      <View style={styles.memberAvatar}>
-        <Text style={styles.memberAvatarText}>
-          {item.display_name?.charAt(0).toUpperCase() || "U"}
-        </Text>
-      </View>
+      {item.photo_url ? (
+        <Image source={{ uri: item.photo_url }} style={styles.memberAvatarImage} />
+      ) : (
+        <View style={styles.memberAvatar}>
+          <Text style={styles.memberAvatarText}>
+            {item.display_name?.charAt(0).toUpperCase() || "U"}
+          </Text>
+        </View>
+      )}
       <View style={styles.memberDetails}>
         <Text style={styles.memberName}>{item.display_name}</Text>
         <Text style={styles.memberEmail}>{item.email}</Text>
@@ -985,7 +1076,10 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
         showAlert("Error", msg);
       }
     } else {
-      showAlert("Error", "Could not determine your user ID. Try logging out and back in.");
+      showAlert(
+        "Error",
+        "Could not determine your user ID. Try logging out and back in.",
+      );
     }
   };
 
@@ -1076,11 +1170,21 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     onTransferLeadership,
     goToProjects,
     navigateToTab,
+    refreshProject: handleRefresh,
   };
 
-  return <ProjectDetailContext.Provider value={value}>{children}</ProjectDetailContext.Provider>;
+  return (
+    <ProjectDetailContext.Provider value={value}>
+      {children}
+    </ProjectDetailContext.Provider>
+  );
 }
 
+/**
+ * Consumes the ProjectDetailContext.
+ * @returns The project detail context value
+ * @throws If used outside of a ProjectDetailProvider
+ */
 export function useProjectDetail() {
   const ctx = useContext(ProjectDetailContext);
   if (!ctx) {
@@ -1089,6 +1193,10 @@ export function useProjectDetail() {
   return ctx;
 }
 
+/**
+ * Displays a skeleton placeholder after a brief delay while the project loads.
+ * @returns The skeleton element, or null if the delay has not elapsed
+ */
 export function ProjectLoadingState() {
   const [show, setShow] = useState(false);
   useEffect(() => {
@@ -1100,6 +1208,12 @@ export function ProjectLoadingState() {
   return <ProjectDetailSkeleton />;
 }
 
+/**
+ * Renders a "project not found" message with a button to return to the projects list.
+ * @param props - Component props
+ * @param props.onReturn - Callback invoked when the user presses the return button
+ * @returns The not-found UI element
+ */
 export function ProjectNotFoundState({ onReturn }: { onReturn: () => void }) {
   return (
     <View style={styles.safeArea}>
@@ -1108,12 +1222,24 @@ export function ProjectNotFoundState({ onReturn }: { onReturn: () => void }) {
         <Text style={styles.errorSubtext}>
           You may have been removed from this project or it no longer exists.
         </Text>
-        <LiquidGlassButton title="Go to Projects" onPress={onReturn} variant="primary" size="md" />
+        <LiquidGlassButton
+          title="Go to Projects"
+          onPress={onReturn}
+          variant="primary"
+          size="md"
+        />
       </View>
     </View>
   );
 }
 
+/**
+ * Renders the header action buttons (files and menu) for the project detail screen.
+ * @param props - Component props
+ * @param props.onOpenFiles - Callback to open the files overlay
+ * @param props.onOpenMenu - Callback to open the project menu
+ * @returns The header actions element
+ */
 export function ProjectHeaderActions({
   onOpenFiles,
   onOpenMenu,

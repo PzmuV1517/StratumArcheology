@@ -1,3 +1,32 @@
+/**
+ * @file
+ * Map editor component for web.
+ *
+ * Interactive map using Leaflet for marking GPS coordinates
+ * and polygons on archaeological sites.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
@@ -119,6 +148,7 @@ export default function MapEditor({
         saveNow();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Load Leaflet dynamically on the client and initialize the map
@@ -223,7 +253,7 @@ export default function MapEditor({
             setWorkSync(updated);
             saveNow();
           } else {
-            const idx = curWork.points.length;
+            const _idx = curWork.points.length;
             const newPts = [...curWork.points, ll];
             const poly = curWork.layer as any;
             if (poly) poly.setLatLngs(newPts as any);
@@ -286,7 +316,7 @@ export default function MapEditor({
             setSitesSync(updated);
             saveNow();
           } else {
-            const idx = cur.points.length;
+            const _idx = cur.points.length;
             const newPts = [...cur.points, ll];
             (cur.layer as any)?.setLatLngs(newPts as any);
             const mk = (L as any)
@@ -311,6 +341,7 @@ export default function MapEditor({
     return () => {
       map.off("click", onClick);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leafletReady, mode, work, sites, activeSite]);
 
   const canClose = (first: LatLngLiteral, click: LatLngLiteral) => {
@@ -381,7 +412,7 @@ export default function MapEditor({
 
   // Load from backend when ready and projectId changes
   useEffect(() => {
-    let cancelled = false;
+    let _cancelled = false;
     (async () => {
       if (!leafletReady || !projectId || !mapRef.current || !LRef.current) return;
       try {
@@ -517,10 +548,11 @@ export default function MapEditor({
             });
           setSitesSync(reSites);
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leafletReady, projectId]);
 
   return (

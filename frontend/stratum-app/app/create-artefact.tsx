@@ -1,9 +1,33 @@
 /**
- * Create Artefact Screen
- * Full-page form matching the new-project / join-project style
- * with iOS Liquid Glass support.
+ * @file
+ * Artefact creation screen.
+ *
+ * Provides a multi-step form for recording archaeological
+ * artefact data with QR code generation.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,6 +38,8 @@ import {
   StyleSheet,
   Platform,
   Image,
+  Modal,
+  FlatList,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +51,7 @@ import { useAuth } from "../src/contexts/AuthContext";
 import { buildManifestFromChildren } from "../src/utils/artefactManifest";
 import { showAlert } from "../src/utils/alert";
 import QRCodeView from "../src/components/common/QRCodeView";
+import api from "../src/services/api";
 
 const isIOS = Platform.OS === "ios";
 
@@ -109,6 +136,39 @@ export default function CreateArtefactScreen() {
   const [creating, setCreating] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+
+  // Harris Matrix context linking
+  type HMContext = { id: string; type: string; description: string };
+  const [hmContexts, setHmContexts] = useState<HMContext[]>([]);
+  const [selectedHmContext, setSelectedHmContext] = useState<string | null>(null);
+  const [showHmPicker, setShowHmPicker] = useState(false);
+
+  // GPS coordinates
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+
+  // Fetch Harris Matrix contexts on mount
+  useEffect(() => {
+    if (!projectId) return;
+    (async () => {
+      try {
+        const res = await api.get(`/projects/${projectId}/harris-matrix`);
+        const data = res.data?.data;
+        if (data?.contexts) {
+          const ctxs: HMContext[] = (data.contexts as [string, any][]).map(
+            ([id, ctx]) => ({
+              id,
+              type: ctx.type || "layer",
+              description: ctx.description || "",
+            }),
+          );
+          setHmContexts(ctxs);
+        }
+      } catch {
+        // No HM data or not available
+      }
+    })();
+  }, [projectId]);
 
   // Preview QR shows a placeholder; the real unique code is generated on create
   const qrPreviewValue = "STR-PREVIEW";
@@ -252,6 +312,7 @@ export default function CreateArtefactScreen() {
         console.warn("QR code registration failed", e);
       }
 
+      // Build manifest with all metadata and children
       const manifest = buildManifestFromChildren(
         folder.id,
         name.trim(),
@@ -261,6 +322,9 @@ export default function CreateArtefactScreen() {
           createdAt: new Date().toISOString(),
           createdBy: user || undefined,
           previewFileId,
+          harrisMatrixContextId: selectedHmContext || undefined,
+          latitude: latitude ? parseFloat(latitude) : undefined,
+          longitude: longitude ? parseFloat(longitude) : undefined,
         },
         { user: user || undefined, qrUrl: artefactQrCode || undefined },
       );
@@ -488,6 +552,98 @@ export default function CreateArtefactScreen() {
           ))}
         </GlassCard>
 
+        {/* ── Harris Matrix Context card ── */}
+        {hmContexts.length > 0 && (
+          <GlassCard style={s.formCard}>
+            <Text style={s.label}>
+              <Ionicons name="git-network" size={14} color="#9A9A9A" /> Stratigraphic
+              Context
+              <Text style={s.optionalLabel}> (optional)</Text>
+            </Text>
+            <Text style={s.hint}>Link this artefact to a Harris Matrix context</Text>
+            <TouchableOpacity
+              style={[
+                s.input,
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                },
+              ]}
+              onPress={() => setShowHmPicker(true)}
+            >
+              <Text
+                style={{
+                  color: selectedHmContext ? "#F5F5F5" : "#555",
+                  fontSize: 16,
+                  flex: 1,
+                }}
+                numberOfLines={1}
+              >
+                {selectedHmContext
+                  ? (() => {
+                      const ctx = hmContexts.find((c) => c.id === selectedHmContext);
+                      return ctx
+                        ? `[${ctx.type.toUpperCase()}] ${ctx.id}${ctx.description ? " — " + ctx.description : ""}`
+                        : selectedHmContext;
+                    })()
+                  : "Select a context…"}
+              </Text>
+              {selectedHmContext ? (
+                <TouchableOpacity
+                  onPress={() => setSelectedHmContext(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={20} color="#9A9A9A" />
+                </TouchableOpacity>
+              ) : (
+                <Ionicons name="chevron-down" size={18} color="#9A9A9A" />
+              )}
+            </TouchableOpacity>
+          </GlassCard>
+        )}
+
+        {/* ── GPS Coordinates card ── */}
+        <GlassCard style={s.formCard}>
+          <Text style={s.label}>
+            <Ionicons name="location" size={14} color="#9A9A9A" /> GPS Coordinates
+            <Text style={s.optionalLabel}> (optional)</Text>
+          </Text>
+          <Text style={s.hint}>Exact find-spot coordinates for GIS mapping</Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>
+                Latitude
+              </Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. 44.4268"
+                placeholderTextColor="#555"
+                value={latitude}
+                onChangeText={setLatitude}
+                keyboardType="numeric"
+                editable={!creating}
+                returnKeyType="done"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>
+                Longitude
+              </Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. 26.1025"
+                placeholderTextColor="#555"
+                value={longitude}
+                onChangeText={setLongitude}
+                keyboardType="numeric"
+                editable={!creating}
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+        </GlassCard>
+
         {/* ── QR preview card ── */}
         <GlassCard style={s.formCard}>
           <Text style={s.label}>
@@ -556,6 +712,159 @@ export default function CreateArtefactScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* ── Harris Matrix Context picker modal ── */}
+      <Modal
+        visible={showHmPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowHmPicker(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              maxHeight: "70%",
+              backgroundColor: "#1A1A1A",
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "#2A2A2A",
+              overflow: "hidden",
+            }}
+          >
+            <View
+              style={{
+                padding: 20,
+                borderBottomWidth: 1,
+                borderBottomColor: "#2A2A2A",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: "#F5F5F5",
+                }}
+              >
+                Select Context
+              </Text>
+              <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+                Link to a Harris Matrix stratigraphic context
+              </Text>
+            </View>
+            <FlatList
+              data={hmContexts}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ padding: 8 }}
+              renderItem={({ item }) => {
+                const isSelected = selectedHmContext === item.id;
+                const typeColors: Record<string, string> = {
+                  layer: "#FFA726",
+                  deposit: "#66BB6A",
+                  cut: "#EF5350",
+                  fill: "#42A5F5",
+                  structure: "#AB47BC",
+                };
+                return (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 12,
+                      marginBottom: 4,
+                      backgroundColor: isSelected
+                        ? "rgba(255,42,42,0.15)"
+                        : "transparent",
+                    }}
+                    onPress={() => {
+                      setSelectedHmContext(item.id);
+                      setShowHmPicker(false);
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: typeColors[item.type] || "#9A9A9A",
+                        marginRight: 12,
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          color: "#F5F5F5",
+                          fontSize: 15,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {item.id}
+                        <Text
+                          style={{
+                            color: typeColors[item.type] || "#9A9A9A",
+                            fontWeight: "400",
+                            fontSize: 12,
+                          }}
+                        >
+                          {" "}
+                          {item.type.toUpperCase()}
+                        </Text>
+                      </Text>
+                      {item.description ? (
+                        <Text
+                          style={{
+                            color: "#888",
+                            fontSize: 13,
+                            marginTop: 2,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color="#FF2A2A" />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={
+                <Text
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: 20,
+                  }}
+                >
+                  No contexts found in Harris Matrix
+                </Text>
+              }
+            />
+            <TouchableOpacity
+              style={{
+                padding: 16,
+                borderTopWidth: 1,
+                borderTopColor: "#2A2A2A",
+                alignItems: "center",
+              }}
+              onPress={() => setShowHmPicker(false)}
+            >
+              <Text style={{ color: "#9A9A9A", fontWeight: "600" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
