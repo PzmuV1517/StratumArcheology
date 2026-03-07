@@ -31,11 +31,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
 import { useChat } from "@/src/hooks/useChat";
-import {
-  ChatBubble,
-  MessageInput,
-  TypingIndicator,
-} from "@/src/components/chat";
+import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
 import { chatService } from "@/src/services/chatService";
 import { projectService } from "@/src/services/projectService";
 import { ensureProjectKey } from "@/src/utils/e2ee";
@@ -66,7 +62,10 @@ export default function ProjectChatScreen() {
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
       () => setKbVisible(false),
     );
-    return () => { show.remove(); hide.remove(); };
+    return () => {
+      show.remove();
+      hide.remove();
+    };
   }, []);
 
   /* ── channel state ────────────────────────────────── */
@@ -177,7 +176,10 @@ export default function ProjectChatScreen() {
   function handleSend(content: string, replyToId?: string, mentions?: any[]) {
     sendMessage(content, replyToId, mentions);
     // Inverted list: offset 0 = visual bottom
-    setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 120);
+    setTimeout(
+      () => listRef.current?.scrollToOffset({ offset: 0, animated: true }),
+      120,
+    );
   }
 
   function handleEdit(messageId: string, current: string) {
@@ -261,9 +263,7 @@ export default function ProjectChatScreen() {
         ) : channelsError ? (
           <TouchableOpacity style={s.barRow} onPress={retryChannels}>
             <Text style={s.hash}>!</Text>
-            <Text style={s.barTextWarn}>
-              Couldn't load channels — tap to retry
-            </Text>
+            <Text style={s.barTextWarn}>Couldn't load channels — tap to retry</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -294,12 +294,7 @@ export default function ProjectChatScreen() {
                   setShowDrawer(false);
                 }}
               >
-                <Text
-                  style={[
-                    s.drawerItemText,
-                    active && s.drawerItemTextActive,
-                  ]}
-                >
+                <Text style={[s.drawerItemText, active && s.drawerItemTextActive]}>
                   # {ch.name}
                 </Text>
                 {ch.is_default && <Text style={s.badge}>default</Text>}
@@ -330,9 +325,7 @@ export default function ProjectChatScreen() {
           // In inverted list: visually-above message = index + 1
           const prevMsg = reversedMessages[index + 1];
           const isGrouped =
-            !!prevMsg &&
-            prevMsg.sender_id === item.sender_id &&
-            !prevMsg.is_deleted;
+            !!prevMsg && prevMsg.sender_id === item.sender_id && !prevMsg.is_deleted;
           return (
             <ChatBubble
               message={item}
@@ -352,10 +345,7 @@ export default function ProjectChatScreen() {
         onEndReachedThreshold={0.3}
         ListFooterComponent={
           isLoading ? (
-            <ActivityIndicator
-              color="#9A9A9A"
-              style={{ marginVertical: 12 }}
-            />
+            <ActivityIndicator color="#9A9A9A" style={{ marginVertical: 12 }} />
           ) : null
         }
         ListEmptyComponent={
@@ -381,7 +371,12 @@ export default function ProjectChatScreen() {
       />
 
       {/* ── input area ─────────────────────────────── */}
-      <View style={{ paddingBottom: Platform.OS === "web" ? 12 : kbVisible ? 0 : 49 + insets.bottom }}>
+      <View
+        style={{
+          paddingBottom:
+            Platform.OS === "web" ? 12 : kbVisible ? 0 : 49 + insets.bottom,
+        }}
+      >
         <TypingIndicator names={typingUsers} />
         <MessageInput
           onSend={handleSend}
@@ -389,9 +384,7 @@ export default function ProjectChatScreen() {
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           placeholder={
-            inputDisabled
-              ? "Loading channels…"
-              : `Message #${channelName}…`
+            inputDisabled ? "Loading channels…" : `Message #${channelName}…`
           }
           projectId={projectId}
           disabled={inputDisabled}
@@ -414,9 +407,7 @@ export default function ProjectChatScreen() {
               style={s.input}
               value={newName}
               onChangeText={(t) =>
-                setNewName(
-                  t.toLowerCase().replace(/[^a-z0-9_-]/g, ""),
-                )
+                setNewName(t.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
               }
               placeholder="e.g. field-notes"
               placeholderTextColor="#666"
@@ -454,9 +445,7 @@ export default function ProjectChatScreen() {
                 {creating ? (
                   <ActivityIndicator color="#F5F5F5" />
                 ) : (
-                  <Text style={[s.modalBtnText, { color: "#F5F5F5" }]}>
-                    Create
-                  </Text>
+                  <Text style={[s.modalBtnText, { color: "#F5F5F5" }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
