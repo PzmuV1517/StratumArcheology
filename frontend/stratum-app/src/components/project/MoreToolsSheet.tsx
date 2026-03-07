@@ -49,16 +49,15 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onNavigate: (
-    tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat",
+    tab: "gallery" | "gps" | "history" | "tools" | "wheeler",
   ) => void;
 }
 
 const ITEMS: {
-  key: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat";
+  key: "gallery" | "gps" | "history" | "tools" | "wheeler";
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { key: "chat", label: "Project Chat", icon: "chatbubbles" },
   { key: "gallery", label: "Gallery", icon: "images" },
   { key: "gps", label: "GPS Map", icon: "map" },
   { key: "history", label: "Time Machine", icon: "time" },
@@ -68,7 +67,7 @@ const ITEMS: {
 
 export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) {
   const handlePress = (
-    tab: "gallery" | "gps" | "history" | "tools" | "wheeler" | "chat",
+    tab: "gallery" | "gps" | "history" | "tools" | "wheeler",
   ) => {
     onClose();
     // Small delay so the modal dismisses before navigation

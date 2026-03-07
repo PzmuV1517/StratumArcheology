@@ -25,13 +25,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from contextvars import ContextVar
 from io import BytesIO
 from typing import Optional
+from urllib.parse import quote
 
 from minio import Minio
 from minio.error import S3Error
 
 from app.config import settings
+
+# Stores the base URL of the current request (set by middleware) so that
+# presigned helpers can return proxy URLs reachable from any device.
+_request_base_url: ContextVar[str | None] = ContextVar(
+    "_request_base_url", default=None
+)
+
+
+def set_request_base_url(url: str) -> None:
+    """Called by middleware to capture the incoming request's base URL."""
+    _request_base_url.set(url)
 
 
 class MinIOClient:
@@ -128,7 +141,21 @@ class MinIOClient:
             return False
 
     def get_presigned_url(self, object_name: str, expiry: int = 3600) -> str:
-        """Get presigned URL for file access"""
+        """Get a URL for file access.
+
+        When a request context is available (set by middleware), returns a
+        proxy URL that routes through the API server so mobile / remote
+        clients can reach the file.  Falls back to a direct MinIO presigned
+        URL for CLI / script usage.
+        """
+        base_url = _request_base_url.get()
+        if base_url:
+            return (
+                f"{base_url}api/files/storage/"
+                f"{quote(self.bucket_name, safe='')}"
+                f"/{quote(object_name, safe='/')}"
+            )
+
         if not self.client:
             raise RuntimeError("MinIO client unavailable")
 
@@ -176,7 +203,19 @@ class MinIOClient:
     def get_presigned_url_for_bucket(
         self, bucket: str, key: str, expiry_seconds: int = 604800
     ) -> str:
-        """Return a presigned GET URL for an object in *any* bucket."""
+        """Return a URL for an object in *any* bucket.
+
+        Uses a proxy URL when a request context is available; falls back to
+        a direct MinIO presigned URL otherwise.
+        """
+        base_url = _request_base_url.get()
+        if base_url:
+            return (
+                f"{base_url}api/files/storage/"
+                f"{quote(bucket, safe='')}"
+                f"/{quote(key, safe='/')}"
+            )
+
         if not self.client:
             raise RuntimeError("MinIO client unavailable")
         from datetime import timedelta

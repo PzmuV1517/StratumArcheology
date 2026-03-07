@@ -126,9 +126,21 @@ const getApiBaseUrl = (): string => {
   }
 
   if (Platform.OS === "android") {
-    // Android emulator uses 10.0.2.2 to reach host machine's localhost
+    // Physical device: use the Expo dev server's host IP (same LAN)
+    const debuggerHost =
+      Constants.expoConfig?.hostUri ||
+      Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    const hostIp = debuggerHost?.split(":")[0];
+
+    if (hostIp && hostIp !== "localhost" && hostIp !== "127.0.0.1") {
+      const url = `http://${hostIp}:${port}/api`;
+      console.log("[Config] Android physical device, using debuggerHost IP:", url);
+      return url;
+    }
+
+    // Emulator fallback: 10.0.2.2 is a special alias for host machine's localhost
     const url = `http://10.0.2.2:${port}/api`;
-    console.log("[Config] Android platform, using:", url);
+    console.log("[Config] Android emulator, using:", url);
     return url;
   }
 

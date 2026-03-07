@@ -293,6 +293,7 @@ export default function TabLayout() {
               <Tabs.Screen name="messages" options={{ title: "Messages" }} />
               <Tabs.Screen name="settings" options={{ title: "Settings" }} />
               <Tabs.Screen name="gps" options={{ href: null }} />
+              <Tabs.Screen name="dm/[userId]" options={{ href: null }} />
             </Tabs>
           </View>
         </View>
