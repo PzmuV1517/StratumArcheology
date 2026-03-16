@@ -42,10 +42,10 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { projectService } from "../src/services/projectService";
-import { authService } from "../src/services/authService";
-import { showAlert } from "../src/utils/alert";
-import ImageCropModal from "../src/components/ui/ImageCropModal";
+import { projectService } from "@/services/projectService";
+import { authService } from "@/services/authService";
+import { showAlert } from "@/utils/alert";
+import ImageCropModal from "@/components/ui/ImageCropModal";
 interface Member {
   id: string;
   display_name: string;

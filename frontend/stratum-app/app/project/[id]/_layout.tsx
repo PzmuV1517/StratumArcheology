@@ -45,20 +45,20 @@ import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import styles from "@/src/components/project/ProjectDetailStyles";
-import ProjectOverlays from "@/src/components/project/ProjectOverlays";
-import { projectService } from "@/src/services/projectService";
+import styles from "@/components/project/ProjectDetailStyles";
+import ProjectOverlays from "@/components/project/ProjectOverlays";
+import { projectService } from "@/services/projectService";
 import {
   ProjectDetailProvider,
   useProjectDetail,
-} from "@/src/contexts/ProjectDetailContext";
+} from "@/contexts/ProjectDetailContext";
 import {
   ProjectGalleryScreen,
   ProjectMapScreen,
   ProjectHistoryScreen,
   ProjectToolsScreen,
   ProjectWheelerScreen,
-} from "@/src/components/project/ProjectTabsScreens";
+} from "@/components/project/ProjectTabsScreens";
 
 // liquid-react native components — loaded at module scope.
 // Only available in dev client / production builds (not Expo Go).

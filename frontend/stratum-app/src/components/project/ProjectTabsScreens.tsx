@@ -42,19 +42,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import NotesSection from "@/src/components/project/NotesSection";
-import FileGallery from "@/src/components/project/FileGallery";
-import ArtefactsTab from "@/src/components/project/ArtefactsTab";
-import TimeMachineTab from "@/src/components/project/TimeMachineTab";
-import ToolsTab from "@/src/components/project/ToolsTab";
-import Timeline from "@/src/components/timeline/Timeline";
-import MapEditor from "@/src/components/map/MapEditor";
-import styles from "@/src/components/project/ProjectDetailStyles";
+import NotesSection from "@/components/project/NotesSection";
+import FileGallery from "@/components/project/FileGallery";
+import ArtefactsTab from "@/components/project/ArtefactsTab";
+import TimeMachineTab from "@/components/project/TimeMachineTab";
+import ToolsTab from "@/components/project/ToolsTab";
+import Timeline from "@/components/timeline/Timeline";
+import MapEditor from "@/components/map/MapEditor";
+import styles from "@/components/project/ProjectDetailStyles";
 import {
   ProjectLoadingState,
   ProjectNotFoundState,
   useProjectDetail,
-} from "@/src/contexts/ProjectDetailContext";
+} from "@/contexts/ProjectDetailContext";
 
 function ProjectTabGuard({ children }: { children: React.ReactNode }) {
   const { loading, project } = useProjectDetail();
@@ -523,13 +523,13 @@ export function ProjectWheelerScreen({
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      import("@/src/components/matrix/WheelerDiagram.web")
+      import("@/components/matrix/WheelerDiagram.web")
         .then((mod) => setWheelerComponent(() => mod.default))
         .catch(() => {
           /* WheelerDiagram web not available */
         });
     } else {
-      import("@/src/components/matrix/WheelerDiagram.native")
+      import("@/components/matrix/WheelerDiagram.native")
         .then((mod) => setWheelerComponent(() => mod.default))
         .catch(() => {
           /* WheelerDiagram native not available */

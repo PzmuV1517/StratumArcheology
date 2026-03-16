@@ -44,27 +44,27 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "../src/contexts/AuthContext";
-import { useOnboarding } from "../src/contexts/OnboardingContext";
-import api from "../src/services/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOnboarding } from "@/contexts/OnboardingContext";
+import api from "@/services/api";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { showAlert } from "../src/utils/alert";
+import { showAlert } from "@/utils/alert";
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { config } from "../src/config/config";
-import { ConflictResolutionModal } from "../src/components/sync/ConflictResolutionModal";
-import type { FileConflict } from "../src/services/offlineQueueService";
+import { config } from "@/config/config";
+import { ConflictResolutionModal } from "@/components/sync/ConflictResolutionModal";
+import type { FileConflict } from "@/services/offlineQueueService";
 import {
   offlineFilesStorage,
   recentProjectsCache,
-} from "../src/services/offlineService";
+} from "@/services/offlineService";
 import {
   offlineQueue,
   getOfflineStorageStats,
   OfflineStorageStats,
-} from "../src/services/offlineQueueService";
-import { OfflineFile } from "../src/db/schema";
+} from "@/services/offlineQueueService";
+import { OfflineFile } from "@/db/schema";
 
 /* ── Social link definitions ────────────────────────────────────── */
 const SOCIAL_LINKS = [

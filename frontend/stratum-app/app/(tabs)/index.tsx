@@ -36,13 +36,13 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { OverviewSkeleton, Skeleton } from "../../src/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { OverviewSkeleton, Skeleton } from "@/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import { activityService } from "../../src/services/activityService";
-import { useAuth } from "../../src/contexts/AuthContext";
-import type { Project } from "../../src/services/projectService.types";
+import { projectService } from "@/services/projectService";
+import { activityService } from "@/services/activityService";
+import { useAuth } from "@/contexts/AuthContext";
+import type { Project } from "@/services/projectService.types";
 
 interface Activity {
   id: string;

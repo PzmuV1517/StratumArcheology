@@ -43,12 +43,12 @@ import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { fileService } from "../src/services/fileService";
-import { qrService } from "../src/services/qrService";
-import { useAuth } from "../src/contexts/AuthContext";
-import { buildManifestFromChildren } from "../src/utils/artefactManifest";
-import { showAlert } from "../src/utils/alert";
-import QRCodeView from "../src/components/common/QRCodeView";
+import { fileService } from "@/services/fileService";
+import { qrService } from "@/services/qrService";
+import { useAuth } from "@/contexts/AuthContext";
+import { buildManifestFromChildren } from "@/utils/artefactManifest";
+import { showAlert } from "@/utils/alert";
+import QRCodeView from "@/components/common/QRCodeView";
 
 const isIOS = Platform.OS === "ios";
 

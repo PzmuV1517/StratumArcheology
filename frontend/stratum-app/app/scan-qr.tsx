@@ -47,8 +47,8 @@ import {
 } from "expo-camera";
 import { useRouter, Stack, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { projectService } from "../src/services/projectService";
-import { qrService } from "../src/services/qrService";
+import { projectService } from "@/services/projectService";
+import { qrService } from "@/services/qrService";
 
 const isIOS = Platform.OS === "ios";
 const VIEWPORT_SIZE = 250;

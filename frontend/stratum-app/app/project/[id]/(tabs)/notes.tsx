@@ -25,7 +25,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import { ProjectNotesScreen } from "@/src/components/project/ProjectTabsScreens";
+import { ProjectNotesScreen } from "@/components/project/ProjectTabsScreens";
 
 export default function ProjectNotesRoute() {
   return <ProjectNotesScreen />;

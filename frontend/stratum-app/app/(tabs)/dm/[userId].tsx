@@ -22,11 +22,11 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useChat } from "@/src/hooks/useChat";
-import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
-import type { ChatMessage } from "@/src/services/chatService.types";
-import api from "@/src/services/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useChat } from "@/hooks/useChat";
+import { ChatBubble, MessageInput, TypingIndicator } from "@/components/chat";
+import type { ChatMessage } from "@/services/chatService.types";
+import api from "@/services/api";
 
 export default function DirectMessageScreen() {
   const { userId: otherUserId } = useLocalSearchParams<{ userId: string }>();

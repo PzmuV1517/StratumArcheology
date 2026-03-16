@@ -38,12 +38,12 @@ import {
   Modal,
   Platform,
 } from "react-native";
-import { useDelayedLoading } from "../src/hooks/useDelayedLoading";
-import { NoteDetailSkeleton } from "../src/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { NoteDetailSkeleton } from "@/components/common/Skeleton";
 import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { noteService } from "../src/services/noteService";
-import { showAlert } from "../src/utils/alert";
+import { noteService } from "@/services/noteService";
+import { showAlert } from "@/utils/alert";
 
 const isIOS = Platform.OS === "ios";
 

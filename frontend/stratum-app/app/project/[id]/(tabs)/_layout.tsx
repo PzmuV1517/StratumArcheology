@@ -31,8 +31,8 @@ import React, { useState } from "react";
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
-import MoreToolsSheet from "@/src/components/project/MoreToolsSheet";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
+import MoreToolsSheet from "@/components/project/MoreToolsSheet";
 
 const ACTIVE_COLOR = "#FF2A2A";
 const INACTIVE_COLOR = "#9A9A9A";

@@ -25,9 +25,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { projectService } from "@/src/services/projectService";
-import MapEditor from "@/src/components/map/MapEditor";
-import type { PublicProjectDetail } from "@/src/services/projectService.types";
+import { projectService } from "@/services/projectService";
+import MapEditor from "@/components/map/MapEditor";
+import type { PublicProjectDetail } from "@/services/projectService.types";
 
 const goBack = (router: ReturnType<typeof useRouter>) => {
   if (router.canGoBack()) {
@@ -36,7 +36,7 @@ const goBack = (router: ReturnType<typeof useRouter>) => {
     router.replace("/(tabs)/explore");
   }
 };
-import type { ProjectMember } from "@/src/services/projectService.types";
+import type { ProjectMember } from "@/services/projectService.types";
 
 // ─── Component ──────────────────────────────────────────────────────────────
 

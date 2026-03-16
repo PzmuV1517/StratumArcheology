@@ -37,12 +37,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AuthRedirector from "./AuthRedirector";
 
-import { AuthProvider } from "../src/contexts/AuthContext";
-import { WebSocketProvider } from "../src/contexts/WebSocketContext";
-import { OnboardingProvider } from "../src/contexts/OnboardingContext";
-import ConnectionStatusIndicator from "../src/components/common/OfflineBanner";
-import CustomAlertOverride from "../src/components/common/AndroidAlertOverride";
-import { OnboardingOverlay } from "../src/components/onboarding/OnboardingOverlay";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import ConnectionStatusIndicator from "@/components/common/OfflineBanner";
+import CustomAlertOverride from "@/components/common/AndroidAlertOverride";
+import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {

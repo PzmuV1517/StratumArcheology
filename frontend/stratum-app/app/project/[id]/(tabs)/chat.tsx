@@ -23,14 +23,14 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useChat } from "@/src/hooks/useChat";
-import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
-import { chatService } from "@/src/services/chatService";
-import { projectService } from "@/src/services/projectService";
-import { ensureProjectKey } from "@/src/utils/e2ee";
-import type { ChatMessage } from "@/src/services/chatService.types";
-import type { Channel } from "@/src/services/chatService.types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useChat } from "@/hooks/useChat";
+import { ChatBubble, MessageInput, TypingIndicator } from "@/components/chat";
+import { chatService } from "@/services/chatService";
+import { projectService } from "@/services/projectService";
+import { ensureProjectKey } from "@/utils/e2ee";
+import type { ChatMessage } from "@/services/chatService.types";
+import type { Channel } from "@/services/chatService.types";
 
 export default function ProjectChatScreen() {
   const { id: projectId } = useLocalSearchParams<{ id: string }>();

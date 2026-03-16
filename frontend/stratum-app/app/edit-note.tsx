@@ -42,9 +42,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { noteService } from "../src/services/noteService";
-import { useAutoSave } from "../src/hooks/useAutoSave";
-import { showAlert } from "../src/utils/alert";
+import { noteService } from "@/services/noteService";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { showAlert } from "@/utils/alert";
 
 const isIOS = Platform.OS === "ios";
 

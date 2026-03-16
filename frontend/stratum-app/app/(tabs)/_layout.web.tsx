@@ -43,8 +43,8 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useAuth } from "@/src/contexts/AuthContext";
-import UsernamePromptModal from "@/src/components/UsernamePromptModal";
+import { useAuth } from "@/contexts/AuthContext";
+import UsernamePromptModal from "@/components/UsernamePromptModal";
 
 /* ─────────────────────────────────────────────
  *  Constants
