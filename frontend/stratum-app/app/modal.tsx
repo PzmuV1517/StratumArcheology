@@ -41,8 +41,8 @@ import {
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { projectService } from "../src/services/projectService";
-import { showAlert } from "../src/utils/alert";
+import { projectService } from "@/services/projectService";
+import { showAlert } from "@/utils/alert";
 
 const isIOS = Platform.OS === "ios";
 

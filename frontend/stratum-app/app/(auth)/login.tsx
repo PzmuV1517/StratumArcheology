@@ -44,11 +44,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { useAuth } from "../../src/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../../src/services/api";
-import { showAlert } from "../../src/utils/alert";
-import { config } from "../../src/config/config";
+import api from "@/services/api";
+import { showAlert } from "@/utils/alert";
+import { config } from "@/config/config";
 import RAnimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -57,7 +57,7 @@ import RAnimated, {
   interpolate,
 } from "react-native-reanimated";
 
-import NativeTerminalBg from "../../components/NativeTerminalBg";
+import NativeTerminalBg from "@/components/effects/NativeTerminalBg";
 
 // Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
 let FaEyeSlash: any = null;
@@ -73,11 +73,11 @@ if (Platform.OS === "web") {
   } catch {}
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const FaultyTerminal = require("../../components/FaultyTerminal.jsx").default;
+    const FaultyTerminal = require("@/components/effects/FaultyTerminal.jsx").default;
     MemoFaultyTerminal = React.memo(FaultyTerminal);
     // @ts-ignore - CSS handled by web bundler
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require("../../components/FaultyTerminal.css");
+    require("@/components/effects/FaultyTerminal.css");
   } catch {}
 }
 

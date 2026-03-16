@@ -20,8 +20,8 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { chatService } from "@/src/services/chatService";
-import type { ConversationPreview } from "@/src/services/chatService.types";
+import { chatService } from "@/services/chatService";
+import type { ConversationPreview } from "@/services/chatService.types";
 
 function formatRelative(iso: string): string {
   const d = new Date(iso);

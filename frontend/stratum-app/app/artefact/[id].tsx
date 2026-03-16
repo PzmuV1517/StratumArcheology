@@ -44,12 +44,12 @@ import {
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import QRCodeView from "../../src/components/common/QRCodeView";
-import { ArtefactDetailSkeleton } from "../../src/components/common/Skeleton";
-import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { fileService } from "../../src/services/fileService";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { showAlert } from "../../src/utils/alert";
+import QRCodeView from "@/components/common/QRCodeView";
+import { ArtefactDetailSkeleton } from "@/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { fileService } from "@/services/fileService";
+import { useAuth } from "@/contexts/AuthContext";
+import { showAlert } from "@/utils/alert";
 import {
   buildManifestFromChildren,
   ArtefactManifest,

@@ -36,9 +36,9 @@ import {
   Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { fileService } from "../src/services/fileService";
-import PhotoPanel from "../src/components/data/PhotoPanel";
-import { showAlert } from "../src/utils/alert";
+import { fileService } from "@/services/fileService";
+import PhotoPanel from "@/components/data/PhotoPanel";
+import { showAlert } from "@/utils/alert";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();

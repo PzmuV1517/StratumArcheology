@@ -28,7 +28,7 @@
  */
 import React from "react";
 
-import { ProjectWheelerScreen } from "@/src/components/project/ProjectTabsScreens";
+import { ProjectWheelerScreen } from "@/components/project/ProjectTabsScreens";
 
 /**
  * Route component for the Wheeler Stratigraphic Notation tab.

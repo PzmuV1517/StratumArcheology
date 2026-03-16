@@ -25,10 +25,10 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
-import EditProjectModal from "@/src/components/project/EditProjectModal";
-import { projectService } from "@/src/services/projectService";
-import { showAlert } from "@/src/utils/alert";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
+import EditProjectModal from "@/components/project/EditProjectModal";
+import { projectService } from "@/services/projectService";
+import { showAlert } from "@/utils/alert";
 
 /* ─────────────────────────────────────────────
  *  Constants

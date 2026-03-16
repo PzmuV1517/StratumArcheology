@@ -39,20 +39,20 @@ import {
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { ProjectListSkeleton } from "@/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import { activityService } from "../../src/services/activityService";
-import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
+import { projectService } from "@/services/projectService";
+import { activityService } from "@/services/activityService";
+import { ProjectActionModal } from "@/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useAuth } from "../../src/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   useOnboarding,
   DEV_ALWAYS_SHOW_ONBOARDING,
-} from "../../src/contexts/OnboardingContext";
-import type { Project } from "../../src/services/projectService.types";
-import type { ProjectActivity } from "../../src/services/activityService.types";
+} from "@/contexts/OnboardingContext";
+import type { Project } from "@/services/projectService.types";
+import type { ProjectActivity } from "@/services/activityService.types";
 
 type MyActivity = ProjectActivity & {
   project_name?: string;

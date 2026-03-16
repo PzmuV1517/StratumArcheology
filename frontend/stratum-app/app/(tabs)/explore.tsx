@@ -42,8 +42,8 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { projectService } from "../../src/services/projectService";
-import type { Project } from "../../src/services/projectService.types";
+import { projectService } from "@/services/projectService";
+import type { Project } from "@/services/projectService.types";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 // ─── Types ──────────────────────────────────────────────────────────────────

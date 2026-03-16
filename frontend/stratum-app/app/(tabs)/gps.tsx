@@ -31,7 +31,7 @@ import React from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { Stack } from "expo-router";
 
-import MapEditor from "@/src/components/map/MapEditor";
+import MapEditor from "@/components/map/MapEditor";
 
 export default function GPSScreen() {
   return (

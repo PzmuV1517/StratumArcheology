@@ -38,8 +38,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useAuth } from "@/src/contexts/AuthContext";
-import UsernamePromptModal from "@/src/components/UsernamePromptModal";
+import { useAuth } from "@/contexts/AuthContext";
+import UsernamePromptModal from "@/components/UsernamePromptModal";
 
 const ACTIVE_COLOR = "#FF2A2A";
 const INACTIVE_COLOR = "#9A9A9A";

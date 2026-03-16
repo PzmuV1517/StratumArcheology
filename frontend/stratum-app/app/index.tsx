@@ -42,15 +42,15 @@ import { useRouter } from "expo-router";
 // Only import these on web to avoid native compilation issues
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ColorBends =
-  Platform.OS === "web" ? require("../components/ColorBends.jsx").default : null;
+  Platform.OS === "web" ? require("../src/components/effects/ColorBends.jsx").default : null;
 const StarBorder =
-  Platform.OS === "web" ? require("../components/StarBorder.jsx").default : null;
+  Platform.OS === "web" ? require("../src/components/effects/StarBorder.jsx").default : null;
 const DotGrid =
-  Platform.OS === "web" ? require("../components/DotGrid.jsx").default : null;
+  Platform.OS === "web" ? require("../src/components/effects/DotGrid.jsx").default : null;
 const GradualBlur =
-  Platform.OS === "web" ? require("../components/GradualBlur.jsx").default : null;
+  Platform.OS === "web" ? require("../src/components/effects/GradualBlur.jsx").default : null;
 const CardSwapModule =
-  Platform.OS === "web" ? require("../components/CardSwap.jsx") : null;
+  Platform.OS === "web" ? require("../src/components/effects/CardSwap.jsx") : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 const CardSwap = CardSwapModule?.default || CardSwapModule;
 const Card = CardSwapModule?.Card;
@@ -58,10 +58,10 @@ const Card = CardSwapModule?.Card;
 // Load component CSS only on web to avoid native errors
 if (Platform.OS === "web") {
   /* eslint-disable @typescript-eslint/no-require-imports */
-  require("../components/ColorBends.css");
-  require("../components/DotGrid.css");
-  require("../components/StarBorder.css");
-  require("../components/CardSwap.css");
+  require("../src/components/effects/ColorBends.css");
+  require("../src/components/effects/DotGrid.css");
+  require("../src/components/effects/StarBorder.css");
+  require("../src/components/effects/CardSwap.css");
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 

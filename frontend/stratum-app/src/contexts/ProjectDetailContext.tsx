@@ -36,22 +36,22 @@ import React, {
   useState,
 } from "react";
 import { Platform, RefreshControl, View, Text, Image } from "react-native";
-import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
+import { ProjectDetailSkeleton } from "@/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
-import { projectService } from "@/src/services/projectService";
-import { noteService } from "@/src/services/noteService";
-import { showAlert } from "@/src/utils/alert";
-import { fileService } from "@/src/services/fileService";
+import { LiquidGlassButton } from "@/components/ui/LiquidGlassButton";
+import { projectService } from "@/services/projectService";
+import { noteService } from "@/services/noteService";
+import { showAlert } from "@/utils/alert";
+import { fileService } from "@/services/fileService";
 import * as DocumentPicker from "expo-document-picker";
-import { conflicts, FileConflict } from "@/src/services/offlineQueueService";
-import { useWebSocket } from "@/src/contexts/WebSocketContext";
-import type { Project as ServiceProject } from "@/src/services/projectService.types";
-import styles from "@/src/components/project/ProjectDetailStyles";
+import { conflicts, FileConflict } from "@/services/offlineQueueService";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import type { Project as ServiceProject } from "@/services/projectService.types";
+import styles from "@/components/project/ProjectDetailStyles";
 
 /** Represents a project note with title, content, and metadata. */
 export interface Note {
@@ -224,7 +224,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   useEffect(() => {
-    import("@/src/components/matrix")
+    import("@/components/matrix")
       .then((mod) => setHarrisMatrixComponent(() => mod.default))
       .catch(() => {
         /* HarrisMatrix not available on native - expected */
@@ -234,7 +234,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     (async () => {
       try {
-        const { authService } = await import("@/src/services/authService");
+        const { authService } = await import("@/services/authService");
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
       } catch {
@@ -428,7 +428,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
 
       try {
         const { recentProjectsCache } =
-          await import("@/src/services/offlineService");
+          await import("@/services/offlineService");
         await recentProjectsCache.saveRecentProject(
           id,
           projectData,
@@ -441,7 +441,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
     } catch {
       try {
         const { recentProjectsCache } =
-          await import("@/src/services/offlineService");
+          await import("@/services/offlineService");
         const cached = await recentProjectsCache.getCachedProject(id);
         if (cached) {
           setProject(cached.project);

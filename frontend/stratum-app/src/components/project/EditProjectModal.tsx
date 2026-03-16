@@ -20,10 +20,10 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
-import ImageCropModal from "@/src/components/ui/ImageCropModal";
-import { projectService } from "@/src/services/projectService";
-import { showAlert } from "@/src/utils/alert";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
+import ImageCropModal from "@/components/ui/ImageCropModal";
+import { projectService } from "@/services/projectService";
+import { showAlert } from "@/utils/alert";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
 
 interface Props {
   visible: boolean;

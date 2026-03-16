@@ -22,8 +22,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../src/services/api";
-import { useAuth } from "../../src/contexts/AuthContext";
+import api from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfileUser {
   id: number;

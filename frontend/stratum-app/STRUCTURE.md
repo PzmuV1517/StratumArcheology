@@ -21,6 +21,13 @@ frontend/stratum-app/
 └── [config files]          # Project configuration
 ```
 
+### Source Of Truth Rule
+
+- Keep all application code under `src/`.
+- Keep route files under `app/` only.
+- Do not create top-level `components/`, `hooks/`, or `constants/` folders again.
+- Use the `@/` alias for imports from `src/`.
+
 ---
 
 ## Directory Details
