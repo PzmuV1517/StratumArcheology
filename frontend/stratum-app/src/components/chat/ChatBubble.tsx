@@ -18,12 +18,14 @@ import {
   Platform,
   Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { ChatMessage, MentionRef } from "../../services/chatService.types";
 
 interface ChatBubbleProps {
   message: ChatMessage;
   isOwnMessage: boolean;
+  isGrouped?: boolean;
   onEdit?: (messageId: string, content: string) => void;
   onDelete?: (messageId: string) => void;
   onReply?: (message: ChatMessage) => void;
@@ -41,6 +43,7 @@ function formatTime(iso: string): string {
 export default function ChatBubble({
   message,
   isOwnMessage,
+  isGrouped,
   onEdit,
   onDelete,
   onReply,
@@ -115,32 +118,43 @@ export default function ChatBubble({
   const initial = (message.sender_name ?? "?")[0].toUpperCase();
 
   return (
-    <View style={[styles.row, isOwnMessage && styles.rowOwn]}>
-      {/* Avatar — tap to view profile */}
+    <View style={[styles.row, isOwnMessage && styles.rowOwn, isGrouped && styles.rowGrouped]}>
+      {/* Avatar — tap to view profile (hidden when grouped) */}
       {!isOwnMessage && (
-        <TouchableOpacity onPress={navigateToProfile} style={styles.avatar}>
-          {message.sender_photo ? (
-            <Image source={{ uri: message.sender_photo }} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarText}>{initial}</Text>
-          )}
-        </TouchableOpacity>
+        isGrouped ? (
+          <View style={styles.avatarSpacer} />
+        ) : (
+          <TouchableOpacity onPress={navigateToProfile} style={styles.avatar}>
+            {message.sender_photo ? (
+              <Image source={{ uri: message.sender_photo }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
+          </TouchableOpacity>
+        )
       )}
 
       <TouchableOpacity
         onLongPress={handleLongPress}
         onPress={Platform.OS === "web" ? handleLongPress : undefined}
         activeOpacity={0.8}
-        style={[styles.bubble, isOwnMessage ? styles.bubbleOwn : styles.bubbleOther]}
+        style={[
+          styles.bubble,
+          isOwnMessage ? styles.bubbleOwn : styles.bubbleOther,
+          // Only first message in group gets the tail; grouped = fully rounded
+          isGrouped && (isOwnMessage ? styles.bubbleOwnGrouped : styles.bubbleOtherGrouped),
+        ]}
       >
-        {!isOwnMessage && (
+        {!isOwnMessage && !isGrouped && (
           <TouchableOpacity onPress={navigateToProfile}>
             <Text style={styles.senderName}>{message.sender_name ?? "Unknown"}</Text>
           </TouchableOpacity>
         )}
         {renderedContent}
         <View style={styles.meta}>
-          {message._e2ee && <Text style={styles.e2eeBadge}>🔒</Text>}
+          {message._e2ee && (
+            <Ionicons name="lock-closed" size={10} color="rgba(255,255,255,0.5)" />
+          )}
           <Text style={styles.time}>{formatTime(message.created_at)}</Text>
           {message.edited_at && <Text style={styles.edited}>(edited)</Text>}
         </View>
@@ -178,16 +192,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     marginBottom: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     alignItems: "flex-end",
   },
   rowOwn: {
     justifyContent: "flex-end",
   },
+  rowGrouped: {
+    marginBottom: 2,
+  },
+  avatarSpacer: {
+    width: 32, // 24 avatar + 8 marginRight
+  },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "#2A2A2A",
     alignItems: "center",
     justifyContent: "center",
@@ -195,13 +215,13 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "600",
   },
   avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   bubble: {
     maxWidth: "75%",
@@ -211,11 +231,17 @@ const styles = StyleSheet.create({
   },
   bubbleOwn: {
     backgroundColor: "#FF2A2A",
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 2,
+  },
+  bubbleOwnGrouped: {
+    borderBottomRightRadius: 16,
   },
   bubbleOther: {
     backgroundColor: "#1A1A1A",
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 2,
+  },
+  bubbleOtherGrouped: {
+    borderBottomLeftRadius: 16,
   },
   bubbleDeleted: {
     backgroundColor: "#0E0E0E",
@@ -246,9 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "rgba(255,255,255,0.4)",
     fontStyle: "italic",
-  },
-  e2eeBadge: {
-    fontSize: 10,
   },
   deletedText: {
     fontSize: 14,

@@ -55,6 +55,11 @@ export interface ArtefactManifest {
   files: ManifestFileEntry[]; // images and other files
   notes: ManifestFileEntry[]; // .txt notes
   history?: { type: string; at: string; by?: ManifestUser; details?: any }[];
+  /** Linked Harris Matrix stratigraphic context ID */
+  harrisMatrixContextId?: string;
+  /** GPS coordinates for the artefact find-spot */
+  latitude?: number;
+  longitude?: number;
 }
 
 export type FileNode = {
@@ -117,6 +122,9 @@ export function buildManifestFromChildren(
     files,
     notes,
     history: existing?.history ? [...existing.history] : [],
+    harrisMatrixContextId: existing?.harrisMatrixContextId,
+    latitude: existing?.latitude,
+    longitude: existing?.longitude,
   };
 
   // Append a generic update event

@@ -1,116 +1,162 @@
 /**
  * @file
- * Per-project chat with Slack-like channels.
+ * Per-project Slack-style chat tab (iOS / Android / Web).
  *
- * Shows a channel list sidebar (drawer) and the active channel's
- * messages. Default #general channel is auto-created. Admins
- * (project leaders) can create new channels.
+ * Loads channels via REST, displays the active channel's messages via
+ * useChat, and supports channel switching, creating new channels,
+ * editing & deleting messages.
+ *
+ * Rebuilt from scratch — zero useCallback, refs for closures, primitive
+ * effect deps only. Immune to React Compiler memoisation issues.
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   FlatList,
   StyleSheet,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Text,
+  Alert,
   ActivityIndicator,
   TouchableOpacity,
   TextInput,
   Modal,
 } from "react-native";
-import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
-import { useAuth } from "@/contexts/AuthContext";
-import { useChat } from "@/hooks/useChat";
-import { ChatBubble, MessageInput, TypingIndicator } from "@/components/chat";
-import { chatService } from "@/services/chatService";
-import { projectService } from "@/services/projectService";
-import { ensureProjectKey } from "@/utils/e2ee";
-import type { ChatMessage } from "@/services/chatService.types";
-import type { Channel } from "@/services/chatService.types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/src/contexts/AuthContext";
+import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
+import { useChat } from "@/src/hooks/useChat";
+import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
+import { chatService } from "@/src/services/chatService";
+import { projectService } from "@/src/services/projectService";
+import { ensureProjectKey } from "@/src/utils/e2ee";
+import type { ChatMessage, Channel } from "@/src/services/chatService.types";
+
+/* ================================================================== *
+ *  Screen                                                            *
+ * ================================================================== */
 
 export default function ProjectChatScreen() {
-  const { id: projectId } = useLocalSearchParams<{ id: string }>();
-  const { user, loading: authLoading } = useAuth();
-  // Explicit heights match the project (tabs) _layout.tsx tabBarStyle.
-  // BottomTabBarHeightContext can be 0 before the tab bar measures on first render.
-  const TAB_BAR_HEIGHT = Platform.OS === "android" ? 84 : 90;
-  const headerHeight = useHeaderHeight();
+  "use no memo";
 
-  /* ── Channel state ───────────────────────────────── */
+  /* ── params & context ─────────────────────────────── */
+  const { user } = useAuth();
+  const { project, isOwner } = useProjectDetail();
+  const projectId = project?.id;
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+
+  /* ── keyboard tracking ────────────────────────────── */
+  const [kbVisible, setKbVisible] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKbVisible(true),
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKbVisible(false),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  /* ── channel state ────────────────────────────────── */
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
   const [channelsLoading, setChannelsLoading] = useState(true);
-  const [channelsError, setChannelsError] = useState(false);
-  const [showChannelList, setShowChannelList] = useState(false);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+  const [showDrawer, setShowDrawer] = useState(false);
+
+  /* ── create-channel modal ─────────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newChannelName, setNewChannelName] = useState("");
-  const [newChannelDesc, setNewChannelDesc] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
-  /* ── Load channels on mount ──────────────────────── */
-  /* ── Load channels ──────────────────────────────────────────────── */
-  const loadChannels = useCallback(async () => {
-    if (!projectId) return;
-    setChannelsLoading(true);
-    setChannelsError(false);
-    // Retry up to 4 times with 600 ms delay.
-    // Covers two races:
-    //   1. Auth race: token not yet written to AsyncStorage on first render.
-    //   2. #general creation race: backend creates the channel async so the
-    //      first read can return []. After one retry it's always present.
-    const MAX = 4;
-    for (let attempt = 0; attempt < MAX; attempt++) {
+  /* ── load channels ────────────────────────────────── */
+  useEffect(() => {
+    if (!projectId) {
+      console.log("[Chat] no projectId, skipping channel load");
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      console.log("[Chat] loading channels for project:", projectId);
+      setChannelsLoading(true);
+      setChannelsError(null);
+
       try {
-        const chs = await chatService.getChannels(projectId);
-        if (chs.length > 0) {
-          setChannels(chs);
-          setActiveChannel((prev) =>
-            prev && chs.find((c) => c.id === prev.id)
-              ? prev
-              : chs.find((c) => c.is_default) ?? chs[0],
-          );
-          setChannelsError(false);
+        let data = await chatService.getChannels(projectId);
+        console.log("[Chat] getChannels returned", data.length, "channels");
+
+        // Backend auto-creates #general; tiny race → retry once
+        if (data.length === 0) {
+          console.log("[Chat] 0 channels, retrying after 800ms…");
+          await new Promise((r) => setTimeout(r, 800));
+          data = await chatService.getChannels(projectId);
+          console.log("[Chat] retry returned", data.length, "channels");
+        }
+
+        if (cancelled) return;
+
+        if (data.length === 0) {
+          setChannelsError("No channels available");
           setChannelsLoading(false);
           return;
         }
-        // Empty list — channel may still be being created; retry.
-      } catch {
-        // Request error (401/403/network) — retry after delay.
+
+        setChannels(data);
+        setActiveChannel((prev) => {
+          if (prev) {
+            const still = data.find((c) => c.id === prev.id);
+            if (still) return still;
+          }
+          return data.find((c) => c.is_default) ?? data[0];
+        });
+      } catch (e: any) {
+        console.error("[Chat] loadChannels error:", e?.message ?? e);
+        if (!cancelled) setChannelsError(e?.message ?? "Failed to load channels");
+      } finally {
+        if (!cancelled) setChannelsLoading(false);
       }
-      if (attempt < MAX - 1) {
-        await new Promise((r) => setTimeout(r, 600));
-      }
-    }
-    // All attempts exhausted.
-    setChannelsError(true);
-    setChannelsLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
-  // Re-load channels every time the tab comes into focus.
-  // useFocusEffect is more reliable than useEffect for tab screens because
-  // React Navigation pre-mounts tab content before focus events fire.
-  useFocusEffect(
-    useCallback(() => {
-      if (authLoading || !user || !projectId) return;
-      loadChannels();
-    }, [authLoading, user, projectId, loadChannels]),
-  );
-
-  /* ── Ensure E2EE key is provisioned for this project ── */
+  /* ── E2EE key provisioning ────────────────────────── */
   useEffect(() => {
     if (!projectId) return;
     ensureProjectKey(
       projectId,
       () => projectService.getE2eeKey(projectId),
       (key) => projectService.setE2eeKey(projectId, key),
-    );
+    ).catch((e) => console.warn("[Chat] E2EE key error:", e));
   }, [projectId]);
 
-  /* ── Chat hook — uses channel if available, else project room ── */
+  /* ── chat hook ────────────────────────────────────── */
+  const effective = activeChannel ?? channels[0] ?? null;
+
+  console.log("[Chat] render", {
+    projectId,
+    channelsLoading,
+    channelCount: channels.length,
+    activeId: activeChannel?.id,
+    effectiveId: effective?.id,
+  });
+
   const {
     messages,
     isLoading,
@@ -121,181 +167,202 @@ export default function ProjectChatScreen() {
     deleteMessage,
     loadMore,
     sendTyping,
-  } = useChat({
-    projectId,
-    channelId: activeChannel?.id,
-  });
+  } = useChat({ projectId, channelId: effective?.id });
 
   const listRef = useRef<FlatList>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
-  const handleSend = useCallback(
-    (content: string, replyToId?: string, mentions?: any[]) => {
-      sendMessage(content, replyToId, mentions);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    },
-    [sendMessage],
-  );
-
-  const handleEdit = useCallback(
-    (messageId: string, _currentContent: string) => {
-      if (Platform.OS !== "web") {
-        const { Alert } = require("react-native");
-        Alert.prompt?.(
-          "Edit message",
-          undefined,
-          (text: string) => {
-            if (text?.trim()) editMessage(messageId, text.trim());
-          },
-          "plain-text",
-          _currentContent,
-        );
-      } else {
-        const text = window.prompt("Edit message", _currentContent);
-        if (text?.trim()) editMessage(messageId, text.trim());
-      }
-    },
-    [editMessage],
-  );
-
-  /* ── Create channel ──────────────────────────────── */
-  const handleCreateChannel = async () => {
-    if (!newChannelName.trim() || !projectId) return;
-    setCreating(true);
-    const ch = await chatService.createChannel(
-      projectId,
-      newChannelName.trim(),
-      newChannelDesc.trim() || undefined,
+  /* ── handlers ─────────────────────────────────────── */
+  function handleSend(content: string, replyToId?: string, mentions?: any[]) {
+    sendMessage(content, replyToId, mentions);
+    // Inverted list: offset 0 = visual bottom
+    setTimeout(
+      () => listRef.current?.scrollToOffset({ offset: 0, animated: true }),
+      120,
     );
-    if (ch) {
-      setChannels((prev) => [...prev, ch]);
-      setActiveChannel(ch);
-      setShowCreateModal(false);
-      setNewChannelName("");
-      setNewChannelDesc("");
+  }
+
+  function handleEdit(messageId: string, current: string) {
+    if (Platform.OS === "web") {
+      const text = window.prompt("Edit message", current);
+      if (text?.trim()) editMessage(messageId, text.trim());
+    } else {
+      Alert.prompt?.(
+        "Edit message",
+        undefined,
+        (text: string) => {
+          if (text?.trim()) editMessage(messageId, text.trim());
+        },
+        "plain-text",
+        current,
+      );
     }
-    setCreating(false);
-  };
+  }
 
-  const renderItem = useCallback(
-    ({ item }: { item: ChatMessage }) => (
-      <ChatBubble
-        message={item}
-        isOwnMessage={item.sender_id === user?.id}
-        onEdit={handleEdit}
-        onDelete={deleteMessage}
-        onReply={setReplyTo}
-      />
-    ),
-    [user?.id, handleEdit, deleteMessage],
-  );
+  async function handleCreate() {
+    if (!newName.trim() || !projectId) return;
+    setCreating(true);
+    try {
+      const ch = await chatService.createChannel(
+        projectId,
+        newName.trim(),
+        newDesc.trim() || undefined,
+      );
+      if (ch) {
+        setChannels((p) => [...p, ch]);
+        setActiveChannel(ch);
+        setShowCreateModal(false);
+        setNewName("");
+        setNewDesc("");
+      } else {
+        Alert.alert("Failed", "Only project leaders can create channels.");
+      }
+    } finally {
+      setCreating(false);
+    }
+  }
 
+  function retryChannels() {
+    setChannelsLoading(true);
+    setChannelsError(null);
+    chatService
+      .getChannels(projectId!)
+      .then((data) => {
+        setChannels(data);
+        if (data.length > 0) {
+          setActiveChannel(data.find((c) => c.is_default) ?? data[0]);
+        } else {
+          setChannelsError("No channels available");
+        }
+      })
+      .catch((e) => setChannelsError(e?.message ?? "Retry failed"))
+      .finally(() => setChannelsLoading(false));
+  }
+
+  /* ── derived ──────────────────────────────────────── */
+  const inputDisabled = channelsLoading || !!channelsError || channels.length === 0;
+  const channelName = effective?.name ?? "general";
+  const reversedMessages = [...messages].reverse();
+
+  /* ================================================================ *
+   *  JSX                                                             *
+   * ================================================================ */
   return (
     <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={headerHeight + (Platform.OS === "ios" ? TAB_BAR_HEIGHT : 0)}
+      style={s.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
     >
-      {/* ── Channel header bar ──────────────────────── */}
-      <View style={[styles.channelBar, Platform.OS !== "android" && { marginTop: headerHeight }]}>
+      {/* ── channel header bar ─────────────────────── */}
+      <View style={[s.bar, { marginTop: headerHeight }]}>
         {channelsLoading ? (
-          <View style={styles.channelToggle}>
+          <View style={s.barRow}>
             <ActivityIndicator size="small" color="#FF2A2A" />
-            <Text style={[styles.channelName, { marginLeft: 8, color: "#9A9A9A" }]}>Loading channels…</Text>
+            <Text style={s.barTextMuted}>Loading channels…</Text>
           </View>
         ) : channelsError ? (
-          <TouchableOpacity style={styles.channelToggle} onPress={loadChannels}>
-            <Text style={styles.channelHash}>!</Text>
-            <Text style={[styles.channelName, { color: "#FF9500" }]}>
-              Failed to load channels — tap to retry
-            </Text>
+          <TouchableOpacity style={s.barRow} onPress={retryChannels}>
+            <Text style={s.hash}>!</Text>
+            <Text style={s.barTextWarn}>Couldn't load channels — tap to retry</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={styles.channelToggle}
-            onPress={() => setShowChannelList((p) => !p)}
+            style={s.barRow}
+            onPress={() => setShowDrawer((p) => !p)}
           >
-            <Text style={styles.channelHash}>#</Text>
-            <Text style={styles.channelName} numberOfLines={1}>
-              {activeChannel?.name || "general"}
+            <Text style={s.hash}>#</Text>
+            <Text style={s.barText} numberOfLines={1}>
+              {channelName}
             </Text>
-            <Text style={styles.chevron}>{showChannelList ? "▲" : "▼"}</Text>
+            <Text style={s.chevron}>{showDrawer ? "▲" : "▼"}</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* ── Channel list dropdown ───────────────────── */}
-      {showChannelList && (
-        <View style={styles.channelDrawer}>
-          <Text style={styles.drawerTitle}>Channels</Text>
-          {channels.map((ch) => (
+      {/* ── channel dropdown ───────────────────────── */}
+      {showDrawer && (
+        <View style={s.drawer}>
+          <Text style={s.drawerTitle}>Channels</Text>
+          {channels.map((ch) => {
+            const active = activeChannel?.id === ch.id;
+            return (
+              <TouchableOpacity
+                key={ch.id}
+                style={[s.drawerItem, active && s.drawerItemActive]}
+                onPress={() => {
+                  setActiveChannel(ch);
+                  setShowDrawer(false);
+                }}
+              >
+                <Text style={[s.drawerItemText, active && s.drawerItemTextActive]}>
+                  # {ch.name}
+                </Text>
+                {ch.is_default && <Text style={s.badge}>default</Text>}
+              </TouchableOpacity>
+            );
+          })}
+          {isOwner && (
             <TouchableOpacity
-              key={ch.id}
-              style={[
-                styles.channelItem,
-                activeChannel?.id === ch.id && styles.channelItemActive,
-              ]}
+              style={s.addBtn}
               onPress={() => {
-                setActiveChannel(ch);
-                setShowChannelList(false);
+                setShowDrawer(false);
+                setShowCreateModal(true);
               }}
             >
-              <Text
-                style={[
-                  styles.channelItemText,
-                  activeChannel?.id === ch.id && styles.channelItemTextActive,
-                ]}
-              >
-                # {ch.name}
-              </Text>
-              {ch.is_default && (
-                <Text style={styles.defaultBadge}>default</Text>
-              )}
+              <Text style={s.addBtnText}>+ New Channel</Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={styles.addChannelBtn}
-            onPress={() => {
-              setShowChannelList(false);
-              setShowCreateModal(true);
-            }}
-          >
-            <Text style={styles.addChannelText}>+ New Channel</Text>
-          </TouchableOpacity>
+          )}
         </View>
       )}
 
-      {/* ── Messages list ───────────────────────────── */}
+      {/* ── messages ───────────────────────────────── */}
       <FlatList
         ref={listRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.list}
-        onStartReached={() => {
+        inverted
+        data={reversedMessages}
+        keyExtractor={(m) => m.id}
+        renderItem={({ item, index }) => {
+          // In inverted list: visually-above message = index + 1
+          const prevMsg = reversedMessages[index + 1];
+          const isGrouped =
+            !!prevMsg && prevMsg.sender_id === item.sender_id && !prevMsg.is_deleted;
+          return (
+            <ChatBubble
+              message={item}
+              isOwnMessage={item.sender_id === user?.id}
+              isGrouped={isGrouped}
+              onEdit={handleEdit}
+              onDelete={deleteMessage}
+              onReply={setReplyTo}
+            />
+          );
+        }}
+        style={s.list}
+        contentContainerStyle={s.listContent}
+        onEndReached={() => {
           if (hasMore && !isLoading) loadMore();
         }}
-        onStartReachedThreshold={0.3}
-        onScroll={(e) => {
-          if (e.nativeEvent.contentOffset.y < 50 && hasMore && !isLoading) {
-            loadMore();
-          }
-        }}
-        scrollEventThrottle={200}
-        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-        ListHeaderComponent={
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
           isLoading ? (
             <ActivityIndicator color="#9A9A9A" style={{ marginVertical: 12 }} />
           ) : null
         }
         ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>💬</Text>
-              <Text style={styles.emptyTitle}>
-                #{activeChannel?.name || "general"}
-              </Text>
-              <Text style={styles.emptyText}>
+          channelsLoading ? (
+            <View style={s.emptyInverted}>
+              <ActivityIndicator
+                size="large"
+                color="#FF2A2A"
+                style={{ marginBottom: 16 }}
+              />
+              <Text style={s.emptyTitle}>Loading…</Text>
+            </View>
+          ) : !isLoading ? (
+            <View style={s.emptyInverted}>
+              <Text style={s.emptyIcon}>💬</Text>
+              <Text style={s.emptyTitle}>#{channelName}</Text>
+              <Text style={s.emptyBody}>
                 Send the first message in this channel!
               </Text>
             </View>
@@ -303,59 +370,83 @@ export default function ProjectChatScreen() {
         }
       />
 
-      <View style={{ paddingBottom: Platform.OS === "web" ? 12 : TAB_BAR_HEIGHT }}>
+      {/* ── input area ─────────────────────────────── */}
+      <View
+        style={{
+          paddingBottom:
+            Platform.OS === "web" ? 12 : kbVisible ? 0 : 49 + insets.bottom,
+        }}
+      >
         <TypingIndicator names={typingUsers} />
         <MessageInput
-          onSend={activeChannel ? handleSend : () => {}}
+          onSend={handleSend}
           onTyping={sendTyping}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           placeholder={
-            channelsLoading
-              ? "Loading channels…"
-              : channelsError
-                ? "Cannot send — channel unavailable"
-                : `Message #${activeChannel?.name || "general"}…`
+            inputDisabled ? "Loading channels…" : `Message #${channelName}…`
           }
           projectId={projectId}
-          disabled={!activeChannel}
+          disabled={inputDisabled}
         />
       </View>
 
-      {/* ── Create channel modal ────────────────────── */}
-      <Modal visible={showCreateModal} transparent animationType="fade" onRequestClose={() => setShowCreateModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Create Channel</Text>
-            <Text style={styles.fieldLabel}>Name</Text>
+      {/* ── create channel modal ───────────────────── */}
+      <Modal
+        visible={showCreateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View style={s.modalBg}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>Create Channel</Text>
+
+            <Text style={s.label}>Name</Text>
             <TextInput
-              style={styles.input}
-              value={newChannelName}
-              onChangeText={(t) => setNewChannelName(t.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+              style={s.input}
+              value={newName}
+              onChangeText={(t) =>
+                setNewName(t.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
+              }
               placeholder="e.g. field-notes"
               placeholderTextColor="#666"
               autoCapitalize="none"
+              autoFocus
               maxLength={50}
             />
-            <Text style={styles.fieldLabel}>Description (optional)</Text>
+
+            <Text style={s.label}>Description (optional)</Text>
             <TextInput
-              style={styles.input}
-              value={newChannelDesc}
-              onChangeText={setNewChannelDesc}
+              style={s.input}
+              value={newDesc}
+              onChangeText={setNewDesc}
               placeholder="What is this channel about?"
               placeholderTextColor="#666"
               maxLength={200}
             />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setShowCreateModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
+
+            <View style={s.modalRow}>
+              <TouchableOpacity
+                style={s.modalBtn}
+                onPress={() => setShowCreateModal(false)}
+              >
+                <Text style={s.modalBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#FF2A2A" }, (!newChannelName.trim() || creating) && { opacity: 0.5 }]}
-                onPress={handleCreateChannel}
-                disabled={!newChannelName.trim() || creating}
+                style={[
+                  s.modalBtn,
+                  { backgroundColor: "#FF2A2A" },
+                  (!newName.trim() || creating) && { opacity: 0.5 },
+                ]}
+                onPress={handleCreate}
+                disabled={!newName.trim() || creating}
               >
-                {creating ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.modalButtonText, { color: "#F5F5F5" }]}>Create</Text>}
+                {creating ? (
+                  <ActivityIndicator color="#F5F5F5" />
+                ) : (
+                  <Text style={[s.modalBtnText, { color: "#F5F5F5" }]}>Create</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -365,11 +456,14 @@ export default function ProjectChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
+/* ================================================================== *
+ *  Styles                                                            *
+ * ================================================================== */
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: "#111111" },
 
-  /* Channel header bar */
-  channelBar: {
+  /* channel bar */
+  bar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -378,17 +472,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#2A2A2A",
   },
-  channelToggle: {
+  barRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  channelHash: { fontSize: 20, fontWeight: "700", color: "#FF2A2A" },
-  channelName: { fontSize: 17, fontWeight: "600", color: "#F5F5F5", maxWidth: 200 },
+  hash: { fontSize: 20, fontWeight: "700", color: "#FF2A2A" },
+  barText: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#F5F5F5",
+    maxWidth: 200,
+  },
+  barTextMuted: {
+    fontSize: 15,
+    color: "#9A9A9A",
+    marginLeft: 8,
+  },
+  barTextWarn: {
+    fontSize: 15,
+    color: "#FF9500",
+    marginLeft: 4,
+  },
   chevron: { fontSize: 12, color: "#9A9A9A", marginLeft: 4 },
 
-  /* Channel drawer */
-  channelDrawer: {
+  /* channel drawer */
+  drawer: {
     backgroundColor: "#1A1A1A",
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -403,7 +512,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 4,
   },
-  channelItem: {
+  drawerItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -412,10 +521,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 2,
   },
-  channelItemActive: { backgroundColor: "#2A2A2A" },
-  channelItemText: { fontSize: 15, color: "#CFCFCF" },
-  channelItemTextActive: { color: "#F5F5F5", fontWeight: "600" },
-  defaultBadge: {
+  drawerItemActive: { backgroundColor: "#2A2A2A" },
+  drawerItemText: { fontSize: 15, color: "#CFCFCF" },
+  drawerItemTextActive: { color: "#F5F5F5", fontWeight: "600" },
+  badge: {
     fontSize: 10,
     color: "#9A9A9A",
     backgroundColor: "#2A2A2A",
@@ -424,45 +533,84 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-  addChannelBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 4,
-  },
-  addChannelText: { fontSize: 14, color: "#FF2A2A", fontWeight: "600" },
+  addBtn: { paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
+  addBtnText: { fontSize: 14, color: "#FF2A2A", fontWeight: "600" },
 
-  /* Messages */
-  list: { flexGrow: 1, paddingTop: 12, paddingBottom: 8 },
-  emptyContainer: {
-    flex: 1, alignItems: "center", justifyContent: "center",
-    paddingTop: 100, paddingHorizontal: 40,
+  /* messages */
+  list: { flex: 1 },
+  listContent: { paddingVertical: 8 },
+  emptyInverted: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+    transform: [{ scaleY: -1 }],
   },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: "600", color: "#F5F5F5", marginBottom: 8 },
-  emptyText: { fontSize: 14, color: "#9A9A9A", textAlign: "center", lineHeight: 20 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#F5F5F5",
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    textAlign: "center",
+    lineHeight: 20,
+  },
 
-  /* Modal */
-  modalBackdrop: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center", alignItems: "center", padding: 24,
+  /* modal */
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
   modalCard: {
-    backgroundColor: "#1A1A1A", borderRadius: 16, padding: 20,
-    borderWidth: 1, borderColor: "#2A2A2A", width: "100%", maxWidth: 400,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    width: "100%",
+    maxWidth: 400,
   },
-  modalTitle: { fontSize: 20, fontWeight: "700", color: "#F5F5F5", marginBottom: 16 },
-  fieldLabel: {
-    fontSize: 12, fontWeight: "600", color: "#9A9A9A",
-    marginBottom: 6, marginTop: 8, textTransform: "uppercase",
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#9A9A9A",
+    marginBottom: 6,
+    marginTop: 8,
+    textTransform: "uppercase",
   },
   input: {
-    backgroundColor: "#0A0A0A", color: "#F5F5F5", padding: 14,
-    borderRadius: 12, borderWidth: 1, borderColor: "#2A2A2A", fontSize: 16,
+    backgroundColor: "#0A0A0A",
+    color: "#F5F5F5",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    fontSize: 16,
   },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 12, marginTop: 20 },
-  modalButton: {
-    paddingVertical: 12, paddingHorizontal: 16,
-    borderRadius: 12, backgroundColor: "#2A2A2A",
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 20,
   },
-  modalButtonText: { color: "#F5F5F5", fontSize: 14, fontWeight: "600" },
+  modalBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "#2A2A2A",
+  },
+  modalBtnText: { color: "#F5F5F5", fontSize: 14, fontWeight: "600" },
 });
