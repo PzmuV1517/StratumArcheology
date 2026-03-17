@@ -56,7 +56,6 @@ import * as FileSystemLegacy from "expo-file-system/legacy";
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
-let XLSX: any = null;
 let AutoSizer: any = null;
 let VariableSizeGrid: any = null;
 
@@ -98,9 +97,7 @@ export default function DataPreviewScreen() {
       ext.endsWith(".txt") ||
       ext.endsWith(".md") ||
       ext.endsWith(".json") ||
-      ext.endsWith(".csv") ||
-      ext.endsWith(".xlsx") ||
-      ext.endsWith(".xls")
+      ext.endsWith(".csv")
     );
   }, [name]);
 
@@ -397,11 +394,6 @@ export default function DataPreviewScreen() {
           if (!Papa)
             Papa =
               (await import("papaparse")).default || (await import("papaparse"));
-          try {
-            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
-          } catch {
-            XLSX = null;
-          }
 
           if (ext.endsWith(".csv")) {
             const text = await blob.text();
@@ -409,16 +401,7 @@ export default function DataPreviewScreen() {
             if (parsed?.data) setTable(parsed.data as any);
             else setTextContent(text);
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-            if (!XLSX) {
-              setTextContent("[xlsx library not installed – install \"xlsx\" to preview Excel files]");
-            } else {
-              const arrayBuffer = await blob.arrayBuffer();
-              const wb = XLSX.read(arrayBuffer, { type: "array" });
-              const firstSheet = wb.SheetNames[0];
-              const ws = wb.Sheets[firstSheet];
-              const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
-              setTable(json as string[][]);
-            }
+            setTextContent("Excel preview is not supported. Convert to CSV for editing.");
           } else {
             // Try CSV by MIME fallback
             try {
@@ -602,27 +585,8 @@ export default function DataPreviewScreen() {
           const csv = Papa.unparse(trimmed);
           blob = new Blob([csv], { type: "text/csv" });
         } else {
-          try {
-            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
-          } catch {
-            XLSX = null;
-          }
-          if (!XLSX) {
-            showAlert("Error", "xlsx library not installed – cannot save Excel files");
-            return;
-          }
-          const ws = XLSX.utils.aoa_to_sheet(trimmed);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-          const wbout = XLSX.write(wb, {
-            bookType: ext.endsWith(".xls") ? "xls" : "xlsx",
-            type: "array",
-          });
-          blob = new Blob([wbout], {
-            type: ext.endsWith(".xls")
-              ? "application/vnd.ms-excel"
-              : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          });
+          showAlert("Error", "Excel saving is not supported. Convert to CSV for editing.");
+          return;
         }
       } else {
         return;
