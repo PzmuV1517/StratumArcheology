@@ -25,6 +25,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from datetime import datetime
+
 import jwt
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -37,6 +39,36 @@ from app.models import User
 security = HTTPBearer(
     auto_error=False
 )  # Allow None for endpoints with optional auth
+
+
+def build_maintainer_user() -> User:
+    """Build an in-memory maintainer user object from env credentials."""
+    maintainer_user = User(
+        id="MAINTAINER",
+        firebase_uid="MAINTAINER",
+        email=settings.MAINTAINER_EMAIL,
+        username="maintainer",
+        display_name="System Maintainer",
+        show_projects=True,
+        photo_url=None,
+        banner_url=None,
+        bio=None,
+        description=None,
+        phone=None,
+        timezone=None,
+        link_x=None,
+        link_discord=None,
+        link_bsky=None,
+        link_linkedin=None,
+        link_website=None,
+        is_emonument_privileged=True,
+        is_dashboard_admin=True,
+        has_completed_onboarding=True,
+        created_at=datetime.utcnow(),
+        last_login=datetime.utcnow(),
+    )
+    setattr(maintainer_user, "is_maintainer", True)
+    return maintainer_user
 
 
 async def get_current_user(
@@ -63,6 +95,10 @@ async def get_current_user(
                 detail="Invalid token payload",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+        # Allow maintainer bypass
+        if user_id == "MAINTAINER":
+            return build_maintainer_user()
 
         # Get user from database
         user = db.query(User).filter(User.id == user_id).first()
@@ -131,6 +167,10 @@ async def get_current_user_or_token(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        # Allow maintainer bypass
+        if user_id == "MAINTAINER":
+            return build_maintainer_user()
+
         # Get user from database
         user = db.query(User).filter(User.id == user_id).first()
 
@@ -161,6 +201,9 @@ def check_project_permission(
     project_id: str, user: User, db: Session, required_role: str = None
 ) -> bool:
     """Check if user has permission to access a project"""
+    if getattr(user, "is_maintainer", False):
+        return True
+
     from sqlalchemy import select
 
     from app.models import Project, project_members

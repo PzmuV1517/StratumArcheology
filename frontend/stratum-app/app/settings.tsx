@@ -850,6 +850,7 @@ export default function SettingsScreen() {
               <Text style={styles.menuItemArrow}>→</Text>
             </TouchableOpacity>
           )}
+
         </View>
 
         {/* ── Connection & Sync Section ────────────────── */}

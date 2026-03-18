@@ -56,6 +56,8 @@ interface User {
   link_bsky?: string;
   link_linkedin?: string;
   link_website?: string;
+  is_emonument_privileged?: boolean;
+  is_dashboard_admin?: boolean;
   has_completed_onboarding?: boolean;
 }
 
@@ -162,6 +164,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             link_bsky: response.data.link_bsky,
             link_linkedin: response.data.link_linkedin,
             link_website: response.data.link_website,
+            is_emonument_privileged: response.data.is_emonument_privileged,
+            is_dashboard_admin: response.data.is_dashboard_admin,
             has_completed_onboarding: response.data.has_completed_onboarding,
           };
           await authService.updateUserData(freshUser);
@@ -253,6 +257,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           link_bsky: response.data.link_bsky,
           link_linkedin: response.data.link_linkedin,
           link_website: response.data.link_website,
+          is_emonument_privileged: response.data.is_emonument_privileged,
+          is_dashboard_admin: response.data.is_dashboard_admin,
           has_completed_onboarding: response.data.has_completed_onboarding,
         };
         await authService.updateUserData(freshUser);

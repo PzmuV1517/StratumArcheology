@@ -51,6 +51,8 @@ from app.routes import (
     channels,
     chat,
     convert,
+    emonument_dashboard,
+    emonument_instances,
     files,
     forms,
     gps,
@@ -124,6 +126,8 @@ app.include_router(qrcodes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(channels.router, prefix="/api")
+app.include_router(emonument_dashboard.router, prefix="/api")
+app.include_router(emonument_instances.router, prefix="/api")
 
 logger.info(
     "STRATUM API started",

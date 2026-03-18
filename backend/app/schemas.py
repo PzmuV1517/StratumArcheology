@@ -96,6 +96,8 @@ class UserResponse(UserBase):
     id: str
     firebase_uid: str
     has_completed_onboarding: bool = False
+    is_emonument_privileged: bool = False
+    is_dashboard_admin: bool = False
     created_at: datetime
     last_login: datetime | None = None
 

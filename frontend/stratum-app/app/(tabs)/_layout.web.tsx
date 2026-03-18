@@ -58,7 +58,7 @@ const PAGE_BG = "#111111";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BORDER = "#2A2A2A";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { name: "index", label: "Overview", icon: "house.fill" as const, path: "/" },
   {
     name: "projects",
@@ -102,6 +102,9 @@ const bStyles = StyleSheet.create({
  * ─────────────────────────────────────────── */
 export default function TabLayout() {
   const { user, logout } = useAuth();
+  const canAccessEmonument = Boolean(
+    user?.is_emonument_privileged || user?.is_dashboard_admin,
+  );
   const [usernameSet, setUsernameSet] = useState(false);
   const needsUsername = !!user && !user.username && !usernameSet;
   const handleUsernameComplete = useCallback(() => setUsernameSet(true), []);
@@ -162,6 +165,18 @@ export default function TabLayout() {
     if (user.email) return user.email.charAt(0).toUpperCase();
     return "?";
   };
+
+  const navItems = canAccessEmonument
+    ? [
+        ...BASE_NAV_ITEMS,
+        {
+          name: "emonument",
+          label: "eMonument",
+          icon: "mountain.2.fill" as const,
+          path: "/emonument",
+        },
+      ]
+    : BASE_NAV_ITEMS;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -251,7 +266,7 @@ export default function TabLayout() {
         <View style={s.bodyRow}>
           {/* Sidebar nav — also driven by widthAnim */}
           <Animated.View style={[s.sidebar, { width: widthAnim }]}>
-            {NAV_ITEMS.map(({ name, label, icon, path }) => {
+            {navItems.map(({ name, label, icon, path }) => {
               const active = isActive(path);
               return (
                 <TouchableOpacity
@@ -294,6 +309,10 @@ export default function TabLayout() {
               <Tabs.Screen name="settings" options={{ title: "Settings" }} />
               <Tabs.Screen name="gps" options={{ href: null }} />
               <Tabs.Screen name="dm/[userId]" options={{ href: null }} />
+              <Tabs.Screen
+                name="emonument"
+                options={{ href: canAccessEmonument ? "/emonument" : null }}
+              />
             </Tabs>
           </View>
         </View>

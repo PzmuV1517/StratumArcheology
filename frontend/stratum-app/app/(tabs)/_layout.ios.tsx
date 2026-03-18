@@ -142,6 +142,10 @@ export default function TabLayout() {
         <NativeTabs.Trigger name="dm/[userId]" hidden>
           <Label>DM</Label>
         </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="emonument" hidden>
+          <Label>eMonument</Label>
+        </NativeTabs.Trigger>
       </NativeTabs>
 
       {/* Floating profile button */}

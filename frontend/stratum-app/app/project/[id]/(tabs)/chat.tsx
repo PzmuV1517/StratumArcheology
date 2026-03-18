@@ -28,14 +28,14 @@ import {
 } from "react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
-import { useChat } from "@/src/hooks/useChat";
-import { ChatBubble, MessageInput, TypingIndicator } from "@/src/components/chat";
-import { chatService } from "@/src/services/chatService";
-import { projectService } from "@/src/services/projectService";
-import { ensureProjectKey } from "@/src/utils/e2ee";
-import type { ChatMessage, Channel } from "@/src/services/chatService.types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
+import { useChat } from "@/hooks/useChat";
+import { ChatBubble, MessageInput, TypingIndicator } from "@/components/chat";
+import { chatService } from "@/services/chatService";
+import { projectService } from "@/services/projectService";
+import { ensureProjectKey } from "@/utils/e2ee";
+import type { ChatMessage, Channel } from "@/services/chatService.types";
 
 /* ================================================================== *
  *  Screen                                                            *

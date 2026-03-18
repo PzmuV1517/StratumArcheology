@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "stratum-files"
     MINIO_USE_SSL: bool = False
 
+    # Dashboard Maintainer
+    MAINTAINER_EMAIL: str 
+    MAINTAINER_PASSWORD: str
+
     # App
     APP_SECRET_KEY: str
     APP_DEBUG: bool = True

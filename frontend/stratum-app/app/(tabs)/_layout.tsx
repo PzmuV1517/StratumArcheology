@@ -238,6 +238,14 @@ export default function TabLayout() {
           href: null,
         }}
       />
+
+      {/* Hidden eMonument tab (accessible from Settings) */}
+      <Tabs.Screen
+        name="emonument"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
     </>
   );
