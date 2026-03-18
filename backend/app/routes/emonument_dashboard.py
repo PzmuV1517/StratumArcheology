@@ -11,7 +11,7 @@ from datetime import datetime
 
 import firebase_admin.auth as firebase_auth
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -19,7 +19,7 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.middleware import get_logger
-from app.models import User
+from app.models import Monument, User
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/emonument-dashboard", tags=["eMonument Dashboard"])
@@ -58,6 +58,32 @@ class DashboardUpdateUserRequest(BaseModel):
     username: str | None = None
     is_emonument_privileged: bool | None = None
     is_dashboard_admin: bool | None = None
+
+
+class DashboardMonumentResponse(BaseModel):
+    id: str
+    lmi_code: str
+    name: str
+    county: str | None = None
+    locality: str | None = None
+    address: str | None = None
+    latitude: str | None = None
+    longitude: str | None = None
+    status: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class DashboardCreateMonumentRequest(BaseModel):
+    lmi_code: str
+    name: str
+    county: str | None = None
+    locality: str | None = None
+    address: str | None = None
+    latitude: str | None = None
+    longitude: str | None = None
+    status: str | None = None
 
 
 def _is_maintainer(user: User) -> bool:
@@ -284,3 +310,74 @@ async def send_password_reset_email(
         )
 
     return {"message": "Password reset email sent", "email": target.email}
+
+
+@router.get("/monuments", response_model=list[DashboardMonumentResponse])
+async def list_dashboard_monuments(
+    q: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List monuments for dashboard management."""
+    _assert_dashboard_actor(current_user)
+
+    query = db.query(Monument)
+    if q:
+        like_q = f"%{q}%"
+        query = query.filter(
+            (Monument.lmi_code.ilike(like_q))
+            | (Monument.name.ilike(like_q))
+            | (Monument.locality.ilike(like_q))
+            | (Monument.county.ilike(like_q))
+        )
+
+    monuments = query.order_by(Monument.lmi_code.asc()).all()
+    return [DashboardMonumentResponse.model_validate(m) for m in monuments]
+
+
+@router.post("/monuments", response_model=DashboardMonumentResponse)
+async def create_dashboard_monument(
+    request: DashboardCreateMonumentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new monument available for eMonument forms."""
+    _assert_dashboard_actor(current_user)
+
+    lmi_code = request.lmi_code.strip()
+    if not lmi_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="lmi_code is required",
+        )
+
+    if db.query(Monument).filter(Monument.lmi_code == lmi_code).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Monument with this LMI code already exists",
+        )
+
+    name = request.name.strip()
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="name is required",
+        )
+
+    monument = Monument(
+        id=str(uuid.uuid4()),
+        lmi_code=lmi_code,
+        name=name,
+        county=request.county.strip() if request.county else None,
+        locality=request.locality.strip() if request.locality else None,
+        address=request.address.strip() if request.address else None,
+        latitude=request.latitude.strip() if request.latitude else None,
+        longitude=request.longitude.strip() if request.longitude else None,
+        status=request.status.strip() if request.status else None,
+    )
+
+    db.add(monument)
+    db.commit()
+    db.refresh(monument)
+
+    return DashboardMonumentResponse.model_validate(monument)

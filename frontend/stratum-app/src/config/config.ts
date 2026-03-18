@@ -90,17 +90,37 @@ const getApiBaseUrl = (): string => {
   );
 
   if (Platform.OS === "web") {
-    // In production (served from a domain), use relative URLs so it works on any domain
-    // In development (localhost), explicitly use localhost
-    if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
-      // Production: use relative URL (e.g., /api on https://stratum.andreibanu.com)
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      const pagePort = window.location.port;
+      const isLocalHost =
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "::1" ||
+        host === "0.0.0.0";
+      const isExpoDevPort =
+        pagePort === "8081" ||
+        pagePort === "19006" ||
+        pagePort === "19000" ||
+        pagePort === "19001";
+      const isDevelopment = process.env.NODE_ENV !== "production";
+
+      // Expo web dev commonly runs on :8081/:19006 and should target backend on :8000.
+      if (isDevelopment || isLocalHost || isExpoDevPort) {
+        const resolvedHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+        const url = `http://${resolvedHost}:${port}/api`;
+        console.log("[Config] Web development, using:", url);
+        return url;
+      }
+
+      // Production: use relative URL (e.g., /api on deployed domain)
       const url = `/api`;
       console.log("[Config] Web production, using relative URL:", url);
       return url;
     }
-    // Development: use localhost
+
     const url = `http://localhost:${port}/api`;
-    console.log("[Config] Web development, using:", url);
+    console.log("[Config] Web fallback, using:", url);
     return url;
   }
 

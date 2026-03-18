@@ -8,13 +8,18 @@ const StarBorder = ({
   speed = "6s",
   thickness = 1,
   children,
+  onPress,
+  onClick,
   ...rest
 }) => {
+  const resolvedPressHandler = onClick || onPress;
+
   // Only apply className and HTML styles on web
   const webProps =
     Platform.OS === "web"
       ? {
           className: `star-border-container ${className}`,
+          onClick: resolvedPressHandler,
           style: {
             padding: `${thickness}px 0`,
             ...(rest.style || {}),
@@ -22,8 +27,15 @@ const StarBorder = ({
         }
       : {};
 
+  const nativeProps =
+    Platform.OS === "web"
+      ? {}
+      : {
+          onPress: resolvedPressHandler,
+        };
+
   return (
-    <Component {...webProps} {...rest}>
+    <Component {...webProps} {...nativeProps} {...rest}>
       {Platform.OS === "web" ? (
         <>
           <div

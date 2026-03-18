@@ -62,6 +62,7 @@ function RootLayoutNav() {
   // Web-only: register the precaching service worker
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    if (process.env.NODE_ENV !== "production") return;
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker
       .register("/sw.js")

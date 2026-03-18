@@ -64,6 +64,8 @@ export interface EMonumentInstance {
   updated_at: string;
 }
 
+export type EMonumentInstanceStatus = EMonumentInstance["status"];
+
 export const emonumentService = {
   getFormSchema: async (): Promise<EMonumentSchemaResponse> => {
     const res = await api.get("/emonument/form-schema");
@@ -91,11 +93,11 @@ export const emonumentService = {
   },
 
   createInstance: async (
-    monumentId: string,
+    monumentCode: string,
     data: Record<string, unknown>,
   ): Promise<EMonumentInstance> => {
     const res = await api.post("/emonument/instances", {
-      monument_id: monumentId,
+      monument_code: monumentCode,
       data,
     });
     return res.data;
@@ -104,8 +106,17 @@ export const emonumentService = {
   updateInstance: async (
     instanceId: string,
     data: Record<string, unknown>,
+    status?: EMonumentInstanceStatus,
   ): Promise<EMonumentInstance> => {
-    const res = await api.patch(`/emonument/instances/${instanceId}`, { data });
+    const res = await api.patch(`/emonument/instances/${instanceId}`, {
+      data,
+      status,
+    });
+    return res.data;
+  },
+
+  submitForVerification: async (instanceId: string): Promise<EMonumentInstance> => {
+    const res = await api.post(`/emonument/instances/${instanceId}/submit`);
     return res.data;
   },
 };

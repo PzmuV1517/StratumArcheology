@@ -22,7 +22,8 @@ router = APIRouter(prefix="/emonument", tags=["eMonument Workflow"])
 
 
 class FisaCreateRequest(BaseModel):
-    monument_id: str
+    monument_id: str | None = None
+    monument_code: str | None = None
     device_id: str | None = None
     data: dict = {}
 
@@ -244,7 +245,17 @@ async def create_instance(
             },
         )
 
-    monument = db.query(Monument).filter(Monument.id == request.monument_id).first()
+    monument_ref = (request.monument_code or request.monument_id or "").strip()
+    if not monument_ref:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="monument_code or monument_id is required",
+        )
+
+    monument = db.query(Monument).filter(Monument.lmi_code == monument_ref).first()
+    if not monument:
+        monument = db.query(Monument).filter(Monument.id == monument_ref).first()
+
     if not monument:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -252,7 +263,7 @@ async def create_instance(
         )
 
     instance = FisaInstance(
-        monument_id=request.monument_id,
+        monument_id=monument.id,
         user_id=None if _is_maintainer(current_user) else current_user.id,
         device_id=request.device_id,
         status=FisaInstanceStatus.DRAFT,

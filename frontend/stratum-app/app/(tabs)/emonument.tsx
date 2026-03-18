@@ -1,20 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   emonumentService,
+  EMonumentFormField,
   EMonumentFormSection,
+  EMonumentInstance,
+  EMonumentInstanceStatus,
+  EMonumentMonument,
   EMonumentValidationIssue,
 } from "@/services/emonumentService";
+
+const LEGACY_DEV_FALLBACK_MONUMENT_ID = "00000000-0000-0000-0000-000000000001";
+
+function isFilledValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
 
 export default function EMonumentHiddenTab() {
   const router = useRouter();
@@ -23,9 +42,24 @@ export default function EMonumentHiddenTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(true);
   const [schema, setSchema] = useState<EMonumentFormSection[]>([]);
-  const [instanceCount, setInstanceCount] = useState(0);
+  const [instances, setInstances] = useState<EMonumentInstance[]>([]);
+  const [monuments, setMonuments] = useState<EMonumentMonument[]>([]);
+
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingInstanceId, setEditingInstanceId] = useState<string | null>(null);
+  const [selectedMonumentCode, setSelectedMonumentCode] = useState<string>("");
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [validationIssues, setValidationIssues] = useState<EMonumentValidationIssue[]>([]);
-  const [validating, setValidating] = useState(false);
+  const [monumentSearchQuery, setMonumentSearchQuery] = useState("");
+  const [appliedMonumentSearchQuery, setAppliedMonumentSearchQuery] = useState("");
+  const [hasAppliedMonumentSearch, setHasAppliedMonumentSearch] = useState(false);
+  const [instanceQuery, setInstanceQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | EMonumentInstanceStatus>("all");
+  const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
+  const { width } = useWindowDimensions();
+  const isWide = width >= 1200;
 
   const canAccess = useMemo(
     () => Boolean(user?.is_emonument_privileged || user?.is_dashboard_admin),
@@ -40,15 +74,202 @@ export default function EMonumentHiddenTab() {
     return walk(schema);
   }, [schema]);
 
+  const monumentNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of monuments) {
+      const label = `${m.lmi_code} - ${m.name}`;
+      map.set(m.id, label);
+    }
+    return map;
+  }, [monuments]);
+
+  const monumentCodeById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of monuments) {
+      map.set(m.id, m.lmi_code);
+    }
+    return map;
+  }, [monuments]);
+
+  const sectionProgress = useMemo(() => {
+    return schema.map((section) => {
+      let total = 0;
+      let filled = 0;
+
+      for (const field of section.fields) {
+        total += 1;
+        const sectionData = (formData[section.key] as Record<string, unknown> | undefined) || {};
+        if (isFilledValue(sectionData[field.key])) {
+          filled += 1;
+        }
+      }
+
+      for (const sub of section.subsections) {
+        const sectionData = (formData[section.key] as Record<string, unknown> | undefined) || {};
+        const subData = (sectionData[sub.key] as Record<string, unknown> | undefined) || {};
+        for (const field of sub.fields) {
+          total += 1;
+          if (isFilledValue(subData[field.key])) {
+            filled += 1;
+          }
+        }
+      }
+
+      return {
+        key: section.key,
+        label: section.label,
+        total,
+        filled,
+      };
+    });
+  }, [schema, formData]);
+
+  const overallProgress = useMemo(() => {
+    const total = sectionProgress.reduce((sum, section) => sum + section.total, 0);
+    const filled = sectionProgress.reduce((sum, section) => sum + section.filled, 0);
+    const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+    return { total, filled, percent };
+  }, [sectionProgress]);
+
+  const filteredInstances = useMemo(() => {
+    const query = instanceQuery.trim().toLowerCase();
+    return [...instances]
+      .filter((instance) => (statusFilter === "all" ? true : instance.status === statusFilter))
+      .filter((instance) => {
+        if (!query) return true;
+        const code = (monumentCodeById.get(instance.monument_id) || "").toLowerCase();
+        const label = (monumentNameById.get(instance.monument_id) || "").toLowerCase();
+        return code.includes(query) || label.includes(query) || instance.id.toLowerCase().includes(query);
+      })
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  }, [instances, statusFilter, instanceQuery, monumentCodeById, monumentNameById]);
+
+  const filteredMonumentsForPicker = useMemo(() => {
+    if (!hasAppliedMonumentSearch) {
+      return [];
+    }
+
+    const query = appliedMonumentSearchQuery.trim().toLowerCase();
+    const base = query
+      ? monuments.filter((m) => {
+          const code = m.lmi_code.toLowerCase();
+          const name = m.name.toLowerCase();
+          return code.includes(query) || name.includes(query);
+        })
+      : monuments;
+
+    return base.slice(0, 25);
+  }, [monuments, hasAppliedMonumentSearch, appliedMonumentSearchQuery]);
+
+  const selectedMonument = useMemo(
+    () => monuments.find((m) => m.lmi_code === selectedMonumentCode) || null,
+    [monuments, selectedMonumentCode],
+  );
+
+  const buildSchemaSkeleton = useCallback((sections: EMonumentFormSection[]) => {
+    const root: Record<string, unknown> = {};
+    for (const section of sections) {
+      const sectionPayload: Record<string, unknown> = {};
+      for (const subsection of section.subsections) {
+        sectionPayload[subsection.key] = {};
+      }
+      root[section.key] = sectionPayload;
+    }
+    return root;
+  }, []);
+
+  const buildAutoFillValue = useCallback(
+    (
+      sectionPath: string,
+      field: EMonumentFormField,
+    ): unknown => {
+      const fieldPath = `${sectionPath}.${field.key}`;
+
+      if (fieldPath === "stare_conservare_riscuri.probabilitate") {
+        return 2;
+      }
+      if (fieldPath === "stare_conservare_riscuri.grad") {
+        return 3;
+      }
+      if (fieldPath === "stare_conservare_riscuri.nivel_risc") {
+        return 6;
+      }
+
+      let candidateValue: unknown;
+
+      if (field.type === "select") {
+        if (field.key === "tip_istoric_clasare") {
+          candidateValue = field.options?.includes("oficiala_actuala")
+            ? "oficiala_actuala"
+            : field.options?.[0] || "oficiala_actuala";
+        } else {
+          candidateValue = field.options?.[0] || "valoare_test";
+        }
+      } else if (field.type === "multi_select") {
+        candidateValue = field.options?.length ? [field.options[0]] : ["valoare_test"];
+      } else if (field.type === "number") {
+        candidateValue = 1;
+      } else if (field.type === "date") {
+        candidateValue = "2026-03-18";
+      } else if (field.type === "long_text") {
+        candidateValue = `Test valid pentru ${field.label}`;
+      } else {
+        candidateValue = `Test ${field.label}`;
+      }
+
+      if (field.multiple && !Array.isArray(candidateValue)) {
+        return [candidateValue];
+      }
+
+      return candidateValue;
+    },
+    [],
+  );
+
+  const buildAutoFillSectionPayload = useCallback(
+    (section: EMonumentFormSection, sectionPath: string): Record<string, unknown> => {
+      const payload: Record<string, unknown> = {};
+
+      for (const field of section.fields) {
+        payload[field.key] = buildAutoFillValue(sectionPath, field);
+      }
+
+      for (const subsection of section.subsections) {
+        payload[subsection.key] = buildAutoFillSectionPayload(
+          subsection,
+          `${sectionPath}.${subsection.key}`,
+        );
+      }
+
+      return payload;
+    },
+    [buildAutoFillValue],
+  );
+
+  const buildAutoFillPayload = useCallback(
+    (sections: EMonumentFormSection[]): Record<string, unknown> => {
+      const root: Record<string, unknown> = {};
+
+      for (const section of sections) {
+        root[section.key] = buildAutoFillSectionPayload(section, section.key);
+      }
+
+      return root;
+    },
+    [buildAutoFillSectionPayload],
+  );
+
   const load = useCallback(async () => {
     try {
-      const [schemaRes, instances] = await Promise.all([
+      const [schemaRes, instancesRes, monumentsRes] = await Promise.all([
         emonumentService.getFormSchema(),
         emonumentService.listInstances(),
+        emonumentService.listMonuments(),
       ]);
       setIsAuthorized(true);
       setSchema(schemaRes.sections || []);
-      setInstanceCount(instances.length);
+      setInstances(instancesRes || []);
+      setMonuments(monumentsRes || []);
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
@@ -70,20 +291,458 @@ export default function EMonumentHiddenTab() {
   }, [load]);
 
   const runStrictValidation = useCallback(async () => {
-    setValidating(true);
     setValidationIssues([]);
     try {
-      const samplePayload: Record<string, unknown> = {
-        identificare: { denumire: "Monument demo" },
-        localizare: { judet: "Bucuresti", ut: "Bucuresti" },
-        protectie_valorificare: { criterii_evaluare_globala: "Evaluare initiala" },
-      };
-      const res = await emonumentService.validatePayload(samplePayload, true);
+      const res = await emonumentService.validatePayload(formData, true);
       setValidationIssues(res.errors || []);
-    } finally {
-      setValidating(false);
+      return res.valid;
+    } catch {
+      return false;
     }
+  }, [formData]);
+
+  const openNewForm = useCallback(() => {
+    setEditingInstanceId(null);
+    setFormData(buildSchemaSkeleton(schema));
+    setValidationIssues([]);
+    setSelectedMonumentCode((prev) => prev || monuments[0]?.lmi_code || "");
+    setMonumentSearchQuery("");
+    setAppliedMonumentSearchQuery("");
+    setHasAppliedMonumentSearch(false);
+    setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
+    setShowEditor(true);
+  }, [buildSchemaSkeleton, schema, monuments]);
+
+  const openExisting = useCallback((instance: EMonumentInstance) => {
+    setEditingInstanceId(instance.id);
+    setFormData((instance.data as Record<string, unknown>) || {});
+    setValidationIssues([]);
+    setSelectedMonumentCode(monumentCodeById.get(instance.monument_id) || "");
+    setMonumentSearchQuery("");
+    setAppliedMonumentSearchQuery("");
+    setHasAppliedMonumentSearch(false);
+    setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
+    setShowEditor(true);
+  }, [monumentCodeById, schema]);
+
+  const closeEditor = useCallback(() => {
+    setShowEditor(false);
+    setEditingInstanceId(null);
+    setFormData({});
+    setValidationIssues([]);
+    setMonumentSearchQuery("");
+    setAppliedMonumentSearchQuery("");
+    setHasAppliedMonumentSearch(false);
+    setExpandedSectionKeys([]);
   }, []);
+
+  const applyMonumentSearch = useCallback(() => {
+    setAppliedMonumentSearchQuery(monumentSearchQuery);
+    setHasAppliedMonumentSearch(true);
+  }, [monumentSearchQuery]);
+
+  const toggleSection = useCallback((sectionKey: string) => {
+    setExpandedSectionKeys((prev) =>
+      prev.includes(sectionKey)
+        ? prev.filter((key) => key !== sectionKey)
+        : [...prev, sectionKey],
+    );
+  }, []);
+
+  const autoFillValidData = useCallback(() => {
+    const fallbackFromCurrentInstance =
+      (editingInstanceId
+        ? monumentCodeById.get(
+            instances.find((instance) => instance.id === editingInstanceId)?.monument_id || "",
+          )
+        : "") || "";
+    const fallbackFromInstances =
+      monumentCodeById.get(
+        instances.find((instance) => Boolean(instance.monument_id))?.monument_id || "",
+      ) || "";
+    const selectedCandidate =
+      selectedMonumentCode && selectedMonumentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID
+        ? selectedMonumentCode
+        : "";
+    const autoMonumentId =
+      selectedCandidate ||
+      fallbackFromCurrentInstance ||
+      monuments[0]?.lmi_code ||
+      fallbackFromInstances ||
+      "";
+
+    setFormData(buildAutoFillPayload(schema));
+
+    if (autoMonumentId) {
+      setSelectedMonumentCode(autoMonumentId);
+      setValidationIssues((prev) => prev.filter((issue) => issue.path !== "monument_code"));
+      return;
+    }
+
+    setSelectedMonumentCode("");
+    setValidationIssues([
+      {
+        path: "monument_code",
+        code: "required",
+        message: "DEV autofill a completat campurile, dar lipseste un cod LMI/ZP valid. Selecteaza unul din lista sau introdu manual un cod real.",
+      },
+    ]);
+  }, [buildAutoFillPayload, schema, selectedMonumentCode, monuments, instances, editingInstanceId, monumentCodeById]);
+
+  const getEffectiveMonumentCode = useCallback(() => {
+    if (
+      selectedMonumentCode &&
+      selectedMonumentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID
+    ) {
+      return selectedMonumentCode;
+    }
+
+    if (editingInstanceId) {
+      const current = instances.find((instance) => instance.id === editingInstanceId);
+      const currentCode = current?.monument_id ? monumentCodeById.get(current.monument_id) : "";
+      if (currentCode && currentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID) {
+        return currentCode;
+      }
+    }
+
+    if (monuments[0]?.lmi_code) {
+      return monuments[0].lmi_code;
+    }
+
+    return (
+      monumentCodeById.get(
+        instances.find((instance) => Boolean(instance.monument_id))?.monument_id || "",
+      ) || ""
+    );
+  }, [selectedMonumentCode, editingInstanceId, instances, monuments, monumentCodeById]);
+
+  const setFieldValue = useCallback(
+    (
+      sectionKey: string,
+      fieldKey: string,
+      value: unknown,
+      subsectionKey?: string,
+    ) => {
+      setFormData((prev) => {
+        const next = { ...(prev as Record<string, any>) };
+        const section = { ...(next[sectionKey] as Record<string, any> | undefined) };
+
+        if (subsectionKey) {
+          const sub = { ...(section[subsectionKey] as Record<string, any> | undefined) };
+          sub[fieldKey] = value;
+          section[subsectionKey] = sub;
+        } else {
+          section[fieldKey] = value;
+        }
+
+        next[sectionKey] = section;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const saveDraft = useCallback(async () => {
+    setValidationIssues([]);
+    const monumentCode = getEffectiveMonumentCode();
+
+    if (!monumentCode) {
+      setValidationIssues([
+        {
+          path: "monument_code",
+          code: "required",
+          message: "Selecteaza un cod LMI/ZP pentru fisa",
+        },
+      ]);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editingInstanceId) {
+        await emonumentService.updateInstance(editingInstanceId, formData);
+      } else {
+        const created = await emonumentService.createInstance(monumentCode, formData);
+        setEditingInstanceId(created.id);
+      }
+      if (selectedMonumentCode !== monumentCode) {
+        setSelectedMonumentCode(monumentCode);
+      }
+      setValidationIssues([]);
+      await load();
+    } catch (error: any) {
+      const apiErrors = error?.response?.data?.detail?.errors;
+      if (Array.isArray(apiErrors)) {
+        setValidationIssues(apiErrors);
+      } else if (error?.response?.status === 404) {
+        setValidationIssues([
+          {
+            path: "monument_code",
+            code: "not_found",
+            message: "Codul LMI/ZP selectat nu exista. Alege un cod valid din lista.",
+          },
+        ]);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [getEffectiveMonumentCode, selectedMonumentCode, editingInstanceId, formData, load]);
+
+  const submitForVerification = useCallback(async () => {
+    setValidationIssues([]);
+    const monumentCode = getEffectiveMonumentCode();
+
+    if (!monumentCode) {
+      setValidationIssues([
+        {
+          path: "monument_code",
+          code: "required",
+          message: "Selecteaza un cod LMI/ZP pentru fisa",
+        },
+      ]);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const valid = await runStrictValidation();
+      if (!valid) {
+        return;
+      }
+
+      let instanceId = editingInstanceId;
+      if (!instanceId) {
+        const created = await emonumentService.createInstance(monumentCode, formData);
+        instanceId = created.id;
+        setEditingInstanceId(created.id);
+      }
+
+      if (selectedMonumentCode !== monumentCode) {
+        setSelectedMonumentCode(monumentCode);
+      }
+
+      await emonumentService.updateInstance(
+        instanceId,
+        formData,
+        "completat" as EMonumentInstanceStatus,
+      );
+      await emonumentService.submitForVerification(instanceId);
+
+      await load();
+      setValidationIssues([]);
+      closeEditor();
+    } catch (error: any) {
+      const apiErrors = error?.response?.data?.detail?.errors;
+      if (Array.isArray(apiErrors)) {
+        setValidationIssues(apiErrors);
+      } else if (error?.response?.status === 404) {
+        setValidationIssues([
+          {
+            path: "monument_code",
+            code: "not_found",
+            message: "Codul LMI/ZP selectat nu exista. Alege un cod valid din lista.",
+          },
+        ]);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [getEffectiveMonumentCode, selectedMonumentCode, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
+
+  const renderFieldInput = useCallback(
+    (
+      section: EMonumentFormSection,
+      field: EMonumentFormField,
+      subsectionKey?: string,
+    ) => {
+      const sectionData = (formData[section.key] as Record<string, any>) || {};
+      const holder = subsectionKey
+        ? (sectionData[subsectionKey] as Record<string, any>) || {}
+        : sectionData;
+      const currentValue = holder[field.key];
+
+      if (field.type === "select" && field.options?.length) {
+        return (
+          <View style={styles.optionsWrap}>
+            {field.options.map((opt) => {
+              const active = currentValue === opt;
+              return (
+                <TouchableOpacity
+                  key={`${field.key}-${opt}`}
+                  style={[styles.optionChip, active && styles.optionChipActive]}
+                  onPress={() => setFieldValue(section.key, field.key, opt, subsectionKey)}
+                >
+                  <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        );
+      }
+
+      if (field.type === "multi_select" && field.options?.length) {
+        const selected = Array.isArray(currentValue) ? currentValue : [];
+        return (
+          <View style={styles.optionsWrap}>
+            {field.options.map((opt) => {
+              const active = selected.includes(opt);
+              return (
+                <TouchableOpacity
+                  key={`${field.key}-${opt}`}
+                  style={[styles.optionChip, active && styles.optionChipActive]}
+                  onPress={() => {
+                    const next = active
+                      ? selected.filter((x: string) => x !== opt)
+                      : [...selected, opt];
+                    setFieldValue(section.key, field.key, next, subsectionKey);
+                  }}
+                >
+                  <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        );
+      }
+
+      const multiline = field.type === "long_text";
+      const keyboardType = field.type === "number" ? "numeric" : "default";
+
+      return (
+        <TextInput
+          style={[styles.input, multiline && styles.textArea]}
+          multiline={multiline}
+          keyboardType={keyboardType}
+          value={currentValue == null ? "" : String(currentValue)}
+          placeholder={field.label}
+          placeholderTextColor="#777"
+          onChangeText={(text) => {
+            const value = field.type === "number" ? Number(text) || 0 : text;
+            setFieldValue(section.key, field.key, value, subsectionKey);
+          }}
+        />
+      );
+    },
+    [formData, setFieldValue],
+  );
+
+  const renderSection = useCallback(
+    (section: EMonumentFormSection) => {
+      const progress = sectionProgress.find((item) => item.key === section.key);
+      const isExpanded = expandedSectionKeys.includes(section.key);
+
+      return (
+        <View key={section.key} style={styles.formSectionCard}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => toggleSection(section.key)}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formSectionTitle}>{section.label}</Text>
+              <Text style={styles.sectionProgressText}>
+                {progress?.filled || 0}/{progress?.total || 0} campuri completate
+              </Text>
+            </View>
+            <Text style={styles.sectionToggle}>{isExpanded ? "Ascunde" : "Deschide"}</Text>
+          </TouchableOpacity>
+
+          {isExpanded ? (
+            <>
+              {section.fields.map((field) => (
+                <View key={`${section.key}-${field.key}`} style={styles.fieldWrap}>
+                  <Text style={styles.fieldLabel}>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </Text>
+                  {renderFieldInput(section, field)}
+                </View>
+              ))}
+
+              {section.subsections.map((sub) => (
+                <View key={`${section.key}-${sub.key}`} style={styles.subsectionWrap}>
+                  <Text style={styles.subsectionTitle}>{sub.label}</Text>
+                  {sub.fields.map((subField) => (
+                    <View key={`${section.key}-${sub.key}-${subField.key}`} style={styles.fieldWrap}>
+                      <Text style={styles.fieldLabel}>
+                        {subField.label}
+                        {subField.required ? " *" : ""}
+                      </Text>
+                      {renderFieldInput(section, subField, sub.key)}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </>
+          ) : null}
+        </View>
+      );
+    },
+    [expandedSectionKeys, renderFieldInput, sectionProgress, toggleSection],
+  );
+
+  const statusLabel = (status: EMonumentInstanceStatus) =>
+    ({
+      draft: "Draft",
+      completat: "Completat",
+      finalizat: "Finalizat",
+      in_verificare: "In verificare",
+      in_aprobare: "In aprobare",
+      validat: "Validat",
+      reintors: "Reintors",
+    }[status] || status);
+
+  const statusColor = (status: EMonumentInstanceStatus) =>
+    ({
+      draft: "#8D8D8D",
+      completat: "#4DA3FF",
+      finalizat: "#2FB7B7",
+      in_verificare: "#FFC857",
+      in_aprobare: "#FF9F1C",
+      validat: "#4CAF50",
+      reintors: "#FF5D73",
+    }[status] || "#8D8D8D");
+
+  const statusFilterLabel = (status: "all" | EMonumentInstanceStatus) =>
+    ({
+      all: "Toate",
+      draft: "Draft",
+      completat: "Completat",
+      finalizat: "Finalizat",
+      in_verificare: "Verif.",
+      in_aprobare: "Aprobare",
+      validat: "Valid.",
+      reintors: "Ret.",
+    }[status] || status);
+
+  const renderFormCard = ({ item }: { item: EMonumentInstance }) => (
+    <TouchableOpacity
+      style={styles.formCard}
+      onPress={() => openExisting(item)}
+    >
+      <View style={styles.formCardContent}>
+        <Text style={styles.formCardTitle}>
+          {`${monumentCodeById.get(item.monument_id) || "Cod lipsa"} - ${
+            monumentNameById.get(item.monument_id) || "Monument"
+          }`}
+        </Text>
+        <Text style={styles.formCardDescription}>
+          Formular eMonument v{item.version}
+        </Text>
+        <View style={styles.formCardMeta}>
+          <Text style={[styles.formCardStatus, { color: statusColor(item.status) }]}> 
+            {statusLabel(item.status)}
+          </Text>
+          <Text style={styles.formCardDate}>
+            {new Date(item.updated_at).toLocaleDateString()}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -109,89 +768,434 @@ export default function EMonumentHiddenTab() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF2A2A" />
-      }
-    >
-      <Text style={styles.title}>eMonument Hidden Tab</Text>
-      <Text style={styles.subtitle}>Schema + validation + workflow diagnostics</Text>
+    <View style={styles.container}>
+      <View style={[styles.workspace, isWide && styles.workspaceWide]}>
+        <View style={[styles.leftPane, isWide && styles.leftPaneWide]}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Formulare</Text>
+            <Text style={styles.headerSubtitle}>Gestioneaza toate formularele eMonument</Text>
+          </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Backend Integration</Text>
-        <Text style={styles.metric}>Sections: {schema.length}</Text>
-        <Text style={styles.metric}>Fields: {totalFieldCount}</Text>
-        <Text style={styles.metric}>Instances: {instanceCount}</Text>
-      </View>
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              value={instanceQuery}
+              placeholder="Search formulare..."
+              placeholderTextColor="#777"
+              onChangeText={setInstanceQuery}
+            />
+          </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Strict Validation Check</Text>
-        <TouchableOpacity
-          style={[styles.primaryButton, validating && styles.disabledButton]}
-          disabled={validating}
-          onPress={runStrictValidation}
-        >
-          <Text style={styles.primaryButtonText}>
-            {validating ? "Validating..." : "Run strict validation"}
-          </Text>
-        </TouchableOpacity>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filtersRow}
+            contentContainerStyle={styles.subTabContainer}
+          >
+            {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
+              const active = statusFilter === status;
+              return (
+                <TouchableOpacity
+                  key={status}
+                  style={[styles.subTab, active && styles.subTabActive]}
+                  onPress={() => setStatusFilter(status)}
+                >
+                  <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                    {statusFilterLabel(status)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-        {validationIssues.length > 0 ? (
-          <View style={styles.issueList}>
-            {validationIssues.slice(0, 8).map((issue, idx) => (
-              <View key={`${issue.path}-${idx}`} style={styles.issueRow}>
-                <Text style={styles.issuePath}>{issue.path}</Text>
-                <Text style={styles.issueMessage}>{issue.message}</Text>
+          {filteredInstances.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Niciun formular</Text>
+              <Text style={styles.emptySubtext}>Apasa pe + pentru a crea primul formular.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredInstances}
+              renderItem={renderFormCard}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#FF2A2A"
+                />
+              }
+            />
+          )}
+
+          <TouchableOpacity style={styles.fab} onPress={openNewForm}>
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.editorPane, isWide && styles.editorPaneWide]}>
+          <View style={styles.editorHost}>
+            <View style={styles.emptyEditorState}>
+              <Text style={styles.emptyEditorTitle}>Editor Formular</Text>
+              <Text style={styles.infoText}>Apasa pe un formular din lista din stanga sau pe butonul + Formular Nou.</Text>
+            </View>
+          </View>
+
+          {showEditor ? (
+            <View style={styles.editorOverlay}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={closeEditor}>
+                  <Text style={styles.modalAction}>Inchide</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>{editingInstanceId ? "Editare formular" : "Formular nou"}</Text>
+                {__DEV__ ? (
+                  <TouchableOpacity style={styles.devFillButton} onPress={autoFillValidData}>
+                    <Text style={styles.devFillButtonText}>DEV: Autofill</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ width: 64 }} />
+                )}
               </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.okText}>No strict validation issues in sample payload.</Text>
-        )}
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Schema Sections</Text>
-        {schema.map((section) => (
-          <View key={section.key} style={styles.sectionRow}>
-            <Text style={styles.sectionLabel}>{section.label}</Text>
-            <Text style={styles.sectionMeta}>
-              {section.fields.length} fields · {section.subsections.length} subsections
-            </Text>
-          </View>
-        ))}
+              <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 60 }}>
+                <View style={styles.progressCard}>
+                  <Text style={styles.progressTitle}>Progres Formular</Text>
+                  <Text style={styles.progressSubtitle}>
+                    {overallProgress.filled}/{overallProgress.total} campuri completate ({overallProgress.percent}%)
+                  </Text>
+                  <View style={styles.progressBarTrack}>
+                    <View style={[styles.progressBarFill, { width: `${overallProgress.percent}%` }]} />
+                  </View>
+                </View>
+
+                <View style={styles.formSectionCard}>
+                  <Text style={styles.formSectionTitle}>Monument</Text>
+                  {monuments.length > 0 ? (
+                    <>
+                      <View style={styles.monumentSearchRow}>
+                        <TextInput
+                          style={[styles.input, styles.monumentSearchInput]}
+                          value={monumentSearchQuery}
+                          placeholder="Cauta monument dupa cod LMI/ZP sau nume"
+                          placeholderTextColor="#777"
+                          onChangeText={setMonumentSearchQuery}
+                          onSubmitEditing={applyMonumentSearch}
+                          returnKeyType="search"
+                        />
+                        <TouchableOpacity style={styles.monumentSearchButton} onPress={applyMonumentSearch}>
+                          <Text style={styles.monumentSearchButtonText}>Search</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.monumentResultsList}>
+                        {!hasAppliedMonumentSearch ? (
+                          <Text style={styles.monumentResultEmpty}>Apasa Search pentru a vedea rezultate.</Text>
+                        ) : filteredMonumentsForPicker.length === 0 ? (
+                          <Text style={styles.monumentResultEmpty}>Niciun monument gasit pentru cautarea curenta.</Text>
+                        ) : (
+                          filteredMonumentsForPicker.map((m) => {
+                            const active = selectedMonumentCode === m.lmi_code;
+                            return (
+                              <TouchableOpacity
+                                key={m.id}
+                                style={[styles.monumentResultRow, active && styles.monumentResultRowActive]}
+                                onPress={() => {
+                                  setSelectedMonumentCode(m.lmi_code);
+                                  setValidationIssues((prev) =>
+                                    prev.filter(
+                                      (issue) => issue.path !== "monument_id" && issue.path !== "monument_code",
+                                    ),
+                                  );
+                                }}
+                              >
+                                <Text style={[styles.monumentResultCode, active && styles.monumentResultCodeActive]}>
+                                  {m.lmi_code}
+                                </Text>
+                                <Text style={[styles.monumentResultName, active && styles.monumentResultNameActive]}>
+                                  {m.name}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })
+                        )}
+                      </View>
+
+                      <View style={styles.selectedMonumentBox}>
+                        <Text style={styles.selectedMonumentLabel}>Selectat:</Text>
+                        <Text style={styles.selectedMonumentValue}>
+                          {selectedMonument
+                            ? `${selectedMonument.lmi_code} - ${selectedMonument.name}`
+                            : selectedMonumentCode || "Niciun monument selectat"}
+                        </Text>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.monumentFallbackText}>
+                        Nu exista monumente in lista pentru acest cont. Introdu manual un cod LMI/ZP pentru test.
+                      </Text>
+                      <TextInput
+                        style={styles.input}
+                        value={selectedMonumentCode}
+                        placeholder="Cod LMI/ZP"
+                        placeholderTextColor="#777"
+                        onChangeText={(text) => {
+                          setSelectedMonumentCode(text.trim());
+                          setValidationIssues((prev) =>
+                            prev.filter(
+                              (issue) => issue.path !== "monument_id" && issue.path !== "monument_code",
+                            ),
+                          );
+                        }}
+                      />
+                    </>
+                  )}
+                </View>
+
+                {schema.map((section) => renderSection(section))}
+
+                {validationIssues.length > 0 && (
+                  <View style={styles.issueList}>
+                    {validationIssues.map((issue, idx) => (
+                      <View key={`${issue.path}-${idx}`} style={styles.issueRow}>
+                        <Text style={styles.issuePath}>{issue.path}</Text>
+                        <Text style={styles.issueMessage}>{issue.message}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.editorActions}>
+                  <TouchableOpacity
+                    style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
+                    disabled={saving || submitting}
+                    onPress={saveDraft}
+                  >
+                    <Text style={styles.primaryButtonText}>{saving ? "Se salveaza..." : "Salveaza Draft"}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
+                    disabled={saving || submitting}
+                    onPress={submitForVerification}
+                  >
+                    <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          ) : null}
+        </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#101010",
+    backgroundColor: "#111111",
   },
-  content: {
-    padding: 16,
-    paddingBottom: 36,
+  workspace: {
+    flex: 1,
+  },
+  workspaceWide: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  leftPane: {
+    flex: 1,
+    backgroundColor: "#111111",
+  },
+  leftPaneWide: {
+    width: "44%",
+    maxWidth: 640,
+    borderRightWidth: 1,
+    borderRightColor: "#242424",
+  },
+  editorPane: {
+    flex: 1,
+    backgroundColor: "#101010",
+    position: "relative",
+  },
+  editorPaneWide: {
+    width: "56%",
+  },
+  editorHost: {
+    flex: 1,
+  },
+  editorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#101010",
+    borderLeftWidth: 1,
+    borderLeftColor: "#2A2A2A",
+    zIndex: 2,
   },
   centered: {
     flex: 1,
-    backgroundColor: "#101010",
+    backgroundColor: "#111111",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
-  title: {
-    color: "#F5F5F5",
-    fontSize: 24,
-    fontWeight: "700",
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === "web" ? 8 : 60,
+    paddingBottom: 12,
+    backgroundColor: "#111111",
   },
-  subtitle: {
-    marginTop: 6,
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#F5F5F5",
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 15,
     color: "#9A9A9A",
-    fontSize: 13,
+    marginTop: 6,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    backgroundColor: "#1A1A1A",
+    color: "#F0F0F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  subTabContainer: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    alignItems: "center",
+    minHeight: 40,
+  },
+  filtersRow: {
+    maxHeight: 48,
+  },
+  subTab: {
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    justifyContent: "center",
+    alignSelf: "center",
+  },
+  subTabActive: {
+    backgroundColor: "#FF2A2A",
+    borderColor: "#FF2A2A",
+  },
+  subTabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 14,
+    color: "#9A9A9A",
+    letterSpacing: 0.3,
+  },
+  subTabTextActive: {
+    color: "#F5F5F5",
+  },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 120,
+  },
+  formCard: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  formCardContent: {
+    padding: 16,
+  },
+  formCardTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#F5F5F5",
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  formCardDescription: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  formCardMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 8,
+  },
+  formCardStatus: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  formCardDate: {
+    fontSize: 12,
+    color: "#9A9A9A",
+    letterSpacing: 0.5,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: "#F5F5F5",
+    marginBottom: 10,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: "#9A9A9A",
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: Platform.OS === "android" ? 110 : 100,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#FF2A2A",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#FF2A2A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
+    zIndex: 999,
+  },
+  fabText: {
+    fontSize: 32,
+    lineHeight: 34,
+    color: "#F5F5F5",
+    fontWeight: "700",
   },
   card: {
     marginTop: 16,
@@ -207,10 +1211,63 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 10,
   },
+  listHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 6,
+  },
+  listSubtitle: {
+    color: "#A0A0A0",
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  newFormButtonCompact: {
+    borderRadius: 8,
+    backgroundColor: "#FF2A2A",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  newFormButtonCompactText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   metric: {
     color: "#D0D0D0",
     fontSize: 13,
     marginBottom: 4,
+  },
+  progressCard: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    backgroundColor: "#161616",
+    padding: 10,
+  },
+  progressTitle: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  progressSubtitle: {
+    color: "#B8B8B8",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  progressBarTrack: {
+    marginTop: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: "#272727",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#FF2A2A",
   },
   primaryButton: {
     backgroundColor: "#FF2A2A",
@@ -290,5 +1347,241 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: "#F5F5F5",
     fontWeight: "600",
+  },
+  modalHeader: {
+    paddingTop: 18,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#292929",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalAction: {
+    color: "#FF2A2A",
+    fontSize: 14,
+    fontWeight: "700",
+    minWidth: 64,
+  },
+  modalTitle: {
+    color: "#F5F5F5",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  modalBody: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  formSectionCard: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    backgroundColor: "#171717",
+    padding: 10,
+  },
+  formSectionTitle: {
+    color: "#F5F5F5",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    gap: 8,
+  },
+  sectionProgressText: {
+    color: "#AFAFAF",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  sectionToggle: {
+    color: "#FF9A9A",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  fieldWrap: {
+    marginBottom: 10,
+  },
+  fieldLabel: {
+    color: "#D8D8D8",
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#393939",
+    backgroundColor: "#111",
+    color: "#F0F0F0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+  },
+  textArea: {
+    minHeight: 88,
+    textAlignVertical: "top",
+  },
+  subsectionWrap: {
+    borderTopWidth: 1,
+    borderTopColor: "#2E2E2E",
+    marginTop: 6,
+    paddingTop: 8,
+  },
+  subsectionTitle: {
+    color: "#BFBFBF",
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  optionsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  optionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#3A3A3A",
+    backgroundColor: "#121212",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  optionChipActive: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "#2A1212",
+  },
+  optionChipText: {
+    color: "#C7C7C7",
+    fontSize: 11,
+  },
+  optionChipTextActive: {
+    color: "#FFD9D9",
+    fontWeight: "700",
+  },
+  monumentSearchRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  monumentSearchInput: {
+    flex: 1,
+  },
+  monumentSearchButton: {
+    borderRadius: 8,
+    backgroundColor: "#FF2A2A",
+    borderWidth: 1,
+    borderColor: "#FF2A2A",
+    paddingHorizontal: 12,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  monumentSearchButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  monumentResultsList: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#2F2F2F",
+    borderRadius: 10,
+    backgroundColor: "#131313",
+    maxHeight: 220,
+    overflow: "hidden",
+  },
+  monumentResultRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#232323",
+  },
+  monumentResultRowActive: {
+    backgroundColor: "#2A1212",
+  },
+  monumentResultCode: {
+    color: "#E5E5E5",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  monumentResultCodeActive: {
+    color: "#FFD9D9",
+  },
+  monumentResultName: {
+    color: "#BFBFBF",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  monumentResultNameActive: {
+    color: "#FFECEC",
+  },
+  monumentResultEmpty: {
+    color: "#A0A0A0",
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  selectedMonumentBox: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2E2E2E",
+    backgroundColor: "#151515",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  selectedMonumentLabel: {
+    color: "#9F9F9F",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  selectedMonumentValue: {
+    color: "#F0F0F0",
+    fontSize: 13,
+    marginTop: 4,
+  },
+  monumentFallbackText: {
+    color: "#B5B5B5",
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  editorActions: {
+    marginTop: 14,
+    marginBottom: 24,
+    gap: 8,
+  },
+  emptyEditorState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  emptyEditorTitle: {
+    color: "#F5F5F5",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  secondaryButton: {
+    backgroundColor: "#E56A00",
+  },
+  devFillButton: {
+    borderWidth: 1,
+    borderColor: "#3A3A3A",
+    backgroundColor: "#171717",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  devFillButtonText: {
+    color: "#FFD4D4",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

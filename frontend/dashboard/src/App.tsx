@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { CheckCircle2, LogOut, RotateCcw, Shield, UserPlus, Users } from 'lucide-react'
+import { CheckCircle2, Landmark, LogOut, RotateCcw, Shield, UserPlus, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
@@ -34,6 +34,18 @@ type Instance = {
   updated_at: string
 }
 
+type Monument = {
+  id: string
+  lmi_code: string
+  name: string
+  county: string | null
+  locality: string | null
+  address: string | null
+  latitude: string | null
+  longitude: string | null
+  status: string | null
+}
+
 type AuthResponse = {
   access_token: string
   user: User
@@ -43,10 +55,12 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
 })
 
+const isDev = Boolean(import.meta.env.DEV)
+
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
-  const [tab, setTab] = useState<'users' | 'instances'>('users')
+  const [tab, setTab] = useState<'users' | 'instances' | 'monuments'>('users')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -55,6 +69,7 @@ function App() {
 
   const [users, setUsers] = useState<User[]>([])
   const [instances, setInstances] = useState<Instance[]>([])
+  const [monuments, setMonuments] = useState<Monument[]>([])
 
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
@@ -63,10 +78,49 @@ function App() {
   const [newUserPrivileged, setNewUserPrivileged] = useState(true)
   const [newUserAdmin, setNewUserAdmin] = useState(false)
 
+  const [newMonumentLmiCode, setNewMonumentLmiCode] = useState('')
+  const [newMonumentName, setNewMonumentName] = useState('')
+  const [newMonumentCounty, setNewMonumentCounty] = useState('')
+  const [newMonumentLocality, setNewMonumentLocality] = useState('')
+  const [newMonumentAddress, setNewMonumentAddress] = useState('')
+  const [newMonumentLatitude, setNewMonumentLatitude] = useState('')
+  const [newMonumentLongitude, setNewMonumentLongitude] = useState('')
+  const [newMonumentStatus, setNewMonumentStatus] = useState('')
+
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   )
+
+  const fillLoginDev = () => {
+    setEmail(import.meta.env.VITE_DEV_DASHBOARD_EMAIL ?? 'admin@example.com')
+    setPassword(import.meta.env.VITE_DEV_DASHBOARD_PASSWORD ?? 'password123')
+    setError(null)
+  }
+
+  const fillCreateUserDev = () => {
+    const stamp = Date.now()
+    setNewUserEmail(`emonument.user.${stamp}@example.com`)
+    setNewUserPassword('password123')
+    setNewUserName(`eMonument User ${new Date().toLocaleTimeString()}`)
+    setNewUserUsername(`emon_user_${stamp.toString().slice(-6)}`)
+    setNewUserPrivileged(true)
+    setNewUserAdmin(false)
+    setError(null)
+  }
+
+  const fillCreateMonumentDev = () => {
+    const stamp = Date.now().toString().slice(-6)
+    setNewMonumentLmiCode(`DEV-${stamp}`)
+    setNewMonumentName(`Monument test ${stamp}`)
+    setNewMonumentCounty('Bucuresti')
+    setNewMonumentLocality('Bucuresti')
+    setNewMonumentAddress(`Strada Test ${stamp}`)
+    setNewMonumentLatitude('44.4268')
+    setNewMonumentLongitude('26.1025')
+    setNewMonumentStatus('activ')
+    setError(null)
+  }
 
   const loadMe = async (jwtToken: string) => {
     const res = await api.get<User>('/auth/me', {
@@ -87,6 +141,12 @@ function App() {
     setInstances(res.data)
   }
 
+  const loadMonuments = async () => {
+    if (!authHeaders) return
+    const res = await api.get<Monument[]>('/emonument-dashboard/monuments', { headers: authHeaders })
+    setMonuments(res.data)
+  }
+
   useEffect(() => {
     if (!token) {
       setMe(null)
@@ -94,7 +154,7 @@ function App() {
     }
 
     loadMe(token)
-      .then(() => Promise.all([loadUsers(), loadInstances()]))
+      .then(() => Promise.all([loadUsers(), loadInstances(), loadMonuments()]))
       .catch(() => {
         localStorage.removeItem('dashboard_token')
         setToken(null)
@@ -150,6 +210,48 @@ function App() {
       const message = axios.isAxiosError(err)
         ? err.response?.data?.detail ?? 'Could not create user'
         : 'Could not create user'
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateMonument = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!authHeaders) return
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await api.post<Monument>(
+        '/emonument-dashboard/monuments',
+        {
+          lmi_code: newMonumentLmiCode,
+          name: newMonumentName,
+          county: newMonumentCounty || null,
+          locality: newMonumentLocality || null,
+          address: newMonumentAddress || null,
+          latitude: newMonumentLatitude || null,
+          longitude: newMonumentLongitude || null,
+          status: newMonumentStatus || null,
+        },
+        { headers: authHeaders },
+      )
+      setNewMonumentLmiCode('')
+      setNewMonumentName('')
+      setNewMonumentCounty('')
+      setNewMonumentLocality('')
+      setNewMonumentAddress('')
+      setNewMonumentLatitude('')
+      setNewMonumentLongitude('')
+      setNewMonumentStatus('')
+      alert(`Monument created. Monument ID: ${res.data.id}`)
+      await loadMonuments()
+    } catch (err: unknown) {
+      let message = 'Could not create monument'
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data?.detail
+        message = typeof detail === 'string' ? detail : message
+      }
       setError(message)
     } finally {
       setLoading(false)
@@ -233,6 +335,11 @@ function App() {
             <button type="submit" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+            {isDev ? (
+              <button type="button" className="small ghost" onClick={fillLoginDev}>
+                DEV Autofill
+              </button>
+            ) : null}
           </form>
           {error ? <p className="error-msg">{error}</p> : null}
         </section>
@@ -260,6 +367,9 @@ function App() {
         </button>
         <button className={tab === 'instances' ? 'active' : ''} onClick={() => setTab('instances')}>
           <Shield size={16} /> Validation Flow
+        </button>
+        <button className={tab === 'monuments' ? 'active' : ''} onClick={() => setTab('monuments')}>
+          <Landmark size={16} /> Monuments
         </button>
       </nav>
 
@@ -319,6 +429,11 @@ function App() {
               <button type="submit" disabled={loading}>
                 {loading ? 'Creating...' : 'Create'}
               </button>
+              {isDev ? (
+                <button type="button" className="small ghost" onClick={fillCreateUserDev}>
+                  DEV Autofill
+                </button>
+              ) : null}
             </form>
           </article>
 
@@ -354,7 +469,7 @@ function App() {
             </div>
           </article>
         </section>
-      ) : (
+      ) : tab === 'instances' ? (
         <section className="panel">
           <h3>Inbox Validare</h3>
           <div className="table-wrap">
@@ -397,6 +512,94 @@ function App() {
               </tbody>
             </table>
           </div>
+        </section>
+      ) : (
+        <section className="grid-two">
+          <article className="panel">
+            <h3>
+              <Landmark size={18} /> Add Monument
+            </h3>
+            <form className="stack" onSubmit={handleCreateMonument}>
+              <label>
+                LMI Code
+                <input
+                  value={newMonumentLmiCode}
+                  onChange={(e) => setNewMonumentLmiCode(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Name
+                <input
+                  value={newMonumentName}
+                  onChange={(e) => setNewMonumentName(e.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                County
+                <input value={newMonumentCounty} onChange={(e) => setNewMonumentCounty(e.target.value)} />
+              </label>
+              <label>
+                Locality
+                <input value={newMonumentLocality} onChange={(e) => setNewMonumentLocality(e.target.value)} />
+              </label>
+              <label>
+                Address
+                <input value={newMonumentAddress} onChange={(e) => setNewMonumentAddress(e.target.value)} />
+              </label>
+              <label>
+                Latitude
+                <input value={newMonumentLatitude} onChange={(e) => setNewMonumentLatitude(e.target.value)} />
+              </label>
+              <label>
+                Longitude
+                <input value={newMonumentLongitude} onChange={(e) => setNewMonumentLongitude(e.target.value)} />
+              </label>
+              <label>
+                Status
+                <input value={newMonumentStatus} onChange={(e) => setNewMonumentStatus(e.target.value)} />
+              </label>
+              <button type="submit" disabled={loading}>
+                {loading ? 'Saving...' : 'Add Monument'}
+              </button>
+              {isDev ? (
+                <button type="button" className="small ghost" onClick={fillCreateMonumentDev}>
+                  DEV Autofill
+                </button>
+              ) : null}
+            </form>
+          </article>
+
+          <article className="panel">
+            <h3>Existing Monuments</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Monument ID</th>
+                    <th>LMI</th>
+                    <th>Name</th>
+                    <th>County</th>
+                    <th>Locality</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monuments.map((monument) => (
+                    <tr key={monument.id}>
+                      <td>{monument.id}</td>
+                      <td>{monument.lmi_code}</td>
+                      <td>{monument.name}</td>
+                      <td>{monument.county ?? '-'}</td>
+                      <td>{monument.locality ?? '-'}</td>
+                      <td>{monument.status ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
         </section>
       )}
     </main>
