@@ -16,13 +16,13 @@ type User = {
 }
 
 type InstanceStatus =
-  | 'DRAFT'
-  | 'COMPLETAT'
-  | 'FINALIZAT'
-  | 'IN_VERIFICARE'
-  | 'IN_APROBARE'
-  | 'VALIDAT'
-  | 'REINTORS'
+  | 'draft'
+  | 'completat'
+  | 'finalizat'
+  | 'in_verificare'
+  | 'in_aprobare'
+  | 'validat'
+  | 'reintors'
 
 type Instance = {
   id: string
@@ -61,6 +61,7 @@ function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
   const [tab, setTab] = useState<'users' | 'instances' | 'monuments'>('users')
+  const [draftsExpanded, setDraftsExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -91,6 +92,27 @@ function App() {
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token],
   )
+
+  const validationInboxInstances = useMemo(
+    () => instances.filter((instance) => instance.status !== 'draft'),
+    [instances],
+  )
+
+  const draftInstances = useMemo(
+    () => instances.filter((instance) => instance.status === 'draft'),
+    [instances],
+  )
+
+  const statusLabel = (status: InstanceStatus) =>
+    ({
+      draft: 'Draft',
+      completat: 'Completat',
+      finalizat: 'Finalizat',
+      in_verificare: 'In verificare',
+      in_aprobare: 'In aprobare',
+      validat: 'Validat',
+      reintors: 'Reintors',
+    }[status] ?? status)
 
   const fillLoginDev = () => {
     setEmail(import.meta.env.VITE_DEV_DASHBOARD_EMAIL ?? 'admin@example.com')
@@ -306,6 +328,40 @@ function App() {
     }
   }
 
+  const deleteInstance = async (instanceId: string) => {
+    if (!authHeaders) return
+    const ok = window.confirm('Delete this form? This action cannot be undone.')
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.delete(`/emonument/instances/${instanceId}`, { headers: authHeaders })
+      await loadInstances()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Delete failed'
+        : 'Delete failed'
+      setError(message)
+    }
+  }
+
+  const deleteMonument = async (monumentId: string) => {
+    if (!authHeaders) return
+    const ok = window.confirm('Delete this monument? This action cannot be undone.')
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.delete(`/emonument-dashboard/monuments/${monumentId}`, { headers: authHeaders })
+      await loadMonuments()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Delete failed'
+        : 'Delete failed'
+      setError(message)
+    }
+  }
+
   const logout = () => {
     localStorage.removeItem('dashboard_token')
     setToken(null)
@@ -472,46 +528,97 @@ function App() {
       ) : tab === 'instances' ? (
         <section className="panel">
           <h3>Inbox Validare</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Status</th>
-                  <th>Version</th>
-                  <th>Updated</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {instances.map((instance) => (
-                  <tr key={instance.id}>
-                    <td>{instance.id.slice(0, 8)}</td>
-                    <td>{instance.status}</td>
-                    <td>{instance.version}</td>
-                    <td>{new Date(instance.updated_at).toLocaleString()}</td>
-                    <td className="actions">
-                      {instance.status === 'IN_VERIFICARE' ? (
-                        <button className="small" onClick={() => updateInstanceStatus(instance.id, 'to-approval')}>
-                          <CheckCircle2 size={14} /> To Approval
-                        </button>
-                      ) : null}
-                      {instance.status === 'IN_APROBARE' ? (
-                        <button className="small" onClick={() => updateInstanceStatus(instance.id, 'approve')}>
-                          <CheckCircle2 size={14} /> Approve
-                        </button>
-                      ) : null}
-                      {(instance.status === 'IN_VERIFICARE' || instance.status === 'IN_APROBARE') ? (
-                        <button className="small danger" onClick={() => returnInstance(instance.id)}>
-                          <RotateCcw size={14} /> Return
-                        </button>
-                      ) : null}
-                    </td>
+          {validationInboxInstances.length === 0 ? (
+            <p>No forms currently in validation/approval flow.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th>Version</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {validationInboxInstances.map((instance) => (
+                    <tr key={instance.id}>
+                      <td>{instance.id.slice(0, 8)}</td>
+                      <td>{statusLabel(instance.status)}</td>
+                      <td>{instance.version}</td>
+                      <td>{new Date(instance.updated_at).toLocaleString()}</td>
+                      <td className="actions">
+                        {instance.status === 'in_verificare' ? (
+                          <button className="small" onClick={() => updateInstanceStatus(instance.id, 'to-approval')}>
+                            <CheckCircle2 size={14} /> To Approval
+                          </button>
+                        ) : null}
+                        {instance.status === 'in_aprobare' ? (
+                          <button className="small" onClick={() => updateInstanceStatus(instance.id, 'approve')}>
+                            <CheckCircle2 size={14} /> Approve
+                          </button>
+                        ) : null}
+                        {(instance.status === 'in_verificare' || instance.status === 'in_aprobare') ? (
+                          <button className="small danger" onClick={() => returnInstance(instance.id)}>
+                            <RotateCcw size={14} /> Return
+                          </button>
+                        ) : null}
+                        <button className="small danger" onClick={() => deleteInstance(instance.id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h3 style={{ margin: 0 }}>Drafts ({draftInstances.length})</h3>
+            <button className="small" onClick={() => setDraftsExpanded((prev) => !prev)}>
+              {draftsExpanded ? 'Collapse' : 'Expand'}
+            </button>
           </div>
+
+          {draftsExpanded ? (
+            draftInstances.length === 0 ? (
+              <p>No drafts.</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Status</th>
+                      <th>Version</th>
+                      <th>Updated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {draftInstances.map((instance) => (
+                      <tr key={instance.id}>
+                        <td>{instance.id.slice(0, 8)}</td>
+                        <td>{statusLabel(instance.status)}</td>
+                        <td>{instance.version}</td>
+                        <td>{new Date(instance.updated_at).toLocaleString()}</td>
+                        <td className="actions">
+                          <button className="small danger" onClick={() => deleteInstance(instance.id)}>
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            <p>Drafts are hidden. Expand to view them.</p>
+          )}
         </section>
       ) : (
         <section className="grid-two">
@@ -583,6 +690,7 @@ function App() {
                     <th>County</th>
                     <th>Locality</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -594,6 +702,11 @@ function App() {
                       <td>{monument.county ?? '-'}</td>
                       <td>{monument.locality ?? '-'}</td>
                       <td>{monument.status ?? '-'}</td>
+                      <td>
+                        <button className="small danger" onClick={() => deleteMonument(monument.id)}>
+                          Delete
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -322,6 +322,15 @@ async def update_instance(
 
     instance.data = request.data
     if request.status is not None:
+        if request.status not in {
+            FisaInstanceStatus.DRAFT,
+            FisaInstanceStatus.COMPLETAT,
+            FisaInstanceStatus.FINALIZAT,
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Collectors can only set status to draft, completat or finalizat",
+            )
         instance.status = request.status
     instance.version += 1
     instance.updated_at = datetime.utcnow()
@@ -498,3 +507,22 @@ async def list_instance_versions(
         .all()
     )
     return [FisaVersionResponse.model_validate(v) for v in versions]
+
+
+@router.delete("/instances/{instance_id}")
+async def delete_instance(
+    instance_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a form instance and all its version snapshots."""
+    instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
+    if not instance:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+
+    _assert_instance_access(current_user, instance)
+
+    db.delete(instance)
+    db.commit()
+
+    return {"message": "Instance deleted", "id": instance_id}

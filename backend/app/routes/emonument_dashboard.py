@@ -19,7 +19,7 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.middleware import get_logger
-from app.models import Monument, User
+from app.models import FisaInstance, Monument, User
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/emonument-dashboard", tags=["eMonument Dashboard"])
@@ -381,3 +381,35 @@ async def create_dashboard_monument(
     db.refresh(monument)
 
     return DashboardMonumentResponse.model_validate(monument)
+
+
+@router.delete("/monuments/{monument_id}")
+async def delete_dashboard_monument(
+    monument_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a monument if no forms are linked to it."""
+    _assert_dashboard_actor(current_user)
+
+    monument = db.query(Monument).filter(Monument.id == monument_id).first()
+    if not monument:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Monument not found",
+        )
+
+    has_instances = (
+        db.query(FisaInstance.id).filter(FisaInstance.monument_id == monument_id).first()
+        is not None
+    )
+    if has_instances:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete monument with existing forms. Delete linked forms first.",
+        )
+
+    db.delete(monument)
+    db.commit()
+
+    return {"message": "Monument deleted", "id": monument_id}

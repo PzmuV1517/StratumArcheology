@@ -119,4 +119,8 @@ export const emonumentService = {
     const res = await api.post(`/emonument/instances/${instanceId}/submit`);
     return res.data;
   },
+
+  deleteInstance: async (instanceId: string): Promise<void> => {
+    await api.delete(`/emonument/instances/${instanceId}`);
+  },
 };

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   RefreshControl,
@@ -58,6 +59,8 @@ export default function EMonumentHiddenTab() {
   const [instanceQuery, setInstanceQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | EMonumentInstanceStatus>("all");
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
   const { width } = useWindowDimensions();
   const isWide = width >= 1200;
 
@@ -166,6 +169,17 @@ export default function EMonumentHiddenTab() {
     [monuments, selectedMonumentCode],
   );
 
+  const editingInstance = useMemo(
+    () =>
+      editingInstanceId
+        ? instances.find((instance) => instance.id === editingInstanceId) || null
+        : null,
+    [instances, editingInstanceId],
+  );
+
+  const isEditingDraft = editingInstance?.status === "draft";
+  const canEditCurrentForm = !editingInstance || editingInstance.status === "draft";
+
   const buildSchemaSkeleton = useCallback((sections: EMonumentFormSection[]) => {
     const root: Record<string, unknown> = {};
     for (const section of sections) {
@@ -270,6 +284,10 @@ export default function EMonumentHiddenTab() {
       setSchema(schemaRes.sections || []);
       setInstances(instancesRes || []);
       setMonuments(monumentsRes || []);
+      setSelectedInstanceIds((prev) => {
+        const ids = new Set((instancesRes || []).map((i) => i.id));
+        return prev.filter((id) => ids.has(id));
+      });
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
@@ -443,6 +461,17 @@ export default function EMonumentHiddenTab() {
   );
 
   const saveDraft = useCallback(async () => {
+    if (!canEditCurrentForm) {
+      setValidationIssues([
+        {
+          path: "instance",
+          code: "read_only",
+          message: "Doar formularele in status draft pot fi editate.",
+        },
+      ]);
+      return;
+    }
+
     setValidationIssues([]);
     const monumentCode = getEffectiveMonumentCode();
 
@@ -460,7 +489,11 @@ export default function EMonumentHiddenTab() {
     setSaving(true);
     try {
       if (editingInstanceId) {
-        await emonumentService.updateInstance(editingInstanceId, formData);
+        await emonumentService.updateInstance(
+          editingInstanceId,
+          formData,
+          isEditingDraft ? ("draft" as EMonumentInstanceStatus) : undefined,
+        );
       } else {
         const created = await emonumentService.createInstance(monumentCode, formData);
         setEditingInstanceId(created.id);
@@ -486,9 +519,20 @@ export default function EMonumentHiddenTab() {
     } finally {
       setSaving(false);
     }
-  }, [getEffectiveMonumentCode, selectedMonumentCode, editingInstanceId, formData, load]);
+  }, [canEditCurrentForm, getEffectiveMonumentCode, selectedMonumentCode, editingInstanceId, formData, load, isEditingDraft]);
 
   const submitForVerification = useCallback(async () => {
+    if (!canEditCurrentForm) {
+      setValidationIssues([
+        {
+          path: "instance",
+          code: "read_only",
+          message: "Doar formularele in status draft pot fi editate.",
+        },
+      ]);
+      return;
+    }
+
     setValidationIssues([]);
     const monumentCode = getEffectiveMonumentCode();
 
@@ -547,7 +591,85 @@ export default function EMonumentHiddenTab() {
     } finally {
       setSubmitting(false);
     }
-  }, [getEffectiveMonumentCode, selectedMonumentCode, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
+  }, [canEditCurrentForm, getEffectiveMonumentCode, selectedMonumentCode, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
+
+  const deleteInstance = useCallback(async (instanceId: string) => {
+    try {
+      await emonumentService.deleteInstance(instanceId);
+      if (editingInstanceId === instanceId) {
+        closeEditor();
+      }
+      await load();
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail;
+      setValidationIssues([
+        {
+          path: "instance",
+          code: "delete_failed",
+          message: typeof detail === "string" ? detail : "Stergerea formularului a esuat.",
+        },
+      ]);
+    }
+  }, [closeEditor, editingInstanceId, load]);
+
+  const toggleSelectMode = useCallback(() => {
+    setIsSelectMode((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSelectedInstanceIds([]);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleInstanceSelection = useCallback((instanceId: string) => {
+    setSelectedInstanceIds((prev) =>
+      prev.includes(instanceId)
+        ? prev.filter((id) => id !== instanceId)
+        : [...prev, instanceId],
+    );
+  }, []);
+
+  const confirmDeleteSelectedInstances = useCallback(() => {
+    if (selectedInstanceIds.length === 0) {
+      return;
+    }
+
+    const message = `Stergi ${selectedInstanceIds.length} formular(e)? Actiunea este ireversibila.`;
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const ok = window.confirm(message);
+      if (ok) {
+        void (async () => {
+          for (const id of selectedInstanceIds) {
+            // Run sequentially so backend errors are surfaced deterministically.
+            await deleteInstance(id);
+          }
+          setSelectedInstanceIds([]);
+          setIsSelectMode(false);
+        })();
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Sterge formulare",
+      message,
+      [
+        { text: "Anuleaza", style: "cancel" },
+        {
+          text: "Sterge",
+          style: "destructive",
+          onPress: async () => {
+            for (const id of selectedInstanceIds) {
+              await deleteInstance(id);
+            }
+            setSelectedInstanceIds([]);
+            setIsSelectMode(false);
+          },
+        },
+      ],
+    );
+  }, [deleteInstance, selectedInstanceIds]);
 
   const renderFieldInput = useCallback(
     (
@@ -570,6 +692,7 @@ export default function EMonumentHiddenTab() {
                 <TouchableOpacity
                   key={`${field.key}-${opt}`}
                   style={[styles.optionChip, active && styles.optionChipActive]}
+                  disabled={!canEditCurrentForm}
                   onPress={() => setFieldValue(section.key, field.key, opt, subsectionKey)}
                 >
                   <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
@@ -592,6 +715,7 @@ export default function EMonumentHiddenTab() {
                 <TouchableOpacity
                   key={`${field.key}-${opt}`}
                   style={[styles.optionChip, active && styles.optionChipActive]}
+                  disabled={!canEditCurrentForm}
                   onPress={() => {
                     const next = active
                       ? selected.filter((x: string) => x !== opt)
@@ -620,6 +744,7 @@ export default function EMonumentHiddenTab() {
           value={currentValue == null ? "" : String(currentValue)}
           placeholder={field.label}
           placeholderTextColor="#777"
+          editable={canEditCurrentForm}
           onChangeText={(text) => {
             const value = field.type === "number" ? Number(text) || 0 : text;
             setFieldValue(section.key, field.key, value, subsectionKey);
@@ -627,7 +752,7 @@ export default function EMonumentHiddenTab() {
         />
       );
     },
-    [formData, setFieldValue],
+    [formData, setFieldValue, canEditCurrentForm],
   );
 
   const renderSection = useCallback(
@@ -718,10 +843,19 @@ export default function EMonumentHiddenTab() {
       reintors: "Ret.",
     }[status] || status);
 
-  const renderFormCard = ({ item }: { item: EMonumentInstance }) => (
+  const renderFormCard = ({ item }: { item: EMonumentInstance }) => {
+    const isSelected = selectedInstanceIds.includes(item.id);
+
+    return (
     <TouchableOpacity
-      style={styles.formCard}
-      onPress={() => openExisting(item)}
+      style={[styles.formCard, isSelectMode && isSelected && styles.formCardSelected]}
+      onPress={() => {
+        if (isSelectMode) {
+          toggleInstanceSelection(item.id);
+        } else {
+          openExisting(item);
+        }
+      }}
     >
       <View style={styles.formCardContent}>
         <Text style={styles.formCardTitle}>
@@ -732,6 +866,9 @@ export default function EMonumentHiddenTab() {
         <Text style={styles.formCardDescription}>
           Formular eMonument v{item.version}
         </Text>
+        {item.status === "reintors" && item.rejection_reason ? (
+          <Text style={styles.returnReasonText}>Reintors: {item.rejection_reason}</Text>
+        ) : null}
         <View style={styles.formCardMeta}>
           <Text style={[styles.formCardStatus, { color: statusColor(item.status) }]}> 
             {statusLabel(item.status)}
@@ -740,9 +877,15 @@ export default function EMonumentHiddenTab() {
             {new Date(item.updated_at).toLocaleDateString()}
           </Text>
         </View>
+        {isSelectMode ? (
+          <View style={styles.formCardActions}>
+            <Text style={styles.selectionHintText}>{isSelected ? "Selectat" : "Tap pentru selectare"}</Text>
+          </View>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
+  };
 
   if (loading) {
     return (
@@ -807,6 +950,26 @@ export default function EMonumentHiddenTab() {
               );
             })}
           </ScrollView>
+
+          <View style={styles.selectionBar}>
+            <TouchableOpacity
+              style={[styles.selectionModeButton, isSelectMode && styles.selectionModeButtonActive]}
+              onPress={toggleSelectMode}
+            >
+              <Text style={[styles.selectionModeButtonText, isSelectMode && styles.selectionModeButtonTextActive]}>
+                {isSelectMode ? "Cancel" : "Select"}
+              </Text>
+            </TouchableOpacity>
+            {isSelectMode ? (
+              <TouchableOpacity
+                style={[styles.bulkDeleteButton, selectedInstanceIds.length === 0 && styles.bulkDeleteButtonDisabled]}
+                onPress={confirmDeleteSelectedInstances}
+                disabled={selectedInstanceIds.length === 0}
+              >
+                <Text style={styles.bulkDeleteButtonText}>Delete ({selectedInstanceIds.length})</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
           {filteredInstances.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -900,7 +1063,9 @@ export default function EMonumentHiddenTab() {
                               <TouchableOpacity
                                 key={m.id}
                                 style={[styles.monumentResultRow, active && styles.monumentResultRowActive]}
+                                disabled={!canEditCurrentForm}
                                 onPress={() => {
+                                  if (!canEditCurrentForm) return;
                                   setSelectedMonumentCode(m.lmi_code);
                                   setValidationIssues((prev) =>
                                     prev.filter(
@@ -967,21 +1132,31 @@ export default function EMonumentHiddenTab() {
                 )}
 
                 <View style={styles.editorActions}>
-                  <TouchableOpacity
-                    style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
-                    disabled={saving || submitting}
-                    onPress={saveDraft}
-                  >
-                    <Text style={styles.primaryButtonText}>{saving ? "Se salveaza..." : "Salveaza Draft"}</Text>
-                  </TouchableOpacity>
+                  {canEditCurrentForm ? (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
+                        disabled={saving || submitting}
+                        onPress={saveDraft}
+                      >
+                        <Text style={styles.primaryButtonText}>
+                          {saving ? "Se salveaza..." : isEditingDraft ? "Update Draft" : "Salveaza Draft"}
+                        </Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
-                    disabled={saving || submitting}
-                    onPress={submitForVerification}
-                  >
-                    <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
-                  </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
+                        disabled={saving || submitting}
+                        onPress={submitForVerification}
+                      >
+                        <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <View style={styles.readOnlyBanner}>
+                      <Text style={styles.readOnlyBannerText}>Acest formular nu mai este editabil. Doar draft-urile pot fi editate.</Text>
+                    </View>
+                  )}
                 </View>
               </ScrollView>
             </View>
@@ -1111,6 +1286,49 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 120,
   },
+  selectionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  selectionModeButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#3A3A3A",
+    backgroundColor: "#1A1A1A",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  selectionModeButtonActive: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "#2A1212",
+  },
+  selectionModeButtonText: {
+    color: "#D2D2D2",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  selectionModeButtonTextActive: {
+    color: "#FFD9D9",
+  },
+  bulkDeleteButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#5A2222",
+    backgroundColor: "#2A1212",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  bulkDeleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  bulkDeleteButtonText: {
+    color: "#FFC5C5",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   formCard: {
     backgroundColor: "#1A1A1A",
     borderRadius: 16,
@@ -1123,6 +1341,11 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
     overflow: "hidden",
+  },
+  formCardSelected: {
+    borderColor: "#FF2A2A",
+    shadowColor: "#FF2A2A",
+    shadowOpacity: 0.2,
   },
   formCardContent: {
     padding: 16,
@@ -1140,10 +1363,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 20,
   },
+  returnReasonText: {
+    color: "#FFB3B3",
+    fontSize: 12,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
   formCardMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 8,
+  },
+  formCardActions: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  selectionHintText: {
+    color: "#FFC5C5",
+    fontSize: 12,
+    fontWeight: "700",
   },
   formCardStatus: {
     fontSize: 12,
@@ -1555,6 +1794,20 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 24,
     gap: 8,
+  },
+  readOnlyBanner: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#5A2222",
+    backgroundColor: "#2A1212",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  readOnlyBannerText: {
+    color: "#FFD4D4",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
   },
   emptyEditorState: {
     flex: 1,
