@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { CheckCircle2, Landmark, LogOut, RotateCcw, Shield, UserPlus, Users } from 'lucide-react'
+import { CheckCircle2, FileText, Landmark, LogOut, RotateCcw, Shield, UserPlus, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
@@ -30,6 +30,7 @@ type Instance = {
   user_id: string | null
   status: InstanceStatus
   version: number
+  data: Record<string, unknown>
   rejection_reason: string | null
   updated_at: string
 }
@@ -60,7 +61,8 @@ const isDev = Boolean(import.meta.env.DEV)
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
-  const [tab, setTab] = useState<'users' | 'instances' | 'monuments'>('users')
+  const [tab, setTab] = useState<'users' | 'instances' | 'monuments' | 'form-view'>('users')
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [draftsExpanded, setDraftsExpanded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -101,6 +103,11 @@ function App() {
   const draftInstances = useMemo(
     () => instances.filter((instance) => instance.status === 'draft'),
     [instances],
+  )
+
+  const selectedInstance = useMemo(
+    () => (selectedInstanceId ? instances.find((instance) => instance.id === selectedInstanceId) ?? null : null),
+    [instances, selectedInstanceId],
   )
 
   const statusLabel = (status: InstanceStatus) =>
@@ -336,6 +343,12 @@ function App() {
     setError(null)
     try {
       await api.delete(`/emonument/instances/${instanceId}`, { headers: authHeaders })
+      if (selectedInstanceId === instanceId) {
+        setSelectedInstanceId(null)
+        if (tab === 'form-view') {
+          setTab('instances')
+        }
+      }
       await loadInstances()
     } catch (err: unknown) {
       const message = axios.isAxiosError(err)
@@ -427,6 +440,11 @@ function App() {
         <button className={tab === 'monuments' ? 'active' : ''} onClick={() => setTab('monuments')}>
           <Landmark size={16} /> Monuments
         </button>
+        {selectedInstance ? (
+          <button className={tab === 'form-view' ? 'active' : ''} onClick={() => setTab('form-view')}>
+            <FileText size={16} /> Form View
+          </button>
+        ) : null}
       </nav>
 
       {error ? <p className="error-msg">{error}</p> : null}
@@ -544,28 +562,59 @@ function App() {
                 </thead>
                 <tbody>
                   {validationInboxInstances.map((instance) => (
-                    <tr key={instance.id}>
+                    <tr
+                      key={instance.id}
+                      className="clickable-row"
+                      onClick={() => {
+                        setSelectedInstanceId(instance.id)
+                        setTab('form-view')
+                      }}
+                    >
                       <td>{instance.id.slice(0, 8)}</td>
                       <td>{statusLabel(instance.status)}</td>
                       <td>{instance.version}</td>
                       <td>{new Date(instance.updated_at).toLocaleString()}</td>
                       <td className="actions">
                         {instance.status === 'in_verificare' ? (
-                          <button className="small" onClick={() => updateInstanceStatus(instance.id, 'to-approval')}>
+                          <button
+                            className="small"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void updateInstanceStatus(instance.id, 'to-approval')
+                            }}
+                          >
                             <CheckCircle2 size={14} /> To Approval
                           </button>
                         ) : null}
                         {instance.status === 'in_aprobare' ? (
-                          <button className="small" onClick={() => updateInstanceStatus(instance.id, 'approve')}>
+                          <button
+                            className="small"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void updateInstanceStatus(instance.id, 'approve')
+                            }}
+                          >
                             <CheckCircle2 size={14} /> Approve
                           </button>
                         ) : null}
                         {(instance.status === 'in_verificare' || instance.status === 'in_aprobare') ? (
-                          <button className="small danger" onClick={() => returnInstance(instance.id)}>
+                          <button
+                            className="small danger"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void returnInstance(instance.id)
+                            }}
+                          >
                             <RotateCcw size={14} /> Return
                           </button>
                         ) : null}
-                        <button className="small danger" onClick={() => deleteInstance(instance.id)}>
+                        <button
+                          className="small danger"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void deleteInstance(instance.id)
+                          }}
+                        >
                           Delete
                         </button>
                       </td>
@@ -600,13 +649,26 @@ function App() {
                   </thead>
                   <tbody>
                     {draftInstances.map((instance) => (
-                      <tr key={instance.id}>
+                      <tr
+                        key={instance.id}
+                        className="clickable-row"
+                        onClick={() => {
+                          setSelectedInstanceId(instance.id)
+                          setTab('form-view')
+                        }}
+                      >
                         <td>{instance.id.slice(0, 8)}</td>
                         <td>{statusLabel(instance.status)}</td>
                         <td>{instance.version}</td>
                         <td>{new Date(instance.updated_at).toLocaleString()}</td>
                         <td className="actions">
-                          <button className="small danger" onClick={() => deleteInstance(instance.id)}>
+                          <button
+                            className="small danger"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              void deleteInstance(instance.id)
+                            }}
+                          >
                             Delete
                           </button>
                         </td>
@@ -620,7 +682,7 @@ function App() {
             <p>Drafts are hidden. Expand to view them.</p>
           )}
         </section>
-      ) : (
+      ) : tab === 'monuments' ? (
         <section className="grid-two">
           <article className="panel">
             <h3>
@@ -713,6 +775,38 @@ function App() {
               </table>
             </div>
           </article>
+        </section>
+      ) : (
+        <section className="panel">
+          <h3>
+            <FileText size={18} /> Submitted Form View
+          </h3>
+          {selectedInstance ? (
+            <>
+              <div className="form-view-meta">
+                <p>
+                  <strong>Instance:</strong> {selectedInstance.id}
+                </p>
+                <p>
+                  <strong>Status:</strong> {statusLabel(selectedInstance.status)}
+                </p>
+                <p>
+                  <strong>Version:</strong> {selectedInstance.version}
+                </p>
+                <p>
+                  <strong>Updated:</strong> {new Date(selectedInstance.updated_at).toLocaleString()}
+                </p>
+              </div>
+              <div className="form-view-actions">
+                <button className="small" onClick={() => setTab('instances')}>
+                  Back to Validation Inbox
+                </button>
+              </div>
+              <pre className="json-view">{JSON.stringify(selectedInstance.data ?? {}, null, 2)}</pre>
+            </>
+          ) : (
+            <p>No form selected. Open one from Validation Flow.</p>
+          )}
         </section>
       )}
     </main>

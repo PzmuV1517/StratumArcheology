@@ -211,6 +211,14 @@ td {
   font-size: 0.92rem;
 }
 
+tr.clickable-row {
+  cursor: pointer;
+}
+
+tr.clickable-row:hover {
+  background: rgba(15, 118, 110, 0.08);
+}
+
 th {
   color: var(--muted);
   font-weight: 600;
@@ -238,6 +246,28 @@ th {
 .error-msg {
   color: var(--danger);
   font-weight: 600;
+}
+
+.form-view-meta {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.form-view-actions {
+  margin-top: 0.5rem;
+}
+
+.json-view {
+  margin: 0;
+  max-height: 62vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 
 @media (max-width: 960px) {
