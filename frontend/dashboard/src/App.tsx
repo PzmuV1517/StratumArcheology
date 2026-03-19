@@ -798,6 +798,22 @@ function App() {
                 </p>
               </div>
               <div className="form-view-actions">
+                {selectedInstance.status === 'in_verificare' ? (
+                  <button
+                    className="small"
+                    onClick={() => void updateInstanceStatus(selectedInstance.id, 'to-approval')}
+                  >
+                    <CheckCircle2 size={14} /> To Approval
+                  </button>
+                ) : null}
+                {selectedInstance.status === 'in_aprobare' ? (
+                  <button
+                    className="small"
+                    onClick={() => void updateInstanceStatus(selectedInstance.id, 'approve')}
+                  >
+                    <CheckCircle2 size={14} /> Approve
+                  </button>
+                ) : null}
                 <button className="small" onClick={() => setTab('instances')}>
                   Back to Validation Inbox
                 </button>

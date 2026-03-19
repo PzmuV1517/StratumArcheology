@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import MonumentPinPicker from "@/components/map/MonumentPinPicker";
 import {
   emonumentService,
   EMonumentFormField,
@@ -683,6 +684,24 @@ export default function EMonumentHiddenTab() {
         : sectionData;
       const currentValue = holder[field.key];
 
+      if (section.key === "localizare" && !subsectionKey && field.key === "pin") {
+        const monumentLatitude = Number(selectedMonument?.latitude);
+        const monumentLongitude = Number(selectedMonument?.longitude);
+        const monumentCoordinate =
+          Number.isFinite(monumentLatitude) && Number.isFinite(monumentLongitude)
+            ? { latitude: monumentLatitude, longitude: monumentLongitude }
+            : null;
+
+        return (
+          <MonumentPinPicker
+            value={currentValue}
+            editable={canEditCurrentForm}
+            monumentCoordinate={monumentCoordinate}
+            onChange={(nextValue) => setFieldValue(section.key, field.key, nextValue, subsectionKey)}
+          />
+        );
+      }
+
       if (field.type === "select" && field.options?.length) {
         return (
           <View style={styles.optionsWrap}>
@@ -752,7 +771,7 @@ export default function EMonumentHiddenTab() {
         />
       );
     },
-    [formData, setFieldValue, canEditCurrentForm],
+    [formData, setFieldValue, canEditCurrentForm, selectedMonument],
   );
 
   const renderSection = useCallback(

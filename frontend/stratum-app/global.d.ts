@@ -28,6 +28,22 @@ declare module "remark-math";
 declare module "rehype-katex";
 declare module "rehype-raw";
 declare module "d3";
+declare module "@/components/map/MonumentPinPicker" {
+  import * as React from "react";
+
+  type Coordinates = { latitude: number; longitude: number };
+
+  type MonumentPinPickerProps = {
+    value: unknown;
+    editable: boolean;
+    monumentCoordinate?: Coordinates | null;
+    onChange: (nextValue: string) => void;
+  };
+
+  const MonumentPinPicker: React.ComponentType<MonumentPinPickerProps>;
+  export default MonumentPinPicker;
+}
+
 declare module "liquid-react" {
   export const LiquidReact: {
     setSidebarAdaptable: (forceSidebar: boolean) => void;
