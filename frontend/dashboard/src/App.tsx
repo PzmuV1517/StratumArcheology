@@ -1,5 +1,17 @@
 import axios from 'axios'
-import { CheckCircle2, FileText, Landmark, LogOut, RotateCcw, Shield, UserPlus, Users } from 'lucide-react'
+import {
+  CheckCircle2,
+  Copy,
+  Download,
+  FileText,
+  Landmark,
+  LogOut,
+  RotateCcw,
+  Search,
+  Shield,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
@@ -52,6 +64,9 @@ type AuthResponse = {
   user: User
 }
 
+type InstanceSortKey = 'updated_at' | 'status' | 'version' | 'id'
+type MonumentSortKey = 'id' | 'lmi_code' | 'name' | 'county' | 'locality' | 'status'
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
 })
@@ -63,9 +78,28 @@ function App() {
   const [me, setMe] = useState<User | null>(null)
   const [tab, setTab] = useState<'users' | 'instances' | 'monuments' | 'form-view'>('users')
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
-  const [draftsExpanded, setDraftsExpanded] = useState(false)
+  const [expandedPinMapKey, setExpandedPinMapKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const [instanceSearch, setInstanceSearch] = useState('')
+  const [instanceStatusFilter, setInstanceStatusFilter] = useState<'all' | InstanceStatus>('all')
+  const [includeDrafts, setIncludeDrafts] = useState(false)
+  const [compactRows, setCompactRows] = useState(true)
+  const [instanceSortKey, setInstanceSortKey] = useState<InstanceSortKey>('updated_at')
+  const [instanceSortDirection, setInstanceSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [instancePage, setInstancePage] = useState(1)
+  const [instancePageSize, setInstancePageSize] = useState(25)
+
+  const [monumentSearch, setMonumentSearch] = useState('')
+  const [monumentStatusFilter, setMonumentStatusFilter] = useState<'all' | string>('all')
+  const [monumentCountyFilter, setMonumentCountyFilter] = useState<'all' | string>('all')
+  const [monumentWithCoordinatesOnly, setMonumentWithCoordinatesOnly] = useState(false)
+  const [monumentCompactRows, setMonumentCompactRows] = useState(true)
+  const [monumentSortKey, setMonumentSortKey] = useState<MonumentSortKey>('lmi_code')
+  const [monumentSortDirection, setMonumentSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [monumentPage, setMonumentPage] = useState(1)
+  const [monumentPageSize, setMonumentPageSize] = useState(25)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -95,20 +129,202 @@ function App() {
     [token],
   )
 
-  const validationInboxInstances = useMemo(
-    () => instances.filter((instance) => instance.status !== 'draft'),
-    [instances],
-  )
-
-  const draftInstances = useMemo(
-    () => instances.filter((instance) => instance.status === 'draft'),
-    [instances],
-  )
-
   const selectedInstance = useMemo(
     () => (selectedInstanceId ? instances.find((instance) => instance.id === selectedInstanceId) ?? null : null),
     [instances, selectedInstanceId],
   )
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<InstanceStatus, number> = {
+      draft: 0,
+      completat: 0,
+      finalizat: 0,
+      in_verificare: 0,
+      in_aprobare: 0,
+      validat: 0,
+      reintors: 0,
+    }
+    for (const instance of instances) {
+      counts[instance.status] += 1
+    }
+    return counts
+  }, [instances])
+
+  const monumentStatusOptions = useMemo(
+    () =>
+      Array.from(new Set(monuments.map((monument) => monument.status?.trim() || '-')))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [monuments],
+  )
+
+  const monumentCountyOptions = useMemo(
+    () =>
+      Array.from(new Set(monuments.map((monument) => monument.county?.trim() || '-')))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [monuments],
+  )
+
+  const filteredSortedInstances = useMemo(() => {
+    const query = instanceSearch.trim().toLowerCase()
+
+    const filtered = instances
+      .filter((instance) => (includeDrafts ? true : instance.status !== 'draft'))
+      .filter((instance) =>
+        instanceStatusFilter === 'all' ? true : instance.status === instanceStatusFilter,
+      )
+      .filter((instance) => {
+        if (!query) return true
+        const haystack = [
+          instance.id,
+          instance.status,
+          String(instance.version),
+          instance.monument_id,
+          instance.user_id ?? '',
+          instance.rejection_reason ?? '',
+          new Date(instance.updated_at).toLocaleString(),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(query)
+      })
+
+    filtered.sort((a, b) => {
+      let result = 0
+
+      if (instanceSortKey === 'updated_at') {
+        result = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+      } else if (instanceSortKey === 'version') {
+        result = a.version - b.version
+      } else if (instanceSortKey === 'status') {
+        result = a.status.localeCompare(b.status)
+      } else {
+        result = a.id.localeCompare(b.id)
+      }
+
+      return instanceSortDirection === 'asc' ? result : -result
+    })
+
+    return filtered
+  }, [
+    instances,
+    includeDrafts,
+    instanceStatusFilter,
+    instanceSearch,
+    instanceSortDirection,
+    instanceSortKey,
+  ])
+
+  const totalInstancePages = Math.max(1, Math.ceil(filteredSortedInstances.length / instancePageSize))
+
+  const paginatedInstances = useMemo(() => {
+    const start = (instancePage - 1) * instancePageSize
+    return filteredSortedInstances.slice(start, start + instancePageSize)
+  }, [filteredSortedInstances, instancePage, instancePageSize])
+
+  const visibleRangeLabel = useMemo(() => {
+    if (filteredSortedInstances.length === 0) return '0-0'
+    const start = (instancePage - 1) * instancePageSize + 1
+    const end = Math.min(start + instancePageSize - 1, filteredSortedInstances.length)
+    return `${start}-${end}`
+  }, [filteredSortedInstances.length, instancePage, instancePageSize])
+
+  const filteredSortedMonuments = useMemo(() => {
+    const query = monumentSearch.trim().toLowerCase()
+
+    const filtered = monuments
+      .filter((monument) => {
+        const status = monument.status?.trim() || '-'
+        return monumentStatusFilter === 'all' ? true : status === monumentStatusFilter
+      })
+      .filter((monument) => {
+        const county = monument.county?.trim() || '-'
+        return monumentCountyFilter === 'all' ? true : county === monumentCountyFilter
+      })
+      .filter((monument) => {
+        if (!monumentWithCoordinatesOnly) return true
+        return Boolean(monument.latitude?.trim() && monument.longitude?.trim())
+      })
+      .filter((monument) => {
+        if (!query) return true
+        const haystack = [
+          monument.id,
+          monument.lmi_code,
+          monument.name,
+          monument.county ?? '',
+          monument.locality ?? '',
+          monument.address ?? '',
+          monument.latitude ?? '',
+          monument.longitude ?? '',
+          monument.status ?? '',
+        ]
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(query)
+      })
+
+    filtered.sort((a, b) => {
+      const aStatus = a.status ?? ''
+      const bStatus = b.status ?? ''
+      const aCounty = a.county ?? ''
+      const bCounty = b.county ?? ''
+      const aLocality = a.locality ?? ''
+      const bLocality = b.locality ?? ''
+
+      let result = 0
+      if (monumentSortKey === 'id') {
+        result = a.id.localeCompare(b.id)
+      } else if (monumentSortKey === 'lmi_code') {
+        result = a.lmi_code.localeCompare(b.lmi_code)
+      } else if (monumentSortKey === 'name') {
+        result = a.name.localeCompare(b.name)
+      } else if (monumentSortKey === 'county') {
+        result = aCounty.localeCompare(bCounty)
+      } else if (monumentSortKey === 'locality') {
+        result = aLocality.localeCompare(bLocality)
+      } else {
+        result = aStatus.localeCompare(bStatus)
+      }
+
+      return monumentSortDirection === 'asc' ? result : -result
+    })
+
+    return filtered
+  }, [
+    monuments,
+    monumentCountyFilter,
+    monumentSearch,
+    monumentSortDirection,
+    monumentSortKey,
+    monumentStatusFilter,
+    monumentWithCoordinatesOnly,
+  ])
+
+  const monumentCounts = useMemo(() => {
+    const withCoordinates = monuments.filter(
+      (monument) => Boolean(monument.latitude?.trim() && monument.longitude?.trim()),
+    ).length
+    return {
+      total: monuments.length,
+      withCoordinates,
+      missingCoordinates: monuments.length - withCoordinates,
+    }
+  }, [monuments])
+
+  const totalMonumentPages = Math.max(1, Math.ceil(filteredSortedMonuments.length / monumentPageSize))
+
+  const paginatedMonuments = useMemo(() => {
+    const start = (monumentPage - 1) * monumentPageSize
+    return filteredSortedMonuments.slice(start, start + monumentPageSize)
+  }, [filteredSortedMonuments, monumentPage, monumentPageSize])
+
+  const monumentVisibleRangeLabel = useMemo(() => {
+    if (filteredSortedMonuments.length === 0) return '0-0'
+    const start = (monumentPage - 1) * monumentPageSize + 1
+    const end = Math.min(start + monumentPageSize - 1, filteredSortedMonuments.length)
+    return `${start}-${end}`
+  }, [filteredSortedMonuments.length, monumentPage, monumentPageSize])
 
   const statusLabel = (status: InstanceStatus) =>
     ({
@@ -120,6 +336,318 @@ function App() {
       validat: 'Validat',
       reintors: 'Reintors',
     }[status] ?? status)
+
+  const formatFieldLabel = (raw: string) =>
+    raw
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  const formatPrimitiveValue = (value: string | number | boolean) => {
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+    if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '-'
+
+    const trimmed = value.trim()
+    if (!trimmed) return '-'
+
+    const asDate = Date.parse(trimmed)
+    if (Number.isNaN(asDate)) return trimmed
+
+    const isoDatePattern = /^\d{4}-\d{2}-\d{2}(T|\s|$)/
+    if (!isoDatePattern.test(trimmed)) return trimmed
+
+    return new Date(asDate).toLocaleString()
+  }
+
+  const parseCoordinatePair = (value: string) => {
+    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+    if (!match) return null
+
+    const latitude = Number(match[1])
+    const longitude = Number(match[2])
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null
+
+    return { latitude, longitude }
+  }
+
+  const buildMapUrl = (latitude: number, longitude: number) =>
+    `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`
+
+  const buildMapEmbedUrl = (latitude: number, longitude: number) => {
+    const delta = 0.0025
+    const left = longitude - delta
+    const right = longitude + delta
+    const top = latitude + delta
+    const bottom = latitude - delta
+
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${left},${bottom},${right},${top}&layer=mapnik&marker=${latitude},${longitude}`
+  }
+
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value)
+
+  const summarizeValue = (value: unknown) => {
+    if (value == null) return 'No data'
+    if (Array.isArray(value)) return `${value.length} entries`
+    if (isRecord(value)) return `${Object.keys(value).length} fields`
+    return 'Single value'
+  }
+
+  function renderProcessedValue(value: unknown, keyPath: string, depth = 0) {
+    if (value == null) {
+      return <span className="processed-empty">-</span>
+    }
+
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      if (typeof value === 'string' && /(?:^|\.)pin$/.test(keyPath)) {
+        const coordinates = parseCoordinatePair(value)
+        if (coordinates) {
+          const isMapVisible = expandedPinMapKey === keyPath
+
+          return (
+            <div className="pin-field-inline">
+              <span>{formatPrimitiveValue(value)}</span>
+              <button
+                type="button"
+                className="small ghost pin-map-link"
+                onClick={() => setExpandedPinMapKey((prev) => (prev === keyPath ? null : keyPath))}
+              >
+                {isMapVisible ? 'Hide map' : 'Show map'}
+              </button>
+              <a
+                className="small ghost pin-map-link"
+                href={buildMapUrl(coordinates.latitude, coordinates.longitude)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open external
+              </a>
+              {isMapVisible ? (
+                <div className="pin-map-embed-wrap">
+                  <iframe
+                    className="pin-map-embed"
+                    src={buildMapEmbedUrl(coordinates.latitude, coordinates.longitude)}
+                    title={`PIN map ${keyPath}`}
+                    loading="lazy"
+                  />
+                </div>
+              ) : null}
+            </div>
+          )
+        }
+      }
+
+      return <span>{formatPrimitiveValue(value)}</span>
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return <span className="processed-empty">Empty list</span>
+      }
+
+      const primitiveOnly = value.every(
+        (item) => item == null || ['string', 'number', 'boolean'].includes(typeof item),
+      )
+
+      if (primitiveOnly) {
+        return (
+          <ul className="processed-list-compact">
+            {value.map((item, index) => (
+              <li key={`${keyPath}-item-${index}`}>{item == null ? '-' : formatPrimitiveValue(item as string | number | boolean)}</li>
+            ))}
+          </ul>
+        )
+      }
+
+      return (
+        <div className="processed-block-stack">
+          {value.map((item, index) => (
+            <div key={`${keyPath}-group-${index}`} className="processed-group">
+              <div className="processed-group-title">Entry {index + 1}</div>
+              {renderProcessedValue(item, `${keyPath}.${index}`, depth + 1)}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    const objectValue = value as Record<string, unknown>
+    const entries = Object.entries(objectValue)
+
+    if (entries.length === 0) {
+      return <span className="processed-empty">No data</span>
+    }
+
+    return (
+      <div className={`processed-table ${depth > 0 ? 'nested' : ''}`}>
+        {entries.map(([key, nestedValue]) => (
+          <div className="processed-row" key={`${keyPath}.${key}`}>
+            <div className="processed-key">{formatFieldLabel(key)}</div>
+            <div className="processed-value">{renderProcessedValue(nestedValue, `${keyPath}.${key}`, depth + 1)}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  function renderProcessedRoot(value: unknown) {
+    if (!isRecord(value)) {
+      return renderProcessedValue(value, 'root')
+    }
+
+    const sections = Object.entries(value)
+
+    if (sections.length === 0) {
+      return <p className="processed-empty padded">No submitted fields.</p>
+    }
+
+    return (
+      <div className="processed-sections-grid">
+        {sections.map(([sectionKey, sectionValue]) => (
+          <article className="processed-section-card" key={`section-${sectionKey}`}>
+            <header className="processed-section-header">
+              <h4>{formatFieldLabel(sectionKey)}</h4>
+              <span className="processed-section-meta">{summarizeValue(sectionValue)}</span>
+            </header>
+            <div className="processed-section-body">{renderProcessedValue(sectionValue, `root.${sectionKey}`, 1)}</div>
+          </article>
+        ))}
+      </div>
+    )
+  }
+
+  const copyToClipboard = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      setError('Clipboard unavailable in this browser context.')
+    }
+  }
+
+  const exportInstancesCsv = () => {
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
+
+    const headers = [
+      'id',
+      'status',
+      'version',
+      'updated_at',
+      'monument_id',
+      'user_id',
+      'rejection_reason',
+    ]
+    const lines = filteredSortedInstances.map((instance) =>
+      [
+        instance.id,
+        instance.status,
+        String(instance.version),
+        instance.updated_at,
+        instance.monument_id,
+        instance.user_id ?? '',
+        instance.rejection_reason ?? '',
+      ]
+        .map((value) => escapeCsv(value))
+        .join(','),
+    )
+
+    const csv = [headers.join(','), ...lines].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `emonument_instances_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const exportMonumentsCsv = () => {
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
+
+    const headers = [
+      'id',
+      'lmi_code',
+      'name',
+      'county',
+      'locality',
+      'address',
+      'latitude',
+      'longitude',
+      'status',
+    ]
+    const lines = filteredSortedMonuments.map((monument) =>
+      [
+        monument.id,
+        monument.lmi_code,
+        monument.name,
+        monument.county ?? '',
+        monument.locality ?? '',
+        monument.address ?? '',
+        monument.latitude ?? '',
+        monument.longitude ?? '',
+        monument.status ?? '',
+      ]
+        .map((value) => escapeCsv(value))
+        .join(','),
+    )
+
+    const csv = [headers.join(','), ...lines].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `emonument_monuments_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const toggleSort = (key: InstanceSortKey) => {
+    if (instanceSortKey === key) {
+      setInstanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setInstanceSortKey(key)
+    setInstanceSortDirection('desc')
+  }
+
+  const toggleMonumentSort = (key: MonumentSortKey) => {
+    if (monumentSortKey === key) {
+      setMonumentSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setMonumentSortKey(key)
+    setMonumentSortDirection('asc')
+  }
+
+  useEffect(() => {
+    setInstancePage(1)
+  }, [instanceSearch, instanceStatusFilter, includeDrafts, instancePageSize])
+
+  useEffect(() => {
+    if (instancePage > totalInstancePages) {
+      setInstancePage(totalInstancePages)
+    }
+  }, [instancePage, totalInstancePages])
+
+  useEffect(() => {
+    setExpandedPinMapKey(null)
+  }, [selectedInstanceId])
+
+  useEffect(() => {
+    setMonumentPage(1)
+  }, [monumentSearch, monumentStatusFilter, monumentCountyFilter, monumentWithCoordinatesOnly, monumentPageSize])
+
+  useEffect(() => {
+    if (monumentPage > totalMonumentPages) {
+      setMonumentPage(totalMonumentPages)
+    }
+  }, [monumentPage, totalMonumentPages])
 
   const fillLoginDev = () => {
     setEmail(import.meta.env.VITE_DEV_DASHBOARD_EMAIL ?? 'admin@example.com')
@@ -545,23 +1073,114 @@ function App() {
         </section>
       ) : tab === 'instances' ? (
         <section className="panel">
-          <h3>Inbox Validare</h3>
-          {validationInboxInstances.length === 0 ? (
-            <p>No forms currently in validation/approval flow.</p>
+          <h3>Forms Table</h3>
+          <div className="db-toolbar">
+            <label className="db-search">
+              <Search size={14} />
+              <input
+                value={instanceSearch}
+                onChange={(event) => setInstanceSearch(event.target.value)}
+                placeholder="Search by id, status, user, monument, reason"
+              />
+            </label>
+
+            <label>
+              Status
+              <select
+                value={instanceStatusFilter}
+                onChange={(event) => setInstanceStatusFilter(event.target.value as 'all' | InstanceStatus)}
+              >
+                <option value="all">All</option>
+                <option value="draft">Draft</option>
+                <option value="in_verificare">In verificare</option>
+                <option value="in_aprobare">In aprobare</option>
+                <option value="validat">Validat</option>
+                <option value="reintors">Reintors</option>
+              </select>
+            </label>
+
+            <label>
+              Rows
+              <select
+                value={instancePageSize}
+                onChange={(event) => setInstancePageSize(Number(event.target.value))}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+
+            <label className="switch-row">
+              <input
+                type="checkbox"
+                checked={includeDrafts}
+                onChange={(event) => setIncludeDrafts(event.target.checked)}
+              />
+              Include drafts
+            </label>
+
+            <label className="switch-row">
+              <input
+                type="checkbox"
+                checked={compactRows}
+                onChange={(event) => setCompactRows(event.target.checked)}
+              />
+              Compact rows
+            </label>
+
+            <div className="toolbar-spacer" />
+
+            <button className="small ghost" onClick={exportInstancesCsv}>
+              <Download size={14} /> Export CSV
+            </button>
+          </div>
+
+          <div className="db-stats">
+            <span className="stat-chip">Total: {instances.length}</span>
+            <span className="stat-chip">Draft: {statusCounts.draft}</span>
+            <span className="stat-chip">In verificare: {statusCounts.in_verificare}</span>
+            <span className="stat-chip">In aprobare: {statusCounts.in_aprobare}</span>
+            <span className="stat-chip">Validat: {statusCounts.validat}</span>
+            <span className="stat-chip">Reintors: {statusCounts.reintors}</span>
+          </div>
+
+          {filteredSortedInstances.length === 0 ? (
+            <p>No forms match the current filters.</p>
           ) : (
-            <div className="table-wrap">
-              <table>
+            <div className="table-wrap tall">
+              <table className={`db-table ${compactRows ? 'compact' : ''}`}>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Status</th>
-                    <th>Version</th>
-                    <th>Updated</th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleSort('id')}>
+                        ID
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleSort('status')}>
+                        Status
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleSort('version')}>
+                        Version
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleSort('updated_at')}>
+                        Updated
+                      </button>
+                    </th>
+                    <th>Monument</th>
+                    <th>User</th>
+                    <th>Reason</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {validationInboxInstances.map((instance) => (
+                  {paginatedInstances.map((instance) => (
                     <tr
                       key={instance.id}
                       className="clickable-row"
@@ -570,10 +1189,31 @@ function App() {
                         setTab('form-view')
                       }}
                     >
-                      <td>{instance.id.slice(0, 8)}</td>
+                      <td className="cell-mono">
+                        <span className="truncate">{instance.id}</span>
+                        <button
+                          className="icon-btn"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void copyToClipboard(instance.id)
+                          }}
+                          title="Copy instance id"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </td>
                       <td>{statusLabel(instance.status)}</td>
                       <td>{instance.version}</td>
                       <td>{new Date(instance.updated_at).toLocaleString()}</td>
+                      <td className="cell-mono">
+                        <span className="truncate">{instance.monument_id}</span>
+                      </td>
+                      <td className="cell-mono">
+                        <span className="truncate">{instance.user_id ?? '-'}</span>
+                      </td>
+                      <td>
+                        <span className="truncate">{instance.rejection_reason ?? '-'}</span>
+                      </td>
                       <td className="actions">
                         {instance.status === 'in_verificare' ? (
                           <button
@@ -625,62 +1265,30 @@ function App() {
             </div>
           )}
 
-          <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h3 style={{ margin: 0 }}>Drafts ({draftInstances.length})</h3>
-            <button className="small" onClick={() => setDraftsExpanded((prev) => !prev)}>
-              {draftsExpanded ? 'Collapse' : 'Expand'}
-            </button>
+          <div className="pagination-row">
+            <span>
+              Showing {visibleRangeLabel} of {filteredSortedInstances.length}
+            </span>
+            <div className="pagination-actions">
+              <button
+                className="small ghost"
+                disabled={instancePage <= 1}
+                onClick={() => setInstancePage((prev) => Math.max(1, prev - 1))}
+              >
+                Prev
+              </button>
+              <span>
+                Page {instancePage} / {totalInstancePages}
+              </span>
+              <button
+                className="small ghost"
+                disabled={instancePage >= totalInstancePages}
+                onClick={() => setInstancePage((prev) => Math.min(totalInstancePages, prev + 1))}
+              >
+                Next
+              </button>
+            </div>
           </div>
-
-          {draftsExpanded ? (
-            draftInstances.length === 0 ? (
-              <p>No drafts.</p>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Status</th>
-                      <th>Version</th>
-                      <th>Updated</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {draftInstances.map((instance) => (
-                      <tr
-                        key={instance.id}
-                        className="clickable-row"
-                        onClick={() => {
-                          setSelectedInstanceId(instance.id)
-                          setTab('form-view')
-                        }}
-                      >
-                        <td>{instance.id.slice(0, 8)}</td>
-                        <td>{statusLabel(instance.status)}</td>
-                        <td>{instance.version}</td>
-                        <td>{new Date(instance.updated_at).toLocaleString()}</td>
-                        <td className="actions">
-                          <button
-                            className="small danger"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              void deleteInstance(instance.id)
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          ) : (
-            <p>Drafts are hidden. Expand to view them.</p>
-          )}
         </section>
       ) : tab === 'monuments' ? (
         <section className="grid-two">
@@ -740,32 +1348,169 @@ function App() {
             </form>
           </article>
 
-          <article className="panel">
-            <h3>Existing Monuments</h3>
-            <div className="table-wrap">
-              <table>
+          <article className="panel monuments-panel">
+            <h3>Monuments Table</h3>
+
+            <div className="db-toolbar monuments-toolbar">
+              <label className="db-search">
+                <Search size={14} />
+                <input
+                  value={monumentSearch}
+                  onChange={(event) => setMonumentSearch(event.target.value)}
+                  placeholder="Search by LMI, id, name, county, locality"
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  value={monumentStatusFilter}
+                  onChange={(event) => setMonumentStatusFilter(event.target.value)}
+                >
+                  <option value="all">All</option>
+                  {monumentStatusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                County
+                <select
+                  value={monumentCountyFilter}
+                  onChange={(event) => setMonumentCountyFilter(event.target.value)}
+                >
+                  <option value="all">All</option>
+                  {monumentCountyOptions.map((county) => (
+                    <option key={county} value={county}>
+                      {county}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Rows
+                <select
+                  value={monumentPageSize}
+                  onChange={(event) => setMonumentPageSize(Number(event.target.value))}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </label>
+
+              <label className="switch-row">
+                <input
+                  type="checkbox"
+                  checked={monumentWithCoordinatesOnly}
+                  onChange={(event) => setMonumentWithCoordinatesOnly(event.target.checked)}
+                />
+                Coordinates only
+              </label>
+
+              <label className="switch-row">
+                <input
+                  type="checkbox"
+                  checked={monumentCompactRows}
+                  onChange={(event) => setMonumentCompactRows(event.target.checked)}
+                />
+                Compact rows
+              </label>
+
+              <div className="toolbar-spacer" />
+
+              <button className="small ghost" onClick={exportMonumentsCsv}>
+                <Download size={14} /> Export CSV
+              </button>
+            </div>
+
+            <div className="db-stats">
+              <span className="stat-chip">Total: {monumentCounts.total}</span>
+              <span className="stat-chip">With coords: {monumentCounts.withCoordinates}</span>
+              <span className="stat-chip">Missing coords: {monumentCounts.missingCoordinates}</span>
+              <span className="stat-chip">Filtered: {filteredSortedMonuments.length}</span>
+            </div>
+
+            {filteredSortedMonuments.length === 0 ? (
+              <p>No monuments match the current filters.</p>
+            ) : (
+              <div className="table-wrap tall">
+                <table className={`db-table monuments-table ${monumentCompactRows ? 'compact' : ''}`}>
                 <thead>
                   <tr>
-                    <th>Monument ID</th>
-                    <th>LMI</th>
-                    <th>Name</th>
-                    <th>County</th>
-                    <th>Locality</th>
-                    <th>Status</th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('id')}>
+                        Monument ID
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('lmi_code')}>
+                        LMI
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('name')}>
+                        Name
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('county')}>
+                        County
+                      </button>
+                    </th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('locality')}>
+                        Locality
+                      </button>
+                    </th>
+                    <th>Coordinates</th>
+                    <th>
+                      <button className="sort-btn" onClick={() => toggleMonumentSort('status')}>
+                        Status
+                      </button>
+                    </th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {monuments.map((monument) => (
+                  {paginatedMonuments.map((monument) => (
                     <tr key={monument.id}>
-                      <td>{monument.id}</td>
-                      <td>{monument.lmi_code}</td>
+                      <td className="cell-mono">
+                        <span className="truncate">{monument.id}</span>
+                        <button
+                          className="icon-btn"
+                          onClick={() => void copyToClipboard(monument.id)}
+                          title="Copy monument id"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </td>
+                      <td className="cell-mono">
+                        <span className="truncate">{monument.lmi_code}</span>
+                        <button
+                          className="icon-btn"
+                          onClick={() => void copyToClipboard(monument.lmi_code)}
+                          title="Copy LMI code"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </td>
                       <td>{monument.name}</td>
                       <td>{monument.county ?? '-'}</td>
                       <td>{monument.locality ?? '-'}</td>
+                      <td className="cell-mono">
+                        {monument.latitude && monument.longitude
+                          ? `${monument.latitude}, ${monument.longitude}`
+                          : '-'}
+                      </td>
                       <td>{monument.status ?? '-'}</td>
                       <td>
-                        <button className="small danger" onClick={() => deleteMonument(monument.id)}>
+                        <button className="small danger monuments-action-btn" onClick={() => deleteMonument(monument.id)}>
                           Delete
                         </button>
                       </td>
@@ -773,55 +1518,98 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              </div>
+            )}
+
+            <div className="pagination-row monuments-pagination-row">
+              <span>
+                Showing {monumentVisibleRangeLabel} of {filteredSortedMonuments.length}
+              </span>
+              <div className="pagination-actions">
+                <button
+                  className="small ghost"
+                  disabled={monumentPage <= 1}
+                  onClick={() => setMonumentPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Prev
+                </button>
+                <span>
+                  Page {monumentPage} / {totalMonumentPages}
+                </span>
+                <button
+                  className="small ghost"
+                  disabled={monumentPage >= totalMonumentPages}
+                  onClick={() => setMonumentPage((prev) => Math.min(totalMonumentPages, prev + 1))}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </article>
         </section>
       ) : (
         <section className="panel">
-          <h3>
-            <FileText size={18} /> Submitted Form View
-          </h3>
           {selectedInstance ? (
             <>
-              <div className="form-view-meta">
-                <p>
-                  <strong>Instance:</strong> {selectedInstance.id}
-                </p>
-                <p>
-                  <strong>Status:</strong> {statusLabel(selectedInstance.status)}
-                </p>
-                <p>
-                  <strong>Version:</strong> {selectedInstance.version}
-                </p>
-                <p>
-                  <strong>Updated:</strong> {new Date(selectedInstance.updated_at).toLocaleString()}
-                </p>
-              </div>
-              <div className="form-view-actions">
-                {selectedInstance.status === 'in_verificare' ? (
-                  <button
-                    className="small"
-                    onClick={() => void updateInstanceStatus(selectedInstance.id, 'to-approval')}
-                  >
-                    <CheckCircle2 size={14} /> To Approval
+              <div className="form-view-header-row">
+                <h3>
+                  <FileText size={18} /> Submitted Form View
+                </h3>
+                <div className="form-view-actions">
+                  {selectedInstance.status === 'in_verificare' ? (
+                    <button
+                      className="small"
+                      onClick={() => void updateInstanceStatus(selectedInstance.id, 'to-approval')}
+                    >
+                      <CheckCircle2 size={14} /> To Approval
+                    </button>
+                  ) : null}
+                  {selectedInstance.status === 'in_aprobare' ? (
+                    <button
+                      className="small"
+                      onClick={() => void updateInstanceStatus(selectedInstance.id, 'approve')}
+                    >
+                      <CheckCircle2 size={14} /> Approve
+                    </button>
+                  ) : null}
+                  <button className="small" onClick={() => setTab('instances')}>
+                    Back to Validation Inbox
                   </button>
-                ) : null}
-                {selectedInstance.status === 'in_aprobare' ? (
-                  <button
-                    className="small"
-                    onClick={() => void updateInstanceStatus(selectedInstance.id, 'approve')}
-                  >
-                    <CheckCircle2 size={14} /> Approve
-                  </button>
-                ) : null}
-                <button className="small" onClick={() => setTab('instances')}>
-                  Back to Validation Inbox
-                </button>
+                </div>
               </div>
-              <pre className="json-view">{JSON.stringify(selectedInstance.data ?? {}, null, 2)}</pre>
+
+              <div className="form-view-topbar">
+                <div className="form-view-summary-grid">
+                  <div className="summary-card wide">
+                    <span className="summary-label">Instance</span>
+                    <span className="summary-value mono">{selectedInstance.id}</span>
+                  </div>
+                  <div className="summary-card">
+                    <span className="summary-label">Status</span>
+                    <span className="summary-value">{statusLabel(selectedInstance.status)}</span>
+                  </div>
+                  <div className="summary-card">
+                    <span className="summary-label">Version</span>
+                    <span className="summary-value">{selectedInstance.version}</span>
+                  </div>
+                  <div className="summary-card wide">
+                    <span className="summary-label">Updated</span>
+                    <span className="summary-value">{new Date(selectedInstance.updated_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <section className="processed-view">
+                <div className="processed-view-header">Processed Form Data</div>
+                {renderProcessedRoot(selectedInstance.data ?? {})}
+              </section>
             </>
           ) : (
-            <p>No form selected. Open one from Validation Flow.</p>
+            <>
+              <h3>
+                <FileText size={18} /> Submitted Form View
+              </h3>
+              <p>No form selected. Open one from Validation Flow.</p>
+            </>
           )}
         </section>
       )}
