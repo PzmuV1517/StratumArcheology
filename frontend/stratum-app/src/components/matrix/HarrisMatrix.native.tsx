@@ -39,8 +39,14 @@ import {
   Modal,
   ScrollView,
   Dimensions,
-  Platform,
 } from "react-native";
+import {
+  NativeNavigationBar,
+  NativeToolbar,
+  NativeToolbarButton,
+  NativeToolbarMenu,
+  NativeButton,
+} from "liquid-react";
 import Svg, { Path, Defs, Marker } from "react-native-svg";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -48,7 +54,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { showAlert } from "../../utils/alert";
@@ -112,6 +117,14 @@ const NODE_RX = 10;
 const X_SPACING = 130;
 const Y_SPACING = 120;
 const { width: SCREEN_W } = Dimensions.get("window");
+
+const NODE_COLORS: Record<ContextType, string> = {
+  layer: "#FF2A2A",
+  deposit: "#ffc107",
+  cut: "#dc3545",
+  fill: "#28a745",
+  structure: "#9c27b0",
+};
 
 const REL_OPTIONS: {
   value: RelType;
@@ -660,9 +673,9 @@ export default function HarrisMatrix({
   const nodeColor = useCallback(
     (id: string) => {
       const ctx = contexts.get(id);
-      if (ctx?.phaseId) return "#28a745";
+      if (ctx?.phaseId) return "#22C55E";
       if (ctx?.groupId) return "#ffc107";
-      return ACCENT;
+      return NODE_COLORS[ctx?.type ?? "layer"] ?? ACCENT;
     },
     [contexts],
   );
@@ -671,9 +684,9 @@ export default function HarrisMatrix({
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={s.loadingContainer}>
         <ActivityIndicator size="large" color={ACCENT} />
-        <Text style={styles.loadingText}>Loading Harris Matrix…</Text>
+        <Text style={s.loadingText}>Loading Harris Matrix…</Text>
       </View>
     );
   }
@@ -681,74 +694,100 @@ export default function HarrisMatrix({
   const contextList = Array.from(contexts.keys());
 
   return (
-    <SafeAreaView
-      style={styles.root}
-      edges={Platform.OS === "ios" ? ["bottom"] : []}
-    >
-      {/* ── Status bar ── */}
-      <View style={styles.statusBar}>
-        <View style={styles.statusLeft}>
-          <View
-            style={[
-              styles.dot,
-              { backgroundColor: isOnline ? "#4CAF50" : "#FF4444" },
-            ]}
-          />
-          <Text style={styles.statusText}>{isOnline ? "Online" : "Offline"}</Text>
-          {hasPending && (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingText}>Unsaved</Text>
-            </View>
-          )}
-        </View>
-        {isSyncing ? (
-          <ActivityIndicator size="small" color={ACCENT} />
-        ) : isOnline && hasPending ? (
-          <TouchableOpacity style={styles.syncBtn} onPress={syncToServer}>
-            <Text style={styles.syncBtnText}>Sync</Text>
-          </TouchableOpacity>
-        ) : null}
+    <View style={s.container}>
+      {/* ── Native navigation bar ── */}
+      <NativeNavigationBar title="Harris Matrix" style={{ width: "100%" }} />
+
+      {/* ── Status strip (counts + pending state) ── */}
+      <View style={s.statusStrip}>
+        <Text style={s.statusText}>
+          {contexts.size} contexts · {relationships.length} relations
+        </Text>
+        {hasPending && (
+          <View style={s.pendingBadge}>
+            <Text style={s.pendingBadgeText}>
+              {isSyncing ? "Syncing…" : isOnline ? "Pending" : "Offline"}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* ── Toolbar ── */}
-      <View style={styles.toolbar}>
-        <Pressable style={styles.toolBtn} onPress={resetView}>
-          <Text style={styles.toolBtnText}>Reset</Text>
-        </Pressable>
-        <Pressable style={styles.toolBtn} onPress={() => setShowInfoPanel(true)}>
-          <Text style={styles.toolBtnText}>Info</Text>
-        </Pressable>
-        {canEdit && (
-          <Pressable
-            style={[styles.toolBtn, styles.toolBtnAccent]}
-            onPress={openNewCtx}
-          >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Add Context</Text>
-          </Pressable>
+      {/* ── Native toolbar ── */}
+      <NativeToolbar translucent={false} style={{ width: "100%" }}>
+        {canEdit && <NativeToolbarButton systemItem="add" onPress={openNewCtx} />}
+        <NativeToolbarButton systemItem="flexibleSpace" />
+        {isSyncing && (
+          <ActivityIndicator
+            size="small"
+            color={ACCENT}
+            style={{ marginRight: 8 }}
+          />
         )}
-        {canEdit && (
-          <Pressable
-            style={[styles.toolBtn, { backgroundColor: "#dc3545" }]}
-            onPress={clearAll}
-          >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Clear</Text>
-          </Pressable>
-        )}
+        <NativeToolbarMenu
+          icon="ellipsis.circle"
+          menuItems={[
+            {
+              id: "resetView",
+              title: "Reset View",
+              icon: "arrow.up.left.and.arrow.down.right",
+            },
+            {
+              id: "info",
+              title: "Statistics",
+              icon: "chart.bar.fill",
+            },
+            ...(isOnline && hasPending && !isSyncing && canEdit
+              ? [
+                  {
+                    id: "sync",
+                    title: "Sync Now",
+                    icon: "arrow.triangle.2.circlepath",
+                  },
+                ]
+              : []),
+            ...(canEdit
+              ? [
+                  {
+                    id: "clear",
+                    title: "Clear All",
+                    icon: "trash.fill",
+                    destructive: true,
+                  },
+                ]
+              : []),
+          ]}
+          onMenuAction={(e: any) => {
+            const id = e.nativeEvent.id;
+            if (id === "resetView") resetView();
+            else if (id === "info") setShowInfoPanel(true);
+            else if (id === "sync") syncToServer();
+            else if (id === "clear") clearAll();
+          }}
+        />
+      </NativeToolbar>
+
+      {/* ── Banner ── */}
+      <View style={s.banner}>
+        <Text style={s.bannerText}>
+          {canEdit
+            ? "Tap a node to edit · Long-press to add a relationship"
+            : "Read-only view. Use desktop for full editing."}
+        </Text>
       </View>
 
       {/* ── SVG Canvas ── */}
       <View
-        style={styles.canvas}
+        style={s.svgContainer}
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           if (width > 0 && height > 0) setCanvasDimensions({ width, height });
         }}
       >
         <GestureDetector gesture={composed}>
-          <View style={styles.gestureLayer} collapsable={false}>
+          <View style={s.gestureLayer} collapsable={false}>
             <Animated.View
               style={[
-                styles.canvasInner,
+                s.canvasInner,
                 {
                   width: svgBounds.width,
                   height: svgBounds.height,
@@ -820,7 +859,7 @@ export default function HarrisMatrix({
                   <Pressable
                     key={id}
                     style={[
-                      styles.node,
+                      s.node,
                       {
                         left: pos.x - NODE_W / 2,
                         top: pos.y - NODE_H / 2,
@@ -835,7 +874,7 @@ export default function HarrisMatrix({
                     onLongPress={() => onNodeLongPress(id)}
                     delayLongPress={300}
                   >
-                    <Text style={styles.nodeText}>{id}</Text>
+                    <Text style={s.nodeText}>{id}</Text>
                   </Pressable>
                 );
               })}
@@ -845,12 +884,26 @@ export default function HarrisMatrix({
 
         {/* Empty-state overlay */}
         {contexts.size === 0 && (
-          <View style={styles.emptyOverlay} pointerEvents="box-none">
-            <Text style={styles.emptyTitle}>No contexts yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap "+ Add Context" to start building your Harris Matrix
+          <View style={s.emptyOverlay} pointerEvents="box-none">
+            <Text style={s.emptyTitle}>No contexts yet</Text>
+            <Text style={s.emptySubtitle}>
+              Tap "+ Context" to start building your Harris Matrix
             </Text>
           </View>
+        )}
+      </View>
+
+      {/* ── Legend ── */}
+      <View style={s.legend}>
+        {(["layer", "deposit", "cut", "fill", "structure"] as ContextType[]).map(
+          (type) => (
+            <View key={type} style={s.legendItem}>
+              <View
+                style={[s.legendSwatch, { backgroundColor: NODE_COLORS[type] }]}
+              />
+              <Text style={s.legendLabel}>{type}</Text>
+            </View>
+          ),
         )}
       </View>
 
@@ -863,31 +916,27 @@ export default function HarrisMatrix({
         animationType="fade"
         onRequestClose={() => setShowInfoPanel(false)}
       >
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={() => setShowInfoPanel(false)}
-        >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Statistics</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>{contexts.size}</Text>
-                <Text style={styles.statLabel}>Contexts</Text>
+        <Pressable style={s.modalBackdrop} onPress={() => setShowInfoPanel(false)}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>Statistics</Text>
+            <View style={s.statsRow}>
+              <View style={s.statBox}>
+                <Text style={s.statValue}>{contexts.size}</Text>
+                <Text style={s.statLabel}>Contexts</Text>
               </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statValue}>{relationships.length}</Text>
-                <Text style={styles.statLabel}>Relations</Text>
+              <View style={s.statBox}>
+                <Text style={s.statValue}>{relationships.length}</Text>
+                <Text style={s.statLabel}>Relations</Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.closeModalBtn}
+            <NativeButton
+              title="Close"
+              buttonStyle="filled"
               onPress={() => setShowInfoPanel(false)}
-            >
-              <Text style={styles.closeModalBtnText}>Close</Text>
-            </TouchableOpacity>
+              style={{ width: "100%", marginTop: 4 }}
+            />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Modal>
 
       {/* New Context */}
@@ -897,13 +946,13 @@ export default function HarrisMatrix({
         animationType="slide"
         onRequestClose={() => setShowCtxModal(false)}
       >
-        <View style={styles.backdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New Context</Text>
+        <Pressable style={s.modalBackdrop} onPress={() => setShowCtxModal(false)}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>New Context</Text>
 
-            <Text style={styles.inputLabel}>Context ID</Text>
+            <Text style={s.inputLabel}>Context ID</Text>
             <TextInput
-              style={styles.input}
+              style={s.input}
               value={newCtxId}
               onChangeText={setNewCtxId}
               placeholder="e.g., 1001"
@@ -911,7 +960,7 @@ export default function HarrisMatrix({
               autoCapitalize="characters"
             />
 
-            <Text style={styles.inputLabel}>Type</Text>
+            <Text style={s.inputLabel}>Type</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -922,24 +971,19 @@ export default function HarrisMatrix({
               ).map((t) => (
                 <TouchableOpacity
                   key={t}
-                  style={[styles.chipBtn, newCtxType === t && styles.chipBtnActive]}
+                  style={[s.chipBtn, newCtxType === t && s.chipBtnActive]}
                   onPress={() => setNewCtxType(t)}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      newCtxType === t && styles.chipTextActive,
-                    ]}
-                  >
+                  <Text style={[s.chipText, newCtxType === t && s.chipTextActive]}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={styles.inputLabel}>Description</Text>
+            <Text style={s.inputLabel}>Description</Text>
             <TextInput
-              style={[styles.input, { height: 60 }]}
+              style={[s.input, { height: 60 }]}
               value={newCtxDesc}
               onChangeText={setNewCtxDesc}
               placeholder="Brief description"
@@ -947,22 +991,22 @@ export default function HarrisMatrix({
               multiline
             />
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnAccent]}
+            <View style={s.modalActions}>
+              <NativeButton
+                title="Create"
+                buttonStyle="filled"
                 onPress={addContext}
-              >
-                <Text style={styles.actionBtnText}>Create</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnCancel]}
+                style={{ flex: 1 }}
+              />
+              <NativeButton
+                title="Cancel"
+                buttonStyle="plain"
                 onPress={() => setShowCtxModal(false)}
-              >
-                <Text style={styles.actionBtnText}>Cancel</Text>
-              </TouchableOpacity>
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
 
       {/* Relationship */}
@@ -972,11 +1016,11 @@ export default function HarrisMatrix({
         animationType="slide"
         onRequestClose={() => setShowRelModal(false)}
       >
-        <View style={styles.backdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{relSource} → ?</Text>
+        <Pressable style={s.modalBackdrop} onPress={() => setShowRelModal(false)}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>{relSource} → ?</Text>
 
-            <Text style={styles.inputLabel}>Target</Text>
+            <Text style={s.inputLabel}>Target</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -987,36 +1031,28 @@ export default function HarrisMatrix({
                 .map((k) => (
                   <TouchableOpacity
                     key={k}
-                    style={[styles.chipBtn, relTarget === k && styles.chipBtnActive]}
+                    style={[s.chipBtn, relTarget === k && s.chipBtnActive]}
                     onPress={() => setRelTarget(k)}
                   >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        relTarget === k && styles.chipTextActive,
-                      ]}
-                    >
+                    <Text style={[s.chipText, relTarget === k && s.chipTextActive]}>
                       {k}
                     </Text>
                   </TouchableOpacity>
                 ))}
             </ScrollView>
 
-            <Text style={styles.inputLabel}>Relationship</Text>
+            <Text style={s.inputLabel}>Relationship</Text>
             <ScrollView style={{ maxHeight: 220 }}>
               {REL_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
-                  style={[
-                    styles.relRow,
-                    relType === opt.value && styles.relRowActive,
-                  ]}
+                  style={[s.relRow, relType === opt.value && s.relRowActive]}
                   onPress={() => setRelType(opt.value)}
                 >
                   <Text
                     style={[
-                      styles.relRowText,
-                      relType === opt.value && styles.relRowTextActive,
+                      s.relRowText,
+                      relType === opt.value && s.relRowTextActive,
                     ]}
                   >
                     {opt.label(relSource, relTarget)}
@@ -1025,22 +1061,22 @@ export default function HarrisMatrix({
               ))}
             </ScrollView>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnAccent]}
+            <View style={s.modalActions}>
+              <NativeButton
+                title="Add"
+                buttonStyle="filled"
                 onPress={addRelationship}
-              >
-                <Text style={styles.actionBtnText}>Add</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnCancel]}
+                style={{ flex: 1 }}
+              />
+              <NativeButton
+                title="Cancel"
+                buttonStyle="plain"
                 onPress={() => setShowRelModal(false)}
-              >
-                <Text style={styles.actionBtnText}>Cancel</Text>
-              </TouchableOpacity>
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
 
       {/* Edit / View Context */}
@@ -1050,13 +1086,13 @@ export default function HarrisMatrix({
         animationType="slide"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={styles.backdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
+        <Pressable style={s.modalBackdrop} onPress={() => setShowEditModal(false)}>
+          <View style={s.modalContent}>
+            <Text style={s.modalTitle}>
               {canEdit ? "Edit" : "View"}: {editId}
             </Text>
 
-            <Text style={styles.inputLabel}>Type</Text>
+            <Text style={s.inputLabel}>Type</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1067,25 +1103,20 @@ export default function HarrisMatrix({
               ).map((t) => (
                 <TouchableOpacity
                   key={t}
-                  style={[styles.chipBtn, editType === t && styles.chipBtnActive]}
+                  style={[s.chipBtn, editType === t && s.chipBtnActive]}
                   onPress={() => canEdit && setEditType(t)}
                   disabled={!canEdit}
                 >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      editType === t && styles.chipTextActive,
-                    ]}
-                  >
+                  <Text style={[s.chipText, editType === t && s.chipTextActive]}>
                     {t.charAt(0).toUpperCase() + t.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={styles.inputLabel}>Description</Text>
+            <Text style={s.inputLabel}>Description</Text>
             <TextInput
-              style={[styles.input, { height: 60 }]}
+              style={[s.input, { height: 60 }]}
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="Description"
@@ -1098,12 +1129,12 @@ export default function HarrisMatrix({
             {relationships.filter((r) => r.from === editId || r.to === editId)
               .length > 0 && (
               <View style={{ marginBottom: 12 }}>
-                <Text style={styles.inputLabel}>Relationships</Text>
+                <Text style={s.inputLabel}>Relationships</Text>
                 {relationships
                   .filter((r) => r.from === editId || r.to === editId)
                   .map((r, i) => (
-                    <View key={i} style={styles.relInfoRow}>
-                      <Text style={styles.relInfoText}>
+                    <View key={i} style={s.relInfoRow}>
+                      <Text style={s.relInfoText}>
                         {r.from} → {r.to} ({r.type.replace(/_/g, " ")})
                       </Text>
                       {canEdit && (
@@ -1116,7 +1147,7 @@ export default function HarrisMatrix({
                             persist(contexts, next);
                           }}
                         >
-                          <Text style={styles.deleteRelText}>✕</Text>
+                          <Text style={s.deleteRelText}>✕</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1124,99 +1155,103 @@ export default function HarrisMatrix({
               </View>
             )}
 
-            <View style={styles.modalActions}>
+            <View style={s.modalActions}>
               {canEdit && (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnAccent]}
+                <NativeButton
+                  title="Save"
+                  buttonStyle="filled"
                   onPress={saveEdit}
-                >
-                  <Text style={styles.actionBtnText}>Save</Text>
-                </TouchableOpacity>
+                  style={{ flex: 1 }}
+                />
               )}
               {canEdit && (
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: "#dc3545" }]}
+                  style={[s.modalActionBtn, s.modalActionBtnDanger]}
                   onPress={deleteNode}
                 >
-                  <Text style={styles.actionBtnText}>Delete</Text>
+                  <Text style={s.modalActionBtnText}>Delete</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnCancel]}
+              <NativeButton
+                title={canEdit ? "Cancel" : "Close"}
+                buttonStyle="plain"
                 onPress={() => setShowEditModal(false)}
-              >
-                <Text style={styles.actionBtnText}>
-                  {canEdit ? "Cancel" : "Close"}
-                </Text>
-              </TouchableOpacity>
+                style={{ flex: 1 }}
+              />
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 /* ─────────────────────── Styles ─────────────────────── */
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0A0A0A" },
-  center: {
+const s = StyleSheet.create({
+  container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#111111",
   },
-  loadingText: { color: "#9A9A9A", marginTop: 12, fontSize: 16 },
-
-  /* status bar */
-  statusBar: {
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#111111",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    color: "#F5F5F5",
+    fontSize: 14,
+  },
+  statusStrip: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#1A1A1A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  statusLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, color: "#CFCFCF", fontWeight: "500" },
-  pendingBadge: {
-    backgroundColor: "rgba(255,193,7,0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  pendingText: { fontSize: 11, color: "#ffc107", fontWeight: "600" },
-  syncBtn: {
-    backgroundColor: ACCENT,
-    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: "#1A1A1A",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  syncBtnText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
-
-  /* canvas */
-  canvas: {
+  statusText: {
+    fontSize: 12,
+    color: "#888888",
+  },
+  pendingBadge: {
+    backgroundColor: "rgba(255,193,7,0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    color: "#FFC107",
+    fontWeight: "600",
+  },
+  banner: {
+    backgroundColor: "#222222",
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  bannerText: {
+    fontSize: 12,
+    color: "#888888",
+    textAlign: "center",
+  },
+  svgContainer: {
     flex: 1,
-    overflow: "hidden",
     backgroundColor: "#0A0A0A",
+    overflow: "hidden",
   },
   gestureLayer: {
     ...StyleSheet.absoluteFillObject,
   },
   canvasInner: {
     position: "relative",
-    ...Platform.select({
-      ios: {
-        // Explicit layout for iOS SVG rendering
-        position: "relative",
-      },
-    }),
   },
-
   node: {
     position: "absolute",
     alignItems: "center",
@@ -1228,8 +1263,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-
-  /* empty */
   emptyOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
@@ -1243,97 +1276,106 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#9A9A9A",
+    color: "#888888",
     textAlign: "center",
     paddingHorizontal: 40,
   },
-
-  /* toolbar */
-  toolbar: {
+  legend: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 12,
+    alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "#1A1A1A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+    gap: 12,
   },
-  toolBtn: {
-    flex: 1,
-    minWidth: 70,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#2A2A2A",
+  legendItem: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
-  toolBtnAccent: { backgroundColor: ACCENT },
-  toolBtnText: { color: "#CFCFCF", fontSize: 13, fontWeight: "600" },
-
-  /* modal */
-  backdrop: {
+  legendSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+  },
+  legendLabel: {
+    fontSize: 11,
+    color: "#EAEAEA",
+  },
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: 32,
   },
-  modalCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
+  modalContent: {
+    backgroundColor: "#222222",
+    borderRadius: 12,
     padding: 20,
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 400,
     maxHeight: "85%",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "rgba(255,255,255,0.1)",
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: "#F5F5F5",
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  modalDetail: {
+    fontSize: 14,
+    color: "#EAEAEA",
+    marginBottom: 4,
+  },
+  modalMeta: {
+    fontSize: 12,
+    color: "#888888",
+    marginTop: 8,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#9A9A9A",
+    color: "#888888",
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: "#111",
+    backgroundColor: "#111111",
     color: "#F5F5F5",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#333",
-    fontSize: 16,
+    borderColor: "rgba(255,255,255,0.1)",
+    fontSize: 15,
     marginBottom: 12,
   },
   chipBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: "#2A2A2A",
     marginRight: 8,
   },
-  chipBtnActive: { backgroundColor: ACCENT },
-  chipText: { color: "#CFCFCF", fontSize: 13, fontWeight: "600" },
-  chipTextActive: { color: "#FFF" },
-
+  chipBtnActive: { backgroundColor: "#FF2A2A" },
+  chipText: { color: "#EAEAEA", fontSize: 13, fontWeight: "600" },
+  chipTextActive: { color: "#FFFFFF" },
   relRow: {
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: "#2A2A2A",
     marginBottom: 6,
   },
-  relRowActive: { backgroundColor: ACCENT },
-  relRowText: { color: "#CFCFCF", fontSize: 14 },
-  relRowTextActive: { color: "#FFF", fontWeight: "600" },
-
+  relRowActive: { backgroundColor: "#FF2A2A" },
+  relRowText: { color: "#EAEAEA", fontSize: 14 },
+  relRowTextActive: { color: "#FFFFFF", fontWeight: "600" },
   relInfoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1344,45 +1386,37 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 4,
   },
-  relInfoText: { color: "#CFCFCF", fontSize: 13, flex: 1 },
+  relInfoText: { color: "#EAEAEA", fontSize: 13, flex: 1 },
   deleteRelText: {
     color: "#dc3545",
     fontSize: 16,
     fontWeight: "700",
     paddingLeft: 12,
   },
-
   modalActions: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 16,
+    gap: 8,
+    marginTop: 14,
   },
-  actionBtn: {
+  modalActionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 8,
     alignItems: "center",
   },
-  actionBtnAccent: { backgroundColor: ACCENT },
-  actionBtnCancel: { backgroundColor: "#555" },
-  actionBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
-
-  /* stats */
+  modalActionBtnDanger: {
+    backgroundColor: "#7F1D1D",
+    borderColor: "rgba(239,68,68,0.35)",
+  },
+  modalActionBtnText: { color: "#FCA5A5", fontSize: 14, fontWeight: "600" },
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   statBox: {
     flex: 1,
     backgroundColor: "#2A2A2A",
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 16,
     alignItems: "center",
   },
-  statValue: { fontSize: 28, fontWeight: "800", color: ACCENT },
-  statLabel: { fontSize: 12, color: "#9A9A9A", marginTop: 4 },
-  closeModalBtn: {
-    backgroundColor: "#555",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  closeModalBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
+  statValue: { fontSize: 28, fontWeight: "800", color: "#FF2A2A" },
+  statLabel: { fontSize: 12, color: "#888888", marginTop: 4 },
 });
