@@ -32,18 +32,6 @@ export interface EMonumentValidationResponse {
   errors: EMonumentValidationIssue[];
 }
 
-export interface EMonumentMonument {
-  id: string;
-  lmi_code: string;
-  name: string;
-  county?: string | null;
-  locality?: string | null;
-  address?: string | null;
-  latitude?: string | null;
-  longitude?: string | null;
-  status?: string | null;
-}
-
 export interface EMonumentInstance {
   id: string;
   monument_id: string;
@@ -80,24 +68,15 @@ export const emonumentService = {
     return res.data;
   },
 
-  listMonuments: async (q?: string): Promise<EMonumentMonument[]> => {
-    const res = await api.get("/emonument/monuments", {
-      params: q ? { q } : undefined,
-    });
-    return res.data;
-  },
-
   listInstances: async (): Promise<EMonumentInstance[]> => {
     const res = await api.get("/emonument/instances");
     return res.data;
   },
 
   createInstance: async (
-    monumentCode: string,
     data: Record<string, unknown>,
   ): Promise<EMonumentInstance> => {
     const res = await api.post("/emonument/instances", {
-      monument_code: monumentCode,
       data,
     });
     return res.data;

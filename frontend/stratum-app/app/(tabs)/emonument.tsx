@@ -22,11 +22,8 @@ import {
   EMonumentFormSection,
   EMonumentInstance,
   EMonumentInstanceStatus,
-  EMonumentMonument,
   EMonumentValidationIssue,
 } from "@/services/emonumentService";
-
-const LEGACY_DEV_FALLBACK_MONUMENT_ID = "00000000-0000-0000-0000-000000000001";
 
 function isFilledValue(value: unknown): boolean {
   if (value == null) return false;
@@ -37,6 +34,47 @@ function isFilledValue(value: unknown): boolean {
   return true;
 }
 
+function findMonumentCodeInData(value: unknown): string {
+  const scan = (node: unknown): string => {
+    if (!node) return "";
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = scan(item);
+        if (found) return found;
+      }
+      return "";
+    }
+
+    if (typeof node !== "object") {
+      return "";
+    }
+
+    const entries = Object.entries(node as Record<string, unknown>);
+
+    for (const [key, entryValue] of entries) {
+      if (typeof entryValue !== "string") continue;
+      const normalizedKey = key.toLowerCase();
+      const isCodeLikeKey =
+        normalizedKey.includes("lmi") ||
+        normalizedKey.includes("rz") ||
+        (normalizedKey.includes("cod") && (normalizedKey.includes("zp") || normalizedKey.includes("clasare")));
+      if (isCodeLikeKey && entryValue.trim()) {
+        return entryValue.trim();
+      }
+    }
+
+    for (const [, entryValue] of entries) {
+      const found = scan(entryValue);
+      if (found) return found;
+    }
+
+    return "";
+  };
+
+  return scan(value);
+}
+
 export default function EMonumentHiddenTab() {
   const router = useRouter();
   const { user } = useAuth();
@@ -45,18 +83,13 @@ export default function EMonumentHiddenTab() {
   const [isAuthorized, setIsAuthorized] = useState(true);
   const [schema, setSchema] = useState<EMonumentFormSection[]>([]);
   const [instances, setInstances] = useState<EMonumentInstance[]>([]);
-  const [monuments, setMonuments] = useState<EMonumentMonument[]>([]);
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingInstanceId, setEditingInstanceId] = useState<string | null>(null);
-  const [selectedMonumentCode, setSelectedMonumentCode] = useState<string>("");
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [validationIssues, setValidationIssues] = useState<EMonumentValidationIssue[]>([]);
-  const [monumentSearchQuery, setMonumentSearchQuery] = useState("");
-  const [appliedMonumentSearchQuery, setAppliedMonumentSearchQuery] = useState("");
-  const [hasAppliedMonumentSearch, setHasAppliedMonumentSearch] = useState(false);
   const [instanceQuery, setInstanceQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | EMonumentInstanceStatus>("all");
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
@@ -69,31 +102,6 @@ export default function EMonumentHiddenTab() {
     () => Boolean(user?.is_emonument_privileged || user?.is_dashboard_admin),
     [user?.is_emonument_privileged, user?.is_dashboard_admin],
   );
-
-  const totalFieldCount = useMemo(() => {
-    const walk = (sections: EMonumentFormSection[]): number =>
-      sections.reduce((sum, section) => {
-        return sum + section.fields.length + walk(section.subsections || []);
-      }, 0);
-    return walk(schema);
-  }, [schema]);
-
-  const monumentNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const m of monuments) {
-      const label = `${m.lmi_code} - ${m.name}`;
-      map.set(m.id, label);
-    }
-    return map;
-  }, [monuments]);
-
-  const monumentCodeById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const m of monuments) {
-      map.set(m.id, m.lmi_code);
-    }
-    return map;
-  }, [monuments]);
 
   const sectionProgress = useMemo(() => {
     return schema.map((section) => {
@@ -141,34 +149,11 @@ export default function EMonumentHiddenTab() {
       .filter((instance) => (statusFilter === "all" ? true : instance.status === statusFilter))
       .filter((instance) => {
         if (!query) return true;
-        const code = (monumentCodeById.get(instance.monument_id) || "").toLowerCase();
-        const label = (monumentNameById.get(instance.monument_id) || "").toLowerCase();
-        return code.includes(query) || label.includes(query) || instance.id.toLowerCase().includes(query);
+        const code = findMonumentCodeInData(instance.data).toLowerCase();
+        return code.includes(query) || instance.id.toLowerCase().includes(query);
       })
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-  }, [instances, statusFilter, instanceQuery, monumentCodeById, monumentNameById]);
-
-  const filteredMonumentsForPicker = useMemo(() => {
-    if (!hasAppliedMonumentSearch) {
-      return [];
-    }
-
-    const query = appliedMonumentSearchQuery.trim().toLowerCase();
-    const base = query
-      ? monuments.filter((m) => {
-          const code = m.lmi_code.toLowerCase();
-          const name = m.name.toLowerCase();
-          return code.includes(query) || name.includes(query);
-        })
-      : monuments;
-
-    return base.slice(0, 25);
-  }, [monuments, hasAppliedMonumentSearch, appliedMonumentSearchQuery]);
-
-  const selectedMonument = useMemo(
-    () => monuments.find((m) => m.lmi_code === selectedMonumentCode) || null,
-    [monuments, selectedMonumentCode],
-  );
+  }, [instances, statusFilter, instanceQuery]);
 
   const editingInstance = useMemo(
     () =>
@@ -276,15 +261,13 @@ export default function EMonumentHiddenTab() {
 
   const load = useCallback(async () => {
     try {
-      const [schemaRes, instancesRes, monumentsRes] = await Promise.all([
+      const [schemaRes, instancesRes] = await Promise.all([
         emonumentService.getFormSchema(),
         emonumentService.listInstances(),
-        emonumentService.listMonuments(),
       ]);
       setIsAuthorized(true);
       setSchema(schemaRes.sections || []);
       setInstances(instancesRes || []);
-      setMonuments(monumentsRes || []);
       setSelectedInstanceIds((prev) => {
         const ids = new Set((instancesRes || []).map((i) => i.id));
         return prev.filter((id) => ids.has(id));
@@ -324,41 +307,25 @@ export default function EMonumentHiddenTab() {
     setEditingInstanceId(null);
     setFormData(buildSchemaSkeleton(schema));
     setValidationIssues([]);
-    setSelectedMonumentCode((prev) => prev || monuments[0]?.lmi_code || "");
-    setMonumentSearchQuery("");
-    setAppliedMonumentSearchQuery("");
-    setHasAppliedMonumentSearch(false);
     setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
     setShowEditor(true);
-  }, [buildSchemaSkeleton, schema, monuments]);
+  }, [buildSchemaSkeleton, schema]);
 
   const openExisting = useCallback((instance: EMonumentInstance) => {
     setEditingInstanceId(instance.id);
     setFormData((instance.data as Record<string, unknown>) || {});
     setValidationIssues([]);
-    setSelectedMonumentCode(monumentCodeById.get(instance.monument_id) || "");
-    setMonumentSearchQuery("");
-    setAppliedMonumentSearchQuery("");
-    setHasAppliedMonumentSearch(false);
     setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
     setShowEditor(true);
-  }, [monumentCodeById, schema]);
+  }, [schema]);
 
   const closeEditor = useCallback(() => {
     setShowEditor(false);
     setEditingInstanceId(null);
     setFormData({});
     setValidationIssues([]);
-    setMonumentSearchQuery("");
-    setAppliedMonumentSearchQuery("");
-    setHasAppliedMonumentSearch(false);
     setExpandedSectionKeys([]);
   }, []);
-
-  const applyMonumentSearch = useCallback(() => {
-    setAppliedMonumentSearchQuery(monumentSearchQuery);
-    setHasAppliedMonumentSearch(true);
-  }, [monumentSearchQuery]);
 
   const toggleSection = useCallback((sectionKey: string) => {
     setExpandedSectionKeys((prev) =>
@@ -369,71 +336,10 @@ export default function EMonumentHiddenTab() {
   }, []);
 
   const autoFillValidData = useCallback(() => {
-    const fallbackFromCurrentInstance =
-      (editingInstanceId
-        ? monumentCodeById.get(
-            instances.find((instance) => instance.id === editingInstanceId)?.monument_id || "",
-          )
-        : "") || "";
-    const fallbackFromInstances =
-      monumentCodeById.get(
-        instances.find((instance) => Boolean(instance.monument_id))?.monument_id || "",
-      ) || "";
-    const selectedCandidate =
-      selectedMonumentCode && selectedMonumentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID
-        ? selectedMonumentCode
-        : "";
-    const autoMonumentId =
-      selectedCandidate ||
-      fallbackFromCurrentInstance ||
-      monuments[0]?.lmi_code ||
-      fallbackFromInstances ||
-      "";
-
-    setFormData(buildAutoFillPayload(schema));
-
-    if (autoMonumentId) {
-      setSelectedMonumentCode(autoMonumentId);
-      setValidationIssues((prev) => prev.filter((issue) => issue.path !== "monument_code"));
-      return;
-    }
-
-    setSelectedMonumentCode("");
-    setValidationIssues([
-      {
-        path: "monument_code",
-        code: "required",
-        message: "DEV autofill a completat campurile, dar lipseste un cod LMI/ZP valid. Selecteaza unul din lista sau introdu manual un cod real.",
-      },
-    ]);
-  }, [buildAutoFillPayload, schema, selectedMonumentCode, monuments, instances, editingInstanceId, monumentCodeById]);
-
-  const getEffectiveMonumentCode = useCallback(() => {
-    if (
-      selectedMonumentCode &&
-      selectedMonumentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID
-    ) {
-      return selectedMonumentCode;
-    }
-
-    if (editingInstanceId) {
-      const current = instances.find((instance) => instance.id === editingInstanceId);
-      const currentCode = current?.monument_id ? monumentCodeById.get(current.monument_id) : "";
-      if (currentCode && currentCode !== LEGACY_DEV_FALLBACK_MONUMENT_ID) {
-        return currentCode;
-      }
-    }
-
-    if (monuments[0]?.lmi_code) {
-      return monuments[0].lmi_code;
-    }
-
-    return (
-      monumentCodeById.get(
-        instances.find((instance) => Boolean(instance.monument_id))?.monument_id || "",
-      ) || ""
-    );
-  }, [selectedMonumentCode, editingInstanceId, instances, monuments, monumentCodeById]);
+    const nextData = buildAutoFillPayload(schema);
+    setFormData(nextData);
+    setValidationIssues([]);
+  }, [buildAutoFillPayload, schema]);
 
   const setFieldValue = useCallback(
     (
@@ -474,18 +380,6 @@ export default function EMonumentHiddenTab() {
     }
 
     setValidationIssues([]);
-    const monumentCode = getEffectiveMonumentCode();
-
-    if (!monumentCode) {
-      setValidationIssues([
-        {
-          path: "monument_code",
-          code: "required",
-          message: "Selecteaza un cod LMI/ZP pentru fisa",
-        },
-      ]);
-      return;
-    }
 
     setSaving(true);
     try {
@@ -496,11 +390,8 @@ export default function EMonumentHiddenTab() {
           isEditingDraft ? ("draft" as EMonumentInstanceStatus) : undefined,
         );
       } else {
-        const created = await emonumentService.createInstance(monumentCode, formData);
+        const created = await emonumentService.createInstance(formData);
         setEditingInstanceId(created.id);
-      }
-      if (selectedMonumentCode !== monumentCode) {
-        setSelectedMonumentCode(monumentCode);
       }
       setValidationIssues([]);
       await load();
@@ -508,19 +399,25 @@ export default function EMonumentHiddenTab() {
       const apiErrors = error?.response?.data?.detail?.errors;
       if (Array.isArray(apiErrors)) {
         setValidationIssues(apiErrors);
-      } else if (error?.response?.status === 404) {
+      } else {
+        const detail = error?.response?.data?.detail;
+        const message =
+          (typeof detail === "string" && detail) ||
+          (typeof detail?.message === "string" && detail.message) ||
+          error?.message ||
+          "Salvarea formularului a esuat.";
         setValidationIssues([
           {
-            path: "monument_code",
-            code: "not_found",
-            message: "Codul LMI/ZP selectat nu exista. Alege un cod valid din lista.",
+            path: "instance",
+            code: "save_failed",
+            message,
           },
         ]);
       }
     } finally {
       setSaving(false);
     }
-  }, [canEditCurrentForm, getEffectiveMonumentCode, selectedMonumentCode, editingInstanceId, formData, load, isEditingDraft]);
+  }, [canEditCurrentForm, editingInstanceId, formData, load, isEditingDraft]);
 
   const submitForVerification = useCallback(async () => {
     if (!canEditCurrentForm) {
@@ -535,18 +432,6 @@ export default function EMonumentHiddenTab() {
     }
 
     setValidationIssues([]);
-    const monumentCode = getEffectiveMonumentCode();
-
-    if (!monumentCode) {
-      setValidationIssues([
-        {
-          path: "monument_code",
-          code: "required",
-          message: "Selecteaza un cod LMI/ZP pentru fisa",
-        },
-      ]);
-      return;
-    }
 
     setSubmitting(true);
     try {
@@ -557,13 +442,9 @@ export default function EMonumentHiddenTab() {
 
       let instanceId = editingInstanceId;
       if (!instanceId) {
-        const created = await emonumentService.createInstance(monumentCode, formData);
+        const created = await emonumentService.createInstance(formData);
         instanceId = created.id;
         setEditingInstanceId(created.id);
-      }
-
-      if (selectedMonumentCode !== monumentCode) {
-        setSelectedMonumentCode(monumentCode);
       }
 
       await emonumentService.updateInstance(
@@ -574,25 +455,30 @@ export default function EMonumentHiddenTab() {
       await emonumentService.submitForVerification(instanceId);
 
       await load();
-      setValidationIssues([]);
       closeEditor();
     } catch (error: any) {
       const apiErrors = error?.response?.data?.detail?.errors;
       if (Array.isArray(apiErrors)) {
         setValidationIssues(apiErrors);
-      } else if (error?.response?.status === 404) {
+      } else {
+        const detail = error?.response?.data?.detail;
+        const message =
+          (typeof detail === "string" && detail) ||
+          (typeof detail?.message === "string" && detail.message) ||
+          error?.message ||
+          "Trimiterea formularului a esuat.";
         setValidationIssues([
           {
-            path: "monument_code",
-            code: "not_found",
-            message: "Codul LMI/ZP selectat nu exista. Alege un cod valid din lista.",
+            path: "instance",
+            code: "submit_failed",
+            message,
           },
         ]);
       }
     } finally {
       setSubmitting(false);
     }
-  }, [canEditCurrentForm, getEffectiveMonumentCode, selectedMonumentCode, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
+  }, [canEditCurrentForm, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
 
   const deleteInstance = useCallback(async (instanceId: string) => {
     try {
@@ -685,18 +571,11 @@ export default function EMonumentHiddenTab() {
       const currentValue = holder[field.key];
 
       if (section.key === "localizare" && !subsectionKey && field.key === "pin") {
-        const monumentLatitude = Number(selectedMonument?.latitude);
-        const monumentLongitude = Number(selectedMonument?.longitude);
-        const monumentCoordinate =
-          Number.isFinite(monumentLatitude) && Number.isFinite(monumentLongitude)
-            ? { latitude: monumentLatitude, longitude: monumentLongitude }
-            : null;
-
         return (
           <MonumentPinPicker
             value={currentValue}
             editable={canEditCurrentForm}
-            monumentCoordinate={monumentCoordinate}
+            monumentCoordinate={null}
             onChange={(nextValue) => setFieldValue(section.key, field.key, nextValue, subsectionKey)}
           />
         );
@@ -771,7 +650,7 @@ export default function EMonumentHiddenTab() {
         />
       );
     },
-    [formData, setFieldValue, canEditCurrentForm, selectedMonument],
+    [formData, setFieldValue, canEditCurrentForm],
   );
 
   const renderSection = useCallback(
@@ -877,10 +756,12 @@ export default function EMonumentHiddenTab() {
       }}
     >
       <View style={styles.formCardContent}>
+        {(() => {
+          const code = findMonumentCodeInData(item.data);
+          return code ? <Text style={styles.formCardCodeTag}>{code}</Text> : null;
+        })()}
         <Text style={styles.formCardTitle}>
-          {`${monumentCodeById.get(item.monument_id) || "Cod lipsa"} - ${
-            monumentNameById.get(item.monument_id) || "Monument"
-          }`}
+          {"Formular eMonument"}
         </Text>
         <Text style={styles.formCardDescription}>
           Formular eMonument v{item.version}
@@ -1049,92 +930,6 @@ export default function EMonumentHiddenTab() {
                   <View style={styles.progressBarTrack}>
                     <View style={[styles.progressBarFill, { width: `${overallProgress.percent}%` }]} />
                   </View>
-                </View>
-
-                <View style={styles.formSectionCard}>
-                  <Text style={styles.formSectionTitle}>Monument</Text>
-                  {monuments.length > 0 ? (
-                    <>
-                      <View style={styles.monumentSearchRow}>
-                        <TextInput
-                          style={[styles.input, styles.monumentSearchInput]}
-                          value={monumentSearchQuery}
-                          placeholder="Cauta monument dupa cod LMI/ZP sau nume"
-                          placeholderTextColor="#777"
-                          onChangeText={setMonumentSearchQuery}
-                          onSubmitEditing={applyMonumentSearch}
-                          returnKeyType="search"
-                        />
-                        <TouchableOpacity style={styles.monumentSearchButton} onPress={applyMonumentSearch}>
-                          <Text style={styles.monumentSearchButtonText}>Search</Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={styles.monumentResultsList}>
-                        {!hasAppliedMonumentSearch ? (
-                          <Text style={styles.monumentResultEmpty}>Apasa Search pentru a vedea rezultate.</Text>
-                        ) : filteredMonumentsForPicker.length === 0 ? (
-                          <Text style={styles.monumentResultEmpty}>Niciun monument gasit pentru cautarea curenta.</Text>
-                        ) : (
-                          filteredMonumentsForPicker.map((m) => {
-                            const active = selectedMonumentCode === m.lmi_code;
-                            return (
-                              <TouchableOpacity
-                                key={m.id}
-                                style={[styles.monumentResultRow, active && styles.monumentResultRowActive]}
-                                disabled={!canEditCurrentForm}
-                                onPress={() => {
-                                  if (!canEditCurrentForm) return;
-                                  setSelectedMonumentCode(m.lmi_code);
-                                  setValidationIssues((prev) =>
-                                    prev.filter(
-                                      (issue) => issue.path !== "monument_id" && issue.path !== "monument_code",
-                                    ),
-                                  );
-                                }}
-                              >
-                                <Text style={[styles.monumentResultCode, active && styles.monumentResultCodeActive]}>
-                                  {m.lmi_code}
-                                </Text>
-                                <Text style={[styles.monumentResultName, active && styles.monumentResultNameActive]}>
-                                  {m.name}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })
-                        )}
-                      </View>
-
-                      <View style={styles.selectedMonumentBox}>
-                        <Text style={styles.selectedMonumentLabel}>Selectat:</Text>
-                        <Text style={styles.selectedMonumentValue}>
-                          {selectedMonument
-                            ? `${selectedMonument.lmi_code} - ${selectedMonument.name}`
-                            : selectedMonumentCode || "Niciun monument selectat"}
-                        </Text>
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.monumentFallbackText}>
-                        Nu exista monumente in lista pentru acest cont. Introdu manual un cod LMI/ZP pentru test.
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={selectedMonumentCode}
-                        placeholder="Cod LMI/ZP"
-                        placeholderTextColor="#777"
-                        onChangeText={(text) => {
-                          setSelectedMonumentCode(text.trim());
-                          setValidationIssues((prev) =>
-                            prev.filter(
-                              (issue) => issue.path !== "monument_id" && issue.path !== "monument_code",
-                            ),
-                          );
-                        }}
-                      />
-                    </>
-                  )}
                 </View>
 
                 {schema.map((section) => renderSection(section))}
@@ -1368,6 +1163,19 @@ const styles = StyleSheet.create({
   },
   formCardContent: {
     padding: 16,
+  },
+  formCardCodeTag: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#5A2222",
+    backgroundColor: "#2A1212",
+    color: "#FFD9D9",
+    fontSize: 11,
+    fontWeight: "700",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 8,
   },
   formCardTitle: {
     fontSize: 18,
@@ -1721,93 +1529,6 @@ const styles = StyleSheet.create({
   optionChipTextActive: {
     color: "#FFD9D9",
     fontWeight: "700",
-  },
-  monumentSearchRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  monumentSearchInput: {
-    flex: 1,
-  },
-  monumentSearchButton: {
-    borderRadius: 8,
-    backgroundColor: "#FF2A2A",
-    borderWidth: 1,
-    borderColor: "#FF2A2A",
-    paddingHorizontal: 12,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  monumentSearchButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  monumentResultsList: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#2F2F2F",
-    borderRadius: 10,
-    backgroundColor: "#131313",
-    maxHeight: 220,
-    overflow: "hidden",
-  },
-  monumentResultRow: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#232323",
-  },
-  monumentResultRowActive: {
-    backgroundColor: "#2A1212",
-  },
-  monumentResultCode: {
-    color: "#E5E5E5",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  monumentResultCodeActive: {
-    color: "#FFD9D9",
-  },
-  monumentResultName: {
-    color: "#BFBFBF",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  monumentResultNameActive: {
-    color: "#FFECEC",
-  },
-  monumentResultEmpty: {
-    color: "#A0A0A0",
-    fontSize: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  selectedMonumentBox: {
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2E2E2E",
-    backgroundColor: "#151515",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  selectedMonumentLabel: {
-    color: "#9F9F9F",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  selectedMonumentValue: {
-    color: "#F0F0F0",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  monumentFallbackText: {
-    color: "#B5B5B5",
-    fontSize: 12,
-    marginBottom: 8,
   },
   editorActions: {
     marginTop: 14,

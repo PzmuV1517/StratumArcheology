@@ -307,36 +307,6 @@ th {
   align-items: end;
 }
 
-.monuments-toolbar {
-  margin-top: 0;
-  gap: 0.38rem;
-  align-items: center;
-}
-
-.monuments-toolbar label {
-  gap: 0.15rem;
-  font-size: 0.82rem;
-}
-
-.monuments-toolbar .db-search {
-  min-height: 30px;
-  padding: 0.12rem 0.45rem;
-}
-
-.monuments-toolbar input,
-.monuments-toolbar select {
-  min-height: 30px;
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
-}
-
-.monuments-toolbar button,
-.monuments-pagination-row button {
-  min-height: 30px;
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
-}
-
 .db-toolbar label {
   min-width: 140px;
 }
@@ -381,23 +351,6 @@ th {
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
-}
-
-.monuments-panel .db-stats {
-  margin-top: 0.15rem;
-  margin-bottom: 0.1rem;
-}
-
-.monuments-table td,
-.monuments-table th {
-  padding-top: 0.48rem;
-  padding-bottom: 0.48rem;
-}
-
-.monuments-action-btn {
-  min-height: 28px;
-  padding-top: 0.14rem;
-  padding-bottom: 0.14rem;
 }
 
 .sort-btn {

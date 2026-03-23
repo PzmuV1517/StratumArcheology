@@ -4,7 +4,6 @@ import {
   Copy,
   Download,
   FileText,
-  Landmark,
   LogOut,
   RotateCcw,
   Search,
@@ -47,25 +46,12 @@ type Instance = {
   updated_at: string
 }
 
-type Monument = {
-  id: string
-  lmi_code: string
-  name: string
-  county: string | null
-  locality: string | null
-  address: string | null
-  latitude: string | null
-  longitude: string | null
-  status: string | null
-}
-
 type AuthResponse = {
   access_token: string
   user: User
 }
 
 type InstanceSortKey = 'updated_at' | 'status' | 'version' | 'id'
-type MonumentSortKey = 'id' | 'lmi_code' | 'name' | 'county' | 'locality' | 'status'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
@@ -76,7 +62,7 @@ const isDev = Boolean(import.meta.env.DEV)
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
-  const [tab, setTab] = useState<'users' | 'instances' | 'monuments' | 'form-view'>('users')
+  const [tab, setTab] = useState<'users' | 'instances' | 'form-view'>('users')
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [expandedPinMapKey, setExpandedPinMapKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -91,22 +77,11 @@ function App() {
   const [instancePage, setInstancePage] = useState(1)
   const [instancePageSize, setInstancePageSize] = useState(25)
 
-  const [monumentSearch, setMonumentSearch] = useState('')
-  const [monumentStatusFilter, setMonumentStatusFilter] = useState<'all' | string>('all')
-  const [monumentCountyFilter, setMonumentCountyFilter] = useState<'all' | string>('all')
-  const [monumentWithCoordinatesOnly, setMonumentWithCoordinatesOnly] = useState(false)
-  const [monumentCompactRows, setMonumentCompactRows] = useState(true)
-  const [monumentSortKey, setMonumentSortKey] = useState<MonumentSortKey>('lmi_code')
-  const [monumentSortDirection, setMonumentSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [monumentPage, setMonumentPage] = useState(1)
-  const [monumentPageSize, setMonumentPageSize] = useState(25)
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const [users, setUsers] = useState<User[]>([])
   const [instances, setInstances] = useState<Instance[]>([])
-  const [monuments, setMonuments] = useState<Monument[]>([])
 
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
@@ -114,15 +89,6 @@ function App() {
   const [newUserUsername, setNewUserUsername] = useState('')
   const [newUserPrivileged, setNewUserPrivileged] = useState(true)
   const [newUserAdmin, setNewUserAdmin] = useState(false)
-
-  const [newMonumentLmiCode, setNewMonumentLmiCode] = useState('')
-  const [newMonumentName, setNewMonumentName] = useState('')
-  const [newMonumentCounty, setNewMonumentCounty] = useState('')
-  const [newMonumentLocality, setNewMonumentLocality] = useState('')
-  const [newMonumentAddress, setNewMonumentAddress] = useState('')
-  const [newMonumentLatitude, setNewMonumentLatitude] = useState('')
-  const [newMonumentLongitude, setNewMonumentLongitude] = useState('')
-  const [newMonumentStatus, setNewMonumentStatus] = useState('')
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -149,22 +115,6 @@ function App() {
     }
     return counts
   }, [instances])
-
-  const monumentStatusOptions = useMemo(
-    () =>
-      Array.from(new Set(monuments.map((monument) => monument.status?.trim() || '-')))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b)),
-    [monuments],
-  )
-
-  const monumentCountyOptions = useMemo(
-    () =>
-      Array.from(new Set(monuments.map((monument) => monument.county?.trim() || '-')))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b)),
-    [monuments],
-  )
 
   const filteredSortedInstances = useMemo(() => {
     const query = instanceSearch.trim().toLowerCase()
@@ -229,102 +179,6 @@ function App() {
     const end = Math.min(start + instancePageSize - 1, filteredSortedInstances.length)
     return `${start}-${end}`
   }, [filteredSortedInstances.length, instancePage, instancePageSize])
-
-  const filteredSortedMonuments = useMemo(() => {
-    const query = monumentSearch.trim().toLowerCase()
-
-    const filtered = monuments
-      .filter((monument) => {
-        const status = monument.status?.trim() || '-'
-        return monumentStatusFilter === 'all' ? true : status === monumentStatusFilter
-      })
-      .filter((monument) => {
-        const county = monument.county?.trim() || '-'
-        return monumentCountyFilter === 'all' ? true : county === monumentCountyFilter
-      })
-      .filter((monument) => {
-        if (!monumentWithCoordinatesOnly) return true
-        return Boolean(monument.latitude?.trim() && monument.longitude?.trim())
-      })
-      .filter((monument) => {
-        if (!query) return true
-        const haystack = [
-          monument.id,
-          monument.lmi_code,
-          monument.name,
-          monument.county ?? '',
-          monument.locality ?? '',
-          monument.address ?? '',
-          monument.latitude ?? '',
-          monument.longitude ?? '',
-          monument.status ?? '',
-        ]
-          .join(' ')
-          .toLowerCase()
-        return haystack.includes(query)
-      })
-
-    filtered.sort((a, b) => {
-      const aStatus = a.status ?? ''
-      const bStatus = b.status ?? ''
-      const aCounty = a.county ?? ''
-      const bCounty = b.county ?? ''
-      const aLocality = a.locality ?? ''
-      const bLocality = b.locality ?? ''
-
-      let result = 0
-      if (monumentSortKey === 'id') {
-        result = a.id.localeCompare(b.id)
-      } else if (monumentSortKey === 'lmi_code') {
-        result = a.lmi_code.localeCompare(b.lmi_code)
-      } else if (monumentSortKey === 'name') {
-        result = a.name.localeCompare(b.name)
-      } else if (monumentSortKey === 'county') {
-        result = aCounty.localeCompare(bCounty)
-      } else if (monumentSortKey === 'locality') {
-        result = aLocality.localeCompare(bLocality)
-      } else {
-        result = aStatus.localeCompare(bStatus)
-      }
-
-      return monumentSortDirection === 'asc' ? result : -result
-    })
-
-    return filtered
-  }, [
-    monuments,
-    monumentCountyFilter,
-    monumentSearch,
-    monumentSortDirection,
-    monumentSortKey,
-    monumentStatusFilter,
-    monumentWithCoordinatesOnly,
-  ])
-
-  const monumentCounts = useMemo(() => {
-    const withCoordinates = monuments.filter(
-      (monument) => Boolean(monument.latitude?.trim() && monument.longitude?.trim()),
-    ).length
-    return {
-      total: monuments.length,
-      withCoordinates,
-      missingCoordinates: monuments.length - withCoordinates,
-    }
-  }, [monuments])
-
-  const totalMonumentPages = Math.max(1, Math.ceil(filteredSortedMonuments.length / monumentPageSize))
-
-  const paginatedMonuments = useMemo(() => {
-    const start = (monumentPage - 1) * monumentPageSize
-    return filteredSortedMonuments.slice(start, start + monumentPageSize)
-  }, [filteredSortedMonuments, monumentPage, monumentPageSize])
-
-  const monumentVisibleRangeLabel = useMemo(() => {
-    if (filteredSortedMonuments.length === 0) return '0-0'
-    const start = (monumentPage - 1) * monumentPageSize + 1
-    const end = Math.min(start + monumentPageSize - 1, filteredSortedMonuments.length)
-    return `${start}-${end}`
-  }, [filteredSortedMonuments.length, monumentPage, monumentPageSize])
 
   const statusLabel = (status: InstanceStatus) =>
     ({
@@ -565,48 +419,6 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  const exportMonumentsCsv = () => {
-    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
-
-    const headers = [
-      'id',
-      'lmi_code',
-      'name',
-      'county',
-      'locality',
-      'address',
-      'latitude',
-      'longitude',
-      'status',
-    ]
-    const lines = filteredSortedMonuments.map((monument) =>
-      [
-        monument.id,
-        monument.lmi_code,
-        monument.name,
-        monument.county ?? '',
-        monument.locality ?? '',
-        monument.address ?? '',
-        monument.latitude ?? '',
-        monument.longitude ?? '',
-        monument.status ?? '',
-      ]
-        .map((value) => escapeCsv(value))
-        .join(','),
-    )
-
-    const csv = [headers.join(','), ...lines].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `emonument_monuments_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
   const toggleSort = (key: InstanceSortKey) => {
     if (instanceSortKey === key) {
       setInstanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -614,15 +426,6 @@ function App() {
     }
     setInstanceSortKey(key)
     setInstanceSortDirection('desc')
-  }
-
-  const toggleMonumentSort = (key: MonumentSortKey) => {
-    if (monumentSortKey === key) {
-      setMonumentSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setMonumentSortKey(key)
-    setMonumentSortDirection('asc')
   }
 
   useEffect(() => {
@@ -639,16 +442,6 @@ function App() {
     setExpandedPinMapKey(null)
   }, [selectedInstanceId])
 
-  useEffect(() => {
-    setMonumentPage(1)
-  }, [monumentSearch, monumentStatusFilter, monumentCountyFilter, monumentWithCoordinatesOnly, monumentPageSize])
-
-  useEffect(() => {
-    if (monumentPage > totalMonumentPages) {
-      setMonumentPage(totalMonumentPages)
-    }
-  }, [monumentPage, totalMonumentPages])
-
   const fillLoginDev = () => {
     setEmail(import.meta.env.VITE_DEV_DASHBOARD_EMAIL ?? 'admin@example.com')
     setPassword(import.meta.env.VITE_DEV_DASHBOARD_PASSWORD ?? 'password123')
@@ -663,19 +456,6 @@ function App() {
     setNewUserUsername(`emon_user_${stamp.toString().slice(-6)}`)
     setNewUserPrivileged(true)
     setNewUserAdmin(false)
-    setError(null)
-  }
-
-  const fillCreateMonumentDev = () => {
-    const stamp = Date.now().toString().slice(-6)
-    setNewMonumentLmiCode(`DEV-${stamp}`)
-    setNewMonumentName(`Monument test ${stamp}`)
-    setNewMonumentCounty('Bucuresti')
-    setNewMonumentLocality('Bucuresti')
-    setNewMonumentAddress(`Strada Test ${stamp}`)
-    setNewMonumentLatitude('44.4268')
-    setNewMonumentLongitude('26.1025')
-    setNewMonumentStatus('activ')
     setError(null)
   }
 
@@ -698,12 +478,6 @@ function App() {
     setInstances(res.data)
   }
 
-  const loadMonuments = async () => {
-    if (!authHeaders) return
-    const res = await api.get<Monument[]>('/emonument-dashboard/monuments', { headers: authHeaders })
-    setMonuments(res.data)
-  }
-
   useEffect(() => {
     if (!token) {
       setMe(null)
@@ -711,7 +485,7 @@ function App() {
     }
 
     loadMe(token)
-      .then(() => Promise.all([loadUsers(), loadInstances(), loadMonuments()]))
+      .then(() => Promise.all([loadUsers(), loadInstances()]))
       .catch(() => {
         localStorage.removeItem('dashboard_token')
         setToken(null)
@@ -767,48 +541,6 @@ function App() {
       const message = axios.isAxiosError(err)
         ? err.response?.data?.detail ?? 'Could not create user'
         : 'Could not create user'
-      setError(message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCreateMonument = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!authHeaders) return
-    setError(null)
-    setLoading(true)
-    try {
-      const res = await api.post<Monument>(
-        '/emonument-dashboard/monuments',
-        {
-          lmi_code: newMonumentLmiCode,
-          name: newMonumentName,
-          county: newMonumentCounty || null,
-          locality: newMonumentLocality || null,
-          address: newMonumentAddress || null,
-          latitude: newMonumentLatitude || null,
-          longitude: newMonumentLongitude || null,
-          status: newMonumentStatus || null,
-        },
-        { headers: authHeaders },
-      )
-      setNewMonumentLmiCode('')
-      setNewMonumentName('')
-      setNewMonumentCounty('')
-      setNewMonumentLocality('')
-      setNewMonumentAddress('')
-      setNewMonumentLatitude('')
-      setNewMonumentLongitude('')
-      setNewMonumentStatus('')
-      alert(`Monument created. Monument ID: ${res.data.id}`)
-      await loadMonuments()
-    } catch (err: unknown) {
-      let message = 'Could not create monument'
-      if (axios.isAxiosError(err)) {
-        const detail = err.response?.data?.detail
-        message = typeof detail === 'string' ? detail : message
-      }
       setError(message)
     } finally {
       setLoading(false)
@@ -886,23 +618,6 @@ function App() {
     }
   }
 
-  const deleteMonument = async (monumentId: string) => {
-    if (!authHeaders) return
-    const ok = window.confirm('Delete this monument? This action cannot be undone.')
-    if (!ok) return
-
-    setError(null)
-    try {
-      await api.delete(`/emonument-dashboard/monuments/${monumentId}`, { headers: authHeaders })
-      await loadMonuments()
-    } catch (err: unknown) {
-      const message = axios.isAxiosError(err)
-        ? err.response?.data?.detail ?? 'Delete failed'
-        : 'Delete failed'
-      setError(message)
-    }
-  }
-
   const logout = () => {
     localStorage.removeItem('dashboard_token')
     setToken(null)
@@ -964,9 +679,6 @@ function App() {
         </button>
         <button className={tab === 'instances' ? 'active' : ''} onClick={() => setTab('instances')}>
           <Shield size={16} /> Validation Flow
-        </button>
-        <button className={tab === 'monuments' ? 'active' : ''} onClick={() => setTab('monuments')}>
-          <Landmark size={16} /> Monuments
         </button>
         {selectedInstance ? (
           <button className={tab === 'form-view' ? 'active' : ''} onClick={() => setTab('form-view')}>
@@ -1289,263 +1001,6 @@ function App() {
               </button>
             </div>
           </div>
-        </section>
-      ) : tab === 'monuments' ? (
-        <section className="grid-two">
-          <article className="panel">
-            <h3>
-              <Landmark size={18} /> Add Monument
-            </h3>
-            <form className="stack" onSubmit={handleCreateMonument}>
-              <label>
-                LMI Code
-                <input
-                  value={newMonumentLmiCode}
-                  onChange={(e) => setNewMonumentLmiCode(e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Name
-                <input
-                  value={newMonumentName}
-                  onChange={(e) => setNewMonumentName(e.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                County
-                <input value={newMonumentCounty} onChange={(e) => setNewMonumentCounty(e.target.value)} />
-              </label>
-              <label>
-                Locality
-                <input value={newMonumentLocality} onChange={(e) => setNewMonumentLocality(e.target.value)} />
-              </label>
-              <label>
-                Address
-                <input value={newMonumentAddress} onChange={(e) => setNewMonumentAddress(e.target.value)} />
-              </label>
-              <label>
-                Latitude
-                <input value={newMonumentLatitude} onChange={(e) => setNewMonumentLatitude(e.target.value)} />
-              </label>
-              <label>
-                Longitude
-                <input value={newMonumentLongitude} onChange={(e) => setNewMonumentLongitude(e.target.value)} />
-              </label>
-              <label>
-                Status
-                <input value={newMonumentStatus} onChange={(e) => setNewMonumentStatus(e.target.value)} />
-              </label>
-              <button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Add Monument'}
-              </button>
-              {isDev ? (
-                <button type="button" className="small ghost" onClick={fillCreateMonumentDev}>
-                  DEV Autofill
-                </button>
-              ) : null}
-            </form>
-          </article>
-
-          <article className="panel monuments-panel">
-            <h3>Monuments Table</h3>
-
-            <div className="db-toolbar monuments-toolbar">
-              <label className="db-search">
-                <Search size={14} />
-                <input
-                  value={monumentSearch}
-                  onChange={(event) => setMonumentSearch(event.target.value)}
-                  placeholder="Search by LMI, id, name, county, locality"
-                />
-              </label>
-
-              <label>
-                Status
-                <select
-                  value={monumentStatusFilter}
-                  onChange={(event) => setMonumentStatusFilter(event.target.value)}
-                >
-                  <option value="all">All</option>
-                  {monumentStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                County
-                <select
-                  value={monumentCountyFilter}
-                  onChange={(event) => setMonumentCountyFilter(event.target.value)}
-                >
-                  <option value="all">All</option>
-                  {monumentCountyOptions.map((county) => (
-                    <option key={county} value={county}>
-                      {county}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Rows
-                <select
-                  value={monumentPageSize}
-                  onChange={(event) => setMonumentPageSize(Number(event.target.value))}
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </label>
-
-              <label className="switch-row">
-                <input
-                  type="checkbox"
-                  checked={monumentWithCoordinatesOnly}
-                  onChange={(event) => setMonumentWithCoordinatesOnly(event.target.checked)}
-                />
-                Coordinates only
-              </label>
-
-              <label className="switch-row">
-                <input
-                  type="checkbox"
-                  checked={monumentCompactRows}
-                  onChange={(event) => setMonumentCompactRows(event.target.checked)}
-                />
-                Compact rows
-              </label>
-
-              <div className="toolbar-spacer" />
-
-              <button className="small ghost" onClick={exportMonumentsCsv}>
-                <Download size={14} /> Export CSV
-              </button>
-            </div>
-
-            <div className="db-stats">
-              <span className="stat-chip">Total: {monumentCounts.total}</span>
-              <span className="stat-chip">With coords: {monumentCounts.withCoordinates}</span>
-              <span className="stat-chip">Missing coords: {monumentCounts.missingCoordinates}</span>
-              <span className="stat-chip">Filtered: {filteredSortedMonuments.length}</span>
-            </div>
-
-            {filteredSortedMonuments.length === 0 ? (
-              <p>No monuments match the current filters.</p>
-            ) : (
-              <div className="table-wrap tall">
-                <table className={`db-table monuments-table ${monumentCompactRows ? 'compact' : ''}`}>
-                <thead>
-                  <tr>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('id')}>
-                        Monument ID
-                      </button>
-                    </th>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('lmi_code')}>
-                        LMI
-                      </button>
-                    </th>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('name')}>
-                        Name
-                      </button>
-                    </th>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('county')}>
-                        County
-                      </button>
-                    </th>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('locality')}>
-                        Locality
-                      </button>
-                    </th>
-                    <th>Coordinates</th>
-                    <th>
-                      <button className="sort-btn" onClick={() => toggleMonumentSort('status')}>
-                        Status
-                      </button>
-                    </th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedMonuments.map((monument) => (
-                    <tr key={monument.id}>
-                      <td className="cell-mono">
-                        <span className="truncate">{monument.id}</span>
-                        <button
-                          className="icon-btn"
-                          onClick={() => void copyToClipboard(monument.id)}
-                          title="Copy monument id"
-                        >
-                          <Copy size={12} />
-                        </button>
-                      </td>
-                      <td className="cell-mono">
-                        <span className="truncate">{monument.lmi_code}</span>
-                        <button
-                          className="icon-btn"
-                          onClick={() => void copyToClipboard(monument.lmi_code)}
-                          title="Copy LMI code"
-                        >
-                          <Copy size={12} />
-                        </button>
-                      </td>
-                      <td>{monument.name}</td>
-                      <td>{monument.county ?? '-'}</td>
-                      <td>{monument.locality ?? '-'}</td>
-                      <td className="cell-mono">
-                        {monument.latitude && monument.longitude
-                          ? `${monument.latitude}, ${monument.longitude}`
-                          : '-'}
-                      </td>
-                      <td>{monument.status ?? '-'}</td>
-                      <td>
-                        <button className="small danger monuments-action-btn" onClick={() => deleteMonument(monument.id)}>
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            )}
-
-            <div className="pagination-row monuments-pagination-row">
-              <span>
-                Showing {monumentVisibleRangeLabel} of {filteredSortedMonuments.length}
-              </span>
-              <div className="pagination-actions">
-                <button
-                  className="small ghost"
-                  disabled={monumentPage <= 1}
-                  onClick={() => setMonumentPage((prev) => Math.max(1, prev - 1))}
-                >
-                  Prev
-                </button>
-                <span>
-                  Page {monumentPage} / {totalMonumentPages}
-                </span>
-                <button
-                  className="small ghost"
-                  disabled={monumentPage >= totalMonumentPages}
-                  onClick={() => setMonumentPage((prev) => Math.min(totalMonumentPages, prev + 1))}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </article>
         </section>
       ) : (
         <section className="panel">
