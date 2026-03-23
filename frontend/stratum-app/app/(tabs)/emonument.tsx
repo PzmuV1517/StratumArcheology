@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
+  Pressable,
   Platform,
   RefreshControl,
   ScrollView,
@@ -87,6 +89,7 @@ export default function EMonumentHiddenTab() {
   const [showEditor, setShowEditor] = useState(false);
   const [editingInstanceId, setEditingInstanceId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [initialEditorSnapshot, setInitialEditorSnapshot] = useState("{}");
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [validationIssues, setValidationIssues] = useState<EMonumentValidationIssue[]>([]);
@@ -305,15 +308,19 @@ export default function EMonumentHiddenTab() {
 
   const openNewForm = useCallback(() => {
     setEditingInstanceId(null);
-    setFormData(buildSchemaSkeleton(schema));
+    const nextData = buildSchemaSkeleton(schema);
+    setFormData(nextData);
+    setInitialEditorSnapshot(JSON.stringify(nextData));
     setValidationIssues([]);
     setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
     setShowEditor(true);
   }, [buildSchemaSkeleton, schema]);
 
   const openExisting = useCallback((instance: EMonumentInstance) => {
+    const nextData = (instance.data as Record<string, unknown>) || {};
     setEditingInstanceId(instance.id);
-    setFormData((instance.data as Record<string, unknown>) || {});
+    setFormData(nextData);
+    setInitialEditorSnapshot(JSON.stringify(nextData));
     setValidationIssues([]);
     setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
     setShowEditor(true);
@@ -323,9 +330,52 @@ export default function EMonumentHiddenTab() {
     setShowEditor(false);
     setEditingInstanceId(null);
     setFormData({});
+    setInitialEditorSnapshot("{}");
     setValidationIssues([]);
     setExpandedSectionKeys([]);
   }, []);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!showEditor || !canEditCurrentForm || saving || submitting) {
+      return false;
+    }
+
+    return JSON.stringify(formData) !== initialEditorSnapshot;
+  }, [showEditor, canEditCurrentForm, saving, submitting, formData, initialEditorSnapshot]);
+
+  const requestCloseEditor = useCallback(() => {
+    if (saving || submitting) {
+      return;
+    }
+
+    if (!hasUnsavedChanges) {
+      closeEditor();
+      return;
+    }
+
+    const warningMessage = "Ai modificari nesalvate. Daca inchizi acum, progresul se va pierde.";
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const shouldDiscard = window.confirm(warningMessage);
+      if (shouldDiscard) {
+        closeEditor();
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Renunti la modificarile nesalvate?",
+      warningMessage,
+      [
+        { text: "Continua editarea", style: "cancel" },
+        {
+          text: "Inchide fara salvare",
+          style: "destructive",
+          onPress: closeEditor,
+        },
+      ],
+    );
+  }, [hasUnsavedChanges, saving, submitting, closeEditor]);
 
   const toggleSection = useCallback((sectionKey: string) => {
     setExpandedSectionKeys((prev) =>
@@ -393,6 +443,7 @@ export default function EMonumentHiddenTab() {
         const created = await emonumentService.createInstance(formData);
         setEditingInstanceId(created.id);
       }
+      setInitialEditorSnapshot(JSON.stringify(formData));
       setValidationIssues([]);
       await load();
     } catch (error: any) {
@@ -767,7 +818,7 @@ export default function EMonumentHiddenTab() {
           Formular eMonument v{item.version}
         </Text>
         {item.status === "reintors" && item.rejection_reason ? (
-          <Text style={styles.returnReasonText}>Reintors: {item.rejection_reason}</Text>
+          <Text style={styles.returnReasonText}>Motiv: {item.rejection_reason}</Text>
         ) : null}
         <View style={styles.formCardMeta}>
           <Text style={[styles.formCardStatus, { color: statusColor(item.status) }]}> 
@@ -786,6 +837,77 @@ export default function EMonumentHiddenTab() {
     </TouchableOpacity>
   );
   };
+
+  const renderEditorOverlay = (floating: boolean) => (
+    <View style={[styles.editorOverlay, floating && styles.editorOverlayFloating]}>
+      <View style={styles.modalHeader}>
+        <TouchableOpacity onPress={requestCloseEditor}>
+          <Text style={styles.modalAction}>Inchide</Text>
+        </TouchableOpacity>
+        <Text style={styles.modalTitle}>{editingInstanceId ? "Editare formular" : "Formular nou"}</Text>
+        {__DEV__ ? (
+          <TouchableOpacity style={styles.devFillButton} onPress={autoFillValidData}>
+            <Text style={styles.devFillButtonText}>DEV: Autofill</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 64 }} />
+        )}
+      </View>
+
+      <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 60 }}>
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>Progres Formular</Text>
+          <Text style={styles.progressSubtitle}>
+            {overallProgress.filled}/{overallProgress.total} campuri completate ({overallProgress.percent}%)
+          </Text>
+          <View style={styles.progressBarTrack}>
+            <View style={[styles.progressBarFill, { width: `${overallProgress.percent}%` }]} />
+          </View>
+        </View>
+
+        {schema.map((section) => renderSection(section))}
+
+        {validationIssues.length > 0 && (
+          <View style={styles.issueList}>
+            {validationIssues.map((issue, idx) => (
+              <View key={`${issue.path}-${idx}`} style={styles.issueRow}>
+                <Text style={styles.issuePath}>{issue.path}</Text>
+                <Text style={styles.issueMessage}>{issue.message}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.editorActions}>
+          {canEditCurrentForm ? (
+            <>
+              <TouchableOpacity
+                style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
+                disabled={saving || submitting}
+                onPress={saveDraft}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {saving ? "Se salveaza..." : isEditingDraft ? "Update Draft" : "Salveaza Draft"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
+                disabled={saving || submitting}
+                onPress={submitForVerification}
+              >
+                <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.readOnlyBanner}>
+              <Text style={styles.readOnlyBannerText}>Acest formular nu mai este editabil. Doar draft-urile pot fi editate.</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -897,86 +1019,33 @@ export default function EMonumentHiddenTab() {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.editorPane, isWide && styles.editorPaneWide]}>
-          <View style={styles.editorHost}>
-            <View style={styles.emptyEditorState}>
-              <Text style={styles.emptyEditorTitle}>Editor Formular</Text>
-              <Text style={styles.infoText}>Apasa pe un formular din lista din stanga sau pe butonul + Formular Nou.</Text>
-            </View>
-          </View>
-
-          {showEditor ? (
-            <View style={styles.editorOverlay}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity onPress={closeEditor}>
-                  <Text style={styles.modalAction}>Inchide</Text>
-                </TouchableOpacity>
-                <Text style={styles.modalTitle}>{editingInstanceId ? "Editare formular" : "Formular nou"}</Text>
-                {__DEV__ ? (
-                  <TouchableOpacity style={styles.devFillButton} onPress={autoFillValidData}>
-                    <Text style={styles.devFillButtonText}>DEV: Autofill</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ width: 64 }} />
-                )}
+        {isWide ? (
+          <View style={[styles.editorPane, styles.editorPaneWide]}>
+            <View style={styles.editorHost}>
+              <View style={styles.emptyEditorState}>
+                <Text style={styles.emptyEditorTitle}>Editor Formular</Text>
+                <Text style={styles.infoText}>Apasa pe un formular din lista din stanga sau pe butonul + Formular Nou.</Text>
               </View>
-
-              <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 60 }}>
-                <View style={styles.progressCard}>
-                  <Text style={styles.progressTitle}>Progres Formular</Text>
-                  <Text style={styles.progressSubtitle}>
-                    {overallProgress.filled}/{overallProgress.total} campuri completate ({overallProgress.percent}%)
-                  </Text>
-                  <View style={styles.progressBarTrack}>
-                    <View style={[styles.progressBarFill, { width: `${overallProgress.percent}%` }]} />
-                  </View>
-                </View>
-
-                {schema.map((section) => renderSection(section))}
-
-                {validationIssues.length > 0 && (
-                  <View style={styles.issueList}>
-                    {validationIssues.map((issue, idx) => (
-                      <View key={`${issue.path}-${idx}`} style={styles.issueRow}>
-                        <Text style={styles.issuePath}>{issue.path}</Text>
-                        <Text style={styles.issueMessage}>{issue.message}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-
-                <View style={styles.editorActions}>
-                  {canEditCurrentForm ? (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
-                        disabled={saving || submitting}
-                        onPress={saveDraft}
-                      >
-                        <Text style={styles.primaryButtonText}>
-                          {saving ? "Se salveaza..." : isEditingDraft ? "Update Draft" : "Salveaza Draft"}
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
-                        disabled={saving || submitting}
-                        onPress={submitForVerification}
-                      >
-                        <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <View style={styles.readOnlyBanner}>
-                      <Text style={styles.readOnlyBannerText}>Acest formular nu mai este editabil. Doar draft-urile pot fi editate.</Text>
-                    </View>
-                  )}
-                </View>
-              </ScrollView>
             </View>
-          ) : null}
-        </View>
+
+            {showEditor ? renderEditorOverlay(true) : null}
+          </View>
+        ) : null}
       </View>
+
+      {!isWide ? (
+        <Modal
+          visible={showEditor}
+          animationType="fade"
+          transparent
+          onRequestClose={requestCloseEditor}
+        >
+          <View style={styles.mobileModalRoot}>
+            <Pressable style={styles.mobileModalBackdrop} onPress={requestCloseEditor} />
+            <View style={styles.mobileSheetContainer}>{renderEditorOverlay(false)}</View>
+          </View>
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -1015,11 +1084,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   editorOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: "#101010",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 24,
+    zIndex: 2,
+  },
+  editorOverlayFloating: {
+    ...StyleSheet.absoluteFillObject,
     borderLeftWidth: 1,
     borderLeftColor: "#2A2A2A",
-    zIndex: 2,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  mobileModalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  mobileModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  mobileSheetContainer: {
+    height: "92%",
+    minHeight: 520,
+    backgroundColor: "#101010",
   },
   centered: {
     flex: 1,

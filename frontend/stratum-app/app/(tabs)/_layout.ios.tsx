@@ -50,6 +50,7 @@ const isLiquidGlass = parseInt(String(Platform.Version), 10) >= 26;
 
 export default function TabLayout() {
   const { user, logout } = useAuth();
+  const canAccessEMonument = Boolean(user?.is_emonument_privileged || user?.is_dashboard_admin);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [usernameSet, setUsernameSet] = useState(false);
@@ -129,6 +130,18 @@ export default function TabLayout() {
           <Icon sf={{ default: "message", selected: "message.fill" }} />
         </NativeTabs.Trigger>
 
+        {/* eMonument - shown only for privileged users */}
+        {canAccessEMonument ? (
+          <NativeTabs.Trigger name="emonument">
+            <Label>eMonument</Label>
+            <Icon sf={{ default: "building.columns", selected: "building.columns.fill" }} />
+          </NativeTabs.Trigger>
+        ) : (
+          <NativeTabs.Trigger name="emonument" hidden>
+            <Label>eMonument</Label>
+          </NativeTabs.Trigger>
+        )}
+
         {/* Settings - hidden from tab bar, accessible via profile menu */}
         <NativeTabs.Trigger name="settings" hidden>
           <Label>Settings</Label>
@@ -143,9 +156,6 @@ export default function TabLayout() {
           <Label>DM</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="emonument" hidden>
-          <Label>eMonument</Label>
-        </NativeTabs.Trigger>
       </NativeTabs>
 
       {/* Floating profile button */}
