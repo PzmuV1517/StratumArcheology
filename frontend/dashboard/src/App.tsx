@@ -13,7 +13,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
 type User = {
@@ -68,6 +68,46 @@ type DownloadTreeNode = {
   children: DownloadTreeNode[]
 }
 
+type BackupItem = {
+  backup_id: string
+  created_at: string
+  trigger: string
+  sql_size_bytes: number
+  database_names: string[]
+  storage_bucket_names: string[]
+  storage_object_count: number
+  stats: Record<string, number>
+}
+
+type BackupListResponse = {
+  last_backup_at: string | null
+  retention_limit: number
+  backups: BackupItem[]
+}
+
+type BackupDiffResponse = {
+  backup_id: string
+  backup_created_at: string
+  backup_stats: Record<string, number>
+  live_stats: Record<string, number>
+  differences: Record<
+    string,
+    {
+      backup: number
+      live: number
+      delta_live_minus_backup: number
+    }
+  >
+}
+
+type BackupScheduleResponse = {
+  enabled: boolean
+  interval_minutes: number
+  last_backup_at: string | null
+  next_backup_at: string | null
+  seconds_until_next_backup: number | null
+}
+
 const INSTANCE_META_FIELDS = [
   'id',
   'status',
@@ -87,7 +127,7 @@ const isDev = Boolean(import.meta.env.DEV)
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
-  const [tab, setTab] = useState<'users' | 'instances' | 'downloads' | 'form-view'>('users')
+  const [tab, setTab] = useState<'users' | 'instances' | 'downloads' | 'backups' | 'form-view'>('users')
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [expandedPinMapKey, setExpandedPinMapKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -117,6 +157,15 @@ function App() {
   const [selectedDownloadFields, setSelectedDownloadFields] = useState<string[]>([])
   const [expandedDownloadSections, setExpandedDownloadSections] = useState<Record<string, boolean>>({})
   const [expandedDownloadNodes, setExpandedDownloadNodes] = useState<Record<string, boolean>>({})
+  const [backups, setBackups] = useState<BackupItem[]>([])
+  const [backupsLastAt, setBackupsLastAt] = useState<string | null>(null)
+  const [backupsRetentionLimit, setBackupsRetentionLimit] = useState<number>(5)
+  const [backupDiffsById, setBackupDiffsById] = useState<Record<string, BackupDiffResponse>>({})
+  const [backupSchedule, setBackupSchedule] = useState<BackupScheduleResponse | null>(null)
+  const [backupCountdownTick, setBackupCountdownTick] = useState(0)
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [backupActionLoadingId, setBackupActionLoadingId] = useState<string | null>(null)
+  const [backupRunLoading, setBackupRunLoading] = useState(false)
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -126,6 +175,16 @@ function App() {
   const selectedInstance = useMemo(
     () => (selectedInstanceId ? instances.find((instance) => instance.id === selectedInstanceId) ?? null : null),
     [instances, selectedInstanceId],
+  )
+
+  const isMaintainer = useMemo(
+    () => me?.email?.toLowerCase() === 'maintainer@stratum.com',
+    [me?.email],
+  )
+
+  const secondsUntilNextBackup = useMemo(
+    () => calculateRemainingSeconds(),
+    [backupSchedule?.next_backup_at, backupSchedule?.enabled, backupCountdownTick],
   )
 
   const statusCounts = useMemo(() => {
@@ -898,11 +957,42 @@ function App() {
     setError(null)
   }
 
+  const formatBytes = (bytes: number) => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB']
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1)
+    const value = bytes / 1024 ** index
+    return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`
+  }
+
+  const formatDuration = (totalSeconds: number | null) => {
+    if (totalSeconds == null) return 'N/A'
+    if (totalSeconds <= 0) return '0s'
+
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    const parts: string[] = []
+    if (hours > 0) parts.push(`${hours}h`)
+    if (minutes > 0 || hours > 0) parts.push(`${minutes}m`)
+    parts.push(`${seconds}s`)
+    return parts.join(' ')
+  }
+
+  function calculateRemainingSeconds() {
+    if (!backupSchedule?.enabled || !backupSchedule.next_backup_at) return null
+    const nextAtMs = new Date(backupSchedule.next_backup_at).getTime()
+    if (!Number.isFinite(nextAtMs)) return null
+    return Math.max(0, Math.floor((nextAtMs - Date.now()) / 1000))
+  }
+
   const loadMe = async (jwtToken: string) => {
     const res = await api.get<User>('/auth/me', {
       headers: { Authorization: `Bearer ${jwtToken}` },
     })
     setMe(res.data)
+    return res.data
   }
 
   const loadUsers = async () => {
@@ -917,6 +1007,99 @@ function App() {
     setInstances(res.data)
   }
 
+  const loadBackups = async () => {
+    if (!authHeaders) return
+    setBackupLoading(true)
+    try {
+      const res = await api.get<BackupListResponse>('/emonument-dashboard/backups', { headers: authHeaders })
+      setBackups(res.data.backups)
+      setBackupsLastAt(res.data.last_backup_at)
+      setBackupsRetentionLimit(res.data.retention_limit)
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not load backups'
+        : 'Could not load backups'
+      setError(message)
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const loadBackupSchedule = async () => {
+    if (!authHeaders) return
+    try {
+      const res = await api.get<BackupScheduleResponse>('/emonument-dashboard/backups/schedule', {
+        headers: authHeaders,
+      })
+      setBackupSchedule(res.data)
+      if (res.data.last_backup_at) {
+        setBackupsLastAt(res.data.last_backup_at)
+      }
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not load backup schedule'
+        : 'Could not load backup schedule'
+      setError(message)
+    }
+  }
+
+  const runBackupNow = async () => {
+    if (!authHeaders) return
+    setBackupRunLoading(true)
+    setError(null)
+    try {
+      await api.post('/emonument-dashboard/backups/run', {}, { headers: authHeaders })
+      await Promise.all([loadBackups(), loadBackupSchedule()])
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not run backup now'
+        : 'Could not run backup now'
+      setError(message)
+    } finally {
+      setBackupRunLoading(false)
+    }
+  }
+
+  const loadBackupDiff = async (backupId: string) => {
+    if (!authHeaders) return
+    setBackupActionLoadingId(backupId)
+    setError(null)
+    try {
+      const res = await api.get<BackupDiffResponse>(`/emonument-dashboard/backups/${backupId}/diff`, {
+        headers: authHeaders,
+      })
+      setBackupDiffsById((prev) => ({ ...prev, [backupId]: res.data }))
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not load backup differences'
+        : 'Could not load backup differences'
+      setError(message)
+    } finally {
+      setBackupActionLoadingId(null)
+    }
+  }
+
+  const restoreBackup = async (backupId: string) => {
+    if (!authHeaders) return
+    const confirmation = window.prompt(`Type RESTORE ${backupId} to confirm database restore:`)
+    if (confirmation !== `RESTORE ${backupId}`) return
+
+    setBackupActionLoadingId(backupId)
+    setError(null)
+    try {
+      await api.post(`/emonument-dashboard/backups/${backupId}/restore`, {}, { headers: authHeaders })
+      await Promise.all([loadInstances(), loadBackups()])
+      alert('Database restored from selected backup.')
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not restore backup'
+        : 'Could not restore backup'
+      setError(message)
+    } finally {
+      setBackupActionLoadingId(null)
+    }
+  }
+
   useEffect(() => {
     if (!token) {
       setMe(null)
@@ -924,12 +1107,35 @@ function App() {
     }
 
     loadMe(token)
-      .then(() => Promise.all([loadUsers(), loadInstances()]))
+      .then((currentUser) => {
+        const tasks: Promise<void>[] = [loadUsers(), loadInstances()]
+        if (currentUser.email.toLowerCase() === 'maintainer@stratum.com') {
+          tasks.push(loadBackups())
+          tasks.push(loadBackupSchedule())
+        }
+        return Promise.all(tasks)
+      })
       .catch(() => {
         localStorage.removeItem('dashboard_token')
         setToken(null)
       })
   }, [token])
+
+  useEffect(() => {
+    if (tab !== 'backups' || !isMaintainer) return
+    const timer = window.setInterval(() => {
+      setBackupCountdownTick((prev) => prev + 1)
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [tab, isMaintainer])
+
+  useEffect(() => {
+    if (tab !== 'backups' || !isMaintainer) return
+    const timer = window.setInterval(() => {
+      void loadBackupSchedule()
+    }, 30000)
+    return () => window.clearInterval(timer)
+  }, [tab, isMaintainer, authHeaders])
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault()
@@ -1122,6 +1328,11 @@ function App() {
         <button className={tab === 'downloads' ? 'active' : ''} onClick={() => setTab('downloads')}>
           <Download size={16} /> Downloads
         </button>
+        {isMaintainer ? (
+          <button className={tab === 'backups' ? 'active' : ''} onClick={() => setTab('backups')}>
+            <RotateCcw size={16} /> Backups
+          </button>
+        ) : null}
         {selectedInstance ? (
           <button className={tab === 'form-view' ? 'active' : ''} onClick={() => setTab('form-view')}>
             <FileText size={16} /> Form View
@@ -1553,6 +1764,132 @@ function App() {
               )
             })}
           </div>
+        </section>
+      ) : tab === 'backups' ? (
+        <section className="panel">
+          <h3>
+            <RotateCcw size={18} /> Database Backups
+          </h3>
+
+          <div className="downloads-toolbar">
+            <span className="panel-subtle">
+              Last backup: {backupsLastAt ? new Date(backupsLastAt).toLocaleString() : 'No backups yet'}
+            </span>
+            <span className="panel-subtle">
+              Next backup:{' '}
+              {backupSchedule?.next_backup_at
+                ? new Date(backupSchedule.next_backup_at).toLocaleString()
+                : 'Not scheduled'}
+            </span>
+            <span className="panel-subtle">
+              Countdown: {formatDuration(secondsUntilNextBackup)}
+            </span>
+            <span className="panel-subtle">Retention: latest {backupsRetentionLimit} backups</span>
+            <div className="toolbar-spacer" />
+            <button
+              className="small ghost"
+              onClick={() => void Promise.all([loadBackups(), loadBackupSchedule()])}
+              disabled={backupLoading}
+            >
+              {backupLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <button className="small" onClick={() => void runBackupNow()} disabled={backupRunLoading}>
+              {backupRunLoading ? 'Running backup...' : 'Run Backup Now'}
+            </button>
+          </div>
+
+          {!isMaintainer ? (
+            <p className="panel-subtle">Only maintainer can access backup controls.</p>
+          ) : backups.length === 0 ? (
+            <p className="panel-subtle">No backups found yet.</p>
+          ) : (
+            <div className="table-wrap tall">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Backup ID</th>
+                    <th>Created</th>
+                    <th>Trigger</th>
+                    <th>Databases</th>
+                    <th>Storage</th>
+                    <th>Size</th>
+                    <th>Forms</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {backups.map((backup) => {
+                    const diff = backupDiffsById[backup.backup_id]
+                    const isRowBusy = backupActionLoadingId === backup.backup_id
+                    return (
+                      <Fragment key={backup.backup_id}>
+                        <tr>
+                          <td className="cell-mono">{backup.backup_id}</td>
+                          <td>{new Date(backup.created_at).toLocaleString()}</td>
+                          <td>{backup.trigger}</td>
+                          <td>{backup.database_names?.join(', ') || 'stratum_db'}</td>
+                          <td>
+                            {(backup.storage_bucket_names?.length ?? 0) > 0
+                              ? `${backup.storage_object_count ?? 0} objects (${backup.storage_bucket_names.join(', ')})`
+                              : 'No MinIO objects'}
+                          </td>
+                          <td>{formatBytes(backup.sql_size_bytes)}</td>
+                          <td>{backup.stats.forms ?? 0}</td>
+                          <td className="actions">
+                            <button
+                              className="small ghost"
+                              onClick={() => void loadBackupDiff(backup.backup_id)}
+                              disabled={isRowBusy}
+                            >
+                              {isRowBusy ? 'Loading...' : 'Show Diff'}
+                            </button>
+                            <button
+                              className="small danger"
+                              onClick={() => void restoreBackup(backup.backup_id)}
+                              disabled={isRowBusy}
+                            >
+                              Restore
+                            </button>
+                          </td>
+                        </tr>
+                        {diff ? (
+                          <tr>
+                            <td colSpan={8}>
+                              <div className="backup-diff-block">
+                                <strong>Difference vs live database</strong>
+                                <div className="backup-diff-grid">
+                                  {Object.entries(diff.differences).map(([key, value]) => {
+                                    const backupCount = Number(value.backup ?? 0)
+                                    const liveCount = Number(value.live ?? 0)
+                                    const rawDelta = value.delta_live_minus_backup
+                                    const delta = Number.isFinite(Number(rawDelta))
+                                      ? Number(rawDelta)
+                                      : liveCount - backupCount
+
+                                    return (
+                                      <div className="backup-diff-row" key={`${backup.backup_id}-${key}`}>
+                                        <span>{formatFieldLabel(key)}</span>
+                                        <span>Backup: {backupCount}</span>
+                                        <span>Live: {liveCount}</span>
+                                        <span>
+                                          Delta: {delta > 0 ? '+' : ''}
+                                          {delta}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       ) : (
         <section className="panel">

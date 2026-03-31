@@ -491,6 +491,27 @@ th {
   gap: 0.3rem;
 }
 
+.backup-diff-block {
+  display: grid;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.65rem 0.7rem;
+}
+
+.backup-diff-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.backup-diff-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto auto auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
 .download-tree-row {
   display: flex;
   align-items: flex-start;
