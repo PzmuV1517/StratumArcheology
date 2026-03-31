@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import NetInfo from "@react-native-community/netinfo";
 import { useAuth } from "@/contexts/AuthContext";
 import MonumentPinPicker from "@/components/map/MonumentPinPicker";
 import {
@@ -98,6 +99,9 @@ export default function EMonumentHiddenTab() {
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
+  const [syncingOfflineDrafts, setSyncingOfflineDrafts] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const syncInFlightRef = useRef(false);
   const { width } = useWindowDimensions();
   const isWide = width >= 1200;
 
@@ -262,8 +266,25 @@ export default function EMonumentHiddenTab() {
     [buildAutoFillSectionPayload],
   );
 
+  const syncOfflineDraftsIfPossible = useCallback(async () => {
+    if (Platform.OS === "web" || syncInFlightRef.current) {
+      return;
+    }
+
+    syncInFlightRef.current = true;
+    setSyncingOfflineDrafts(true);
+    try {
+      await emonumentService.syncOfflineDrafts();
+    } finally {
+      syncInFlightRef.current = false;
+      setSyncingOfflineDrafts(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
+      await syncOfflineDraftsIfPossible();
+
       const [schemaRes, instancesRes] = await Promise.all([
         emonumentService.getFormSchema(),
         emonumentService.listInstances(),
@@ -283,11 +304,39 @@ export default function EMonumentHiddenTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [syncOfflineDraftsIfPossible]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
+
+    void NetInfo.fetch().then((state) => {
+      const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+      setIsOffline(!online);
+    });
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+      setIsOffline(!online);
+      if (!online) {
+        return;
+      }
+
+      void (async () => {
+        await syncOfflineDraftsIfPossible();
+        await load();
+      })();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [load, syncOfflineDraftsIfPossible]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -503,10 +552,16 @@ export default function EMonumentHiddenTab() {
         formData,
         "completat" as EMonumentInstanceStatus,
       );
-      await emonumentService.submitForVerification(instanceId);
+      const submitResult = await emonumentService.submitForVerification(instanceId);
 
       await load();
       closeEditor();
+      if (Platform.OS !== "web" && submitResult?.is_offline_draft) {
+        Alert.alert(
+          "Fara internet",
+          "Formularul a fost salvat local ca draft si va fi trimis automat in verificare cand revine conexiunea.",
+        );
+      }
     } catch (error: any) {
       const apiErrors = error?.response?.data?.detail?.errors;
       if (Array.isArray(apiErrors)) {
@@ -828,6 +883,9 @@ export default function EMonumentHiddenTab() {
             {new Date(item.updated_at).toLocaleDateString()}
           </Text>
         </View>
+        {item.is_offline_draft ? (
+          <Text style={styles.offlineDraftText}>Nesincronizat: va fi trimis catre cloud automat cand revine conexiunea.</Text>
+        ) : null}
         {isSelectMode ? (
           <View style={styles.formCardActions}>
             <Text style={styles.selectionHintText}>{isSelected ? "Selectat" : "Tap pentru selectare"}</Text>
@@ -939,6 +997,12 @@ export default function EMonumentHiddenTab() {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Formulare</Text>
             <Text style={styles.headerSubtitle}>Gestioneaza toate formularele eMonument</Text>
+            {isOffline ? (
+              <Text style={styles.offlineInfoText}>Offline: datele sunt salvate local si se sincronizeaza automat.</Text>
+            ) : null}
+            {syncingOfflineDrafts ? (
+              <Text style={styles.syncInfoText}>Se sincronizeaza draft-urile locale...</Text>
+            ) : null}
           </View>
 
           <View style={styles.searchContainer}>
@@ -1140,6 +1204,18 @@ const styles = StyleSheet.create({
     color: "#9A9A9A",
     marginTop: 6,
   },
+  syncInfoText: {
+    marginTop: 8,
+    color: "#FFC857",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  offlineInfoText: {
+    marginTop: 8,
+    color: "#FFD166",
+    fontSize: 12,
+    fontWeight: "600",
+  },
   searchContainer: {
     paddingHorizontal: 16,
     paddingTop: 4,
@@ -1305,6 +1381,11 @@ const styles = StyleSheet.create({
     color: "#FFC5C5",
     fontSize: 12,
     fontWeight: "700",
+  },
+  offlineDraftText: {
+    marginTop: 8,
+    fontSize: 11,
+    color: "#FFC857",
   },
   formCardStatus: {
     fontSize: 12,
