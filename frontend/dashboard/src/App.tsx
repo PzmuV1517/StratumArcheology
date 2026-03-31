@@ -1,6 +1,8 @@
 import axios from 'axios'
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Copy,
   Download,
   FileText,
@@ -53,6 +55,29 @@ type AuthResponse = {
 
 type InstanceSortKey = 'updated_at' | 'status' | 'version' | 'id'
 
+type DownloadSection = {
+  key: string
+  label: string
+  fields: string[]
+}
+
+type DownloadTreeNode = {
+  id: string
+  label: string
+  fullPath: string | null
+  children: DownloadTreeNode[]
+}
+
+const INSTANCE_META_FIELDS = [
+  'id',
+  'status',
+  'version',
+  'updated_at',
+  'monument_id',
+  'user_id',
+  'rejection_reason',
+] as const
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
 })
@@ -62,7 +87,7 @@ const isDev = Boolean(import.meta.env.DEV)
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
-  const [tab, setTab] = useState<'users' | 'instances' | 'form-view'>('users')
+  const [tab, setTab] = useState<'users' | 'instances' | 'downloads' | 'form-view'>('users')
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null)
   const [expandedPinMapKey, setExpandedPinMapKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +114,9 @@ function App() {
   const [newUserUsername, setNewUserUsername] = useState('')
   const [newUserPrivileged, setNewUserPrivileged] = useState(true)
   const [newUserAdmin, setNewUserAdmin] = useState(false)
+  const [selectedDownloadFields, setSelectedDownloadFields] = useState<string[]>([])
+  const [expandedDownloadSections, setExpandedDownloadSections] = useState<Record<string, boolean>>({})
+  const [expandedDownloadNodes, setExpandedDownloadNodes] = useState<Record<string, boolean>>({})
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -197,6 +225,176 @@ function App() {
       .replace(/\s+/g, ' ')
       .trim()
       .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  const collectFieldPaths = (value: unknown, prefix: string, out: Set<string>) => {
+    if (value == null) {
+      out.add(prefix)
+      return
+    }
+
+    if (Array.isArray(value)) {
+      out.add(prefix)
+      return
+    }
+
+    if (typeof value !== 'object') {
+      out.add(prefix)
+      return
+    }
+
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.length === 0) {
+      out.add(prefix)
+      return
+    }
+
+    for (const [key, nested] of entries) {
+      collectFieldPaths(nested, `${prefix}.${key}`, out)
+    }
+  }
+
+  const downloadSections = useMemo<DownloadSection[]>(() => {
+    const bySection = new Map<string, Set<string>>()
+
+    for (const instance of instances) {
+      const rootEntries = Object.entries(instance.data ?? {})
+      for (const [sectionKey, sectionValue] of rootEntries) {
+        if (!bySection.has(sectionKey)) {
+          bySection.set(sectionKey, new Set())
+        }
+        const sectionSet = bySection.get(sectionKey)
+        if (!sectionSet) continue
+
+        if (sectionValue == null || typeof sectionValue !== 'object' || Array.isArray(sectionValue)) {
+          sectionSet.add(sectionKey)
+          continue
+        }
+
+        const entries = Object.entries(sectionValue as Record<string, unknown>)
+        if (entries.length === 0) {
+          sectionSet.add(sectionKey)
+          continue
+        }
+
+        for (const [fieldKey, fieldValue] of entries) {
+          collectFieldPaths(fieldValue, `${sectionKey}.${fieldKey}`, sectionSet)
+        }
+      }
+    }
+
+    const systemSection: DownloadSection = {
+      key: '__system__',
+      label: 'System Fields',
+      fields: [...INSTANCE_META_FIELDS],
+    }
+
+    const dynamicSections = [...bySection.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, fields]) => ({
+        key,
+        label: formatFieldLabel(key),
+        fields: [...fields].sort((a, b) => a.localeCompare(b)),
+      }))
+
+    return [systemSection, ...dynamicSections]
+  }, [instances])
+
+  const allDownloadFields = useMemo(
+    () => downloadSections.flatMap((section) => section.fields),
+    [downloadSections],
+  )
+
+  const buildSectionTree = (section: DownloadSection): DownloadTreeNode[] => {
+    type MutableTreeNode = {
+      id: string
+      label: string
+      fullPath: string | null
+      children: Map<string, MutableTreeNode>
+    }
+
+    const root = new Map<string, MutableTreeNode>()
+    const sectionPrefix = `${section.key}.`
+
+    for (const fullFieldPath of section.fields) {
+      const relativePath =
+        section.key === '__system__'
+          ? fullFieldPath
+          : fullFieldPath.startsWith(sectionPrefix)
+            ? fullFieldPath.slice(sectionPrefix.length)
+            : fullFieldPath
+
+      const segments = relativePath.split('.').filter(Boolean)
+      if (segments.length === 0) {
+        continue
+      }
+
+      let level = root
+      let nodeIdPath = section.key
+
+      for (let i = 0; i < segments.length; i += 1) {
+        const segment = segments[i]
+        nodeIdPath = `${nodeIdPath}.${segment}`
+
+        if (!level.has(segment)) {
+          level.set(segment, {
+            id: `${section.key}:${nodeIdPath}`,
+            label: formatFieldLabel(segment),
+            fullPath: null,
+            children: new Map<string, MutableTreeNode>(),
+          })
+        }
+
+        const current = level.get(segment)
+        if (!current) {
+          break
+        }
+
+        if (i === segments.length - 1) {
+          current.fullPath = fullFieldPath
+        }
+
+        level = current.children
+      }
+    }
+
+    const toImmutable = (nodes: Map<string, MutableTreeNode>): DownloadTreeNode[] =>
+      [...nodes.values()]
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map((node) => ({
+          id: node.id,
+          label: node.label,
+          fullPath: node.fullPath,
+          children: toImmutable(node.children),
+        }))
+
+    return toImmutable(root)
+  }
+
+  useEffect(() => {
+    setSelectedDownloadFields((prev) => {
+      if (allDownloadFields.length === 0) {
+        return []
+      }
+      if (prev.length === 0) {
+        return allDownloadFields
+      }
+      const allowed = new Set(allDownloadFields)
+      const next = prev.filter((field) => allowed.has(field))
+      return next.length === prev.length ? prev : next
+    })
+  }, [allDownloadFields])
+
+  useEffect(() => {
+    setExpandedDownloadSections((prev) => {
+      const next = { ...prev }
+      for (const section of downloadSections) {
+        if (next[section.key] === undefined) {
+          next[section.key] = false
+        }
+      }
+      return next
+    })
+  }, [downloadSections])
 
   const formatPrimitiveValue = (value: string | number | boolean) => {
     if (typeof value === 'boolean') return value ? 'Yes' : 'No'
@@ -381,6 +579,17 @@ function App() {
     }
   }
 
+  const triggerFileDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const exportInstancesCsv = () => {
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
 
@@ -409,14 +618,244 @@ function App() {
 
     const csv = [headers.join(','), ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `emonument_instances_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    triggerFileDownload(
+      blob,
+      `emonument_instances_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`,
+    )
+  }
+
+  const downloadWholeFormsDatabase = async () => {
+    if (!authHeaders) return
+
+    setError(null)
+    try {
+      const res = await api.get<Instance[]>('/emonument/instances', { headers: authHeaders })
+      const exportPayload = {
+        exported_at: new Date().toISOString(),
+        total_forms: res.data.length,
+        forms: res.data,
+      }
+      const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+        type: 'application/json;charset=utf-8;',
+      })
+      triggerFileDownload(
+        blob,
+        `emonument_forms_database_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`,
+      )
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not download forms database'
+        : 'Could not download forms database'
+      setError(message)
+    }
+  }
+
+  const sectionIsFullySelected = (fields: string[]) =>
+    fields.length > 0 && fields.every((field) => selectedDownloadFields.includes(field))
+
+  const sectionSelectedCount = (fields: string[]) =>
+    fields.reduce((count, field) => (selectedDownloadFields.includes(field) ? count + 1 : count), 0)
+
+  const getNodeLeafPaths = (node: DownloadTreeNode): string[] => {
+    const out = new Set<string>()
+    const walk = (entry: DownloadTreeNode) => {
+      if (entry.fullPath) {
+        out.add(entry.fullPath)
+      }
+      for (const child of entry.children) {
+        walk(child)
+      }
+    }
+    walk(node)
+    return [...out]
+  }
+
+  const toggleSectionSelection = (fields: string[]) => {
+    const allSelected = sectionIsFullySelected(fields)
+    setSelectedDownloadFields((prev) => {
+      if (allSelected) {
+        return prev.filter((field) => !fields.includes(field))
+      }
+      const next = new Set(prev)
+      for (const field of fields) {
+        next.add(field)
+      }
+      return [...next]
+    })
+  }
+
+  const toggleSectionExpanded = (sectionKey: string) => {
+    setExpandedDownloadSections((prev) => ({
+      ...prev,
+      [sectionKey]: !(prev[sectionKey] ?? false),
+    }))
+  }
+
+  const toggleNodeExpanded = (nodeId: string) => {
+    setExpandedDownloadNodes((prev) => ({
+      ...prev,
+      [nodeId]: !(prev[nodeId] ?? false),
+    }))
+  }
+
+  const toggleNodeSelection = (node: DownloadTreeNode) => {
+    const leafPaths = getNodeLeafPaths(node)
+    const allSelected = leafPaths.length > 0 && leafPaths.every((path) => selectedDownloadFields.includes(path))
+
+    setSelectedDownloadFields((prev) => {
+      if (allSelected) {
+        return prev.filter((field) => !leafPaths.includes(field))
+      }
+
+      const next = new Set(prev)
+      for (const path of leafPaths) {
+        next.add(path)
+      }
+      return [...next]
+    })
+  }
+
+  const selectAllDownloadFields = () => {
+    setSelectedDownloadFields(allDownloadFields)
+  }
+
+  const clearAllDownloadFields = () => {
+    setSelectedDownloadFields([])
+  }
+
+  const expandAllSections = () => {
+    const next: Record<string, boolean> = {}
+    for (const section of downloadSections) {
+      next[section.key] = true
+    }
+    setExpandedDownloadSections(next)
+  }
+
+  const collapseAllSections = () => {
+    const next: Record<string, boolean> = {}
+    for (const section of downloadSections) {
+      next[section.key] = false
+    }
+    setExpandedDownloadSections(next)
+  }
+
+  const getPathValue = (root: Record<string, unknown>, path: string) => {
+    const segments = path.split('.')
+    let cursor: unknown = root
+    for (const segment of segments) {
+      if (cursor == null || typeof cursor !== 'object' || Array.isArray(cursor)) {
+        return undefined
+      }
+      cursor = (cursor as Record<string, unknown>)[segment]
+    }
+    return cursor
+  }
+
+  const setPathValue = (root: Record<string, unknown>, path: string, value: unknown) => {
+    const segments = path.split('.')
+    let cursor: Record<string, unknown> = root
+
+    for (let i = 0; i < segments.length - 1; i += 1) {
+      const segment = segments[i]
+      const existing = cursor[segment]
+      if (existing == null || typeof existing !== 'object' || Array.isArray(existing)) {
+        cursor[segment] = {}
+      }
+      cursor = cursor[segment] as Record<string, unknown>
+    }
+
+    cursor[segments[segments.length - 1]] = value
+  }
+
+  const downloadSelectedForms = () => {
+    if (selectedDownloadFields.length === 0) {
+      setError('Select at least one field before exporting.')
+      return
+    }
+
+    setError(null)
+    const selectedSet = new Set(selectedDownloadFields)
+    const selectedMetaFields = INSTANCE_META_FIELDS.filter((field) => selectedSet.has(field))
+    const selectedDataFields = selectedDownloadFields.filter((field) => !INSTANCE_META_FIELDS.includes(field as (typeof INSTANCE_META_FIELDS)[number]))
+
+    const forms = instances.map((instance) => {
+      const out: Record<string, unknown> = {}
+
+      for (const field of selectedMetaFields) {
+        out[field] = instance[field]
+      }
+
+      const dataOut: Record<string, unknown> = {}
+      for (const path of selectedDataFields) {
+        const value = getPathValue(instance.data, path)
+        if (value !== undefined) {
+          setPathValue(dataOut, path, value)
+        }
+      }
+
+      out.data = dataOut
+      return out
+    })
+
+    const payload = {
+      exported_at: new Date().toISOString(),
+      total_forms: forms.length,
+      selected_fields: selectedDownloadFields,
+      forms,
+    }
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8;',
+    })
+    triggerFileDownload(
+      blob,
+      `emonument_forms_selected_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`,
+    )
+  }
+
+  const renderDownloadNode = (node: DownloadTreeNode, depth = 0) => {
+    const hasChildren = node.children.length > 0
+    const isExpanded = expandedDownloadNodes[node.id] ?? false
+    const leafPaths = getNodeLeafPaths(node)
+    const selectedCount = leafPaths.filter((path) => selectedDownloadFields.includes(path)).length
+    const allSelected = leafPaths.length > 0 && selectedCount === leafPaths.length
+
+    return (
+      <div className="download-tree-node" key={node.id} style={{ marginLeft: `${depth * 14}px` }}>
+        <div className="download-tree-row">
+          {hasChildren ? (
+            <button
+              type="button"
+              className="download-expand-btn"
+              onClick={() => toggleNodeExpanded(node.id)}
+              title={isExpanded ? 'Collapse group' : 'Expand group'}
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+          ) : (
+            <span className="download-expand-placeholder" />
+          )}
+
+          <label className="download-field-option">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={() => toggleNodeSelection(node)}
+            />
+            <span>
+              {node.label}
+              {hasChildren ? ` (${selectedCount}/${leafPaths.length})` : ''}
+            </span>
+          </label>
+        </div>
+
+        {hasChildren && isExpanded ? (
+          <div className="download-tree-children">
+            {node.children.map((child) => renderDownloadNode(child, depth + 1))}
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   const toggleSort = (key: InstanceSortKey) => {
@@ -680,6 +1119,9 @@ function App() {
         <button className={tab === 'instances' ? 'active' : ''} onClick={() => setTab('instances')}>
           <Shield size={16} /> Validation Flow
         </button>
+        <button className={tab === 'downloads' ? 'active' : ''} onClick={() => setTab('downloads')}>
+          <Download size={16} /> Downloads
+        </button>
         {selectedInstance ? (
           <button className={tab === 'form-view' ? 'active' : ''} onClick={() => setTab('form-view')}>
             <FileText size={16} /> Form View
@@ -847,6 +1289,9 @@ function App() {
             <button className="small ghost" onClick={exportInstancesCsv}>
               <Download size={14} /> Export CSV
             </button>
+            <button className="small" onClick={() => void downloadWholeFormsDatabase()}>
+              <Download size={14} /> Download Whole Database
+            </button>
           </div>
 
           <div className="db-stats">
@@ -1000,6 +1445,113 @@ function App() {
                 Next
               </button>
             </div>
+          </div>
+        </section>
+      ) : tab === 'downloads' ? (
+        <section className="panel">
+          <h3>
+            <Download size={18} /> Downloads
+          </h3>
+
+          <div className="downloads-toolbar">
+            <button className="small ghost" onClick={selectAllDownloadFields}>
+              Select All Fields
+            </button>
+            <button className="small ghost" onClick={clearAllDownloadFields}>
+              Clear All
+            </button>
+            <span style={{ borderLeft: '1px solid var(--line)', height: '16px', margin: '0 8px' }} />
+            <button className="small ghost" onClick={expandAllSections}>
+              Expand All
+            </button>
+            <button className="small ghost" onClick={collapseAllSections}>
+              Collapse All
+            </button>
+            <span className="panel-subtle" style={{ marginLeft: '8px' }}>
+              Selected {selectedDownloadFields.length} / {allDownloadFields.length}
+            </span>
+            <div className="toolbar-spacer" />
+            <button className="small" onClick={downloadSelectedForms}>
+              <Download size={14} /> Download Selected
+            </button>
+          </div>
+
+          <div className="downloads-sections">
+            {downloadSections.map((section) => {
+              const selectedCount = sectionSelectedCount(section.fields)
+              const allSelected = sectionIsFullySelected(section.fields)
+              const sectionExpanded = expandedDownloadSections[section.key] ?? false
+              const treeNodes = buildSectionTree(section)
+
+              return (
+                <article className="download-section-card" key={section.key}>
+                  <header className="download-section-header">
+                    <div>
+                      <h4>{section.label}</h4>
+                      <p className="panel-subtle">
+                        {selectedCount} / {section.fields.length} selected
+                      </p>
+                    </div>
+                    <div className="download-section-actions">
+                      <label className="switch-row">
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={() => toggleSectionSelection(section.fields)}
+                        />
+                        Select All
+                      </label>
+                      <button
+                        type="button"
+                        className="small ghost"
+                        onClick={() => toggleSectionExpanded(section.key)}
+                      >
+                        {sectionExpanded ? 'Collapse' : 'Expand'}
+                      </button>
+                    </div>
+                  </header>
+
+                  <div className={`download-section-body ${sectionExpanded ? '' : 'collapsed'}`}>
+                    {sectionExpanded ? (
+                      treeNodes.length > 0 ? (
+                        <div className="download-tree">
+                          {treeNodes.map((node) => renderDownloadNode(node))}
+                        </div>
+                      ) : (
+                        <div className="download-tree">
+                          {section.fields.map((fieldPath) => {
+                            const fieldSelected = selectedDownloadFields.includes(fieldPath)
+                            const label =
+                              section.key === '__system__'
+                                ? fieldPath
+                                : fieldPath.replace(`${section.key}.`, '')
+
+                            return (
+                              <label className="download-field-option" key={`${section.key}-${fieldPath}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={fieldSelected}
+                                  onChange={() => {
+                                    setSelectedDownloadFields((prev) =>
+                                      prev.includes(fieldPath)
+                                        ? prev.filter((value) => value !== fieldPath)
+                                        : [...prev, fieldPath],
+                                    )
+                                  }}
+                                />
+                                <span>{formatFieldLabel(label)}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )
+                    ) : (
+                      <p className="panel-subtle">Section collapsed. Click Expand to select individual fields.</p>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
           </div>
         </section>
       ) : (
