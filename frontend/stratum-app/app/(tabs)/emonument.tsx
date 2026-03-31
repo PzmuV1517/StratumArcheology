@@ -99,6 +99,8 @@ export default function EMonumentHiddenTab() {
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
+  const [showSearchTools, setShowSearchTools] = useState(false);
+  const [showFilterTools, setShowFilterTools] = useState(false);
   const [syncingOfflineDrafts, setSyncingOfflineDrafts] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const syncInFlightRef = useRef(false);
@@ -608,6 +610,10 @@ export default function EMonumentHiddenTab() {
   const toggleSelectMode = useCallback(() => {
     setIsSelectMode((prev) => {
       const next = !prev;
+      if (next) {
+        setShowSearchTools(false);
+        setShowFilterTools(false);
+      }
       if (!next) {
         setSelectedInstanceIds([]);
       }
@@ -663,6 +669,31 @@ export default function EMonumentHiddenTab() {
       ],
     );
   }, [deleteInstance, selectedInstanceIds]);
+
+  const confirmDeleteInstance = useCallback((instanceId: string) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const ok = window.confirm("Stergi acest formular? Actiunea este ireversibila.");
+      if (ok) {
+        void deleteInstance(instanceId);
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Sterge formular",
+      "Stergi acest formular? Actiunea este ireversibila.",
+      [
+        { text: "Anuleaza", style: "cancel" },
+        {
+          text: "Sterge",
+          style: "destructive",
+          onPress: () => {
+            void deleteInstance(instanceId);
+          },
+        },
+      ],
+    );
+  }, [deleteInstance]);
 
   const renderFieldInput = useCallback(
     (
@@ -850,17 +881,7 @@ export default function EMonumentHiddenTab() {
   const renderFormCard = ({ item }: { item: EMonumentInstance }) => {
     const isSelected = selectedInstanceIds.includes(item.id);
 
-    return (
-    <TouchableOpacity
-      style={[styles.formCard, isSelectMode && isSelected && styles.formCardSelected]}
-      onPress={() => {
-        if (isSelectMode) {
-          toggleInstanceSelection(item.id);
-        } else {
-          openExisting(item);
-        }
-      }}
-    >
+    const cardContent = (
       <View style={styles.formCardContent}>
         {(() => {
           const code = findMonumentCodeInData(item.data);
@@ -884,7 +905,7 @@ export default function EMonumentHiddenTab() {
           </Text>
         </View>
         {item.is_offline_draft ? (
-          <Text style={styles.offlineDraftText}>Nesincronizat: va fi trimis catre cloud automat cand revine conexiunea.</Text>
+          <Text style={styles.offlineDraftText}>Nesincronizat: va fi trimis automat cand revine conexiunea.</Text>
         ) : null}
         {isSelectMode ? (
           <View style={styles.formCardActions}>
@@ -892,8 +913,28 @@ export default function EMonumentHiddenTab() {
           </View>
         ) : null}
       </View>
-    </TouchableOpacity>
-  );
+    );
+
+    return (
+      <TouchableOpacity
+        style={[styles.formCard, isSelectMode && isSelected && styles.formCardSelected]}
+        onPress={() => {
+          if (isSelectMode) {
+            toggleInstanceSelection(item.id);
+          } else {
+            openExisting(item);
+          }
+        }}
+        onLongPress={() => {
+          if (!isSelectMode) {
+            confirmDeleteInstance(item.id);
+          }
+        }}
+        delayLongPress={350}
+      >
+        {cardContent}
+      </TouchableOpacity>
+    );
   };
 
   const renderEditorOverlay = (floating: boolean) => (
@@ -1005,57 +1046,120 @@ export default function EMonumentHiddenTab() {
             ) : null}
           </View>
 
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              value={instanceQuery}
-              placeholder="Search formulare..."
-              placeholderTextColor="#777"
-              onChangeText={setInstanceQuery}
-            />
-          </View>
+          {isWide ? (
+            <>
+              <View style={styles.searchContainer}>
+                <TextInput
+                  style={styles.searchInput}
+                  value={instanceQuery}
+                  placeholder="Search formulare..."
+                  placeholderTextColor="#777"
+                  onChangeText={setInstanceQuery}
+                />
+              </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filtersRow}
-            contentContainerStyle={styles.subTabContainer}
-          >
-            {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
-              const active = statusFilter === status;
-              return (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.filtersRow}
+                contentContainerStyle={styles.subTabContainer}
+              >
+                {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
+                  const active = statusFilter === status;
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      style={[styles.subTab, active && styles.subTabActive]}
+                      onPress={() => setStatusFilter(status)}
+                    >
+                      <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                        {statusFilterLabel(status)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={styles.selectionBar}>
                 <TouchableOpacity
-                  key={status}
-                  style={[styles.subTab, active && styles.subTabActive]}
-                  onPress={() => setStatusFilter(status)}
+                  style={[styles.selectionModeButton, isSelectMode && styles.selectionModeButtonActive]}
+                  onPress={toggleSelectMode}
                 >
-                  <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
-                    {statusFilterLabel(status)}
+                  <Text style={[styles.selectionModeButtonText, isSelectMode && styles.selectionModeButtonTextActive]}>
+                    {isSelectMode ? "Cancel" : "Select"}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+                {isSelectMode ? (
+                  <TouchableOpacity
+                    style={[styles.bulkDeleteButton, selectedInstanceIds.length === 0 && styles.bulkDeleteButtonDisabled]}
+                    onPress={confirmDeleteSelectedInstances}
+                    disabled={selectedInstanceIds.length === 0}
+                  >
+                    <Text style={styles.bulkDeleteButtonText}>Delete ({selectedInstanceIds.length})</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <View style={styles.mobileToolsSection}>
+              <View style={styles.mobileToolsRow}>
+                <TouchableOpacity
+                  style={[styles.mobileToolButton, showSearchTools && styles.mobileToolButtonActive]}
+                  onPress={() => setShowSearchTools((prev) => !prev)}
+                >
+                  <Text style={[styles.mobileToolButtonText, showSearchTools && styles.mobileToolButtonTextActive]}>
+                    Cauta
+                  </Text>
+                </TouchableOpacity>
 
-          <View style={styles.selectionBar}>
-            <TouchableOpacity
-              style={[styles.selectionModeButton, isSelectMode && styles.selectionModeButtonActive]}
-              onPress={toggleSelectMode}
-            >
-              <Text style={[styles.selectionModeButtonText, isSelectMode && styles.selectionModeButtonTextActive]}>
-                {isSelectMode ? "Cancel" : "Select"}
-              </Text>
-            </TouchableOpacity>
-            {isSelectMode ? (
-              <TouchableOpacity
-                style={[styles.bulkDeleteButton, selectedInstanceIds.length === 0 && styles.bulkDeleteButtonDisabled]}
-                onPress={confirmDeleteSelectedInstances}
-                disabled={selectedInstanceIds.length === 0}
-              >
-                <Text style={styles.bulkDeleteButtonText}>Delete ({selectedInstanceIds.length})</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
+                <TouchableOpacity
+                  style={[styles.mobileToolButton, showFilterTools && styles.mobileToolButtonActive]}
+                  onPress={() => setShowFilterTools((prev) => !prev)}
+                >
+                  <Text style={[styles.mobileToolButtonText, showFilterTools && styles.mobileToolButtonTextActive]}>
+                    Filtre
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {showSearchTools ? (
+                <View style={styles.searchContainerMobile}>
+                  <TextInput
+                    style={styles.searchInput}
+                    value={instanceQuery}
+                    placeholder="Search formulare..."
+                    placeholderTextColor="#777"
+                    onChangeText={setInstanceQuery}
+                  />
+                </View>
+              ) : null}
+
+              {showFilterTools ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filtersRow}
+                  contentContainerStyle={styles.subTabContainer}
+                >
+                  {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
+                    const active = statusFilter === status;
+                    return (
+                      <TouchableOpacity
+                        key={status}
+                        style={[styles.subTab, active && styles.subTabActive]}
+                        onPress={() => setStatusFilter(status)}
+                      >
+                        <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                          {statusFilterLabel(status)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+
+            </View>
+          )}
 
           {filteredInstances.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -1072,7 +1176,9 @@ export default function EMonumentHiddenTab() {
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  tintColor="#FF2A2A"
+                  tintColor="#FFFFFF"
+                  colors={["#FFFFFF"]}
+                  progressBackgroundColor="#1A1A1A"
                 />
               }
             />
@@ -1110,6 +1216,7 @@ export default function EMonumentHiddenTab() {
           </View>
         </Modal>
       ) : null}
+
     </View>
   );
 }
@@ -1221,6 +1328,10 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 8,
   },
+  searchContainerMobile: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
   searchInput: {
     borderWidth: 1,
     borderColor: "#2A2A2A",
@@ -1266,6 +1377,36 @@ const styles = StyleSheet.create({
   },
   subTabTextActive: {
     color: "#F5F5F5",
+  },
+  mobileToolsSection: {
+    paddingBottom: 8,
+  },
+  mobileToolsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  mobileToolButton: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#343434",
+    backgroundColor: "#1A1A1A",
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  mobileToolButtonActive: {
+    borderColor: "#FF2A2A",
+    backgroundColor: "#2A1212",
+  },
+  mobileToolButtonText: {
+    color: "#D2D2D2",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  mobileToolButtonTextActive: {
+    color: "#FFD9D9",
   },
   listContainer: {
     padding: 16,
