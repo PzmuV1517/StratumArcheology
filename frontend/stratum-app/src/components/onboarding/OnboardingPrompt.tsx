@@ -29,6 +29,7 @@
  */
 import React from "react";
 import { Platform } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /* ─────────────────────────────────────────────────────────────
  *  OnboardingPrompt
@@ -50,6 +51,18 @@ export const OnboardingPrompt: React.FC<Props> = ({
   onAccept,
   onDecline,
 }) => {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const overlayColor = isDarkMode ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.2)";
+  const cardBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+  const cardBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const cardShadow = isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.18)";
+  const titleColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const subtitleColor = isDarkMode ? "#999" : "#5F5F5F";
+  const skipBorderColor = isDarkMode ? "#333" : "#CFCFCF";
+  const skipTextColor = isDarkMode ? "#AAA" : "#666";
+  const hintColor = isDarkMode ? "#666" : "#6F6F6F";
+
   if (!visible || Platform.OS !== "web") return null;
 
   return (
@@ -61,7 +74,7 @@ export const OnboardingPrompt: React.FC<Props> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(0,0,0,0.65)",
+        backgroundColor: overlayColor,
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
@@ -70,12 +83,12 @@ export const OnboardingPrompt: React.FC<Props> = ({
         style={{
           width: "90%",
           maxWidth: 420,
-          backgroundColor: "#1A1A1A",
+          backgroundColor: cardBackground,
           borderRadius: 20,
           padding: 32,
           textAlign: "center",
-          border: "1px solid #2A2A2A",
-          boxShadow: "0 12px 48px rgba(0,0,0,0.6)",
+          border: `1px solid ${cardBorder}`,
+          boxShadow: `0 12px 48px ${cardShadow}`,
         }}
       >
         {/* Icon */}
@@ -86,7 +99,7 @@ export const OnboardingPrompt: React.FC<Props> = ({
           style={{
             fontSize: 22,
             fontWeight: 700,
-            color: "#F5F5F5",
+            color: titleColor,
             marginBottom: 8,
           }}
         >
@@ -97,7 +110,7 @@ export const OnboardingPrompt: React.FC<Props> = ({
         <div
           style={{
             fontSize: 15,
-            color: "#999",
+            color: subtitleColor,
             lineHeight: "22px",
             marginBottom: 28,
           }}
@@ -114,10 +127,10 @@ export const OnboardingPrompt: React.FC<Props> = ({
             style={{
               flex: 1,
               padding: "12px 0",
-              border: "1px solid #333",
+              border: `1px solid ${skipBorderColor}`,
               borderRadius: 12,
               background: "transparent",
-              color: "#AAA",
+              color: skipTextColor,
               fontSize: 15,
               fontWeight: 600,
               cursor: "pointer",
@@ -147,7 +160,7 @@ export const OnboardingPrompt: React.FC<Props> = ({
         <div
           style={{
             fontSize: 12,
-            color: "#666",
+            color: hintColor,
             marginTop: 16,
           }}
         >

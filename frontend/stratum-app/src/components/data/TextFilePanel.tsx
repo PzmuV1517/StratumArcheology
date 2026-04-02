@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Platform,
   View,
@@ -37,6 +37,7 @@ import {
   StyleSheet,
 } from "react-native";
 import MarkdownView from "../../components/common/MarkdownView";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface Props {
   editing: boolean;
@@ -59,6 +60,9 @@ export default function TextFilePanel({
   filename,
   onDirty,
 }: Props) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const placeholderTextColor = isDarkMode ? "#666666" : "#7A7A7A";
   const ext = (filename || "").toLowerCase();
   const isEmpty = !textContent || textContent.length === 0;
 
@@ -78,7 +82,7 @@ export default function TextFilePanel({
               onDirty();
             }}
             placeholder="Enter note title..."
-            placeholderTextColor="#666"
+            placeholderTextColor={placeholderTextColor}
           />
         </View>
       )}
@@ -98,7 +102,7 @@ export default function TextFilePanel({
             onDirty();
           }}
           placeholder="Start typing..."
-          placeholderTextColor="#666"
+          placeholderTextColor={placeholderTextColor}
         />
       ) : (
         <ScrollView
@@ -121,70 +125,83 @@ export default function TextFilePanel({
   );
 }
 
-const styles = StyleSheet.create({
-  textWrapper: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#0E0E0E",
-    padding: 12,
-  },
-  viewWrapper: { flex: 1 },
-  viewContent: { flexGrow: 1 },
-  preText: {
-    color: "#EAEAEA",
-    fontFamily: Platform.select({ web: "monospace", default: undefined }),
-    lineHeight: 20,
-  },
-  textEditor: {
-    color: "#EAEAEA",
-    fontFamily: Platform.select({ web: "monospace", default: undefined }),
-    fontSize: 14,
-    lineHeight: 20,
-    flex: 1,
-    textAlignVertical: "top",
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    padding: 0,
-  },
-  titleEditor: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  titleLabel: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  titleInput: {
-    color: "#EAEAEA",
-    fontSize: 16,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#333",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontWeight: "500",
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    color: "#9A9A9A",
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-  },
-  emptyStateHint: {
-    color: "#666",
-    fontSize: 14,
-  },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    surface: isDarkMode ? "#0E0E0E" : "#FFFFFF",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    inputBorder: isDarkMode ? "#333333" : "#CFCFCF",
+    inputBackground: isDarkMode ? "#1A1A1A" : "#F5F5F5",
+    textPrimary: isDarkMode ? "#EAEAEA" : "#1A1A1A",
+    textStrong: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#9A9A9A" : "#666666",
+    textTertiary: isDarkMode ? "#666666" : "#7A7A7A",
+  };
+
+  return StyleSheet.create({
+    textWrapper: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+      padding: 12,
+    },
+    viewWrapper: { flex: 1 },
+    viewContent: { flexGrow: 1 },
+    preText: {
+      color: palette.textPrimary,
+      fontFamily: Platform.select({ web: "monospace", default: undefined }),
+      lineHeight: 20,
+    },
+    textEditor: {
+      color: palette.textPrimary,
+      fontFamily: Platform.select({ web: "monospace", default: undefined }),
+      fontSize: 14,
+      lineHeight: 20,
+      flex: 1,
+      textAlignVertical: "top",
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      padding: 0,
+    },
+    titleEditor: {
+      marginBottom: 16,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    titleLabel: {
+      color: palette.textStrong,
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    titleInput: {
+      color: palette.textPrimary,
+      fontSize: 16,
+      backgroundColor: palette.inputBackground,
+      borderWidth: 1,
+      borderColor: palette.inputBorder,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontWeight: "500",
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 40,
+    },
+    emptyStateText: {
+      color: palette.textSecondary,
+      fontSize: 16,
+      fontWeight: "500",
+      marginBottom: 8,
+    },
+    emptyStateHint: {
+      color: palette.textTertiary,
+      fontSize: 14,
+    },
+  });
+};

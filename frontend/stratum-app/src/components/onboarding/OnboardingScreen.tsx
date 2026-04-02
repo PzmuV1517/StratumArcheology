@@ -30,6 +30,7 @@
 import React from "react";
 import { Platform, View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import Onboarding from "@blazejkustra/react-native-onboarding";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /* ─────────────────────────────────────────────────────────────
  *  OnboardingScreen
@@ -45,43 +46,55 @@ interface Props {
   onSkip: () => void;
 }
 
-const introStyles = StyleSheet.create({
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "400",
-    color: "#999999",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 0,
-  },
-  button: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignSelf: "center",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-});
-
 export const OnboardingScreen: React.FC<Props> = ({
   visible,
   onComplete,
   onSkip,
 }) => {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const rootBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const titleColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const subtitleColor = isDarkMode ? "#999999" : "#5F5F5F";
+  const stepPrimaryBg = isDarkMode ? "#111111" : "#FFFFFF";
+  const stepSecondaryBg = isDarkMode ? "#1A1A1A" : "#F1F1F1";
+  const stepLabelBg = isDarkMode ? "#2A2A2A" : "#E2E2E2";
+  const stepTextPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const stepTextSecondary = isDarkMode ? "#999999" : "#5F5F5F";
+  const stepTextContrast = "#FFFFFF";
+
   if (!visible || Platform.OS !== "web") return null;
+
+  const introStyles = StyleSheet.create({
+    title: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: titleColor,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    subtitle: {
+      fontSize: 16,
+      fontWeight: "400",
+      color: subtitleColor,
+      textAlign: "center",
+      lineHeight: 24,
+      marginBottom: 0,
+    },
+    button: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignSelf: "center",
+    },
+    buttonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+  });
 
   return (
     <View
@@ -92,7 +105,7 @@ export const OnboardingScreen: React.FC<Props> = ({
         right: 0,
         bottom: 0,
         zIndex: 99998,
-        backgroundColor: "#111111",
+        backgroundColor: rootBackground,
         ...(Platform.OS === "web" ? ({ position: "fixed" } as any) : {}),
       }}
     >
@@ -319,15 +332,15 @@ export const OnboardingScreen: React.FC<Props> = ({
         animationDuration={400}
         colors={{
           background: {
-            primary: "#111111",
-            secondary: "#1A1A1A",
-            label: "#2A2A2A",
+            primary: stepPrimaryBg,
+            secondary: stepSecondaryBg,
+            label: stepLabelBg,
             accent: "#FF2A2A",
           },
           text: {
-            primary: "#F5F5F5",
-            secondary: "#999999",
-            contrast: "#FFFFFF",
+            primary: stepTextPrimary,
+            secondary: stepTextSecondary,
+            contrast: stepTextContrast,
           },
         }}
       />

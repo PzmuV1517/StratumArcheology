@@ -40,6 +40,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
@@ -128,6 +129,14 @@ export default function FilesOverlay({
   projectMembers = [],
   currentUserId,
 }: Props) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const textTertiary = isDarkMode ? "#666666" : "#7A7A7A";
+  const overlayBackground = isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.24)";
+  const dragCardBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+
   // Get safe area insets for proper header spacing on iOS
   const _insets = useSafeAreaInsets();
   const { socket } = useWebSocket();
@@ -882,7 +891,7 @@ export default function FilesOverlay({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.7)",
+            backgroundColor: overlayBackground,
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
@@ -906,7 +915,7 @@ export default function FilesOverlay({
         >
           <div
             style={{
-              backgroundColor: "#1A1A1A",
+              backgroundColor: dragCardBackground,
               borderRadius: 12,
               border: "2px dashed #FF2A2A",
               padding: 40,
@@ -923,7 +932,7 @@ export default function FilesOverlay({
             >
               Drop file here
             </Text>
-            <Text style={{ color: "#9A9A9A", fontSize: 14 }}>
+            <Text style={{ color: textSecondary, fontSize: 14 }}>
               Release or press ESC to cancel
             </Text>
           </div>
@@ -1040,7 +1049,7 @@ export default function FilesOverlay({
           <TextInput
             value={searchQuery}
             placeholder="Search by name..."
-            placeholderTextColor="#666"
+            placeholderTextColor={textTertiary}
             onChangeText={setSearchQuery}
             style={styles.searchInput}
           />
@@ -1048,7 +1057,7 @@ export default function FilesOverlay({
             style={styles.filterToggle}
             onPress={() => setShowExtensionFilter((v) => !v)}
           >
-            <Text style={{ color: "#F5F5F5", fontSize: 12 }}>
+            <Text style={{ color: textPrimary, fontSize: 12 }}>
               {showExtensionFilter ? "Hide Extensions" : "Filter by extension"}
             </Text>
           </TouchableOpacity>
@@ -1059,7 +1068,7 @@ export default function FilesOverlay({
             <View style={[styles.exactBox, exactOnly && styles.exactBoxChecked]}>
               {exactOnly && <Text style={styles.exactBoxTick}>✓</Text>}
             </View>
-            <Text style={{ color: "#9A9A9A", fontSize: 12 }}>
+            <Text style={{ color: textSecondary, fontSize: 12 }}>
               Only exact matches
             </Text>
           </TouchableOpacity>
@@ -1100,7 +1109,7 @@ export default function FilesOverlay({
                 value={customExtInput}
                 onChangeText={setCustomExtInput}
                 placeholder="Search custom extension (e.g. csv)"
-                placeholderTextColor="#666"
+                placeholderTextColor={textTertiary}
                 style={styles.customExtInput}
               />
               <TouchableOpacity
@@ -1164,10 +1173,10 @@ export default function FilesOverlay({
                         <Text style={{ color: "#FF2A2A" }}>{displayName}</Text>
                       </TouchableOpacity>
                     ) : (
-                      <Text style={{ color: "#9A9A9A" }}>{displayName}</Text>
+                      <Text style={{ color: textSecondary }}>{displayName}</Text>
                     )}
                     {idx < arr.length - 1 && (
-                      <Text style={{ color: "#9A9A9A", marginHorizontal: 6 }}>
+                      <Text style={{ color: textSecondary, marginHorizontal: 6 }}>
                         /
                       </Text>
                     )}
@@ -1198,7 +1207,7 @@ export default function FilesOverlay({
                         {allSelected && <Text style={styles.checkboxTick}>✓</Text>}
                       </View>
                     </TouchableOpacity>
-                    <Text style={{ color: "#9A9A9A", marginLeft: 8 }}>
+                    <Text style={{ color: textSecondary, marginLeft: 8 }}>
                       Select All
                     </Text>
                     {fileNodes.some((n) => n.is_locked) && (
@@ -1279,6 +1288,7 @@ export default function FilesOverlay({
                         getDisplayName(node),
                         searchQuery,
                         exactOnly,
+                        styles,
                       )}
                     </TouchableOpacity>
                     {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
@@ -1288,16 +1298,16 @@ export default function FilesOverlay({
                     <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>
                       {node.type === "file" && (
                         <TouchableOpacity onPress={() => onDownload(node)}>
-                          <Text style={{ color: "#9A9A9A" }}>Download</Text>
+                          <Text style={{ color: textSecondary }}>Download</Text>
                         </TouchableOpacity>
                       )}
                       {!node.is_locked && canEdit && (
                         <>
                           <TouchableOpacity onPress={() => onRename(node)}>
-                            <Text style={{ color: "#9A9A9A" }}>Rename</Text>
+                            <Text style={{ color: textSecondary }}>Rename</Text>
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onMove(node)}>
-                            <Text style={{ color: "#9A9A9A" }}>Move</Text>
+                            <Text style={{ color: textSecondary }}>Move</Text>
                           </TouchableOpacity>
                           <TouchableOpacity onPress={() => onDelete(node)}>
                             <Text style={{ color: "#FF4444" }}>Delete</Text>
@@ -1324,12 +1334,17 @@ export default function FilesOverlay({
 }
 
 // Helper to highlight matched substring
-function renderNameWithExtension(name: string, query: string, exactOnly: boolean) {
+function renderNameWithExtension(
+  name: string,
+  query: string,
+  exactOnly: boolean,
+  styles: ReturnType<typeof createStyles>,
+) {
   const idx = name.lastIndexOf(".");
   const hasExt = idx !== -1;
   const base = hasExt ? name.substring(0, idx) : name;
   const ext = hasExt ? name.substring(idx) : "";
-  const highlightedBase = highlightBase(base, query, exactOnly);
+  const highlightedBase = highlightBase(base, query, exactOnly, styles);
   return (
     <Text style={styles.fileName}>
       {highlightedBase}
@@ -1338,7 +1353,12 @@ function renderNameWithExtension(name: string, query: string, exactOnly: boolean
   );
 }
 
-function highlightBase(base: string, query: string, exactOnly: boolean) {
+function highlightBase(
+  base: string,
+  query: string,
+  exactOnly: boolean,
+  styles: ReturnType<typeof createStyles>,
+) {
   const qRaw = query.trim();
   if (!qRaw) return base;
   const q = qRaw.toLowerCase();
@@ -1358,362 +1378,393 @@ function highlightBase(base: string, query: string, exactOnly: boolean) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#111111", position: "relative" },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerGlass: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: "#111111",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#333333",
-  },
-  modalBackButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    minWidth: 70,
-  },
-  modalBackText: {
-    color: "#FF2A2A",
-    fontSize: 17,
-    marginLeft: 4,
-  },
-  modalHeaderTitle: {
-    color: "#F5F5F5",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  modalHeaderSpacer: {
-    minWidth: 70,
-  },
-  bulkBarContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-    maxHeight: 48,
-  },
-  bulkBarScroll: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  bulkBar: {
-    marginLeft: "auto",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  bulkText: { color: "#F5F5F5", marginRight: 8, fontSize: 12 },
-  bulkBtn: {
-    backgroundColor: "#333",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  bulkBtnDanger: {
-    backgroundColor: "#8B0000",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  bulkBtnClear: {
-    backgroundColor: "#444",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  bulkBtnText: { color: "#F5F5F5", fontSize: 12 },
-  sectionHeader: {
-    flexDirection: "column",
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-  },
-  actionButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  myFolderButton: { backgroundColor: "#2A6AFF" },
-  myFolderContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
-  myFolderSettingsBtn: { padding: 4, borderRadius: 6, backgroundColor: "#1A1A1A" },
-  myFolderSettingsIcon: { fontSize: 14 },
-  actionButtonText: {
-    fontSize: 12,
-    color: "#F5F5F5",
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  multiToggle: {
-    backgroundColor: "#222",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  multiToggleActive: {
-    backgroundColor: "#333",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  multiToggleText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600" },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 12,
-    flexWrap: "wrap",
-  },
-  searchInput: {
-    flexGrow: 1,
-    minWidth: 200,
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    color: "#F5F5F5",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    fontSize: 14,
-  },
-  exactToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
-  exactBox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: "#555",
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  exactBoxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
-  exactBoxTick: { color: "#111", fontSize: 12, fontWeight: "700" },
-  filterToggle: {
-    backgroundColor: "#222",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  filterPanel: {
-    backgroundColor: "#141414",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    marginBottom: 12,
-  },
-  extChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  extChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#222",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  extChipActive: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
-  extChipText: { color: "#F5F5F5", fontSize: 12 },
-  customExtRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  customExtInput: {
-    flexGrow: 1,
-    minWidth: 120,
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    color: "#F5F5F5",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    fontSize: 12,
-  },
-  addExtBtn: {
-    backgroundColor: "#333",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  clearFilterBtn: {
-    backgroundColor: "#444",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: "auto",
-  },
-  addExtText: { color: "#F5F5F5", fontSize: 12 },
-  matchHighlight: {
-    backgroundColor: "#FF2A2A",
-    color: "#111111",
-    fontWeight: "700",
-    paddingHorizontal: 2,
-    borderRadius: 4,
-  },
-  fileExt: { color: "#9A9A9A", fontSize: 12, marginLeft: 4 },
-  extPreviewText: { color: "#9A9A9A", fontSize: 11, marginTop: 4 },
-  listHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  fileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  fileRowSelected: { borderColor: "#FF2A2A", backgroundColor: "#1A1A1A" },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#555",
-    marginRight: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxDisabled: { borderColor: "#333", backgroundColor: "#222" },
-  checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
-  checkboxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
-  checkboxTick: { color: "#111111", fontSize: 14, fontWeight: "700" },
-  infoWrapper: { marginLeft: 10, position: "relative" },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#444",
-  },
-  infoIconText: { color: "#F5F5F5", fontSize: 12, fontWeight: "700" },
-  infoTooltip: {
-    position: "absolute",
-    bottom: 22,
-    left: 0,
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    maxWidth: 220,
-  },
-  infoTooltipText: { color: "#F5F5F5", fontSize: 12 },
-  fileIcon: { fontSize: 18, marginRight: 10, color: "#F5F5F5" },
-  fileName: { flex: 1, color: "#F5F5F5", fontSize: 16, letterSpacing: 0.3 },
-  lockBadge: { color: "#FF4444", fontSize: 12, fontWeight: "700" },
-  offlineBadge: {
-    color: "#7A7A7A",
-    fontSize: 10,
-    fontWeight: "600",
-    marginLeft: 6,
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  emptyState: { alignItems: "center", paddingVertical: 48 },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginBottom: 24,
-    letterSpacing: 0.5,
-  },
-  dropMask: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 60,
-  },
-  dropBox: {
-    width: 320,
-    paddingVertical: 36,
-    paddingHorizontal: 24,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 2,
-    borderColor: "#FF2A2A",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-  },
-  dropBoxTitle: {
-    color: "#FF2A2A",
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  dropBoxSub: { color: "#F5F5F5", fontSize: 14, opacity: 0.9 },
-  uploadingBanner: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    flexDirection: "row",
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    zIndex: 70,
-  },
-  uploadingText: { color: "#F5F5F5", fontSize: 14 },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    pageBackground: isDarkMode ? "#111111" : "#F7F7F7",
+    surface: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+    surfaceAlt: isDarkMode ? "#141414" : "#F1F1F1",
+    surfaceMuted: isDarkMode ? "#222222" : "#EAEAEA",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    borderStrong: isDarkMode ? "#333333" : "#C9C9C9",
+    textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#9A9A9A" : "#666666",
+    textMuted: isDarkMode ? "#7A7A7A" : "#7A7A7A",
+    overlaySoft: isDarkMode ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.16)",
+  };
+
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: palette.pageBackground, position: "relative" },
+    header: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    headerGlass: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(0, 0, 0, 0.08)",
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 12,
+      backgroundColor: palette.pageBackground,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: palette.borderStrong,
+    },
+    modalBackButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 70,
+    },
+    modalBackText: {
+      color: "#FF2A2A",
+      fontSize: 17,
+      marginLeft: 4,
+    },
+    modalHeaderTitle: {
+      color: palette.textPrimary,
+      fontSize: 17,
+      fontWeight: "600",
+    },
+    modalHeaderSpacer: {
+      minWidth: 70,
+    },
+    bulkBarContainer: {
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+      maxHeight: 48,
+    },
+    bulkBarScroll: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    bulkBar: {
+      marginLeft: "auto",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    bulkText: { color: palette.textPrimary, marginRight: 8, fontSize: 12 },
+    bulkBtn: {
+      backgroundColor: palette.borderStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    bulkBtnDanger: {
+      backgroundColor: "#8B0000",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    bulkBtnClear: {
+      backgroundColor: isDarkMode ? "#444" : "#D0D0D0",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    bulkBtnText: { color: palette.textPrimary, fontSize: 12 },
+    sectionHeader: {
+      flexDirection: "column",
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
+      marginBottom: 16,
+      gap: 12,
+    },
+    sectionTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: palette.textPrimary,
+      letterSpacing: 0.5,
+    },
+    actionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      alignItems: "center",
+    },
+    actionButton: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+    myFolderButton: { backgroundColor: "#2A6AFF" },
+    myFolderContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
+    myFolderSettingsBtn: {
+      padding: 4,
+      borderRadius: 6,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    myFolderSettingsIcon: { fontSize: 14 },
+    actionButtonText: {
+      fontSize: 12,
+      color: "#FFFFFF",
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    multiToggle: {
+      backgroundColor: palette.surfaceMuted,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    multiToggleActive: {
+      backgroundColor: palette.borderStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    multiToggleText: { color: palette.textPrimary, fontSize: 12, fontWeight: "600" },
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+      gap: 12,
+      flexWrap: "wrap",
+    },
+    searchInput: {
+      flexGrow: 1,
+      minWidth: 200,
+      backgroundColor: palette.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      color: palette.textPrimary,
+      borderWidth: 1,
+      borderColor: palette.border,
+      fontSize: 14,
+    },
+    exactToggle: { flexDirection: "row", alignItems: "center", gap: 6 },
+    exactBox: {
+      width: 18,
+      height: 18,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#555" : "#A0A0A0",
+      borderRadius: 4,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    exactBoxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+    exactBoxTick: { color: "#111", fontSize: 12, fontWeight: "700" },
+    filterToggle: {
+      backgroundColor: palette.surfaceMuted,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    filterPanel: {
+      backgroundColor: palette.surfaceAlt,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+      marginBottom: 12,
+    },
+    extChipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+    extChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: palette.surfaceMuted,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+    },
+    extChipActive: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+    extChipText: { color: palette.textPrimary, fontSize: 12 },
+    customExtRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    customExtInput: {
+      flexGrow: 1,
+      minWidth: 120,
+      backgroundColor: palette.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      color: palette.textPrimary,
+      borderWidth: 1,
+      borderColor: palette.border,
+      fontSize: 12,
+    },
+    addExtBtn: {
+      backgroundColor: palette.borderStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    clearFilterBtn: {
+      backgroundColor: isDarkMode ? "#444" : "#D0D0D0",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      marginLeft: "auto",
+    },
+    addExtText: { color: palette.textPrimary, fontSize: 12 },
+    matchHighlight: {
+      backgroundColor: "#FF2A2A",
+      color: "#111111",
+      fontWeight: "700",
+      paddingHorizontal: 2,
+      borderRadius: 4,
+    },
+    fileExt: { color: palette.textSecondary, fontSize: 12, marginLeft: 4 },
+    extPreviewText: { color: palette.textSecondary, fontSize: 11, marginTop: 4 },
+    listHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+    fileRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    fileRowSelected: { borderColor: "#FF2A2A", backgroundColor: palette.surface },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#555" : "#A0A0A0",
+      marginRight: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxDisabled: {
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surfaceMuted,
+    },
+    checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
+    checkboxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+    checkboxTick: { color: "#111111", fontSize: 14, fontWeight: "700" },
+    infoWrapper: { marginLeft: 10, position: "relative" },
+    infoIcon: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: palette.border,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+    },
+    infoIconText: { color: palette.textPrimary, fontSize: 12, fontWeight: "700" },
+    infoTooltip: {
+      position: "absolute",
+      bottom: 22,
+      left: 0,
+      backgroundColor: palette.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      maxWidth: 220,
+    },
+    infoTooltipText: { color: palette.textPrimary, fontSize: 12 },
+    fileIcon: { fontSize: 18, marginRight: 10, color: palette.textPrimary },
+    fileName: {
+      flex: 1,
+      color: palette.textPrimary,
+      fontSize: 16,
+      letterSpacing: 0.3,
+    },
+    lockBadge: { color: "#FF4444", fontSize: 12, fontWeight: "700" },
+    offlineBadge: {
+      color: palette.textMuted,
+      fontSize: 10,
+      fontWeight: "600",
+      marginLeft: 6,
+      backgroundColor: palette.border,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    emptyState: { alignItems: "center", paddingVertical: 48 },
+    emptyStateText: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: palette.textPrimary,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      marginBottom: 24,
+      letterSpacing: 0.5,
+    },
+    dropMask: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: palette.overlaySoft,
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 60,
+    },
+    dropBox: {
+      width: 320,
+      paddingVertical: 36,
+      paddingHorizontal: 24,
+      backgroundColor: palette.surface,
+      borderWidth: 2,
+      borderColor: "#FF2A2A",
+      borderStyle: "dashed",
+      borderRadius: 16,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOpacity: 0.5,
+      shadowRadius: 18,
+    },
+    dropBoxTitle: {
+      color: "#FF2A2A",
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 6,
+      letterSpacing: 0.5,
+    },
+    dropBoxSub: { color: palette.textPrimary, fontSize: 14, opacity: 0.9 },
+    uploadingBanner: {
+      position: "absolute",
+      bottom: 16,
+      left: 16,
+      flexDirection: "row",
+      backgroundColor: palette.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 12,
+      alignItems: "center",
+      gap: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      zIndex: 70,
+    },
+    uploadingText: { color: palette.textPrimary, fontSize: 14 },
+  });
+};

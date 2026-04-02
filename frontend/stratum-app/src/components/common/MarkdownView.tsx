@@ -27,8 +27,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Platform, View, Text, StyleSheet, ScrollView, Linking } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 let ReactMarkdown: any = null;
 let remarkGfm: any = null;
@@ -45,6 +46,12 @@ let MarkdownDisplayNative: any = null;
  */
 export default function MarkdownView({ content }: { content: string }) {
   const [ready, setReady] = useState(false);
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const nativeStyles = useMemo(() => createNativeStyles(isDarkMode), [isDarkMode]);
+  const markdownStyles = useMemo(
+    () => createMarkdownStyles(isDarkMode),
+    [isDarkMode],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -66,6 +73,7 @@ export default function MarkdownView({ content }: { content: string }) {
         } else {
           // Native: try to load react-native-markdown-display
           try {
+            // eslint-disable-next-line import/no-unresolved
             const mdModule = await import("react-native-markdown-display");
             MarkdownDisplayNative = mdModule.default;
           } catch {
@@ -115,8 +123,9 @@ export default function MarkdownView({ content }: { content: string }) {
   }
 
   // Web platform rendering
-  if (!ready || !ReactMarkdown)
-    return <Text style={{ color: "#9A9A9A" }}>Loading…</Text>;
+  if (!ready || !ReactMarkdown) {
+    return <Text style={nativeStyles.loadingText}>Loading...</Text>;
+  }
 
   return (
     <View style={{ width: "100%" }}>
@@ -132,69 +141,68 @@ export default function MarkdownView({ content }: { content: string }) {
   );
 }
 
-// Native styles
-const nativeStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0C0E",
-  },
-  content: {
-    color: "#EAEAEA",
-    fontSize: 15,
-    lineHeight: 24,
-    padding: 16,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
-  loadingText: {
-    color: "#9A9A9A",
-    padding: 16,
-  },
-});
+const createNativeStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#0C0C0E" : "#F7F7F7",
+    },
+    content: {
+      color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
+      fontSize: 15,
+      lineHeight: 24,
+      padding: 16,
+      fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    },
+    loadingText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      padding: 16,
+    },
+  });
 
-// Markdown display styles for native
-const markdownStyles = {
+const createMarkdownStyles = (isDarkMode: boolean) => ({
   body: {
-    color: "#EAEAEA",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
     fontSize: 15,
     lineHeight: 24,
   },
   heading1: {
-    color: "#FFFFFF",
+    color: isDarkMode ? "#FFFFFF" : "#111111",
     fontSize: 28,
     fontWeight: "bold" as const,
     marginBottom: 12,
     marginTop: 24,
   },
   heading2: {
-    color: "#FFFFFF",
+    color: isDarkMode ? "#FFFFFF" : "#111111",
     fontSize: 24,
     fontWeight: "bold" as const,
     marginBottom: 10,
     marginTop: 20,
   },
   heading3: {
-    color: "#FFFFFF",
+    color: isDarkMode ? "#FFFFFF" : "#111111",
     fontSize: 20,
     fontWeight: "bold" as const,
     marginBottom: 8,
     marginTop: 16,
   },
   heading4: {
-    color: "#FFFFFF",
+    color: isDarkMode ? "#FFFFFF" : "#111111",
     fontSize: 18,
     fontWeight: "bold" as const,
     marginBottom: 6,
     marginTop: 14,
   },
   paragraph: {
-    color: "#EAEAEA",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
     fontSize: 15,
     lineHeight: 24,
     marginBottom: 12,
   },
   code_inline: {
-    backgroundColor: "#2A2A2A",
-    color: "#FF7B72",
+    backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+    color: isDarkMode ? "#FF7B72" : "#B42318",
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     fontSize: 13,
     paddingHorizontal: 6,
@@ -202,20 +210,20 @@ const markdownStyles = {
     borderRadius: 4,
   },
   fence: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: isDarkMode ? "#1A1A1A" : "#F1F1F1",
     borderRadius: 8,
     padding: 12,
     marginVertical: 8,
   },
   code_block: {
-    backgroundColor: "#1A1A1A",
-    color: "#EAEAEA",
+    backgroundColor: isDarkMode ? "#1A1A1A" : "#F1F1F1",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     fontSize: 13,
     lineHeight: 20,
   },
   blockquote: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: isDarkMode ? "#1A1A1A" : "#F3F3F3",
     borderLeftWidth: 4,
     borderLeftColor: "#FF2A2A",
     paddingLeft: 12,
@@ -223,44 +231,44 @@ const markdownStyles = {
     marginVertical: 8,
   },
   list_item: {
-    color: "#EAEAEA",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
     fontSize: 15,
     lineHeight: 24,
   },
   link: {
-    color: "#58A6FF",
+    color: isDarkMode ? "#58A6FF" : "#0A7EA4",
     textDecorationLine: "underline" as const,
   },
   strong: {
-    color: "#FFFFFF",
+    color: isDarkMode ? "#FFFFFF" : "#111111",
     fontWeight: "bold" as const,
   },
   em: {
-    color: "#EAEAEA",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
     fontStyle: "italic" as const,
   },
   hr: {
-    backgroundColor: "#3A3A3A",
+    backgroundColor: isDarkMode ? "#3A3A3A" : "#D9D9D9",
     height: 1,
     marginVertical: 16,
   },
   table: {
     borderWidth: 1,
-    borderColor: "#3A3A3A",
+    borderColor: isDarkMode ? "#3A3A3A" : "#D9D9D9",
     marginVertical: 8,
   },
   th: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: isDarkMode ? "#1A1A1A" : "#F1F1F1",
     padding: 8,
     borderWidth: 1,
-    borderColor: "#3A3A3A",
-    color: "#FFFFFF",
+    borderColor: isDarkMode ? "#3A3A3A" : "#D9D9D9",
+    color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
     fontWeight: "bold" as const,
   },
   td: {
     padding: 8,
     borderWidth: 1,
-    borderColor: "#3A3A3A",
-    color: "#EAEAEA",
+    borderColor: isDarkMode ? "#3A3A3A" : "#D9D9D9",
+    color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
   },
-};
+});

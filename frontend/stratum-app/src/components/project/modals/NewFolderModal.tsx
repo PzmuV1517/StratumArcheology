@@ -58,7 +58,7 @@ export default function NewFolderModal({
       <TextInput
         style={projectModalStyles.input}
         placeholder="Folder name"
-        placeholderTextColor="#666"
+        placeholderTextColor="#8A8A8A"
         value={name}
         onChangeText={setName}
       />

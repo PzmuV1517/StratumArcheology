@@ -27,12 +27,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   ScrollView,
   View,
   Text,
-  Image,
   ImageBackground,
   Platform,
   TouchableOpacity,
@@ -49,12 +48,13 @@ import TimeMachineTab from "@/components/project/TimeMachineTab";
 import ToolsTab from "@/components/project/ToolsTab";
 import Timeline from "@/components/timeline/Timeline";
 import MapEditor from "@/components/map/MapEditor";
-import styles from "@/components/project/ProjectDetailStyles";
+import { useProjectDetailStyles } from "@/components/project/ProjectDetailStyles";
 import {
   ProjectLoadingState,
   ProjectNotFoundState,
   useProjectDetail,
 } from "@/contexts/ProjectDetailContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 function ProjectTabGuard({ children }: { children: React.ReactNode }) {
   const { loading, project } = useProjectDetail();
@@ -72,6 +72,20 @@ function ProjectTabGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function ProjectOverviewScreen() {
+  const styles = useProjectDetailStyles();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const heroGradientColors = useMemo<[string, string]>(
+    () =>
+      isDarkMode
+        ? ["rgba(0,0,0,0)", "rgba(0,0,0,0.75)"]
+        : ["rgba(255,255,255,0)", "rgba(255,255,255,0.82)"],
+    [isDarkMode],
+  );
+  const overviewLocalStyles = useMemo(
+    () => createOverviewLocalStyles(isDarkMode),
+    [isDarkMode],
+  );
+
   const {
     project,
     members,
@@ -102,7 +116,7 @@ export function ProjectOverviewScreen() {
                 resizeMode="cover"
               >
                 <LinearGradient
-                  colors={["transparent", "rgba(0,0,0,0.75)"]}
+                  colors={heroGradientColors}
                   style={overviewLocalStyles.heroBannerGradient}
                 >
                   <Text style={styles.overviewTitle}>{project?.name}</Text>
@@ -170,6 +184,7 @@ export function ProjectOverviewScreen() {
 }
 
 export function ProjectNotesScreen() {
+  const styles = useProjectDetailStyles();
   const {
     notes,
     isGuest,
@@ -210,6 +225,7 @@ export function ProjectNotesScreen() {
 }
 
 export function ProjectArtefactsScreen() {
+  const styles = useProjectDetailStyles();
   const {
     project,
     canEditFiles,
@@ -241,6 +257,11 @@ export function ProjectArtefactsScreen() {
 }
 
 export function ProjectMatrixScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const screenBackground = isDarkMode ? "#111111" : "#F6F6F6";
+  const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const panelBackground = isDarkMode ? "#0A0A0A" : "#FFFFFF";
+
   const {
     project,
     HarrisMatrixComponent,
@@ -258,7 +279,7 @@ export function ProjectMatrixScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: "#111111",
+          backgroundColor: screenBackground,
           paddingTop: iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
@@ -271,12 +292,12 @@ export function ProjectMatrixScreen() {
                   borderRadius: 12,
                   overflow: "hidden",
                   borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                  backgroundColor: "#0A0A0A",
+                  borderColor: panelBorder,
+                  backgroundColor: panelBackground,
                 } as any)
               : {
                   flex: 1,
-                  backgroundColor: "#0A0A0A",
+                  backgroundColor: panelBackground,
                 }
           }
         >
@@ -304,6 +325,7 @@ export function ProjectMatrixScreen() {
 }
 
 export function ProjectGalleryScreen() {
+  const styles = useProjectDetailStyles();
   const {
     project,
     openGalleryItem,
@@ -342,6 +364,10 @@ export function ProjectMapScreen({
 }: {
   noHeaderPad?: boolean;
 }) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const screenBackground = isDarkMode ? "#111111" : "#F6F6F6";
+  const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+
   const { project, canEditMap, iosHeaderPad, setCurrentTabName } =
     useProjectDetail();
 
@@ -354,7 +380,7 @@ export function ProjectMapScreen({
       <View
         style={{
           flex: 1,
-          backgroundColor: "#111111",
+          backgroundColor: screenBackground,
           paddingTop: noHeaderPad ? 0 : iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
@@ -365,7 +391,7 @@ export function ProjectMapScreen({
             borderRadius: 12,
             overflow: "hidden",
             borderWidth: 1,
-            borderColor: "#2A2A2A",
+            borderColor: panelBorder,
           }}
         >
           <MapEditor projectId={project?.id as string} canEdit={canEditMap} />
@@ -380,6 +406,11 @@ export function ProjectHistoryScreen({
 }: {
   noHeaderPad?: boolean;
 }) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const screenBackground = isDarkMode ? "#111111" : "#F6F6F6";
+  const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const panelBackground = isDarkMode ? "#0A0A0A" : "#FFFFFF";
+
   const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
 
   useEffect(() => {
@@ -392,7 +423,7 @@ export function ProjectHistoryScreen({
         <View
           style={{
             flex: 1,
-            backgroundColor: "#111111",
+            backgroundColor: screenBackground,
             paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: 0,
           }}
@@ -412,7 +443,7 @@ export function ProjectHistoryScreen({
         <View
           style={{
             flex: 1,
-            backgroundColor: "#111111",
+            backgroundColor: screenBackground,
             paddingTop: noHeaderPad ? 0 : iosHeaderPad,
             paddingBottom: Platform.OS === "android" ? 84 : 0,
           }}
@@ -423,8 +454,8 @@ export function ProjectHistoryScreen({
               borderRadius: 16,
               overflow: "hidden",
               borderWidth: 1,
-              borderColor: "#2A2A2A",
-              backgroundColor: "#0A0A0A",
+              borderColor: panelBorder,
+              backgroundColor: panelBackground,
               marginHorizontal: 16,
               marginTop: 16,
               marginBottom: 16,
@@ -439,6 +470,11 @@ export function ProjectHistoryScreen({
 }
 
 export function ProjectToolsScreen() {
+  const styles = useProjectDetailStyles();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const panelBackground = isDarkMode ? "#0A0A0A" : "#FFFFFF";
+
   const { project, bottomContentPad, maybeRefreshControl, setCurrentTabName } =
     useProjectDetail();
 
@@ -485,8 +521,8 @@ export function ProjectToolsScreen() {
               borderRadius: 16,
               overflow: "hidden",
               borderWidth: 1,
-              borderColor: "#2A2A2A",
-              backgroundColor: "#0A0A0A",
+              borderColor: panelBorder,
+              backgroundColor: panelBackground,
               minHeight: 500,
             }}
           >
@@ -509,6 +545,11 @@ export function ProjectWheelerScreen({
 }: {
   noHeaderPad?: boolean;
 }) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const screenBackground = isDarkMode ? "#111111" : "#F6F6F6";
+  const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const panelBackground = isDarkMode ? "#0A0A0A" : "#FFFFFF";
+
   const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
 
   const [WheelerComponent, setWheelerComponent] =
@@ -542,7 +583,7 @@ export function ProjectWheelerScreen({
       <View
         style={{
           flex: 1,
-          backgroundColor: "#111111",
+          backgroundColor: screenBackground,
           paddingTop: noHeaderPad ? 0 : iosHeaderPad,
           paddingBottom: Platform.OS === "android" ? 84 : 0,
         }}
@@ -556,12 +597,12 @@ export function ProjectWheelerScreen({
                   borderRadius: 12,
                   overflow: "hidden",
                   borderWidth: 1,
-                  borderColor: "#2A2A2A",
-                  backgroundColor: "#0A0A0A",
+                  borderColor: panelBorder,
+                  backgroundColor: panelBackground,
                 } as any)
               : {
                   flex: 1,
-                  backgroundColor: "#0A0A0A",
+                  backgroundColor: panelBackground,
                 }
           }
         >
@@ -635,6 +676,10 @@ export function ProjectMoreScreen({
 }: {
   onNavigate: (screen: "gallery" | "gps" | "history" | "tools") => void;
 }) {
+  const styles = useProjectDetailStyles();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const moreStyles = useMemo(() => createMoreStyles(isDarkMode), [isDarkMode]);
+
   const { setCurrentTabName, bottomContentPad } = useProjectDetail();
 
   useEffect(() => {
@@ -680,77 +725,79 @@ export function ProjectMoreScreen({
   );
 }
 
-const moreStyles = RNStyleSheet.create({
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#F5F5F5",
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginBottom: 24,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  card: {
-    width: "47%",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 20,
-    alignItems: "center",
-    minHeight: 140,
-    justifyContent: "center",
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255, 42, 42, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  cardLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  cardSub: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    textAlign: "center",
-    lineHeight: 16,
-  },
-});
+const createMoreStyles = (isDarkMode: boolean) =>
+  RNStyleSheet.create({
+    title: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 4,
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 24,
+    },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    card: {
+      width: "47%",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      padding: 20,
+      alignItems: "center",
+      minHeight: 140,
+      justifyContent: "center",
+    },
+    iconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: "rgba(255, 42, 42, 0.12)",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    cardLabel: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    cardSub: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      lineHeight: 16,
+    },
+  });
 
-const overviewLocalStyles = RNStyleSheet.create({
-  heroBanner: {
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    maxWidth: 600,
-    width: "100%",
-    alignSelf: "center",
-  },
-  heroBannerImage: {
-    width: "100%",
-    aspectRatio: 16 / 5,
-  },
-  heroBannerGradient: {
-    flex: 1,
-    justifyContent: "flex-end",
-    padding: 16,
-  },
-});
+const createOverviewLocalStyles = (isDarkMode: boolean) =>
+  RNStyleSheet.create({
+    heroBanner: {
+      borderRadius: 16,
+      overflow: "hidden",
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      maxWidth: 600,
+      width: "100%",
+      alignSelf: "center",
+    },
+    heroBannerImage: {
+      width: "100%",
+      aspectRatio: 16 / 5,
+    },
+    heroBannerGradient: {
+      flex: 1,
+      justifyContent: "flex-end",
+      padding: 16,
+    },
+  });

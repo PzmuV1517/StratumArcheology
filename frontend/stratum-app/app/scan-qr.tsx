@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -49,6 +49,7 @@ import { useRouter, Stack, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "@/services/projectService";
 import { qrService } from "@/services/qrService";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const isIOS = Platform.OS === "ios";
 const VIEWPORT_SIZE = 250;
@@ -70,9 +71,11 @@ type ResultModalData = {
 function ResultModal({
   data,
   onDismiss,
+  modalStyles,
 }: {
   data: ResultModalData;
   onDismiss: () => void;
+  modalStyles: ReturnType<typeof createModalStyles>;
 }) {
   if (!data) return null;
 
@@ -114,66 +117,6 @@ function ResultModal({
   );
 }
 
-const modalStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  card: {
-    backgroundColor: "#1C1C1E",
-    borderRadius: 20,
-    padding: 24,
-    width: "100%",
-    maxWidth: 320,
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  message: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
-  button: {
-    flex: 1,
-    backgroundColor: "#FF2A2A",
-    paddingVertical: 13,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  destructiveBtn: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#FF4444",
-  },
-  destructiveBtnText: {
-    color: "#FF4444",
-  },
-  cancelBtnText: {
-    color: "#9A9A9A",
-  },
-});
-
 // ─── Scanner Screen ─────────────────────────────────────────────────
 
 export default function ScanQRScreen() {
@@ -186,6 +129,12 @@ export default function ScanQRScreen() {
 }
 
 function ScannerContent() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const modalStyles = useMemo(() => createModalStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
@@ -203,9 +152,9 @@ function ScannerContent() {
     title: "Scan QR Code",
     headerTransparent: isIOS,
     headerBlurEffect: isIOS ? ("systemChromeMaterial" as const) : undefined,
-    headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+    headerStyle: isIOS ? {} : { backgroundColor: pageBackground },
     headerTintColor: "#FF2A2A",
-    headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" as const },
+    headerTitleStyle: { color: textPrimary, fontWeight: "600" as const },
     headerBackTitle: "Back",
     headerShown: true,
   };
@@ -540,123 +489,191 @@ function ScannerContent() {
       </CameraView>
 
       {/* Result modal (replaces native Alert) */}
-      <ResultModal data={resultModal} onDismiss={resetScanner} />
+      <ResultModal
+        data={resultModal}
+        onDismiss={resetScanner}
+        modalStyles={modalStyles}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  camera: { flex: 1 },
-  // Permission
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-    gap: 16,
-    backgroundColor: "#111111",
-  },
-  permissionTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    textAlign: "center",
-  },
-  permissionText: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 300,
-  },
-  grantButton: {
-    backgroundColor: "#FF2A2A",
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 14,
-    marginTop: 8,
-  },
-  grantButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  backButton: { paddingVertical: 14, paddingHorizontal: 32 },
-  backButtonText: { color: "#9A9A9A", fontSize: 16 },
-  // Overlay
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center" },
-  overlayTop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
-  overlayMiddle: { flexDirection: "row", alignSelf: "center" },
-  overlaySide: { backgroundColor: "rgba(0,0,0,0.55)" },
-  overlayBottom: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    alignItems: "center",
-    paddingTop: 32,
-  },
-  instructions: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    paddingHorizontal: 24,
-  },
-  rescanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "#FF2A2A",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    marginTop: 20,
-  },
-  rescanText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  // Corner markers — rounded
-  corner: {
-    position: "absolute",
-    width: 36,
-    height: 36,
-    borderColor: "#FF2A2A",
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 20,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 20,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 20,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 20,
-  },
-  // Loading center
-  loadingCenter: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // Freeze overlay
-  freezeOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-});
+const createModalStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+    },
+    card: {
+      backgroundColor: isDarkMode ? "#1C1C1E" : "#FFFFFF",
+      borderRadius: 20,
+      padding: 24,
+      width: "100%",
+      maxWidth: 320,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    message: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: 20,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    button: {
+      flex: 1,
+      backgroundColor: "#FF2A2A",
+      paddingVertical: 13,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    buttonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    destructiveBtn: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: "#FF4444",
+    },
+    destructiveBtnText: {
+      color: "#FF4444",
+    },
+    cancelBtnText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+  });
+
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
+    camera: { flex: 1 },
+    // Permission
+    permissionContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+      gap: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    permissionTitle: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      textAlign: "center",
+    },
+    permissionText: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      lineHeight: 22,
+      maxWidth: 300,
+    },
+    grantButton: {
+      backgroundColor: "#FF2A2A",
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderRadius: 14,
+      marginTop: 8,
+    },
+    grantButtonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    backButton: { paddingVertical: 14, paddingHorizontal: 32 },
+    backButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 16 },
+    // Overlay
+    overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center" },
+    overlayTop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
+    overlayMiddle: { flexDirection: "row", alignSelf: "center" },
+    overlaySide: { backgroundColor: "rgba(0,0,0,0.55)" },
+    overlayBottom: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      alignItems: "center",
+      paddingTop: 32,
+    },
+    instructions: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+      textAlign: "center",
+      paddingHorizontal: 24,
+    },
+    rescanButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "#FF2A2A",
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 14,
+      marginTop: 20,
+    },
+    rescanText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+    // Corner markers — rounded
+    corner: {
+      position: "absolute",
+      width: 36,
+      height: 36,
+      borderColor: "#FF2A2A",
+    },
+    cornerTL: {
+      top: 0,
+      left: 0,
+      borderTopWidth: 3,
+      borderLeftWidth: 3,
+      borderTopLeftRadius: 20,
+    },
+    cornerTR: {
+      top: 0,
+      right: 0,
+      borderTopWidth: 3,
+      borderRightWidth: 3,
+      borderTopRightRadius: 20,
+    },
+    cornerBL: {
+      bottom: 0,
+      left: 0,
+      borderBottomWidth: 3,
+      borderLeftWidth: 3,
+      borderBottomLeftRadius: 20,
+    },
+    cornerBR: {
+      bottom: 0,
+      right: 0,
+      borderBottomWidth: 3,
+      borderRightWidth: 3,
+      borderBottomRightRadius: 20,
+    },
+    // Loading center
+    loadingCenter: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    // Freeze overlay
+    freezeOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.45)",
+    },
+  });

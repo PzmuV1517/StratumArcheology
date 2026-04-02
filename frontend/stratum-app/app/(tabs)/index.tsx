@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -42,6 +42,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { projectService } from "@/services/projectService";
 import { activityService } from "@/services/activityService";
 import { useAuth } from "@/contexts/AuthContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { Project } from "@/services/projectService.types";
 
 interface Activity {
@@ -61,6 +62,15 @@ interface Activity {
 export default function OverviewScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const surfaceBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+  const borderColor = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const timelineTextColor = isDarkMode ? "#CFCFCF" : "#4F4F4F";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [projectActivities, setProjectActivities] = useState<
     Record<string, Activity[]>
@@ -156,28 +166,39 @@ export default function OverviewScreen() {
     return (
       <TouchableOpacity
         key={project.id}
-        style={styles.projectCard}
+        style={[
+          styles.projectCard,
+          { backgroundColor: surfaceBackground, borderColor },
+        ]}
         onPress={() => router.push(`/project/${project.id}`)}
         activeOpacity={0.8}
       >
         <View style={styles.projectHeader}>
-          <Text style={styles.projectName} numberOfLines={1}>
+          <Text
+            style={[styles.projectName, { color: textPrimary }]}
+            numberOfLines={1}
+          >
             {project.name}
           </Text>
-          <Text style={styles.projectDate}>
+          <Text style={[styles.projectDate, { color: textSecondary }]}>
             {formatTimeAgo(project.updated_at || project.created_at)}
           </Text>
         </View>
 
         {project.description && (
-          <Text style={styles.projectDescription} numberOfLines={2}>
+          <Text
+            style={[styles.projectDescription, { color: textSecondary }]}
+            numberOfLines={2}
+          >
             {project.description}
           </Text>
         )}
 
         {/* Interactive Timeline */}
-        <View style={styles.timelineContainer}>
-          <Text style={styles.timelineTitle}>Recent Activity</Text>
+        <View style={[styles.timelineContainer, { borderTopColor: borderColor }]}>
+          <Text style={[styles.timelineTitle, { color: textSecondary }]}>
+            Recent Activity
+          </Text>
           {showActivitiesSkeleton ? (
             <View style={{ flexDirection: "row", gap: 8, marginVertical: 4 }}>
               <Skeleton width={100} height={60} borderRadius={10} />
@@ -192,25 +213,36 @@ export default function OverviewScreen() {
               contentContainerStyle={styles.timelineContent}
             >
               {activities.map((activity, index) => (
-                <View key={activity.id || index} style={styles.timelineItem}>
+                <View
+                  key={activity.id || index}
+                  style={[
+                    styles.timelineItem,
+                    { backgroundColor: surfaceBackground },
+                  ]}
+                >
                   <Text style={styles.timelineIcon}>
                     {getActivityIcon(activity.activity_type)}
                   </Text>
-                  <Text style={styles.timelineText} numberOfLines={2}>
+                  <Text
+                    style={[styles.timelineText, { color: timelineTextColor }]}
+                    numberOfLines={2}
+                  >
                     {activity.description}
                   </Text>
-                  <Text style={styles.timelineTime}>
+                  <Text style={[styles.timelineTime, { color: textSecondary }]}>
                     {formatTimeAgo(activity.created_at)}
                   </Text>
                 </View>
               ))}
             </ScrollView>
           ) : (
-            <Text style={styles.noActivityText}>No recent activity</Text>
+            <Text style={[styles.noActivityText, { color: textSecondary }]}>
+              No recent activity
+            </Text>
           )}
         </View>
 
-        <View style={styles.projectFooter}>
+        <View style={[styles.projectFooter, { borderTopColor: borderColor }]}>
           <Text style={styles.viewProjectText}>View Project →</Text>
         </View>
       </TouchableOpacity>
@@ -222,12 +254,13 @@ export default function OverviewScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Overview</Text>
-        <Text style={styles.headerSubtitle}>
-          Welcome back{user?.display_name ? `,${user.display_name.split(" ")[0]}` : ""}
+      <View style={[styles.header, { backgroundColor: pageBackground }]}>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>Overview</Text>
+        <Text style={[styles.headerSubtitle, { color: textSecondary }]}>
+          Welcome back
+          {user?.display_name ? `,${user.display_name.split(" ")[0]}` : ""}
         </Text>
       </View>
 
@@ -235,242 +268,253 @@ export default function OverviewScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
       >
-
-      {/* Recent Projects Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Projects</Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)")}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {recentProjects.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateEmoji}>📁</Text>
-            <Text style={styles.emptyStateTitle}>No projects yet</Text>
-            <Text style={styles.emptyStateSubtitle}>
-              Create your first project to get started
+        {/* Recent Projects Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: textPrimary }]}>
+              Recent Projects
             </Text>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => router.push("/modal")}
-            >
-              <Text style={styles.createButtonText}>Create Project</Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)")}>
+              <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.projectsGrid}>
-            {recentProjects.map(renderProjectCard)}
-          </View>
-        )}
-      </View>
+
+          {recentProjects.length === 0 ? (
+            <View
+              style={[
+                styles.emptyState,
+                { backgroundColor: surfaceBackground, borderColor },
+              ]}
+            >
+              <Text style={styles.emptyStateEmoji}>📁</Text>
+              <Text style={[styles.emptyStateTitle, { color: textPrimary }]}>
+                No projects yet
+              </Text>
+              <Text style={[styles.emptyStateSubtitle, { color: textSecondary }]}>
+                Create your first project to get started
+              </Text>
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={() => router.push("/modal")}
+              >
+                <Text style={styles.createButtonText}>Create Project</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.projectsGrid}>
+              {recentProjects.map(renderProjectCard)}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 8 : 60,
-    paddingBottom: 16,
-    backgroundColor: "#111111",
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginTop: 6,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 120,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-  },
-  loadingText: {
-    marginTop: 16,
-    color: "#9A9A9A",
-    fontSize: 14,
-  },
-  welcomeSection: {
-    padding: 24,
-    paddingTop: Platform.OS === "ios" ? 120 : 100,
-    paddingBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: "#9A9A9A",
-    marginTop: 8,
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 32,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: "#FF2A2A",
-    fontWeight: "500",
-  },
-  projectsGrid: {
-    gap: 16,
-  },
-  projectCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  projectHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  projectName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    flex: 1,
-    marginRight: 12,
-  },
-  projectDate: {
-    fontSize: 12,
-    color: "#9A9A9A",
-  },
-  projectDescription: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  timelineContainer: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  timelineTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  timelineScroll: {
-    marginHorizontal: -4,
-  },
-  timelineContent: {
-    paddingHorizontal: 4,
-  },
-  timelineItem: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    width: 140,
-    minHeight: 80,
-  },
-  timelineIcon: {
-    fontSize: 16,
-    marginBottom: 6,
-  },
-  timelineText: {
-    fontSize: 12,
-    color: "#CFCFCF",
-    lineHeight: 16,
-    marginBottom: 6,
-  },
-  timelineTime: {
-    fontSize: 10,
-    color: "#9A9A9A",
-  },
-  noActivityText: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    fontStyle: "italic",
-  },
-  projectFooter: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-    alignItems: "flex-end",
-  },
-  viewProjectText: {
-    fontSize: 14,
-    color: "#FF2A2A",
-    fontWeight: "500",
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 40,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  emptyStateEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  createButtonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === "web" ? 8 : 60,
+      paddingBottom: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    headerTitle: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.5,
+    },
+    headerSubtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 6,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 120,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    loadingText: {
+      marginTop: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+    },
+    welcomeSection: {
+      padding: 24,
+      paddingTop: Platform.OS === "ios" ? 120 : 100,
+      paddingBottom: 8,
+    },
+    welcomeText: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.5,
+    },
+    subtitleText: {
+      fontSize: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 8,
+    },
+    section: {
+      paddingHorizontal: 24,
+      marginBottom: 32,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.5,
+    },
+    seeAllText: {
+      fontSize: 14,
+      color: "#FF2A2A",
+      fontWeight: "500",
+    },
+    projectsGrid: {
+      gap: 16,
+    },
+    projectCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    projectHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    projectName: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      flex: 1,
+      marginRight: 12,
+    },
+    projectDate: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    projectDescription: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    timelineContainer: {
+      marginTop: 8,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    timelineTitle: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 8,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    timelineScroll: {
+      marginHorizontal: -4,
+    },
+    timelineContent: {
+      paddingHorizontal: 4,
+    },
+    timelineItem: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 12,
+      marginRight: 12,
+      width: 140,
+      minHeight: 80,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#E4E4E4",
+    },
+    timelineIcon: {
+      fontSize: 16,
+      marginBottom: 6,
+    },
+    timelineText: {
+      fontSize: 12,
+      color: isDarkMode ? "#CFCFCF" : "#4F4F4F",
+      lineHeight: 16,
+      marginBottom: 6,
+    },
+    timelineTime: {
+      fontSize: 10,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    noActivityText: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontStyle: "italic",
+    },
+    projectFooter: {
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      alignItems: "flex-end",
+    },
+    viewProjectText: {
+      fontSize: 14,
+      color: "#FF2A2A",
+      fontWeight: "500",
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 40,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    emptyStateEmoji: {
+      fontSize: 48,
+      marginBottom: 16,
+    },
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptyStateSubtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 24,
+    },
+    createButton: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    createButtonText: {
+      color: "#F5F5F5",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+  });

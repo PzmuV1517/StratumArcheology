@@ -38,6 +38,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { fileService } from "../../services/fileService";
+import { useColorScheme } from "../../hooks/use-color-scheme";
 
 type Mode = "day" | "week" | "month";
 
@@ -59,6 +60,12 @@ export default function FileGallery({
   onOpenItem: (node: FileNode) => void;
 }) {
   const { width: _width } = useWindowDimensions();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const controlIconColor = isDarkMode ? "#9A9A9A" : "#666666";
+  const controlIconActiveColor = "#F5F5F5";
+  const tileIconColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+
   const [mode, setMode] = useState<Mode>("day");
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -143,7 +150,7 @@ export default function FileGallery({
           >
             {Platform.OS === "web" && IoGridIcon ? (
               <IoGridIcon
-                color={view === "grid" ? "#F5F5F5" : "#9A9A9A"}
+                color={view === "grid" ? controlIconActiveColor : controlIconColor}
                 size={16}
               />
             ) : (
@@ -160,7 +167,7 @@ export default function FileGallery({
           >
             {Platform.OS === "web" && FaListIcon ? (
               <FaListIcon
-                color={view === "list" ? "#F5F5F5" : "#9A9A9A"}
+                color={view === "list" ? controlIconActiveColor : controlIconColor}
                 size={16}
               />
             ) : (
@@ -174,37 +181,20 @@ export default function FileGallery({
         </View>
       </View>
       {loading ? (
-        <View style={{ paddingVertical: 24, alignItems: "center" }}>
+        <View style={styles.loadingState}>
           <ActivityIndicator color="#FF2A2A" />
-          <Text style={{ color: "#9A9A9A", marginTop: 8 }}>Loading gallery…</Text>
+          <Text style={styles.loadingText}>Loading gallery…</Text>
         </View>
       ) : groups.length === 0 ? (
-        <View style={{ alignItems: "center", paddingVertical: 48 }}>
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "600",
-              color: "#F5F5F5",
-              marginBottom: 8,
-              letterSpacing: 0.5,
-            }}
-          >
-            No files
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: "#9A9A9A",
-              marginBottom: 24,
-              letterSpacing: 0.5,
-            }}
-          >
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateTitle}>No files</Text>
+          <Text style={styles.emptyStateSubtitle}>
             Upload or create files to see them here
           </Text>
         </View>
       ) : (
         groups.map((group, idx) => (
-          <View key={group.label + idx} style={{ marginBottom: 24 }}>
+          <View key={group.label + idx} style={styles.groupSection}>
             <Text style={styles.groupHeader}>{group.label}</Text>
             {view === "grid" ? (
               <View style={[styles.grid, { gap: gridGap }]}>
@@ -219,7 +209,7 @@ export default function FileGallery({
                   >
                     <View style={styles.thumb}>
                       {Platform.OS === "web" && FaRegFileIcon ? (
-                        <FaRegFileIcon color="#F5F5F5" size={iconSize} />
+                        <FaRegFileIcon color={tileIconColor} size={iconSize} />
                       ) : (
                         <Text style={[styles.icon, { fontSize: iconSize }]}>
                           {iconFor(node)}
@@ -371,63 +361,96 @@ function formatWhen(node: FileNode) {
   return d.toLocaleString();
 }
 
-const styles = StyleSheet.create({
-  controlsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    paddingHorizontal: 2,
-  },
-  controls: {
-    flexDirection: "row",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  modeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  modeBtnActive: { backgroundColor: "#FF2A2A" },
-  modeText: { color: "#9A9A9A", fontWeight: "700", letterSpacing: 0.5 },
-  modeTextActive: { color: "#F5F5F5" },
-  groupHeader: {
-    color: "#F5F5F5",
-    fontWeight: "700",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  tile: {
-    width: "31%",
-    minWidth: 120,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 8,
-  },
-  thumb: {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 8,
-    backgroundColor: "#0A0A0A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  icon: { fontSize: 24, color: "#F5F5F5" },
-  name: { color: "#CFCFCF", fontSize: 12 },
-  listRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 10,
-    marginBottom: 8,
-  },
-  listIcon: { fontSize: 20, color: "#F5F5F5", marginRight: 10 },
-  listName: { color: "#F5F5F5", fontSize: 14, fontWeight: "600" },
-  listMeta: { color: "#9A9A9A", fontSize: 12 },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    controlsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+      paddingHorizontal: 2,
+    },
+    controls: {
+      flexDirection: "row",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    modeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+    modeBtnActive: { backgroundColor: "#FF2A2A" },
+    modeText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    modeTextActive: { color: "#F5F5F5" },
+    loadingState: { paddingVertical: 24, alignItems: "center" },
+    loadingText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 8,
+    },
+    emptyState: { alignItems: "center", paddingVertical: 48 },
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    emptyStateSubtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 24,
+      letterSpacing: 0.5,
+    },
+    groupSection: { marginBottom: 24 },
+    groupHeader: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "700",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    tile: {
+      width: "31%",
+      minWidth: 120,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      padding: 8,
+    },
+    thumb: {
+      width: "100%",
+      aspectRatio: 1,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F1F1F1",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    icon: { fontSize: 24, color: isDarkMode ? "#F5F5F5" : "#1A1A1A" },
+    name: { color: isDarkMode ? "#CFCFCF" : "#4D4D4D", fontSize: 12 },
+    listRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      padding: 10,
+      marginBottom: 8,
+    },
+    listIcon: {
+      fontSize: 20,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginRight: 10,
+    },
+    listName: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    listMeta: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 12 },
+  });

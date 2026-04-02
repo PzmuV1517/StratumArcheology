@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -52,72 +52,9 @@ import { buildManifestFromChildren } from "../src/utils/artefactManifest";
 import { showAlert } from "../src/utils/alert";
 import QRCodeView from "../src/components/common/QRCodeView";
 import api from "../src/services/api";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const isIOS = Platform.OS === "ios";
-
-// ---------------------------------------------------------------------------
-// Shared UI helpers (same pattern as modal.tsx / join-project.tsx)
-// ---------------------------------------------------------------------------
-function GlassCard({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: object;
-}) {
-  return <View style={[s.solidCard, style]}>{children}</View>;
-}
-
-function GlassButton({
-  onPress,
-  title,
-  variant = "primary",
-  icon,
-  disabled,
-  loading: isLoading,
-}: {
-  onPress: () => void;
-  title: string;
-  variant?: "primary" | "secondary";
-  icon?: string;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  const isPrimary = variant === "primary";
-  const content = (
-    <>
-      {icon && (
-        <Ionicons
-          name={icon as keyof typeof Ionicons.glyphMap}
-          size={20}
-          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
-          style={{ marginRight: 8 }}
-        />
-      )}
-      {isLoading && isPrimary ? (
-        <ActivityIndicator color="#FFFFFF" />
-      ) : (
-        <Text style={[s.buttonText, !isPrimary && s.secondaryButtonText]}>
-          {title}
-        </Text>
-      )}
-    </>
-  );
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || isLoading}
-      activeOpacity={0.7}
-      style={[
-        isPrimary ? s.primaryButton : s.secondaryButton,
-        disabled && s.disabledButton,
-      ]}
-    >
-      {content}
-    </TouchableOpacity>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -126,6 +63,10 @@ export default function CreateArtefactScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const s = styles;
 
   const [name, setName] = useState("");
   const [pickedImages, setPickedImages] = useState<
@@ -146,6 +87,67 @@ export default function CreateArtefactScreen() {
   // GPS coordinates
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+
+  const GlassCard = ({
+    children,
+    style,
+  }: {
+    children: React.ReactNode;
+    style?: object;
+  }) => {
+    return <View style={[s.solidCard, style]}>{children}</View>;
+  };
+
+  const GlassButton = ({
+    onPress,
+    title,
+    variant = "primary",
+    icon,
+    disabled,
+    loading: isLoading,
+  }: {
+    onPress: () => void;
+    title: string;
+    variant?: "primary" | "secondary";
+    icon?: string;
+    disabled?: boolean;
+    loading?: boolean;
+  }) => {
+    const isPrimary = variant === "primary";
+    const content = (
+      <>
+        {icon && (
+          <Ionicons
+            name={icon as keyof typeof Ionicons.glyphMap}
+            size={20}
+            color={isPrimary ? "#FFFFFF" : isDarkMode ? "#9A9A9A" : "#666666"}
+            style={{ marginRight: 8 }}
+          />
+        )}
+        {isLoading && isPrimary ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={[s.buttonText, !isPrimary && s.secondaryButtonText]}>
+            {title}
+          </Text>
+        )}
+      </>
+    );
+
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || isLoading}
+        activeOpacity={0.7}
+        style={[
+          isPrimary ? s.primaryButton : s.secondaryButton,
+          disabled && s.disabledButton,
+        ]}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  };
 
   // Fetch Harris Matrix contexts on mount
   useEffect(() => {
@@ -374,10 +376,12 @@ export default function CreateArtefactScreen() {
           title: "New Artefact",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
-          headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+          headerStyle: isIOS
+            ? {}
+            : { backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: {
-            color: "#F5F5F5",
+            color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
             fontWeight: "600",
           },
           headerBackTitle: "Project",
@@ -431,7 +435,7 @@ export default function CreateArtefactScreen() {
             <TextInput
               style={s.input}
               placeholder="e.g., Bronze Age Vessel Fragment"
-              placeholderTextColor="#555"
+              placeholderTextColor={isDarkMode ? "#555555" : "#888888"}
               value={name}
               onChangeText={setName}
               autoFocus={Platform.OS !== "ios"}
@@ -537,7 +541,7 @@ export default function CreateArtefactScreen() {
               <TextInput
                 style={[s.input, s.textArea]}
                 placeholder="Describe the artefact, context, layer, observations..."
-                placeholderTextColor="#555"
+                placeholderTextColor={isDarkMode ? "#555555" : "#888888"}
                 value={n}
                 onChangeText={(t) =>
                   setNotes((arr) => arr.map((x, idx) => (idx === i ? t : x)))
@@ -574,7 +578,13 @@ export default function CreateArtefactScreen() {
             >
               <Text
                 style={{
-                  color: selectedHmContext ? "#F5F5F5" : "#555",
+                  color: selectedHmContext
+                    ? isDarkMode
+                      ? "#F5F5F5"
+                      : "#1A1A1A"
+                    : isDarkMode
+                      ? "#555555"
+                      : "#888888",
                   fontSize: 16,
                   flex: 1,
                 }}
@@ -612,13 +622,19 @@ export default function CreateArtefactScreen() {
           <Text style={s.hint}>Exact find-spot coordinates for GIS mapping</Text>
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>
+              <Text
+                style={{
+                  color: isDarkMode ? "#666666" : "#7A7A7A",
+                  fontSize: 12,
+                  marginBottom: 4,
+                }}
+              >
                 Latitude
               </Text>
               <TextInput
                 style={s.input}
                 placeholder="e.g. 44.4268"
-                placeholderTextColor="#555"
+                placeholderTextColor={isDarkMode ? "#555555" : "#888888"}
                 value={latitude}
                 onChangeText={setLatitude}
                 keyboardType="numeric"
@@ -627,13 +643,19 @@ export default function CreateArtefactScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>
+              <Text
+                style={{
+                  color: isDarkMode ? "#666666" : "#7A7A7A",
+                  fontSize: 12,
+                  marginBottom: 4,
+                }}
+              >
                 Longitude
               </Text>
               <TextInput
                 style={s.input}
                 placeholder="e.g. 26.1025"
-                placeholderTextColor="#555"
+                placeholderTextColor={isDarkMode ? "#555555" : "#888888"}
                 value={longitude}
                 onChangeText={setLongitude}
                 keyboardType="numeric"
@@ -723,7 +745,7 @@ export default function CreateArtefactScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.6)",
+            backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
             justifyContent: "center",
             alignItems: "center",
             padding: 24,
@@ -734,10 +756,10 @@ export default function CreateArtefactScreen() {
               width: "100%",
               maxWidth: 420,
               maxHeight: "70%",
-              backgroundColor: "#1A1A1A",
+              backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: "#2A2A2A",
+              borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
               overflow: "hidden",
             }}
           >
@@ -745,19 +767,25 @@ export default function CreateArtefactScreen() {
               style={{
                 padding: 20,
                 borderBottomWidth: 1,
-                borderBottomColor: "#2A2A2A",
+                borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
               }}
             >
               <Text
                 style={{
                   fontSize: 18,
                   fontWeight: "700",
-                  color: "#F5F5F5",
+                  color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                 }}
               >
                 Select Context
               </Text>
-              <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: isDarkMode ? "#666666" : "#7A7A7A",
+                  marginTop: 4,
+                }}
+              >
                 Link to a Harris Matrix stratigraphic context
               </Text>
             </View>
@@ -784,7 +812,9 @@ export default function CreateArtefactScreen() {
                       marginBottom: 4,
                       backgroundColor: isSelected
                         ? "rgba(255,42,42,0.15)"
-                        : "transparent",
+                        : isDarkMode
+                          ? "transparent"
+                          : "#F8F8F8",
                     }}
                     onPress={() => {
                       setSelectedHmContext(item.id);
@@ -803,7 +833,7 @@ export default function CreateArtefactScreen() {
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{
-                          color: "#F5F5F5",
+                          color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                           fontSize: 15,
                           fontWeight: "600",
                         }}
@@ -823,7 +853,7 @@ export default function CreateArtefactScreen() {
                       {item.description ? (
                         <Text
                           style={{
-                            color: "#888",
+                            color: isDarkMode ? "#888888" : "#666666",
                             fontSize: 13,
                             marginTop: 2,
                           }}
@@ -842,7 +872,7 @@ export default function CreateArtefactScreen() {
               ListEmptyComponent={
                 <Text
                   style={{
-                    color: "#666",
+                    color: isDarkMode ? "#666666" : "#7A7A7A",
                     textAlign: "center",
                     padding: 20,
                   }}
@@ -855,12 +885,19 @@ export default function CreateArtefactScreen() {
               style={{
                 padding: 16,
                 borderTopWidth: 1,
-                borderTopColor: "#2A2A2A",
+                borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
                 alignItems: "center",
               }}
               onPress={() => setShowHmPicker(false)}
             >
-              <Text style={{ color: "#9A9A9A", fontWeight: "600" }}>Cancel</Text>
+              <Text
+                style={{
+                  color: isDarkMode ? "#9A9A9A" : "#666666",
+                  fontWeight: "600",
+                }}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -920,124 +957,143 @@ function printQr(dataUrl: string, _filename: string, label?: string) {
 // ---------------------------------------------------------------------------
 // Styles — matches modal.tsx / join-project.tsx pattern
 // ---------------------------------------------------------------------------
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  scrollView: { flex: 1 },
-  content: { padding: 24, paddingTop: 24, paddingBottom: 48 },
-  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  // Card variants
-  formCard: { marginBottom: 16 },
-  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
-  blurCard: {
-    borderRadius: 20,
-    padding: 20,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  solidCard: {
-    borderRadius: 20,
-    padding: 20,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  // Inputs
-  inputGroup: { marginBottom: 4 },
-  label: { fontSize: 14, fontWeight: "600", color: "#9A9A9A", marginBottom: 8 },
-  optionalLabel: { fontWeight: "400", color: "#666" },
-  hint: { fontSize: 13, color: "#666", marginBottom: 12 },
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  textArea: { height: 100, textAlignVertical: "top" },
-  // Section header
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  inlineBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  inlineBtnText: { color: "#FF2A2A", fontWeight: "600", fontSize: 13 },
-  // Image row
-  imageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    gap: 10,
-  },
-  imageRowActive: { borderColor: "#FF2A2A" },
-  imageThumb: { width: 40, height: 40, borderRadius: 8 },
-  imageRowName: { flex: 1, color: "#F5F5F5", fontSize: 14 },
-  // Buttons
-  buttonContainer: { gap: 12, marginTop: 8 },
-  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
-  primaryButtonGlass: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.4)",
-  },
-  primaryButtonBlur: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.3)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FF2A2A",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  disabledButton: { opacity: 0.5 },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  secondaryButtonText: { color: "#9A9A9A" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    scrollView: { flex: 1 },
+    content: { padding: 24, paddingTop: 24, paddingBottom: 48 },
+    headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+    title: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    // Card variants
+    formCard: { marginBottom: 16 },
+    glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+    blurCard: {
+      borderRadius: 20,
+      padding: 20,
+      overflow: "hidden",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+    },
+    solidCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    // Inputs
+    inputGroup: { marginBottom: 4 },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 8,
+    },
+    optionalLabel: { fontWeight: "400", color: isDarkMode ? "#666666" : "#7A7A7A" },
+    hint: {
+      fontSize: 13,
+      color: isDarkMode ? "#666666" : "#7A7A7A",
+      marginBottom: 12,
+    },
+    input: {
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#D9D9D9",
+    },
+    textArea: { height: 100, textAlignVertical: "top" },
+    // Section header
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    inlineBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    inlineBtnText: { color: "#FF2A2A", fontWeight: "600", fontSize: 13 },
+    // Image row
+    imageRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#F4F4F4",
+      borderRadius: 12,
+      padding: 10,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E4E4E4",
+      gap: 10,
+    },
+    imageRowActive: { borderColor: "#FF2A2A" },
+    imageThumb: { width: 40, height: 40, borderRadius: 8 },
+    imageRowName: {
+      flex: 1,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+    },
+    // Buttons
+    buttonContainer: { gap: 12, marginTop: 8 },
+    buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+    primaryButtonGlass: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.4)",
+    },
+    primaryButtonBlur: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.3)",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    primaryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FF2A2A",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+    },
+    secondaryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    disabledButton: { opacity: 0.5 },
+    buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+    secondaryButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666" },
+  });

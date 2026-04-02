@@ -26,7 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Modal,
   View,
@@ -36,6 +36,7 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface MoreToolsItem {
@@ -48,9 +49,7 @@ interface MoreToolsItem {
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (
-    tab: "gallery" | "gps" | "history" | "tools" | "wheeler",
-  ) => void;
+  onNavigate: (tab: "gallery" | "gps" | "history" | "tools" | "wheeler") => void;
 }
 
 const ITEMS: {
@@ -66,9 +65,11 @@ const ITEMS: {
 ];
 
 export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) {
-  const handlePress = (
-    tab: "gallery" | "gps" | "history" | "tools" | "wheeler",
-  ) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const chevronColor = isDarkMode ? "#666666" : "#8A8A8A";
+
+  const handlePress = (tab: "gallery" | "gps" | "history" | "tools" | "wheeler") => {
     onClose();
     // Small delay so the modal dismisses before navigation
     setTimeout(() => onNavigate(tab), 150);
@@ -79,13 +80,18 @@ export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) 
       {ITEMS.map((item, i) => (
         <TouchableOpacity
           key={item.key}
-          style={[s.row, i < ITEMS.length - 1 && s.rowBorder]}
+          style={[styles.row, i < ITEMS.length - 1 && styles.rowBorder]}
           activeOpacity={0.6}
           onPress={() => handlePress(item.key)}
         >
-          <Ionicons name={item.icon} size={20} color="#FF2A2A" style={s.rowIcon} />
-          <Text style={s.rowLabel}>{item.label}</Text>
-          <Ionicons name="chevron-forward" size={16} color="#555" />
+          <Ionicons
+            name={item.icon}
+            size={20}
+            color="#FF2A2A"
+            style={styles.rowIcon}
+          />
+          <Text style={styles.rowLabel}>{item.label}</Text>
+          <Ionicons name="chevron-forward" size={16} color={chevronColor} />
         </TouchableOpacity>
       ))}
     </>
@@ -98,57 +104,58 @@ export default function MoreToolsSheet({ visible, onClose, onNavigate }: Props) 
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={s.backdrop}>
+      <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={s.sheet}>{content}</View>
+        <View style={styles.sheet}>{content}</View>
       </View>
     </Modal>
   );
 }
 
-const s = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  sheet: {
-    backgroundColor: "#1E1E1A",
-    borderRadius: 16,
-    padding: 8,
-    width: "100%",
-    maxWidth: 320,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  sheetGlass: {
-    borderRadius: 20,
-    padding: 8,
-    width: "100%",
-    maxWidth: 320,
-    overflow: "hidden",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  rowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-  },
-  rowIcon: {
-    marginRight: 14,
-    width: 24,
-    textAlign: "center",
-  },
-  rowLabel: {
-    flex: 1,
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.2)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+    },
+    sheet: {
+      backgroundColor: isDarkMode ? "#1E1E1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 8,
+      width: "100%",
+      maxWidth: 320,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    sheetGlass: {
+      borderRadius: 20,
+      padding: 8,
+      width: "100%",
+      maxWidth: 320,
+      overflow: "hidden",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+    },
+    rowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
+    },
+    rowIcon: {
+      marginRight: 14,
+      width: 24,
+      textAlign: "center",
+    },
+    rowLabel: {
+      flex: 1,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+  });

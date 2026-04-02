@@ -29,6 +29,7 @@
  */
 import React, { useEffect, useState } from "react";
 import { Platform, View, Text, Image } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // QR matrix generation (works on all platforms)
 let createQRMatrix: ((data: string) => boolean[][]) | null = null;
@@ -73,7 +74,17 @@ interface Props {
 /**
  * Native SVG-based QR code renderer for iOS / Android.
  */
-function NativeQRCode({ value, size = 220 }: { value: string; size: number }) {
+function NativeQRCode({
+  value,
+  size = 220,
+  fallbackBackground,
+  fallbackTextColor,
+}: {
+  value: string;
+  size: number;
+  fallbackBackground: string;
+  fallbackTextColor: string;
+}) {
   const [matrix, setMatrix] = useState<boolean[][] | null>(null);
 
   useEffect(() => {
@@ -93,12 +104,12 @@ function NativeQRCode({ value, size = 220 }: { value: string; size: number }) {
           width: size,
           height: size,
           borderRadius: 12,
-          backgroundColor: "#222",
+          backgroundColor: fallbackBackground,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Text style={{ color: "#9A9A9A", textAlign: "center", padding: 12 }}>
+        <Text style={{ color: fallbackTextColor, textAlign: "center", padding: 12 }}>
           QR unavailable
         </Text>
       </View>
@@ -154,6 +165,11 @@ export default function QRCodeView({
   label,
   onReadyDataUrl,
 }: Props) {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const labelColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const fallbackBackground = isDarkMode ? "#222" : "#EAEAEA";
+  const fallbackTextColor = isDarkMode ? "#9A9A9A" : "#666666";
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -192,9 +208,14 @@ export default function QRCodeView({
   if (Platform.OS !== "web") {
     return (
       <View style={{ alignItems: "center" }}>
-        <NativeQRCode value={value} size={size} />
+        <NativeQRCode
+          value={value}
+          size={size}
+          fallbackBackground={fallbackBackground}
+          fallbackTextColor={fallbackTextColor}
+        />
         {label ? (
-          <Text style={{ color: "#F5F5F5", marginTop: 8, fontWeight: "700" }}>
+          <Text style={{ color: labelColor, marginTop: 8, fontWeight: "700" }}>
             {label}
           </Text>
         ) : null}
@@ -230,7 +251,7 @@ export default function QRCodeView({
         </View>
       )}
       {label ? (
-        <Text style={{ color: "#F5F5F5", marginTop: 8, fontWeight: "700" }}>
+        <Text style={{ color: labelColor, marginTop: 8, fontWeight: "700" }}>
           {label}
         </Text>
       ) : null}

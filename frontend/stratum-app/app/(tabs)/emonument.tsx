@@ -27,6 +27,7 @@ import {
   EMonumentInstanceStatus,
   EMonumentValidationIssue,
 } from "@/services/emonumentService";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 function isFilledValue(value: unknown): boolean {
   if (value == null) return false;
@@ -61,7 +62,8 @@ function findMonumentCodeInData(value: unknown): string {
       const isCodeLikeKey =
         normalizedKey.includes("lmi") ||
         normalizedKey.includes("rz") ||
-        (normalizedKey.includes("cod") && (normalizedKey.includes("zp") || normalizedKey.includes("clasare")));
+        (normalizedKey.includes("cod") &&
+          (normalizedKey.includes("zp") || normalizedKey.includes("clasare")));
       if (isCodeLikeKey && entryValue.trim()) {
         return entryValue.trim();
       }
@@ -81,6 +83,12 @@ function findMonumentCodeInData(value: unknown): string {
 export default function EMonumentHiddenTab() {
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const placeholderTextColor = isDarkMode ? "#777777" : "#6F6F6F";
+  const refreshTintColor = isDarkMode ? "#FFFFFF" : "#1A1A1A";
+  const refreshProgressBackground = isDarkMode ? "#1A1A1A" : "#ECECEC";
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(true);
@@ -93,9 +101,13 @@ export default function EMonumentHiddenTab() {
   const [initialEditorSnapshot, setInitialEditorSnapshot] = useState("{}");
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [validationIssues, setValidationIssues] = useState<EMonumentValidationIssue[]>([]);
+  const [validationIssues, setValidationIssues] = useState<
+    EMonumentValidationIssue[]
+  >([]);
   const [instanceQuery, setInstanceQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | EMonumentInstanceStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | EMonumentInstanceStatus>(
+    "all",
+  );
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<string[]>([]);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
@@ -119,15 +131,18 @@ export default function EMonumentHiddenTab() {
 
       for (const field of section.fields) {
         total += 1;
-        const sectionData = (formData[section.key] as Record<string, unknown> | undefined) || {};
+        const sectionData =
+          (formData[section.key] as Record<string, unknown> | undefined) || {};
         if (isFilledValue(sectionData[field.key])) {
           filled += 1;
         }
       }
 
       for (const sub of section.subsections) {
-        const sectionData = (formData[section.key] as Record<string, unknown> | undefined) || {};
-        const subData = (sectionData[sub.key] as Record<string, unknown> | undefined) || {};
+        const sectionData =
+          (formData[section.key] as Record<string, unknown> | undefined) || {};
+        const subData =
+          (sectionData[sub.key] as Record<string, unknown> | undefined) || {};
         for (const field of sub.fields) {
           total += 1;
           if (isFilledValue(subData[field.key])) {
@@ -155,13 +170,18 @@ export default function EMonumentHiddenTab() {
   const filteredInstances = useMemo(() => {
     const query = instanceQuery.trim().toLowerCase();
     return [...instances]
-      .filter((instance) => (statusFilter === "all" ? true : instance.status === statusFilter))
+      .filter((instance) =>
+        statusFilter === "all" ? true : instance.status === statusFilter,
+      )
       .filter((instance) => {
         if (!query) return true;
         const code = findMonumentCodeInData(instance.data).toLowerCase();
         return code.includes(query) || instance.id.toLowerCase().includes(query);
       })
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+      );
   }, [instances, statusFilter, instanceQuery]);
 
   const editingInstance = useMemo(
@@ -188,10 +208,7 @@ export default function EMonumentHiddenTab() {
   }, []);
 
   const buildAutoFillValue = useCallback(
-    (
-      sectionPath: string,
-      field: EMonumentFormField,
-    ): unknown => {
+    (sectionPath: string, field: EMonumentFormField): unknown => {
       const fieldPath = `${sectionPath}.${field.key}`;
 
       if (fieldPath === "stare_conservare_riscuri.probabilitate") {
@@ -215,7 +232,9 @@ export default function EMonumentHiddenTab() {
           candidateValue = field.options?.[0] || "valoare_test";
         }
       } else if (field.type === "multi_select") {
-        candidateValue = field.options?.length ? [field.options[0]] : ["valoare_test"];
+        candidateValue = field.options?.length
+          ? [field.options[0]]
+          : ["valoare_test"];
       } else if (field.type === "number") {
         candidateValue = 1;
       } else if (field.type === "date") {
@@ -236,7 +255,10 @@ export default function EMonumentHiddenTab() {
   );
 
   const buildAutoFillSectionPayload = useCallback(
-    (section: EMonumentFormSection, sectionPath: string): Record<string, unknown> => {
+    (
+      section: EMonumentFormSection,
+      sectionPath: string,
+    ): Record<string, unknown> => {
       const payload: Record<string, unknown> = {};
 
       for (const field of section.fields) {
@@ -318,12 +340,14 @@ export default function EMonumentHiddenTab() {
     }
 
     void NetInfo.fetch().then((state) => {
-      const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+      const online =
+        Boolean(state.isConnected) && state.isInternetReachable !== false;
       setIsOffline(!online);
     });
 
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+      const online =
+        Boolean(state.isConnected) && state.isInternetReachable !== false;
       setIsOffline(!online);
       if (!online) {
         return;
@@ -367,15 +391,18 @@ export default function EMonumentHiddenTab() {
     setShowEditor(true);
   }, [buildSchemaSkeleton, schema]);
 
-  const openExisting = useCallback((instance: EMonumentInstance) => {
-    const nextData = (instance.data as Record<string, unknown>) || {};
-    setEditingInstanceId(instance.id);
-    setFormData(nextData);
-    setInitialEditorSnapshot(JSON.stringify(nextData));
-    setValidationIssues([]);
-    setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
-    setShowEditor(true);
-  }, [schema]);
+  const openExisting = useCallback(
+    (instance: EMonumentInstance) => {
+      const nextData = (instance.data as Record<string, unknown>) || {};
+      setEditingInstanceId(instance.id);
+      setFormData(nextData);
+      setInitialEditorSnapshot(JSON.stringify(nextData));
+      setValidationIssues([]);
+      setExpandedSectionKeys(schema[0]?.key ? [schema[0].key] : []);
+      setShowEditor(true);
+    },
+    [schema],
+  );
 
   const closeEditor = useCallback(() => {
     setShowEditor(false);
@@ -392,7 +419,14 @@ export default function EMonumentHiddenTab() {
     }
 
     return JSON.stringify(formData) !== initialEditorSnapshot;
-  }, [showEditor, canEditCurrentForm, saving, submitting, formData, initialEditorSnapshot]);
+  }, [
+    showEditor,
+    canEditCurrentForm,
+    saving,
+    submitting,
+    formData,
+    initialEditorSnapshot,
+  ]);
 
   const requestCloseEditor = useCallback(() => {
     if (saving || submitting) {
@@ -404,7 +438,8 @@ export default function EMonumentHiddenTab() {
       return;
     }
 
-    const warningMessage = "Ai modificari nesalvate. Daca inchizi acum, progresul se va pierde.";
+    const warningMessage =
+      "Ai modificari nesalvate. Daca inchizi acum, progresul se va pierde.";
 
     if (Platform.OS === "web" && typeof window !== "undefined") {
       const shouldDiscard = window.confirm(warningMessage);
@@ -414,18 +449,14 @@ export default function EMonumentHiddenTab() {
       return;
     }
 
-    Alert.alert(
-      "Renunti la modificarile nesalvate?",
-      warningMessage,
-      [
-        { text: "Continua editarea", style: "cancel" },
-        {
-          text: "Inchide fara salvare",
-          style: "destructive",
-          onPress: closeEditor,
-        },
-      ],
-    );
+    Alert.alert("Renunti la modificarile nesalvate?", warningMessage, [
+      { text: "Continua editarea", style: "cancel" },
+      {
+        text: "Inchide fara salvare",
+        style: "destructive",
+        onPress: closeEditor,
+      },
+    ]);
   }, [hasUnsavedChanges, saving, submitting, closeEditor]);
 
   const toggleSection = useCallback((sectionKey: string) => {
@@ -454,7 +485,9 @@ export default function EMonumentHiddenTab() {
         const section = { ...(next[sectionKey] as Record<string, any> | undefined) };
 
         if (subsectionKey) {
-          const sub = { ...(section[subsectionKey] as Record<string, any> | undefined) };
+          const sub = {
+            ...(section[subsectionKey] as Record<string, any> | undefined),
+          };
           sub[fieldKey] = value;
           section[subsectionKey] = sub;
         } else {
@@ -586,26 +619,39 @@ export default function EMonumentHiddenTab() {
     } finally {
       setSubmitting(false);
     }
-  }, [canEditCurrentForm, runStrictValidation, editingInstanceId, formData, load, closeEditor]);
+  }, [
+    canEditCurrentForm,
+    runStrictValidation,
+    editingInstanceId,
+    formData,
+    load,
+    closeEditor,
+  ]);
 
-  const deleteInstance = useCallback(async (instanceId: string) => {
-    try {
-      await emonumentService.deleteInstance(instanceId);
-      if (editingInstanceId === instanceId) {
-        closeEditor();
+  const deleteInstance = useCallback(
+    async (instanceId: string) => {
+      try {
+        await emonumentService.deleteInstance(instanceId);
+        if (editingInstanceId === instanceId) {
+          closeEditor();
+        }
+        await load();
+      } catch (error: any) {
+        const detail = error?.response?.data?.detail;
+        setValidationIssues([
+          {
+            path: "instance",
+            code: "delete_failed",
+            message:
+              typeof detail === "string"
+                ? detail
+                : "Stergerea formularului a esuat.",
+          },
+        ]);
       }
-      await load();
-    } catch (error: any) {
-      const detail = error?.response?.data?.detail;
-      setValidationIssues([
-        {
-          path: "instance",
-          code: "delete_failed",
-          message: typeof detail === "string" ? detail : "Stergerea formularului a esuat.",
-        },
-      ]);
-    }
-  }, [closeEditor, editingInstanceId, load]);
+    },
+    [closeEditor, editingInstanceId, load],
+  );
 
   const toggleSelectMode = useCallback(() => {
     setIsSelectMode((prev) => {
@@ -650,50 +696,51 @@ export default function EMonumentHiddenTab() {
       return;
     }
 
-    Alert.alert(
-      "Sterge formulare",
-      message,
-      [
-        { text: "Anuleaza", style: "cancel" },
-        {
-          text: "Sterge",
-          style: "destructive",
-          onPress: async () => {
-            for (const id of selectedInstanceIds) {
-              await deleteInstance(id);
-            }
-            setSelectedInstanceIds([]);
-            setIsSelectMode(false);
-          },
+    Alert.alert("Sterge formulare", message, [
+      { text: "Anuleaza", style: "cancel" },
+      {
+        text: "Sterge",
+        style: "destructive",
+        onPress: async () => {
+          for (const id of selectedInstanceIds) {
+            await deleteInstance(id);
+          }
+          setSelectedInstanceIds([]);
+          setIsSelectMode(false);
         },
-      ],
-    );
+      },
+    ]);
   }, [deleteInstance, selectedInstanceIds]);
 
-  const confirmDeleteInstance = useCallback((instanceId: string) => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const ok = window.confirm("Stergi acest formular? Actiunea este ireversibila.");
-      if (ok) {
-        void deleteInstance(instanceId);
+  const confirmDeleteInstance = useCallback(
+    (instanceId: string) => {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        const ok = window.confirm(
+          "Stergi acest formular? Actiunea este ireversibila.",
+        );
+        if (ok) {
+          void deleteInstance(instanceId);
+        }
+        return;
       }
-      return;
-    }
 
-    Alert.alert(
-      "Sterge formular",
-      "Stergi acest formular? Actiunea este ireversibila.",
-      [
-        { text: "Anuleaza", style: "cancel" },
-        {
-          text: "Sterge",
-          style: "destructive",
-          onPress: () => {
-            void deleteInstance(instanceId);
+      Alert.alert(
+        "Sterge formular",
+        "Stergi acest formular? Actiunea este ireversibila.",
+        [
+          { text: "Anuleaza", style: "cancel" },
+          {
+            text: "Sterge",
+            style: "destructive",
+            onPress: () => {
+              void deleteInstance(instanceId);
+            },
           },
-        },
-      ],
-    );
-  }, [deleteInstance]);
+        ],
+      );
+    },
+    [deleteInstance],
+  );
 
   const renderFieldInput = useCallback(
     (
@@ -713,7 +760,9 @@ export default function EMonumentHiddenTab() {
             value={currentValue}
             editable={canEditCurrentForm}
             monumentCoordinate={null}
-            onChange={(nextValue) => setFieldValue(section.key, field.key, nextValue, subsectionKey)}
+            onChange={(nextValue) =>
+              setFieldValue(section.key, field.key, nextValue, subsectionKey)
+            }
           />
         );
       }
@@ -728,9 +777,16 @@ export default function EMonumentHiddenTab() {
                   key={`${field.key}-${opt}`}
                   style={[styles.optionChip, active && styles.optionChipActive]}
                   disabled={!canEditCurrentForm}
-                  onPress={() => setFieldValue(section.key, field.key, opt, subsectionKey)}
+                  onPress={() =>
+                    setFieldValue(section.key, field.key, opt, subsectionKey)
+                  }
                 >
-                  <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      active && styles.optionChipTextActive,
+                    ]}
+                  >
                     {opt}
                   </Text>
                 </TouchableOpacity>
@@ -758,7 +814,12 @@ export default function EMonumentHiddenTab() {
                     setFieldValue(section.key, field.key, next, subsectionKey);
                   }}
                 >
-                  <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      active && styles.optionChipTextActive,
+                    ]}
+                  >
                     {opt}
                   </Text>
                 </TouchableOpacity>
@@ -778,7 +839,7 @@ export default function EMonumentHiddenTab() {
           keyboardType={keyboardType}
           value={currentValue == null ? "" : String(currentValue)}
           placeholder={field.label}
-          placeholderTextColor="#777"
+          placeholderTextColor={placeholderTextColor}
           editable={canEditCurrentForm}
           onChangeText={(text) => {
             const value = field.type === "number" ? Number(text) || 0 : text;
@@ -787,7 +848,7 @@ export default function EMonumentHiddenTab() {
         />
       );
     },
-    [formData, setFieldValue, canEditCurrentForm],
+    [formData, setFieldValue, canEditCurrentForm, placeholderTextColor, styles],
   );
 
   const renderSection = useCallback(
@@ -807,7 +868,9 @@ export default function EMonumentHiddenTab() {
                 {progress?.filled || 0}/{progress?.total || 0} campuri completate
               </Text>
             </View>
-            <Text style={styles.sectionToggle}>{isExpanded ? "Ascunde" : "Deschide"}</Text>
+            <Text style={styles.sectionToggle}>
+              {isExpanded ? "Ascunde" : "Deschide"}
+            </Text>
           </TouchableOpacity>
 
           {isExpanded ? (
@@ -823,10 +886,16 @@ export default function EMonumentHiddenTab() {
               ))}
 
               {section.subsections.map((sub) => (
-                <View key={`${section.key}-${sub.key}`} style={styles.subsectionWrap}>
+                <View
+                  key={`${section.key}-${sub.key}`}
+                  style={styles.subsectionWrap}
+                >
                   <Text style={styles.subsectionTitle}>{sub.label}</Text>
                   {sub.fields.map((subField) => (
-                    <View key={`${section.key}-${sub.key}-${subField.key}`} style={styles.fieldWrap}>
+                    <View
+                      key={`${section.key}-${sub.key}-${subField.key}`}
+                      style={styles.fieldWrap}
+                    >
                       <Text style={styles.fieldLabel}>
                         {subField.label}
                         {subField.required ? " *" : ""}
@@ -841,7 +910,7 @@ export default function EMonumentHiddenTab() {
         </View>
       );
     },
-    [expandedSectionKeys, renderFieldInput, sectionProgress, toggleSection],
+    [expandedSectionKeys, renderFieldInput, sectionProgress, toggleSection, styles],
   );
 
   const statusLabel = (status: EMonumentInstanceStatus) =>
@@ -853,7 +922,7 @@ export default function EMonumentHiddenTab() {
       in_aprobare: "In aprobare",
       validat: "Validat",
       reintors: "Reintors",
-    }[status] || status);
+    })[status] || status;
 
   const statusColor = (status: EMonumentInstanceStatus) =>
     ({
@@ -864,7 +933,7 @@ export default function EMonumentHiddenTab() {
       in_aprobare: "#FF9F1C",
       validat: "#4CAF50",
       reintors: "#FF5D73",
-    }[status] || "#8D8D8D");
+    })[status] || "#8D8D8D";
 
   const statusFilterLabel = (status: "all" | EMonumentInstanceStatus) =>
     ({
@@ -876,7 +945,7 @@ export default function EMonumentHiddenTab() {
       in_aprobare: "Aprobare",
       validat: "Valid.",
       reintors: "Ret.",
-    }[status] || status);
+    })[status] || status;
 
   const renderFormCard = ({ item }: { item: EMonumentInstance }) => {
     const isSelected = selectedInstanceIds.includes(item.id);
@@ -887,9 +956,7 @@ export default function EMonumentHiddenTab() {
           const code = findMonumentCodeInData(item.data);
           return code ? <Text style={styles.formCardCodeTag}>{code}</Text> : null;
         })()}
-        <Text style={styles.formCardTitle}>
-          {"Formular eMonument"}
-        </Text>
+        <Text style={styles.formCardTitle}>{"Formular eMonument"}</Text>
         <Text style={styles.formCardDescription}>
           Formular eMonument v{item.version}
         </Text>
@@ -897,7 +964,7 @@ export default function EMonumentHiddenTab() {
           <Text style={styles.returnReasonText}>Motiv: {item.rejection_reason}</Text>
         ) : null}
         <View style={styles.formCardMeta}>
-          <Text style={[styles.formCardStatus, { color: statusColor(item.status) }]}> 
+          <Text style={[styles.formCardStatus, { color: statusColor(item.status) }]}>
             {statusLabel(item.status)}
           </Text>
           <Text style={styles.formCardDate}>
@@ -905,11 +972,15 @@ export default function EMonumentHiddenTab() {
           </Text>
         </View>
         {item.is_offline_draft ? (
-          <Text style={styles.offlineDraftText}>Nesincronizat: va fi trimis automat cand revine conexiunea.</Text>
+          <Text style={styles.offlineDraftText}>
+            Nesincronizat: va fi trimis automat cand revine conexiunea.
+          </Text>
         ) : null}
         {isSelectMode ? (
           <View style={styles.formCardActions}>
-            <Text style={styles.selectionHintText}>{isSelected ? "Selectat" : "Tap pentru selectare"}</Text>
+            <Text style={styles.selectionHintText}>
+              {isSelected ? "Selectat" : "Tap pentru selectare"}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -917,7 +988,10 @@ export default function EMonumentHiddenTab() {
 
     return (
       <TouchableOpacity
-        style={[styles.formCard, isSelectMode && isSelected && styles.formCardSelected]}
+        style={[
+          styles.formCard,
+          isSelectMode && isSelected && styles.formCardSelected,
+        ]}
         onPress={() => {
           if (isSelectMode) {
             toggleInstanceSelection(item.id);
@@ -943,7 +1017,9 @@ export default function EMonumentHiddenTab() {
         <TouchableOpacity onPress={requestCloseEditor}>
           <Text style={styles.modalAction}>Inchide</Text>
         </TouchableOpacity>
-        <Text style={styles.modalTitle}>{editingInstanceId ? "Editare formular" : "Formular nou"}</Text>
+        <Text style={styles.modalTitle}>
+          {editingInstanceId ? "Editare formular" : "Formular nou"}
+        </Text>
         {__DEV__ ? (
           <TouchableOpacity style={styles.devFillButton} onPress={autoFillValidData}>
             <Text style={styles.devFillButtonText}>DEV: Autofill</Text>
@@ -953,14 +1029,23 @@ export default function EMonumentHiddenTab() {
         )}
       </View>
 
-      <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView
+        style={styles.modalBody}
+        contentContainerStyle={{ paddingBottom: 60 }}
+      >
         <View style={styles.progressCard}>
           <Text style={styles.progressTitle}>Progres Formular</Text>
           <Text style={styles.progressSubtitle}>
-            {overallProgress.filled}/{overallProgress.total} campuri completate ({overallProgress.percent}%)
+            {overallProgress.filled}/{overallProgress.total} campuri completate (
+            {overallProgress.percent}%)
           </Text>
           <View style={styles.progressBarTrack}>
-            <View style={[styles.progressBarFill, { width: `${overallProgress.percent}%` }]} />
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${overallProgress.percent}%` },
+              ]}
+            />
           </View>
         </View>
 
@@ -981,26 +1066,41 @@ export default function EMonumentHiddenTab() {
           {canEditCurrentForm ? (
             <>
               <TouchableOpacity
-                style={[styles.primaryButton, (saving || submitting) && styles.disabledButton]}
+                style={[
+                  styles.primaryButton,
+                  (saving || submitting) && styles.disabledButton,
+                ]}
                 disabled={saving || submitting}
                 onPress={saveDraft}
               >
                 <Text style={styles.primaryButtonText}>
-                  {saving ? "Se salveaza..." : isEditingDraft ? "Update Draft" : "Salveaza Draft"}
+                  {saving
+                    ? "Se salveaza..."
+                    : isEditingDraft
+                      ? "Update Draft"
+                      : "Salveaza Draft"}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.primaryButton, styles.secondaryButton, (saving || submitting) && styles.disabledButton]}
+                style={[
+                  styles.primaryButton,
+                  styles.secondaryButton,
+                  (saving || submitting) && styles.disabledButton,
+                ]}
                 disabled={saving || submitting}
                 onPress={submitForVerification}
               >
-                <Text style={styles.primaryButtonText}>{submitting ? "Se trimite..." : "Trimite in verificare"}</Text>
+                <Text style={styles.primaryButtonText}>
+                  {submitting ? "Se trimite..." : "Trimite in verificare"}
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
             <View style={styles.readOnlyBanner}>
-              <Text style={styles.readOnlyBannerText}>Acest formular nu mai este editabil. Doar draft-urile pot fi editate.</Text>
+              <Text style={styles.readOnlyBannerText}>
+                Acest formular nu mai este editabil. Doar draft-urile pot fi editate.
+              </Text>
             </View>
           )}
         </View>
@@ -1037,12 +1137,18 @@ export default function EMonumentHiddenTab() {
         <View style={[styles.leftPane, isWide && styles.leftPaneWide]}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Formulare</Text>
-            <Text style={styles.headerSubtitle}>Gestioneaza toate formularele eMonument</Text>
+            <Text style={styles.headerSubtitle}>
+              Gestioneaza toate formularele eMonument
+            </Text>
             {isOffline ? (
-              <Text style={styles.offlineInfoText}>Offline: datele sunt salvate local si se sincronizeaza automat.</Text>
+              <Text style={styles.offlineInfoText}>
+                Offline: datele sunt salvate local si se sincronizeaza automat.
+              </Text>
             ) : null}
             {syncingOfflineDrafts ? (
-              <Text style={styles.syncInfoText}>Se sincronizeaza draft-urile locale...</Text>
+              <Text style={styles.syncInfoText}>
+                Se sincronizeaza draft-urile locale...
+              </Text>
             ) : null}
           </View>
 
@@ -1053,7 +1159,7 @@ export default function EMonumentHiddenTab() {
                   style={styles.searchInput}
                   value={instanceQuery}
                   placeholder="Search formulare..."
-                  placeholderTextColor="#777"
+                  placeholderTextColor={placeholderTextColor}
                   onChangeText={setInstanceQuery}
                 />
               </View>
@@ -1064,7 +1170,9 @@ export default function EMonumentHiddenTab() {
                 style={styles.filtersRow}
                 contentContainerStyle={styles.subTabContainer}
               >
-                {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
+                {(
+                  ["all", "draft", "in_verificare", "validat", "reintors"] as const
+                ).map((status) => {
                   const active = statusFilter === status;
                   return (
                     <TouchableOpacity
@@ -1072,7 +1180,12 @@ export default function EMonumentHiddenTab() {
                       style={[styles.subTab, active && styles.subTabActive]}
                       onPress={() => setStatusFilter(status)}
                     >
-                      <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                      <Text
+                        style={[
+                          styles.subTabText,
+                          active && styles.subTabTextActive,
+                        ]}
+                      >
                         {statusFilterLabel(status)}
                       </Text>
                     </TouchableOpacity>
@@ -1082,20 +1195,34 @@ export default function EMonumentHiddenTab() {
 
               <View style={styles.selectionBar}>
                 <TouchableOpacity
-                  style={[styles.selectionModeButton, isSelectMode && styles.selectionModeButtonActive]}
+                  style={[
+                    styles.selectionModeButton,
+                    isSelectMode && styles.selectionModeButtonActive,
+                  ]}
                   onPress={toggleSelectMode}
                 >
-                  <Text style={[styles.selectionModeButtonText, isSelectMode && styles.selectionModeButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.selectionModeButtonText,
+                      isSelectMode && styles.selectionModeButtonTextActive,
+                    ]}
+                  >
                     {isSelectMode ? "Cancel" : "Select"}
                   </Text>
                 </TouchableOpacity>
                 {isSelectMode ? (
                   <TouchableOpacity
-                    style={[styles.bulkDeleteButton, selectedInstanceIds.length === 0 && styles.bulkDeleteButtonDisabled]}
+                    style={[
+                      styles.bulkDeleteButton,
+                      selectedInstanceIds.length === 0 &&
+                        styles.bulkDeleteButtonDisabled,
+                    ]}
                     onPress={confirmDeleteSelectedInstances}
                     disabled={selectedInstanceIds.length === 0}
                   >
-                    <Text style={styles.bulkDeleteButtonText}>Delete ({selectedInstanceIds.length})</Text>
+                    <Text style={styles.bulkDeleteButtonText}>
+                      Delete ({selectedInstanceIds.length})
+                    </Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -1104,19 +1231,35 @@ export default function EMonumentHiddenTab() {
             <View style={styles.mobileToolsSection}>
               <View style={styles.mobileToolsRow}>
                 <TouchableOpacity
-                  style={[styles.mobileToolButton, showSearchTools && styles.mobileToolButtonActive]}
+                  style={[
+                    styles.mobileToolButton,
+                    showSearchTools && styles.mobileToolButtonActive,
+                  ]}
                   onPress={() => setShowSearchTools((prev) => !prev)}
                 >
-                  <Text style={[styles.mobileToolButtonText, showSearchTools && styles.mobileToolButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.mobileToolButtonText,
+                      showSearchTools && styles.mobileToolButtonTextActive,
+                    ]}
+                  >
                     Cauta
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.mobileToolButton, showFilterTools && styles.mobileToolButtonActive]}
+                  style={[
+                    styles.mobileToolButton,
+                    showFilterTools && styles.mobileToolButtonActive,
+                  ]}
                   onPress={() => setShowFilterTools((prev) => !prev)}
                 >
-                  <Text style={[styles.mobileToolButtonText, showFilterTools && styles.mobileToolButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.mobileToolButtonText,
+                      showFilterTools && styles.mobileToolButtonTextActive,
+                    ]}
+                  >
                     Filtre
                   </Text>
                 </TouchableOpacity>
@@ -1128,7 +1271,7 @@ export default function EMonumentHiddenTab() {
                     style={styles.searchInput}
                     value={instanceQuery}
                     placeholder="Search formulare..."
-                    placeholderTextColor="#777"
+                    placeholderTextColor={placeholderTextColor}
                     onChangeText={setInstanceQuery}
                   />
                 </View>
@@ -1141,7 +1284,9 @@ export default function EMonumentHiddenTab() {
                   style={styles.filtersRow}
                   contentContainerStyle={styles.subTabContainer}
                 >
-                  {(["all", "draft", "in_verificare", "validat", "reintors"] as const).map((status) => {
+                  {(
+                    ["all", "draft", "in_verificare", "validat", "reintors"] as const
+                  ).map((status) => {
                     const active = statusFilter === status;
                     return (
                       <TouchableOpacity
@@ -1149,7 +1294,12 @@ export default function EMonumentHiddenTab() {
                         style={[styles.subTab, active && styles.subTabActive]}
                         onPress={() => setStatusFilter(status)}
                       >
-                        <Text style={[styles.subTabText, active && styles.subTabTextActive]}>
+                        <Text
+                          style={[
+                            styles.subTabText,
+                            active && styles.subTabTextActive,
+                          ]}
+                        >
                           {statusFilterLabel(status)}
                         </Text>
                       </TouchableOpacity>
@@ -1157,14 +1307,15 @@ export default function EMonumentHiddenTab() {
                   })}
                 </ScrollView>
               ) : null}
-
             </View>
           )}
 
           {filteredInstances.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Niciun formular</Text>
-              <Text style={styles.emptySubtext}>Apasa pe + pentru a crea primul formular.</Text>
+              <Text style={styles.emptySubtext}>
+                Apasa pe + pentru a crea primul formular.
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -1176,9 +1327,9 @@ export default function EMonumentHiddenTab() {
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  tintColor="#FFFFFF"
-                  colors={["#FFFFFF"]}
-                  progressBackgroundColor="#1A1A1A"
+                  tintColor={refreshTintColor}
+                  colors={[refreshTintColor]}
+                  progressBackgroundColor={refreshProgressBackground}
                 />
               }
             />
@@ -1194,7 +1345,10 @@ export default function EMonumentHiddenTab() {
             <View style={styles.editorHost}>
               <View style={styles.emptyEditorState}>
                 <Text style={styles.emptyEditorTitle}>Editor Formular</Text>
-                <Text style={styles.infoText}>Apasa pe un formular din lista din stanga sau pe butonul + Formular Nou.</Text>
+                <Text style={styles.infoText}>
+                  Apasa pe un formular din lista din stanga sau pe butonul + Formular
+                  Nou.
+                </Text>
               </View>
             </View>
 
@@ -1211,687 +1365,710 @@ export default function EMonumentHiddenTab() {
           onRequestClose={requestCloseEditor}
         >
           <View style={styles.mobileModalRoot}>
-            <Pressable style={styles.mobileModalBackdrop} onPress={requestCloseEditor} />
-            <View style={styles.mobileSheetContainer}>{renderEditorOverlay(false)}</View>
+            <Pressable
+              style={styles.mobileModalBackdrop}
+              onPress={requestCloseEditor}
+            />
+            <View style={styles.mobileSheetContainer}>
+              {renderEditorOverlay(false)}
+            </View>
           </View>
         </Modal>
       ) : null}
-
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  workspace: {
-    flex: 1,
-  },
-  workspaceWide: {
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  leftPane: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  leftPaneWide: {
-    width: "44%",
-    maxWidth: 640,
-    borderRightWidth: 1,
-    borderRightColor: "#242424",
-  },
-  editorPane: {
-    flex: 1,
-    backgroundColor: "#101010",
-    position: "relative",
-  },
-  editorPaneWide: {
-    width: "56%",
-  },
-  editorHost: {
-    flex: 1,
-  },
-  editorOverlay: {
-    flex: 1,
-    backgroundColor: "#101010",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 24,
-    zIndex: 2,
-  },
-  editorOverlayFloating: {
-    ...StyleSheet.absoluteFillObject,
-    borderLeftWidth: 1,
-    borderLeftColor: "#2A2A2A",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  mobileModalRoot: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  mobileModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  mobileSheetContainer: {
-    height: "92%",
-    minHeight: 520,
-    backgroundColor: "#101010",
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: "#111111",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 8 : 60,
-    paddingBottom: 12,
-    backgroundColor: "#111111",
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginTop: 6,
-  },
-  syncInfoText: {
-    marginTop: 8,
-    color: "#FFC857",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  offlineInfoText: {
-    marginTop: 8,
-    color: "#FFD166",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  searchContainerMobile: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#1A1A1A",
-    color: "#F0F0F0",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  subTabContainer: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    alignItems: "center",
-    minHeight: 40,
-  },
-  filtersRow: {
-    maxHeight: 48,
-  },
-  subTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 0,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  subTabActive: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  subTabText: {
-    fontSize: 12,
-    fontWeight: "600",
-    lineHeight: 14,
-    color: "#9A9A9A",
-    letterSpacing: 0.3,
-  },
-  subTabTextActive: {
-    color: "#F5F5F5",
-  },
-  mobileToolsSection: {
-    paddingBottom: 8,
-  },
-  mobileToolsRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  mobileToolButton: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#343434",
-    backgroundColor: "#1A1A1A",
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  mobileToolButtonActive: {
-    borderColor: "#FF2A2A",
-    backgroundColor: "#2A1212",
-  },
-  mobileToolButtonText: {
-    color: "#D2D2D2",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  mobileToolButtonTextActive: {
-    color: "#FFD9D9",
-  },
-  listContainer: {
-    padding: 16,
-    paddingBottom: 120,
-  },
-  selectionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  selectionModeButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  selectionModeButtonActive: {
-    borderColor: "#FF2A2A",
-    backgroundColor: "#2A1212",
-  },
-  selectionModeButtonText: {
-    color: "#D2D2D2",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  selectionModeButtonTextActive: {
-    color: "#FFD9D9",
-  },
-  bulkDeleteButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#5A2222",
-    backgroundColor: "#2A1212",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  bulkDeleteButtonDisabled: {
-    opacity: 0.5,
-  },
-  bulkDeleteButtonText: {
-    color: "#FFC5C5",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  formCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 8,
-    overflow: "hidden",
-  },
-  formCardSelected: {
-    borderColor: "#FF2A2A",
-    shadowColor: "#FF2A2A",
-    shadowOpacity: 0.2,
-  },
-  formCardContent: {
-    padding: 16,
-  },
-  formCardCodeTag: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#5A2222",
-    backgroundColor: "#2A1212",
-    color: "#FFD9D9",
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginBottom: 8,
-  },
-  formCardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  formCardDescription: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  returnReasonText: {
-    color: "#FFB3B3",
-    fontSize: 12,
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  formCardMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 8,
-  },
-  formCardActions: {
-    marginTop: 10,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  selectionHintText: {
-    color: "#FFC5C5",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  offlineDraftText: {
-    marginTop: 8,
-    fontSize: 11,
-    color: "#FFC857",
-  },
-  formCardStatus: {
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  formCardDate: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    letterSpacing: 0.5,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#F5F5F5",
-    marginBottom: 10,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    letterSpacing: 0.5,
-  },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: Platform.OS === "android" ? 110 : 100,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#FF2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-    zIndex: 999,
-  },
-  fabText: {
-    fontSize: 32,
-    lineHeight: 34,
-    color: "#F5F5F5",
-    fontWeight: "700",
-  },
-  card: {
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#171717",
-    padding: 14,
-  },
-  cardTitle: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  listHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 6,
-  },
-  listSubtitle: {
-    color: "#A0A0A0",
-    fontSize: 12,
-    marginTop: -4,
-    marginBottom: 4,
-  },
-  newFormButtonCompact: {
-    borderRadius: 8,
-    backgroundColor: "#FF2A2A",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  newFormButtonCompactText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  metric: {
-    color: "#D0D0D0",
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  progressCard: {
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#161616",
-    padding: 10,
-  },
-  progressTitle: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  progressSubtitle: {
-    color: "#B8B8B8",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  progressBarTrack: {
-    marginTop: 8,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "#272727",
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#FF2A2A",
-  },
-  primaryButton: {
-    backgroundColor: "#FF2A2A",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: "center",
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  issueList: {
-    marginTop: 12,
-    gap: 8,
-  },
-  issueRow: {
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: "#221313",
-    borderWidth: 1,
-    borderColor: "#4A1E1E",
-  },
-  issuePath: {
-    color: "#FF8D8D",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  issueMessage: {
-    color: "#EAEAEA",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  okText: {
-    marginTop: 10,
-    color: "#7ED957",
-    fontSize: 12,
-  },
-  sectionRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#262626",
-  },
-  sectionLabel: {
-    color: "#F0F0F0",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  sectionMeta: {
-    marginTop: 2,
-    color: "#A0A0A0",
-    fontSize: 12,
-  },
-  blockTitle: {
-    color: "#F5F5F5",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  infoText: {
-    color: "#A0A0A0",
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  backButton: {
-    marginTop: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#303030",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  backButtonText: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-  },
-  modalHeader: {
-    paddingTop: 18,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#292929",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  modalAction: {
-    color: "#FF2A2A",
-    fontSize: 14,
-    fontWeight: "700",
-    minWidth: 64,
-  },
-  modalTitle: {
-    color: "#F5F5F5",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  modalBody: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-  },
-  formSectionCard: {
-    marginTop: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#171717",
-    padding: 10,
-  },
-  formSectionTitle: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    gap: 8,
-  },
-  sectionProgressText: {
-    color: "#AFAFAF",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  sectionToggle: {
-    color: "#FF9A9A",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  fieldWrap: {
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    color: "#D8D8D8",
-    fontSize: 12,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#393939",
-    backgroundColor: "#111",
-    color: "#F0F0F0",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-  },
-  textArea: {
-    minHeight: 88,
-    textAlignVertical: "top",
-  },
-  subsectionWrap: {
-    borderTopWidth: 1,
-    borderTopColor: "#2E2E2E",
-    marginTop: 6,
-    paddingTop: 8,
-  },
-  subsectionTitle: {
-    color: "#BFBFBF",
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  optionsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  optionChip: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
-    backgroundColor: "#121212",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  optionChipActive: {
-    borderColor: "#FF2A2A",
-    backgroundColor: "#2A1212",
-  },
-  optionChipText: {
-    color: "#C7C7C7",
-    fontSize: 11,
-  },
-  optionChipTextActive: {
-    color: "#FFD9D9",
-    fontWeight: "700",
-  },
-  editorActions: {
-    marginTop: 14,
-    marginBottom: 24,
-    gap: 8,
-  },
-  readOnlyBanner: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#5A2222",
-    backgroundColor: "#2A1212",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  readOnlyBannerText: {
-    color: "#FFD4D4",
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  emptyEditorState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  emptyEditorTitle: {
-    color: "#F5F5F5",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  secondaryButton: {
-    backgroundColor: "#E56A00",
-  },
-  devFillButton: {
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
-    backgroundColor: "#171717",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  devFillButtonText: {
-    color: "#FFD4D4",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    pageBackground: isDarkMode ? "#111111" : "#F7F7F7",
+    pageAltBackground: isDarkMode ? "#101010" : "#F1F1F1",
+    surface: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+    surfaceSoft: isDarkMode ? "#171717" : "#F4F4F4",
+    surfaceSoftAlt: isDarkMode ? "#161616" : "#EEEEEE",
+    surfaceInput: isDarkMode ? "#111111" : "#FFFFFF",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    borderStrong: isDarkMode ? "#3A3A3A" : "#C9C9C9",
+    sectionDivider: isDarkMode ? "#292929" : "#D9D9D9",
+    textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#A0A0A0" : "#666666",
+    textMuted: isDarkMode ? "#D2D2D2" : "#4D4D4D",
+    textWeak: isDarkMode ? "#C7C7C7" : "#6F6F6F",
+    modalBackdrop: isDarkMode ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.2)",
+  };
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+    },
+    workspace: {
+      flex: 1,
+    },
+    workspaceWide: {
+      flexDirection: "row",
+      alignItems: "stretch",
+    },
+    leftPane: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+    },
+    leftPaneWide: {
+      width: "44%",
+      maxWidth: 640,
+      borderRightWidth: 1,
+      borderRightColor: palette.border,
+    },
+    editorPane: {
+      flex: 1,
+      backgroundColor: palette.pageAltBackground,
+      position: "relative",
+    },
+    editorPaneWide: {
+      width: "56%",
+    },
+    editorHost: {
+      flex: 1,
+    },
+    editorOverlay: {
+      flex: 1,
+      backgroundColor: palette.pageAltBackground,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 16,
+      elevation: 24,
+      zIndex: 2,
+    },
+    editorOverlayFloating: {
+      ...StyleSheet.absoluteFillObject,
+      borderLeftWidth: 1,
+      borderLeftColor: palette.border,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+    },
+    mobileModalRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    mobileModalBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: palette.modalBackdrop,
+    },
+    mobileSheetContainer: {
+      height: "92%",
+      minHeight: 520,
+      backgroundColor: palette.pageAltBackground,
+    },
+    centered: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === "web" ? 8 : 60,
+      paddingBottom: 12,
+      backgroundColor: palette.pageBackground,
+    },
+    headerTitle: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: palette.textPrimary,
+      letterSpacing: 0.5,
+    },
+    headerSubtitle: {
+      fontSize: 15,
+      color: palette.textSecondary,
+      marginTop: 6,
+    },
+    syncInfoText: {
+      marginTop: 8,
+      color: "#FFC857",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    offlineInfoText: {
+      marginTop: 8,
+      color: "#FFD166",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    searchContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 4,
+      paddingBottom: 8,
+    },
+    searchContainerMobile: {
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    searchInput: {
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+      color: palette.textPrimary,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+    },
+    subTabContainer: {
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      alignItems: "center",
+      minHeight: 40,
+    },
+    filtersRow: {
+      maxHeight: 48,
+    },
+    subTab: {
+      paddingHorizontal: 12,
+      paddingVertical: 0,
+      height: 30,
+      borderRadius: 10,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+      justifyContent: "center",
+      alignSelf: "center",
+    },
+    subTabActive: {
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+    },
+    subTabText: {
+      fontSize: 12,
+      fontWeight: "600",
+      lineHeight: 14,
+      color: palette.textSecondary,
+      letterSpacing: 0.3,
+    },
+    subTabTextActive: {
+      color: "#FFFFFF",
+    },
+    mobileToolsSection: {
+      paddingBottom: 8,
+    },
+    mobileToolsRow: {
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    mobileToolButton: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surface,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    mobileToolButtonActive: {
+      borderColor: "#FF2A2A",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFECEC",
+    },
+    mobileToolButtonText: {
+      color: palette.textMuted,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    mobileToolButtonTextActive: {
+      color: isDarkMode ? "#FFD9D9" : "#A63A3A",
+    },
+    listContainer: {
+      padding: 16,
+      paddingBottom: 120,
+    },
+    selectionBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    selectionModeButton: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    selectionModeButtonActive: {
+      borderColor: "#FF2A2A",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFECEC",
+    },
+    selectionModeButtonText: {
+      color: palette.textMuted,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    selectionModeButtonTextActive: {
+      color: isDarkMode ? "#FFD9D9" : "#A63A3A",
+    },
+    bulkDeleteButton: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: "#5A2222",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFECEC",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    bulkDeleteButtonDisabled: {
+      opacity: 0.5,
+    },
+    bulkDeleteButtonText: {
+      color: isDarkMode ? "#FFC5C5" : "#A63A3A",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    formCard: {
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: palette.border,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDarkMode ? 0.4 : 0.12,
+      shadowRadius: 20,
+      elevation: 8,
+      overflow: "hidden",
+    },
+    formCardSelected: {
+      borderColor: "#FF2A2A",
+      shadowColor: "#FF2A2A",
+      shadowOpacity: 0.2,
+    },
+    formCardContent: {
+      padding: 16,
+    },
+    formCardCodeTag: {
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#5A2222" : "#FFB5B5",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFF0F0",
+      color: isDarkMode ? "#FFD9D9" : "#A63A3A",
+      fontSize: 11,
+      fontWeight: "700",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginBottom: 8,
+    },
+    formCardTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: palette.textPrimary,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    formCardDescription: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    returnReasonText: {
+      color: "#FFB3B3",
+      fontSize: 12,
+      marginBottom: 10,
+      lineHeight: 18,
+    },
+    formCardMeta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingTop: 8,
+    },
+    formCardActions: {
+      marginTop: 10,
+      flexDirection: "row",
+      justifyContent: "flex-end",
+    },
+    selectionHintText: {
+      color: isDarkMode ? "#FFC5C5" : "#A63A3A",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    offlineDraftText: {
+      marginTop: 8,
+      fontSize: 11,
+      color: "#FFC857",
+    },
+    formCardStatus: {
+      fontSize: 12,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    formCardDate: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      letterSpacing: 0.5,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyText: {
+      fontSize: 18,
+      color: palette.textPrimary,
+      marginBottom: 10,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      textAlign: "center",
+      letterSpacing: 0.5,
+    },
+    fab: {
+      position: "absolute",
+      right: 24,
+      bottom: Platform.OS === "android" ? 110 : 100,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: "#FF2A2A",
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#FF2A2A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 12,
+      zIndex: 999,
+    },
+    fabText: {
+      fontSize: 32,
+      lineHeight: 34,
+      color: "#FFFFFF",
+      fontWeight: "700",
+    },
+    card: {
+      marginTop: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surfaceSoft,
+      padding: 14,
+    },
+    cardTitle: {
+      color: palette.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 10,
+    },
+    listHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 6,
+    },
+    listSubtitle: {
+      color: palette.textSecondary,
+      fontSize: 12,
+      marginTop: -4,
+      marginBottom: 4,
+    },
+    newFormButtonCompact: {
+      borderRadius: 8,
+      backgroundColor: "#FF2A2A",
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+    },
+    newFormButtonCompactText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    metric: {
+      color: palette.textMuted,
+      fontSize: 13,
+      marginBottom: 4,
+    },
+    progressCard: {
+      marginTop: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surfaceSoftAlt,
+      padding: 10,
+    },
+    progressTitle: {
+      color: palette.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    progressSubtitle: {
+      color: palette.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    progressBarTrack: {
+      marginTop: 8,
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: isDarkMode ? "#272727" : "#DDDDDD",
+      overflow: "hidden",
+    },
+    progressBarFill: {
+      height: "100%",
+      borderRadius: 999,
+      backgroundColor: "#FF2A2A",
+    },
+    primaryButton: {
+      backgroundColor: "#FF2A2A",
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      alignItems: "center",
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    primaryButtonText: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    issueList: {
+      marginTop: 12,
+      gap: 8,
+    },
+    issueRow: {
+      borderRadius: 8,
+      padding: 8,
+      backgroundColor: isDarkMode ? "#221313" : "#FFF1F1",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#4A1E1E" : "#FFCACA",
+    },
+    issuePath: {
+      color: "#FF8D8D",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    issueMessage: {
+      color: palette.textPrimary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    okText: {
+      marginTop: 10,
+      color: "#7ED957",
+      fontSize: 12,
+    },
+    sectionRow: {
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#262626" : "#D9D9D9",
+    },
+    sectionLabel: {
+      color: palette.textPrimary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    sectionMeta: {
+      marginTop: 2,
+      color: palette.textSecondary,
+      fontSize: 12,
+    },
+    blockTitle: {
+      color: palette.textPrimary,
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    infoText: {
+      color: palette.textSecondary,
+      fontSize: 13,
+      marginTop: 8,
+      textAlign: "center",
+    },
+    backButton: {
+      marginTop: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    backButtonText: {
+      color: palette.textPrimary,
+      fontWeight: "600",
+    },
+    modalHeader: {
+      paddingTop: 18,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.sectionDivider,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    modalAction: {
+      color: "#FF2A2A",
+      fontSize: 14,
+      fontWeight: "700",
+      minWidth: 64,
+    },
+    modalTitle: {
+      color: palette.textPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    modalBody: {
+      flex: 1,
+      paddingHorizontal: 12,
+      paddingTop: 8,
+    },
+    formSectionCard: {
+      marginTop: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surfaceSoft,
+      padding: 10,
+    },
+    formSectionTitle: {
+      color: palette.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+      gap: 8,
+    },
+    sectionProgressText: {
+      color: palette.textSecondary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    sectionToggle: {
+      color: "#FF9A9A",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    fieldWrap: {
+      marginBottom: 10,
+    },
+    fieldLabel: {
+      color: palette.textSecondary,
+      fontSize: 12,
+      marginBottom: 6,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surfaceInput,
+      color: palette.textPrimary,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: 13,
+    },
+    textArea: {
+      minHeight: 88,
+      textAlignVertical: "top",
+    },
+    subsectionWrap: {
+      borderTopWidth: 1,
+      borderTopColor: palette.border,
+      marginTop: 6,
+      paddingTop: 8,
+    },
+    subsectionTitle: {
+      color: palette.textSecondary,
+      fontSize: 12,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    optionsWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    optionChip: {
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      backgroundColor: isDarkMode ? "#121212" : "#F1F1F1",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    optionChipActive: {
+      borderColor: "#FF2A2A",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFECEC",
+    },
+    optionChipText: {
+      color: palette.textWeak,
+      fontSize: 11,
+    },
+    optionChipTextActive: {
+      color: isDarkMode ? "#FFD9D9" : "#A63A3A",
+      fontWeight: "700",
+    },
+    editorActions: {
+      marginTop: 14,
+      marginBottom: 24,
+      gap: 8,
+    },
+    readOnlyBanner: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#5A2222" : "#FFB5B5",
+      backgroundColor: isDarkMode ? "#2A1212" : "#FFF0F0",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    readOnlyBannerText: {
+      color: isDarkMode ? "#FFD4D4" : "#A63A3A",
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    emptyEditorState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    emptyEditorTitle: {
+      color: palette.textPrimary,
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    secondaryButton: {
+      backgroundColor: "#E56A00",
+    },
+    devFillButton: {
+      borderWidth: 1,
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surfaceSoft,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    devFillButtonText: {
+      color: isDarkMode ? "#FFD4D4" : "#A63A3A",
+      fontSize: 11,
+      fontWeight: "700",
+    },
+  });
+};

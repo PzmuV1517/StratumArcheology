@@ -26,13 +26,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export interface AudioPanelProps {
   audioUrl: string;
 }
 
 export default function AudioPanel({ audioUrl }: AudioPanelProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -91,12 +94,12 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const createStyles = (isDarkMode: boolean): Record<string, React.CSSProperties> => ({
   wrapper: {
     flex: 1,
     borderRadius: 12,
-    border: "1px solid #2A2A2A",
-    backgroundColor: "#0E0E0E",
+    border: `1px solid ${isDarkMode ? "#2A2A2A" : "#D9D9D9"}`,
+    backgroundColor: isDarkMode ? "#0E0E0E" : "#FFFFFF",
     padding: 16,
     display: "flex",
     flexDirection: "column",
@@ -108,9 +111,9 @@ const styles: Record<string, React.CSSProperties> = {
   canvas: {
     width: "100%",
     height: 120,
-    backgroundColor: "#111111",
+    backgroundColor: isDarkMode ? "#111111" : "#F1F1F1",
     borderRadius: 8,
   },
-  info: { color: "#9A9A9A" },
+  info: { color: isDarkMode ? "#9A9A9A" : "#666666" },
   err: { color: "#FF4444", fontSize: 12 },
-};
+});

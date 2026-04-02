@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { DimensionValue, StyleSheet, View, ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -38,10 +38,13 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
-// ─── Theme tokens (matches app dark theme) ──────────────────────────────────
-const SKELETON_BASE = "#1A1A1A";
-const SKELETON_HIGHLIGHT = "#2A2A2A";
+// ─── Theme tokens ───────────────────────────────────────────────────────────
+const SKELETON_DARK_BASE = "#1A1A1A";
+const SKELETON_DARK_HIGHLIGHT = "#2A2A2A";
+const SKELETON_LIGHT_BASE = "#E8E8E8";
+const SKELETON_LIGHT_HIGHLIGHT = "#F3F3F3";
 const SHIMMER_DURATION = 1200; // ms
 
 // ─── Core Skeleton Element ──────────────────────────────────────────────────
@@ -73,6 +76,12 @@ export function Skeleton({
   size,
   style,
 }: SkeletonProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const skeletonBase = isDarkMode ? SKELETON_DARK_BASE : SKELETON_LIGHT_BASE;
+  const skeletonHighlight = isDarkMode
+    ? SKELETON_DARK_HIGHLIGHT
+    : SKELETON_LIGHT_HIGHLIGHT;
+
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -102,7 +111,7 @@ export function Skeleton({
           width: resolvedWidth,
           height: resolvedHeight,
           borderRadius: resolvedRadius,
-          backgroundColor: SKELETON_BASE,
+          backgroundColor: skeletonBase,
           overflow: "hidden",
         },
         animatedStyle,
@@ -110,7 +119,7 @@ export function Skeleton({
       ]}
     >
       <LinearGradient
-        colors={[SKELETON_BASE, SKELETON_HIGHLIGHT, SKELETON_BASE]}
+        colors={[skeletonBase, skeletonHighlight, skeletonBase]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={StyleSheet.absoluteFill}
@@ -125,6 +134,8 @@ export function Skeleton({
  * @returns The rendered component
  */
 export function ProjectCardSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.projectCard}>
       <Skeleton width="60%" height={18} style={{ marginBottom: 10 }} />
@@ -158,6 +169,8 @@ export function ProjectListSkeleton({ count = 3 }: { count?: number }) {
  * @returns The rendered component
  */
 export function OverviewSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.overviewContainer}>
       <View style={presets.welcomeSection}>
@@ -213,6 +226,8 @@ export function OverviewSkeleton() {
  * @returns The rendered component
  */
 export function NoteDetailSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.noteDetailContainer}>
       <View style={{ alignItems: "center", marginBottom: 16 }}>
@@ -250,6 +265,8 @@ export function NoteDetailSkeleton() {
  * @returns The rendered component
  */
 export function ArtefactGridSkeleton({ count = 4 }: { count?: number }) {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.artefactGrid}>
       {Array.from({ length: count }).map((_, i) => (
@@ -274,6 +291,8 @@ export function ArtefactGridSkeleton({ count = 4 }: { count?: number }) {
  * @returns The rendered component
  */
 export function ArtefactDetailSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.noteDetailContainer}>
       <Skeleton
@@ -332,6 +351,8 @@ export function ArtefactDetailSkeleton() {
  * @returns The rendered component
  */
 export function ProjectDetailSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.projectDetailContainer}>
       <View style={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 }}>
@@ -367,6 +388,8 @@ export function ProjectDetailSkeleton() {
  * @returns The rendered component
  */
 export function ActivityCardSkeleton() {
+  const presets = useSkeletonPresetStyles();
+
   return (
     <View style={presets.activityCard}>
       <View style={presets.activityHeader}>
@@ -395,92 +418,103 @@ export function ActivityListSkeleton({ count = 4 }: { count?: number }) {
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
-const presets = StyleSheet.create({
-  projectCard: {
-    backgroundColor: SKELETON_BASE,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  overviewContainer: {
-    flex: 1,
-    backgroundColor: "#0D0D0D",
-    padding: 20,
-    paddingTop: 60,
-  },
-  welcomeSection: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  overviewCard: {
-    backgroundColor: SKELETON_BASE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  noteDetailContainer: {
-    flex: 1,
-    backgroundColor: "#0D0D0D",
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  noteCard: {
-    backgroundColor: SKELETON_BASE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 16,
-    marginBottom: 12,
-  },
-  artefactGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  artefactCard: {
-    width: 180,
-    backgroundColor: SKELETON_BASE,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 8,
-  },
-  projectDetailContainer: {
-    flex: 1,
-    backgroundColor: "#0D0D0D",
-  },
-  activityCard: {
-    backgroundColor: SKELETON_BASE,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  activityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-});
+function useSkeletonPresetStyles() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  return useMemo(() => createPresetStyles(isDarkMode), [isDarkMode]);
+}
+
+const createPresetStyles = (isDarkMode: boolean) => {
+  const base = isDarkMode ? SKELETON_DARK_BASE : SKELETON_LIGHT_BASE;
+  const border = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const page = isDarkMode ? "#0D0D0D" : "#F6F6F6";
+
+  return StyleSheet.create({
+    projectCard: {
+      backgroundColor: base,
+      padding: 16,
+      borderRadius: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: border,
+    },
+    metaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: border,
+    },
+    overviewContainer: {
+      flex: 1,
+      backgroundColor: page,
+      padding: 20,
+      paddingTop: 60,
+    },
+    welcomeSection: {
+      marginBottom: 24,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    overviewCard: {
+      backgroundColor: base,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      padding: 16,
+      marginBottom: 12,
+    },
+    cardHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    noteDetailContainer: {
+      flex: 1,
+      backgroundColor: page,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+    },
+    noteCard: {
+      backgroundColor: base,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      padding: 16,
+      marginBottom: 12,
+    },
+    artefactGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    artefactCard: {
+      width: 180,
+      backgroundColor: base,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: border,
+      padding: 8,
+    },
+    projectDetailContainer: {
+      flex: 1,
+      backgroundColor: page,
+    },
+    activityCard: {
+      backgroundColor: base,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: border,
+    },
+    activityHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+  });
+};

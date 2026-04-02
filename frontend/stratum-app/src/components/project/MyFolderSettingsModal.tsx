@@ -227,8 +227,8 @@ export default function MyFolderSettingsModal({
                     setDefaultCanView(value);
                     if (!value) setDefaultCanEdit(false);
                   }}
-                  trackColor={{ false: "#2A2A2A", true: "#FF2A2A" }}
-                  thumbColor="#F5F5F5"
+                  trackColor={{ false: "#D9D9D9", true: "#FF2A2A" }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
 
@@ -243,8 +243,8 @@ export default function MyFolderSettingsModal({
                   value={defaultCanEdit}
                   onValueChange={setDefaultCanEdit}
                   disabled={!defaultCanView}
-                  trackColor={{ false: "#2A2A2A", true: "#FF2A2A" }}
-                  thumbColor={defaultCanView ? "#F5F5F5" : "#666"}
+                  trackColor={{ false: "#D9D9D9", true: "#FF2A2A" }}
+                  thumbColor={defaultCanView ? "#FFFFFF" : "#B5B5B5"}
                 />
               </View>
             </View>
@@ -287,7 +287,10 @@ export default function MyFolderSettingsModal({
                     return (
                       <View key={member.id} style={styles.memberRow}>
                         {member.photo_url ? (
-                          <Image source={{ uri: member.photo_url }} style={styles.memberAvatarImage} />
+                          <Image
+                            source={{ uri: member.photo_url }}
+                            style={styles.memberAvatarImage}
+                          />
                         ) : (
                           <View style={styles.memberAvatar}>
                             <Text style={styles.memberAvatarText}>
@@ -369,23 +372,23 @@ export default function MyFolderSettingsModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.24)",
     justifyContent: "flex-end",
   },
   modalContainer: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: "85%",
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#D9D9D9",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.14,
         shadowRadius: 12,
       },
       android: {
@@ -399,24 +402,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: "#E5E5E5",
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     letterSpacing: 0.5,
   },
   closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     justifyContent: "center",
     alignItems: "center",
   },
   closeButtonText: {
-    color: "#9A9A9A",
+    color: "#666666",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -429,13 +432,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 4,
     letterSpacing: 0.3,
   },
   sectionDescription: {
     fontSize: 13,
-    color: "#9A9A9A",
+    color: "#666666",
     marginBottom: 16,
     lineHeight: 18,
   },
@@ -445,7 +448,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: "#E5E5E5",
   },
   permissionInfo: {
     flex: 1,
@@ -454,17 +457,17 @@ const styles = StyleSheet.create({
   permissionLabel: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 2,
   },
   permissionHint: {
     fontSize: 12,
-    color: "#9A9A9A",
+    color: "#666666",
   },
   advancedToggle: {
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
+    borderTopColor: "#E5E5E5",
     marginBottom: 16,
   },
   advancedToggleText: {
@@ -475,10 +478,10 @@ const styles = StyleSheet.create({
   },
   advancedToggleHint: {
     fontSize: 12,
-    color: "#9A9A9A",
+    color: "#666666",
   },
   applyDefaultsButton: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
@@ -488,7 +491,7 @@ const styles = StyleSheet.create({
   applyDefaultsText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
   },
   emptyState: {
     padding: 24,
@@ -496,14 +499,14 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 14,
-    color: "#9A9A9A",
+    color: "#666666",
   },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: "#E5E5E5",
   },
   memberAvatar: {
     width: 40,
@@ -523,7 +526,7 @@ const styles = StyleSheet.create({
   memberAvatarText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#FFFFFF",
   },
   memberInfo: {
     flex: 1,
@@ -531,12 +534,12 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 2,
   },
   memberRole: {
     fontSize: 12,
-    color: "#9A9A9A",
+    color: "#666666",
     textTransform: "capitalize",
   },
   memberPermissions: {
@@ -547,9 +550,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
   },
   permBadgeActive: {
     backgroundColor: "rgba(255, 42, 42, 0.2)",
@@ -558,7 +561,7 @@ const styles = StyleSheet.create({
   permBadgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#9A9A9A",
+    color: "#666666",
   },
   permBadgeTextActive: {
     color: "#FF2A2A",
@@ -569,19 +572,19 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
+    borderTopColor: "#E5E5E5",
   },
   cancelButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     alignItems: "center",
   },
   cancelButtonText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
   },
   saveButton: {
     flex: 1,

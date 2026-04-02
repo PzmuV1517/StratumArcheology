@@ -11,7 +11,7 @@
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   FlatList,
@@ -35,6 +35,7 @@ import { ChatBubble, MessageInput, TypingIndicator } from "@/components/chat";
 import { chatService } from "@/services/chatService";
 import { projectService } from "@/services/projectService";
 import { ensureProjectKey } from "@/utils/e2ee";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import type { ChatMessage, Channel } from "@/services/chatService.types";
 
 /* ================================================================== *
@@ -48,6 +49,10 @@ export default function ProjectChatScreen() {
   const { user } = useAuth();
   const { project, isOwner } = useProjectDetail();
   const projectId = project?.id;
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const s = styles;
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
 
@@ -410,7 +415,7 @@ export default function ProjectChatScreen() {
                 setNewName(t.toLowerCase().replace(/[^a-z0-9_-]/g, ""))
               }
               placeholder="e.g. field-notes"
-              placeholderTextColor="#666"
+              placeholderTextColor={isDarkMode ? "#666666" : "#888888"}
               autoCapitalize="none"
               autoFocus
               maxLength={50}
@@ -422,7 +427,7 @@ export default function ProjectChatScreen() {
               value={newDesc}
               onChangeText={setNewDesc}
               placeholder="What is this channel about?"
-              placeholderTextColor="#666"
+              placeholderTextColor={isDarkMode ? "#666666" : "#888888"}
               maxLength={200}
             />
 
@@ -443,9 +448,16 @@ export default function ProjectChatScreen() {
                 disabled={!newName.trim() || creating}
               >
                 {creating ? (
-                  <ActivityIndicator color="#F5F5F5" />
+                  <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
                 ) : (
-                  <Text style={[s.modalBtnText, { color: "#F5F5F5" }]}>Create</Text>
+                  <Text
+                    style={[
+                      s.modalBtnText,
+                      { color: isDarkMode ? "#F5F5F5" : "#1A1A1A" },
+                    ]}
+                  >
+                    Create
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -459,158 +471,178 @@ export default function ProjectChatScreen() {
 /* ================================================================== *
  *  Styles                                                            *
  * ================================================================== */
-const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#111111" },
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
 
-  /* channel bar */
-  bar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#1A1A1A",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#2A2A2A",
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  hash: { fontSize: 20, fontWeight: "700", color: "#FF2A2A" },
-  barText: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    maxWidth: 200,
-  },
-  barTextMuted: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginLeft: 8,
-  },
-  barTextWarn: {
-    fontSize: 15,
-    color: "#FF9500",
-    marginLeft: 4,
-  },
-  chevron: { fontSize: 12, color: "#9A9A9A", marginLeft: 4 },
+    /* channel bar */
+    bar: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    barRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    hash: { fontSize: 20, fontWeight: "700", color: "#FF2A2A" },
+    barText: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      maxWidth: 200,
+    },
+    barTextMuted: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginLeft: 8,
+    },
+    barTextWarn: {
+      fontSize: 15,
+      color: "#FF9500",
+      marginLeft: 4,
+    },
+    chevron: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginLeft: 4,
+    },
 
-  /* channel drawer */
-  drawer: {
-    backgroundColor: "#1A1A1A",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  drawerTitle: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    textTransform: "uppercase",
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  drawerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 2,
-  },
-  drawerItemActive: { backgroundColor: "#2A2A2A" },
-  drawerItemText: { fontSize: 15, color: "#CFCFCF" },
-  drawerItemTextActive: { color: "#F5F5F5", fontWeight: "600" },
-  badge: {
-    fontSize: 10,
-    color: "#9A9A9A",
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  addBtn: { paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
-  addBtnText: { fontSize: 14, color: "#FF2A2A", fontWeight: "600" },
+    /* channel drawer */
+    drawer: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    drawerTitle: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textTransform: "uppercase",
+      marginBottom: 8,
+      marginTop: 4,
+    },
+    drawerItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      marginBottom: 2,
+    },
+    drawerItemActive: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+    },
+    drawerItemText: {
+      fontSize: 15,
+      color: isDarkMode ? "#CFCFCF" : "#4F4F4F",
+    },
+    drawerItemTextActive: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    badge: {
+      fontSize: 10,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EAEAEA",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      overflow: "hidden",
+    },
+    addBtn: { paddingVertical: 10, paddingHorizontal: 12, marginTop: 4 },
+    addBtnText: { fontSize: 14, color: "#FF2A2A", fontWeight: "600" },
 
-  /* messages */
-  list: { flex: 1 },
-  listContent: { paddingVertical: 8 },
-  emptyInverted: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-    transform: [{ scaleY: -1 }],
-  },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  emptyBody: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    lineHeight: 20,
-  },
+    /* messages */
+    list: { flex: 1 },
+    listContent: { paddingVertical: 8 },
+    emptyInverted: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+      paddingHorizontal: 40,
+      transform: [{ scaleY: -1 }],
+    },
+    emptyIcon: { fontSize: 48, marginBottom: 16 },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptyBody: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      lineHeight: 20,
+    },
 
-  /* modal */
-  modalBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    width: "100%",
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 6,
-    marginTop: 8,
-    textTransform: "uppercase",
-  },
-  input: {
-    backgroundColor: "#0A0A0A",
-    color: "#F5F5F5",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    fontSize: 16,
-  },
-  modalRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 20,
-  },
-  modalBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  modalBtnText: { color: "#F5F5F5", fontSize: 14, fontWeight: "600" },
-});
+    /* modal */
+    modalBg: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      width: "100%",
+      maxWidth: 400,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 6,
+      marginTop: 8,
+      textTransform: "uppercase",
+    },
+    input: {
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      fontSize: 16,
+    },
+    modalRow: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+      marginTop: 20,
+    },
+    modalBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+    },
+    modalBtnText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+  });

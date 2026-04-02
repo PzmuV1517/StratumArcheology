@@ -56,6 +56,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import * as Sharing from "expo-sharing";
 import api from "../../services/api";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 import {
   useWheelerData,
@@ -220,6 +221,31 @@ export default function WheelerDiagram({
 
   canEdit: _canEdit = false,
 }: WheelerDiagramProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const s = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const publicationPalette = useMemo(
+    () => ({
+      pageBackground: isDarkMode ? "#111111" : "#F6F6F6",
+      surface: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      textSecondary: isDarkMode ? "#9CA3AF" : "#666666",
+      buttonDisabled: isDarkMode ? "#444444" : "#D0D0D0",
+    }),
+    [isDarkMode],
+  );
+  const gridLabelColor = isDarkMode ? "#EAEAEA" : "#1A1A1A";
+  const gridAxisColor = isDarkMode ? "#888888" : "#666666";
+  const gridStroke = isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)";
+  const hiatusPatternStroke = isDarkMode
+    ? "rgba(255,255,255,0.08)"
+    : "rgba(0,0,0,0.08)";
+  const occupiedCellStroke = isDarkMode
+    ? "rgba(255,255,255,0.2)"
+    : "rgba(0,0,0,0.2)";
+  const emptyCellStroke = isDarkMode ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.08)";
+  const notesColor = isDarkMode ? "#AAAAAA" : "#666666";
+
   const { data, loading, error, dirty, version, renderVersion } =
     useWheelerData(projectId);
 
@@ -508,7 +534,12 @@ export default function WheelerDiagram({
 
       {/* ── Publication mode ── */}
       {viewMode === "publication" && (
-        <View style={{ flex: 1, backgroundColor: "#111111" }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: publicationPalette.pageBackground,
+          }}
+        >
           {/* Stale warning */}
           {(dirty || (renderVersion !== null && renderVersion !== version)) && (
             <View style={{ backgroundColor: "#92400e", padding: 10 }}>
@@ -525,18 +556,20 @@ export default function WheelerDiagram({
               justifyContent: "space-between",
               padding: 10,
               borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: "#2A2A2A",
-              backgroundColor: "#1a1a1a",
+              borderBottomColor: publicationPalette.border,
+              backgroundColor: publicationPalette.surface,
             }}
           >
-            <Text style={{ fontSize: 11, color: "#888888" }}>
+            <Text style={{ fontSize: 11, color: publicationPalette.textSecondary }}>
               Wheeler 1964 style · v{renderVersion ?? "?"}
             </Text>
             <TouchableOpacity
               onPress={handleShareSvg}
               disabled={!pubSvg}
               style={{
-                backgroundColor: pubSvg ? "#FF2A2A" : "#444444",
+                backgroundColor: pubSvg
+                  ? "#FF2A2A"
+                  : publicationPalette.buttonDisabled,
                 paddingHorizontal: 12,
                 paddingVertical: 6,
                 borderRadius: 6,
@@ -552,7 +585,7 @@ export default function WheelerDiagram({
             >
               <Text
                 style={{
-                  color: "#9ca3af",
+                  color: publicationPalette.textSecondary,
                   fontSize: 13,
                   textAlign: "center",
                   padding: 24,
@@ -568,7 +601,13 @@ export default function WheelerDiagram({
               style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
             >
               <ActivityIndicator color={ACCENT} />
-              <Text style={{ color: "#9ca3af", marginTop: 8, fontSize: 13 }}>
+              <Text
+                style={{
+                  color: publicationPalette.textSecondary,
+                  marginTop: 8,
+                  fontSize: 13,
+                }}
+              >
                 Loading publication SVG…
               </Text>
             </View>
@@ -606,7 +645,7 @@ export default function WheelerDiagram({
                   <SvgXml xml={pubSvg} width={displayW} height={displayH} />
                   <Text
                     style={{
-                      color: "#9ca3af",
+                      color: publicationPalette.textSecondary,
                       fontSize: 10,
                       marginTop: 8,
                       textAlign: "center",
@@ -649,7 +688,7 @@ export default function WheelerDiagram({
                       y1={8}
                       x2={8}
                       y2={0}
-                      stroke="rgba(255,255,255,0.08)"
+                      stroke={hiatusPatternStroke}
                       strokeWidth={1}
                     />
                   </Pattern>
@@ -662,7 +701,7 @@ export default function WheelerDiagram({
                     x={AXIS_LABEL_W + colIdx * CELL_W + CELL_W / 2}
                     y={AXIS_LABEL_H / 2 + 4}
                     textAnchor="middle"
-                    fill="#EAEAEA"
+                    fill={gridLabelColor}
                     fontSize={11}
                     fontWeight="600"
                   >
@@ -677,7 +716,7 @@ export default function WheelerDiagram({
                     x={AXIS_LABEL_W - 8}
                     y={AXIS_LABEL_H + rowIdx * CELL_H + CELL_H / 2 + 4}
                     textAnchor="end"
-                    fill="#888888"
+                    fill={gridAxisColor}
                     fontSize={10}
                   >
                     {totalRows - rowIdx}
@@ -713,7 +752,7 @@ export default function WheelerDiagram({
                             rx={4}
                             fill={color}
                             opacity={0.85}
-                            stroke="rgba(255,255,255,0.2)"
+                            stroke={occupiedCellStroke}
                             strokeWidth={1}
                           />
                           {isTopLeftCol && isTopRow && (
@@ -742,7 +781,7 @@ export default function WheelerDiagram({
                         height={CELL_H - 2}
                         rx={4}
                         fill="url(#native-hiatus)"
-                        stroke="rgba(255,255,255,0.05)"
+                        stroke={emptyCellStroke}
                         strokeWidth={1}
                       />
                     );
@@ -756,7 +795,7 @@ export default function WheelerDiagram({
                   width={sortedTrenches.length * CELL_W}
                   height={totalRows * CELL_H}
                   fill="none"
-                  stroke="rgba(255,255,255,0.1)"
+                  stroke={gridStroke}
                   strokeWidth={1}
                   rx={4}
                 />
@@ -798,7 +837,10 @@ export default function WheelerDiagram({
                 )}
                 {inspected.notes && (
                   <Text
-                    style={[s.modalDetail, { fontStyle: "italic", color: "#aaa" }]}
+                    style={[
+                      s.modalDetail,
+                      { fontStyle: "italic", color: notesColor },
+                    ]}
                   >
                     {inspected.notes}
                   </Text>
@@ -821,161 +863,162 @@ export default function WheelerDiagram({
 
 /* ───────────────────────── Styles ───────────────────────── */
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#111111",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  loadingText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#1A1A1A",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#F5F5F5",
-  },
-  sampleBadge: {
-    backgroundColor: "rgba(255,193,7,0.12)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  sampleBadgeText: {
-    fontSize: 11,
-    color: "#ffc107",
-    fontWeight: "600",
-  },
-  headerInfo: {
-    fontSize: 12,
-    color: "#888",
-    marginLeft: "auto",
-  },
-  banner: {
-    backgroundColor: "#222222",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  bannerText: {
-    fontSize: 12,
-    color: "#888",
-    textAlign: "center",
-  },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: "#1A1A1A",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: "#FF2A2A",
-  },
-  tabText: {
-    fontSize: 13,
-    color: "#888",
-  },
-  tabTextActive: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-  },
-  svgContainer: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-    overflow: "hidden",
-  },
-  legend: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#1A1A1A",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.1)",
-    gap: 12,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  legendSwatch: {
-    width: 10,
-    height: 10,
-    borderRadius: 2,
-  },
-  legendLabel: {
-    fontSize: 11,
-    color: "#EAEAEA",
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  modalContent: {
-    backgroundColor: "#222222",
-    borderRadius: 12,
-    padding: 20,
-    width: "100%",
-    maxWidth: 320,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  modalDetail: {
-    fontSize: 14,
-    color: "#EAEAEA",
-    marginBottom: 4,
-  },
-  modalMeta: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 8,
-  },
-  modalClose: {
-    marginTop: 16,
-    backgroundColor: ACCENT,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  modalCloseText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F6F6F6",
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F6F6F6",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 12,
+    },
+    loadingText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      gap: 8,
+    },
+    headerTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    sampleBadge: {
+      backgroundColor: "rgba(255,193,7,0.12)",
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    sampleBadgeText: {
+      fontSize: 11,
+      color: "#ffc107",
+      fontWeight: "600",
+    },
+    headerInfo: {
+      fontSize: 12,
+      color: isDarkMode ? "#888" : "#666",
+      marginLeft: "auto",
+    },
+    banner: {
+      backgroundColor: isDarkMode ? "#222222" : "#F1F1F1",
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+    },
+    bannerText: {
+      fontSize: 12,
+      color: isDarkMode ? "#888" : "#666",
+      textAlign: "center",
+    },
+    tabBar: {
+      flexDirection: "row",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 9,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tabActive: {
+      borderBottomWidth: 2,
+      borderBottomColor: "#FF2A2A",
+    },
+    tabText: {
+      fontSize: 13,
+      color: isDarkMode ? "#888" : "#666",
+    },
+    tabTextActive: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    svgContainer: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+      overflow: "hidden",
+    },
+    legend: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      gap: 12,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    legendSwatch: {
+      width: 10,
+      height: 10,
+      borderRadius: 2,
+    },
+    legendLabel: {
+      fontSize: 11,
+      color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+    },
+    modalContent: {
+      backgroundColor: isDarkMode ? "#222222" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 20,
+      width: "100%",
+      maxWidth: 320,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "#D9D9D9",
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    modalDetail: {
+      fontSize: 14,
+      color: isDarkMode ? "#EAEAEA" : "#1A1A1A",
+      marginBottom: 4,
+    },
+    modalMeta: {
+      fontSize: 12,
+      color: isDarkMode ? "#888" : "#666",
+      marginTop: 8,
+    },
+    modalClose: {
+      marginTop: 16,
+      backgroundColor: ACCENT,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    modalCloseText: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+  });
