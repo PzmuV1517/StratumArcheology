@@ -24,6 +24,7 @@ type User = {
   firebase_uid: string
   is_emonument_privileged: boolean
   is_dashboard_admin: boolean
+  is_maintainer: boolean
   created_at: string
   last_login: string | null
 }
@@ -118,8 +119,19 @@ const INSTANCE_META_FIELDS = [
   'rejection_reason',
 ] as const
 
+const resolveApiBaseUrl = () => {
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
+  if (configuredApiUrl) return configuredApiUrl
+
+  if (import.meta.env.PROD) {
+    return 'https://stratumarcheology.com/api'
+  }
+
+  return 'http://localhost:8000/api'
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api',
+  baseURL: resolveApiBaseUrl(),
 })
 
 const isDev = Boolean(import.meta.env.DEV)
@@ -178,8 +190,8 @@ function App() {
   )
 
   const isMaintainer = useMemo(
-    () => me?.email?.toLowerCase() === 'maintainer@stratum.com',
-    [me?.email],
+    () => Boolean(me?.is_maintainer),
+    [me?.is_maintainer],
   )
 
   const secondsUntilNextBackup = useMemo(
@@ -1109,7 +1121,7 @@ function App() {
     loadMe(token)
       .then((currentUser) => {
         const tasks: Promise<void>[] = [loadUsers(), loadInstances()]
-        if (currentUser.email.toLowerCase() === 'maintainer@stratum.com') {
+        if (currentUser.is_maintainer) {
           tasks.push(loadBackups())
           tasks.push(loadBackupSchedule())
         }

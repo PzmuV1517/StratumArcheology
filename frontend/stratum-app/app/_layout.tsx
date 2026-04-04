@@ -208,7 +208,6 @@ function RootLayoutNav() {
           >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="dm/[userId]" options={{ headerShown: false }} />
             <Stack.Screen
               name="settings"
               options={{

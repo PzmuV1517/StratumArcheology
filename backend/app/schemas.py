@@ -98,6 +98,7 @@ class UserResponse(UserBase):
     has_completed_onboarding: bool = False
     is_emonument_privileged: bool = False
     is_dashboard_admin: bool = False
+    is_maintainer: bool = False
     created_at: datetime
     last_login: datetime | None = None
 
