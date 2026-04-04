@@ -41,6 +41,13 @@ security = HTTPBearer(
 )  # Allow None for endpoints with optional auth
 
 
+def _maintainer_email_matches_payload(payload: dict) -> bool:
+    """Check whether the JWT payload email still matches current env maintainer."""
+    token_email = str(payload.get("email") or "").strip().lower()
+    expected_email = settings.MAINTAINER_EMAIL.strip().lower()
+    return bool(token_email and token_email == expected_email)
+
+
 def build_maintainer_user() -> User:
     """Build an in-memory maintainer user object from env credentials."""
     maintainer_user = User(
@@ -98,6 +105,12 @@ async def get_current_user(
 
         # Allow maintainer bypass
         if user_id == "MAINTAINER":
+            if not _maintainer_email_matches_payload(payload):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Maintainer token no longer matches current configuration",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             return build_maintainer_user()
 
         # Get user from database
@@ -169,6 +182,12 @@ async def get_current_user_or_token(
 
         # Allow maintainer bypass
         if user_id == "MAINTAINER":
+            if not _maintainer_email_matches_payload(payload):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Maintainer token no longer matches current configuration",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             return build_maintainer_user()
 
         # Get user from database
