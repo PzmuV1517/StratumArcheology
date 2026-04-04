@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -48,6 +48,7 @@ import type { LatLng as RNLatLng } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { projectService } from "../../services/projectService";
 import { fileService } from "../../services/fileService";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ const ROMANIA_REGION = {
 
 // ─── Dot marker ───────────────────────────────────────────────────────────────
 
-function DotMarker({ color }: { color: string }) {
+function DotMarker({ color, centerColor }: { color: string; centerColor: string }) {
   return (
     <View
       style={{
@@ -109,7 +110,7 @@ function DotMarker({ color }: { color: string }) {
         borderRadius: 7,
         borderWidth: 2,
         borderColor: color,
-        backgroundColor: "#111111",
+        backgroundColor: centerColor,
         shadowColor: "#000",
         shadowOpacity: 0.5,
         shadowRadius: 2,
@@ -125,6 +126,13 @@ export const MapEditorMobile: React.FC<{
   projectId: string;
   canEdit?: boolean;
 }> = ({ projectId, canEdit = true }) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const panelTextPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const panelTextSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const panelTextTertiary = isDarkMode ? "#666666" : "#7A7A7A";
+  const markerCenterColor = isDarkMode ? "#111111" : "#FFFFFF";
+
   const [mode, setMode] = useState<Mode>("work");
   const [work, _setWork] = useState<Shape | null>(null);
   const [sites, _setSites] = useState<Shape[]>([]);
@@ -526,7 +534,7 @@ export const MapEditorMobile: React.FC<{
                 onPress={() => onWorkPointTap(i)}
                 tracksViewChanges={false}
               >
-                <DotMarker color={WORK_COLOR} />
+                <DotMarker color={WORK_COLOR} centerColor={markerCenterColor} />
               </Marker>
             ))}
 
@@ -560,7 +568,7 @@ export const MapEditorMobile: React.FC<{
                   onPress={() => onSitePointTap(si, pi)}
                   tracksViewChanges={false}
                 >
-                  <DotMarker color={SITE_COLOR} />
+                  <DotMarker color={SITE_COLOR} centerColor={markerCenterColor} />
                 </Marker>
               ))}
             </React.Fragment>
@@ -659,7 +667,9 @@ export const MapEditorMobile: React.FC<{
               justifyContent: "space-between",
             }}
           >
-            <Text style={{ color: "#F5F5F5", fontWeight: "700", fontSize: 14 }}>
+            <Text
+              style={{ color: panelTextPrimary, fontWeight: "700", fontSize: 14 }}
+            >
               <Ionicons
                 name="location"
                 size={14}
@@ -672,12 +682,14 @@ export const MapEditorMobile: React.FC<{
               onPress={() => setSelectedPoint(null)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={20} color="#9A9A9A" />
+              <Ionicons name="close" size={20} color={panelTextSecondary} />
             </TouchableOpacity>
           </View>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "#666", fontSize: 11, marginBottom: 3 }}>
+              <Text
+                style={{ color: panelTextTertiary, fontSize: 11, marginBottom: 3 }}
+              >
                 Latitude
               </Text>
               <TextInput
@@ -689,7 +701,9 @@ export const MapEditorMobile: React.FC<{
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "#666", fontSize: 11, marginBottom: 3 }}>
+              <Text
+                style={{ color: panelTextTertiary, fontSize: 11, marginBottom: 3 }}
+              >
                 Longitude
               </Text>
               <TextInput
@@ -735,130 +749,131 @@ export const MapEditorMobile: React.FC<{
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  map: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  loadingHint: {
-    color: "#999999",
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: 4,
-  },
-  loadingSubHint: {
-    color: "#555555",
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  tilesOverlay: {
-    position: "absolute",
-    bottom: 72,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(17,17,17,0.75)",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    alignItems: "center",
-  },
-  tilesHint: {
-    color: "#555555",
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  toolbox: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    flexDirection: "row",
-    gap: 8,
-    zIndex: 10,
-  },
-  btn: {
-    backgroundColor: "rgba(26,26,26,0.92)",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  btnActiveWork: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  btnActiveSite: {
-    backgroundColor: "#00d4b3",
-    borderColor: "#00d4b3",
-  },
-  btnClose: {
-    backgroundColor: "rgba(255,200,42,0.15)",
-    borderColor: "#FFC82A",
-  },
-  btnText: {
-    color: "#F5F5F5",
-    fontWeight: "700",
-    fontSize: 13,
-    letterSpacing: 0.4,
-  },
-  btnTextActive: {
-    color: "#111111",
-  },
-  hint: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(17,17,17,0.85)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: "center",
-  },
-  hintText: {
-    color: "#999999",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  coordPanel: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(17,17,17,0.95)",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 16,
-  },
-  coordInput: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 14,
-    color: "#F5F5F5",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    fontVariant: ["tabular-nums"] as any,
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    wrapper: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    map: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      paddingHorizontal: 32,
+      gap: 12,
+    },
+    loadingHint: {
+      color: isDarkMode ? "#999999" : "#666666",
+      fontSize: 13,
+      fontWeight: "600",
+      textAlign: "center",
+      marginTop: 4,
+    },
+    loadingSubHint: {
+      color: isDarkMode ? "#555555" : "#6F6F6F",
+      fontSize: 11,
+      textAlign: "center",
+      lineHeight: 16,
+    },
+    tilesOverlay: {
+      position: "absolute",
+      bottom: 72,
+      left: 16,
+      right: 16,
+      backgroundColor: isDarkMode ? "rgba(17,17,17,0.75)" : "rgba(255,255,255,0.86)",
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      alignItems: "center",
+    },
+    tilesHint: {
+      color: isDarkMode ? "#999999" : "#555555",
+      fontSize: 11,
+      textAlign: "center",
+      lineHeight: 16,
+    },
+    toolbox: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      flexDirection: "row",
+      gap: 8,
+      zIndex: 10,
+    },
+    btn: {
+      backgroundColor: isDarkMode ? "rgba(26,26,26,0.92)" : "rgba(255,255,255,0.92)",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 10,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+    btnActiveWork: {
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+    },
+    btnActiveSite: {
+      backgroundColor: "#00d4b3",
+      borderColor: "#00d4b3",
+    },
+    btnClose: {
+      backgroundColor: "rgba(255,200,42,0.15)",
+      borderColor: "#FFC82A",
+    },
+    btnText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "700",
+      fontSize: 13,
+      letterSpacing: 0.4,
+    },
+    btnTextActive: {
+      color: "#111111",
+    },
+    hint: {
+      position: "absolute",
+      bottom: 16,
+      left: 16,
+      right: 16,
+      backgroundColor: isDarkMode ? "rgba(17,17,17,0.85)" : "rgba(255,255,255,0.9)",
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      alignItems: "center",
+    },
+    hintText: {
+      color: isDarkMode ? "#999999" : "#555555",
+      fontSize: 12,
+      textAlign: "center",
+    },
+    coordPanel: {
+      position: "absolute",
+      bottom: 16,
+      left: 16,
+      right: 16,
+      backgroundColor: isDarkMode ? "rgba(17,17,17,0.95)" : "rgba(255,255,255,0.95)",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      padding: 16,
+    },
+    coordInput: {
+      backgroundColor: isDarkMode ? "rgba(255,255,255,0.08)" : "#FFFFFF",
+      borderRadius: 10,
+      padding: 10,
+      fontSize: 14,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255,255,255,0.1)" : "#D9D9D9",
+      fontVariant: ["tabular-nums"] as any,
+    },
+  });
 
 export default MapEditorMobile;

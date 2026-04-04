@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ import { projectService } from "@/services/projectService";
 import { authService } from "@/services/authService";
 import { showAlert } from "@/utils/alert";
 import ImageCropModal from "@/components/ui/ImageCropModal";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 interface Member {
   id: string;
   display_name: string;
@@ -65,6 +66,12 @@ interface _Project {
 }
 
 export default function EditProjectScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const placeholderTextColor = isDarkMode ? "#666" : "#7A7A7A";
+
   const { projectId } = useLocalSearchParams();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -84,6 +91,21 @@ export default function EditProjectScreen() {
   const [confirmText, setConfirmText] = useState("");
   const [isOwner, setIsOwner] = useState(false);
   const isNameMatch = confirmText.trim() === name.trim();
+
+  const stackScreenOptions = {
+    title: "Edit Project",
+    headerTransparent: Platform.OS === "ios",
+    headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+    headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
+    headerTintColor: "#FF2A2A",
+    headerTitleStyle: {
+      color: textPrimary,
+      fontSize: 18,
+      fontWeight: "600" as const,
+    },
+    headerBackTitle: "Project",
+    headerShown: true,
+  };
 
   useEffect(() => {
     loadProject();
@@ -284,23 +306,7 @@ export default function EditProjectScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <Stack.Screen
-          options={{
-            title: "Edit Project",
-            headerTransparent: Platform.OS === "ios",
-            headerBlurEffect:
-              Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-            headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
-            headerTintColor: "#FF2A2A",
-            headerTitleStyle: {
-              color: "#F5F5F5",
-              fontSize: 18,
-              fontWeight: "600",
-            },
-            headerBackTitle: "Project",
-            headerShown: true,
-          }}
-        />
+        <Stack.Screen options={stackScreenOptions} />
         <ActivityIndicator size="large" color="#FF2A2A" />
         <Text style={styles.loadingText}>Loading project...</Text>
       </View>
@@ -309,23 +315,7 @@ export default function EditProjectScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: "Edit Project",
-          headerTransparent: Platform.OS === "ios",
-          headerBlurEffect:
-            Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
-          headerTintColor: "#FF2A2A",
-          headerTitleStyle: {
-            color: "#F5F5F5",
-            fontSize: 18,
-            fontWeight: "600",
-          },
-          headerBackTitle: "Project",
-          headerShown: true,
-        }}
-      />
+      <Stack.Screen options={stackScreenOptions} />
 
       <ScrollView style={styles.content}>
         <View style={styles.form}>
@@ -347,7 +337,7 @@ export default function EditProjectScreen() {
                   disabled={uploadingImage}
                 >
                   {uploadingImage ? (
-                    <ActivityIndicator color="#F5F5F5" size="small" />
+                    <ActivityIndicator color={textPrimary} size="small" />
                   ) : (
                     <Text style={styles.coverImageButtonText}>Change Photo</Text>
                   )}
@@ -384,7 +374,7 @@ export default function EditProjectScreen() {
           <TextInput
             style={styles.input}
             placeholder="Enter project name"
-            placeholderTextColor="#666"
+            placeholderTextColor={placeholderTextColor}
             value={name}
             onChangeText={setName}
           />
@@ -393,7 +383,7 @@ export default function EditProjectScreen() {
           <TextInput
             style={styles.input}
             placeholder="Enter RAN/LMI ID"
-            placeholderTextColor="#666"
+            placeholderTextColor={placeholderTextColor}
             value={ranLmiId}
             onChangeText={setRanLmiId}
           />
@@ -402,7 +392,7 @@ export default function EditProjectScreen() {
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Enter project description"
-            placeholderTextColor="#666"
+            placeholderTextColor={placeholderTextColor}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -416,7 +406,7 @@ export default function EditProjectScreen() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#F5F5F5" />
+              <ActivityIndicator color={textPrimary} />
             ) : (
               <Text style={styles.buttonText}>Save Changes</Text>
             )}
@@ -468,7 +458,7 @@ export default function EditProjectScreen() {
             <Text
               style={[
                 styles.modalText,
-                { fontWeight: "700", color: "#F5F5F5", marginBottom: 12 },
+                { fontWeight: "700", color: textPrimary, marginBottom: 12 },
               ]}
             >
               {name}
@@ -476,7 +466,7 @@ export default function EditProjectScreen() {
             <TextInput
               style={styles.confirmInput}
               placeholder="Type project name to confirm"
-              placeholderTextColor="#666"
+              placeholderTextColor={placeholderTextColor}
               value={confirmText}
               onChangeText={setConfirmText}
               autoCapitalize="none"
@@ -521,238 +511,239 @@ export default function EditProjectScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-    padding: 24,
-  },
-  content: {
-    flex: 1,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#9A9A9A",
-    marginTop: 16,
-    letterSpacing: 0.5,
-  },
-  form: {
-    padding: 24,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 32,
-    letterSpacing: 0.5,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.3,
-    marginTop: 16,
-  },
-  input: {
-    backgroundColor: "#1E1E1E",
-    color: "#F5F5F5",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#333",
-    fontSize: 16,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  coverImageContainer: {
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  coverImagePreview: {
-    width: "100%",
-    aspectRatio: 3 / 2,
-  },
-  coverImageActions: {
-    flexDirection: "row",
-    gap: 8,
-    padding: 10,
-    backgroundColor: "#1E1E1E",
-  },
-  coverImageButton: {
-    flex: 1,
-    backgroundColor: "#2A2A2A",
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#444",
-  },
-  coverImageButtonText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  coverImageRemoveButton: {
-    borderColor: "#FF4444",
-  },
-  coverImageRemoveText: {
-    color: "#FF4444",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  coverImagePlaceholder: {
-    height: 120,
-    backgroundColor: "#1E1E1E",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  coverImagePlaceholderIcon: {
-    fontSize: 32,
-  },
-  coverImagePlaceholderText: {
-    color: "#9A9A9A",
-    fontSize: 14,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-  button: {
-    backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 24,
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  deleteButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#FF4444",
-  },
-  deleteButtonText: {
-    color: "#FF4444",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  disabledButton: {
-    borderColor: "#555",
-    opacity: 0.6,
-  },
-  disabledButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  permissionHint: {
-    color: "#FF6B6B",
-    fontSize: 12,
-    marginTop: 6,
-    fontStyle: "italic",
-  },
-  buttonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  cancelButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  cancelButtonText: {
-    color: "#9A9A9A",
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#333",
-    width: "100%",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 14,
-    color: "#CCCCCC",
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  confirmInput: {
-    backgroundColor: "#121212",
-    color: "#F5F5F5",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-    marginBottom: 16,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  modalButtonText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  modalDeleteButton: {
-    backgroundColor: "#3A0C0C",
-    borderWidth: 1,
-    borderColor: "#FF4444",
-  },
-  modalDeleteText: {
-    color: "#FF4444",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      padding: 24,
+    },
+    content: {
+      flex: 1,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 16,
+      letterSpacing: 0.5,
+    },
+    form: {
+      padding: 24,
+    },
+    pageTitle: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 32,
+      letterSpacing: 0.5,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+      letterSpacing: 0.3,
+      marginTop: 16,
+    },
+    input: {
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      fontSize: 16,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: "top",
+    },
+    coverImageContainer: {
+      marginBottom: 16,
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+    },
+    coverImagePreview: {
+      width: "100%",
+      aspectRatio: 3 / 2,
+    },
+    coverImageActions: {
+      flexDirection: "row",
+      gap: 8,
+      padding: 10,
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+    },
+    coverImageButton: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#444" : "#D0D0D0",
+    },
+    coverImageButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    coverImageRemoveButton: {
+      borderColor: "#FF4444",
+    },
+    coverImageRemoveText: {
+      color: "#FF4444",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    coverImagePlaceholder: {
+      height: 120,
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      borderStyle: "dashed",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+      gap: 8,
+    },
+    coverImagePlaceholderIcon: {
+      fontSize: 32,
+    },
+    coverImagePlaceholderText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+    },
+    button: {
+      backgroundColor: "#FF2A2A",
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 24,
+      shadowColor: "#FF2A2A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    deleteButton: {
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: "#FF4444",
+    },
+    deleteButtonText: {
+      color: "#FF4444",
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    disabledButton: {
+      borderColor: isDarkMode ? "#555" : "#B0B0B0",
+      opacity: 0.6,
+    },
+    disabledButtonText: {
+      color: isDarkMode ? "#666" : "#7A7A7A",
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    permissionHint: {
+      color: "#FF6B6B",
+      fontSize: 12,
+      marginTop: 6,
+      fontStyle: "italic",
+    },
+    buttonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    cancelButton: {
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 12,
+    },
+    cancelButtonText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 16,
+      letterSpacing: 0.5,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      width: "100%",
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    modalText: {
+      fontSize: 14,
+      color: isDarkMode ? "#CCCCCC" : "#555555",
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    confirmInput: {
+      backgroundColor: isDarkMode ? "#121212" : "#FFFFFF",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      marginBottom: 16,
+    },
+    modalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+    },
+    modalButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#E8E8E8",
+    },
+    modalButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    modalDeleteButton: {
+      backgroundColor: isDarkMode ? "#3A0C0C" : "#FFEAEA",
+      borderWidth: 1,
+      borderColor: "#FF4444",
+    },
+    modalDeleteText: {
+      color: "#FF4444",
+    },
+  });

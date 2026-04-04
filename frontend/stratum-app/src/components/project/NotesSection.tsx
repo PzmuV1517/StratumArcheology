@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -42,6 +42,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
 import { showAlert } from "../../utils/alert";
+import { useColorScheme } from "../../hooks/use-color-scheme";
 
 // Get API base URL for streaming endpoint (uses the same logic as api.ts)
 const getApiBaseUrl = async (): Promise<string> => {
@@ -87,6 +88,8 @@ export default function NotesSection({
   canEdit = true,
 }: Props) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
 
   const MiniAudio = ({
     url,
@@ -423,131 +426,161 @@ export default function NotesSection({
   );
 }
 
-const styles = StyleSheet.create({
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#F5F5F5" },
-  addButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  addButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 12 },
-  noteCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  noteHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  noteTitle: {
-    color: "#F5F5F5",
-    fontWeight: "700",
-    fontSize: 16,
-    flex: 1,
-    marginRight: 8,
-  },
-  noteDate: { color: "#9A9A9A", fontSize: 12 },
-  notePreview: { color: "#CFCFCF", marginTop: 4 },
-  emptyState: { alignItems: "center", paddingVertical: 48 },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  emptyStateSubtext: { fontSize: 14, color: "#9A9A9A", marginBottom: 24 },
-  createButton: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  createButtonText: { color: "#F5F5F5", fontWeight: "600" },
-  audioPreviewWrapper: { marginTop: 6, gap: 6 },
-  audioTag: { width: "100%" },
-  audioCanvas: {
-    width: "100%",
-    height: 40,
-    backgroundColor: "#111",
-    borderRadius: 6,
-  },
-  voiceActions: { flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" },
-  metaBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: "#2A2A2A",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  metaBtnText: { color: "#CFCFCF", fontSize: 12, fontWeight: "600" },
-  deleteBtn: { borderColor: "#3A0C0C", backgroundColor: "#2A1414" },
-  deleteBtnText: { color: "#FF4444" },
-  inlineConfirm: {
-    flex: 1,
-    padding: 8,
-    backgroundColor: "#1E1E1E",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#333",
-    gap: 8,
-  },
-  confirmText: { color: "#F5F5F5", fontSize: 12, fontWeight: "600" },
-  confirmButtons: { flexDirection: "row", gap: 8 },
-  cancelBtn: { backgroundColor: "#2A2A2A", borderColor: "#444" },
-  // Native audio player styles
-  nativeAudioPlayer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#111",
-    borderRadius: 8,
-    padding: 8,
-    gap: 8,
-  },
-  audioPlayBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#FF2A2A",
-  },
-  audioPlayIcon: {
-    color: "#FF2A2A",
-    fontSize: 14,
-  },
-  audioProgress: {
-    flex: 1,
-    height: 4,
-    backgroundColor: "#2A2A2A",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  audioProgressBar: {
-    height: "100%",
-    backgroundColor: "#FF2A2A",
-  },
-  audioTime: {
-    color: "#9A9A9A",
-    fontSize: 11,
-    minWidth: 70,
-    textAlign: "right",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    addButton: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+    addButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 12 },
+    noteCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    noteHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4,
+    },
+    noteTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "700",
+      fontSize: 16,
+      flex: 1,
+      marginRight: 8,
+    },
+    noteDate: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 12 },
+    notePreview: { color: isDarkMode ? "#CFCFCF" : "#4D4D4D", marginTop: 4 },
+    emptyState: { alignItems: "center", paddingVertical: 48 },
+    emptyStateText: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptyStateSubtext: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 24,
+    },
+    createButton: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D0D0D0",
+    },
+    createButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    audioPreviewWrapper: { marginTop: 6, gap: 6 },
+    audioTag: { width: "100%" },
+    audioCanvas: {
+      width: "100%",
+      height: 40,
+      backgroundColor: isDarkMode ? "#111" : "#EDEDED",
+      borderRadius: 6,
+    },
+    voiceActions: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 8,
+      flexWrap: "wrap",
+    },
+    metaBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+    },
+    metaBtnText: {
+      color: isDarkMode ? "#CFCFCF" : "#4D4D4D",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    deleteBtn: {
+      borderColor: isDarkMode ? "#3A0C0C" : "#F3B3B3",
+      backgroundColor: isDarkMode ? "#2A1414" : "#FFECEC",
+    },
+    deleteBtnText: { color: "#FF4444" },
+    inlineConfirm: {
+      flex: 1,
+      padding: 8,
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      gap: 8,
+    },
+    confirmText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    confirmButtons: { flexDirection: "row", gap: 8 },
+    cancelBtn: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      borderColor: isDarkMode ? "#444" : "#D9D9D9",
+    },
+    nativeAudioPlayer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111" : "#F3F3F3",
+      borderRadius: 8,
+      padding: 8,
+      gap: 8,
+    },
+    audioPlayBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#FFFFFF",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#FF2A2A",
+    },
+    audioPlayIcon: {
+      color: "#FF2A2A",
+      fontSize: 14,
+    },
+    audioProgress: {
+      flex: 1,
+      height: 4,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#DADADA",
+      borderRadius: 2,
+      overflow: "hidden",
+    },
+    audioProgressBar: {
+      height: "100%",
+      backgroundColor: "#FF2A2A",
+    },
+    audioTime: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 11,
+      minWidth: 70,
+      textAlign: "right",
+    },
+  });

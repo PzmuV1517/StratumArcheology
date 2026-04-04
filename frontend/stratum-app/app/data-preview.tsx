@@ -53,13 +53,19 @@ import PointCloudPanel from "@/components/data/PointCloudPanel";
 import MeshPanel from "@/components/data/MeshPanel";
 import AudioPanel from "@/components/data/AudioPanel";
 import * as FileSystemLegacy from "expo-file-system/legacy";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Lazy import to avoid native bundling issues
 let Papa: any = null;
-let AutoSizer: any = null;
-let VariableSizeGrid: any = null;
+let XLSX: any = null;
 
 export default function DataPreviewScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+
   const { nodeId, name, kind } = useLocalSearchParams<{
     nodeId: string;
     name: string;
@@ -97,7 +103,9 @@ export default function DataPreviewScreen() {
       ext.endsWith(".txt") ||
       ext.endsWith(".md") ||
       ext.endsWith(".json") ||
-      ext.endsWith(".csv")
+      ext.endsWith(".csv") ||
+      ext.endsWith(".xlsx") ||
+      ext.endsWith(".xls")
     );
   }, [name]);
 
@@ -152,46 +160,13 @@ export default function DataPreviewScreen() {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const STYLE_ID = "stratum-markdown-styles";
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-      /* Global markdown styles for web */
-      .markdown-body { color: #EAEAEA; line-height: 1.6; font-size: 14px; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-      .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 { color: #F5F5F5; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
-      .markdown-body h1 { font-size: 2em; border-bottom: 1px solid #333; padding-bottom: 0.3em; }
-      .markdown-body h2 { font-size: 1.5em; }
-      .markdown-body h3 { font-size: 1.25em; }
-      .markdown-body p { margin: 0 0 1em 0; color: #EAEAEA; }
-      .markdown-body code { background: #1A1A1A; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.95em; font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color: #FF6B6B; }
-      .markdown-body pre { background: #0A0A0A; padding: 1em; border-radius: 6px; overflow: auto; margin: 0 0 1em 0; }
-      .markdown-body pre code { background: transparent; padding: 0; color: #EAEAEA; }
-      .markdown-body blockquote { border-left: 4px solid #FF2A2A; padding-left: 1em; margin-left: 0; color: #CCCCCC; font-style: italic; }
-      .markdown-body ul, .markdown-body ol { padding-left: 2em; margin: 0 0 1em 0; }
-      .markdown-body li { margin-bottom: 0.5em; }
-      .markdown-body a { color: #FF2A2A; text-decoration: none; }
-      .markdown-body a:hover { text-decoration: underline; }
-      .markdown-body table { border-collapse: collapse; width: 100%; margin: 0 0 1em 0; }
-      .markdown-body th, .markdown-body td { border: 1px solid #333; padding: 0.5em; text-align: left; }
-      .markdown-body th { background: #1A1A1A; font-weight: 600; }
-      .markdown-body img { max-width: 100%; height: auto; }
-      .markdown-body hr { border: none; border-top: 1px solid #333; margin: 1.5em 0; }
-      /* Extra elements */
-      .markdown-body mark { background: #665500; color: #fff3cd; padding: 0.1em 0.2em; border-radius: 2px; }
-      .markdown-body ins { text-decoration: none; border-bottom: 2px solid #1db954; background: rgba(29,185,84,0.1); }
-      .markdown-body sup { vertical-align: super; font-size: 0.75em; }
-      .markdown-body sub { vertical-align: sub; font-size: 0.75em; }
-      /* KaTeX layout */
-      .markdown-body .katex-display { margin: 1em 0; overflow-x: auto; }
-      .markdown-body .katex { font-size: 1em; }
-      /* Preview viewport refinements */
-      #preview-viewport { outline: none !important; background-color: #111111 !important; }
-      #preview-viewport *:focus { outline: none !important; }
-      #preview-content { transform-origin: 0 0 !important; background-color: #111111 !important; }
-      #preview-viewport iframe { border: 0 !important; background: #111111 !important; }
-      #preview-viewport model-viewer { background: #111111 !important; }
-    `;
-    document.head.appendChild(style);
+    let style = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement("style");
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
+    style.textContent = getMarkdownCss(isDarkMode);
 
     // Inject KaTeX CSS for math rendering
     const KATEX_ID = "stratum-katex-css";
@@ -203,7 +178,7 @@ export default function DataPreviewScreen() {
       link.crossOrigin = "anonymous";
       document.head.appendChild(link);
     }
-  }, []);
+  }, [isDarkMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -394,6 +369,12 @@ export default function DataPreviewScreen() {
           if (!Papa)
             Papa =
               (await import("papaparse")).default || (await import("papaparse"));
+          try {
+            // eslint-disable-next-line import/no-unresolved
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
 
           if (ext.endsWith(".csv")) {
             const text = await blob.text();
@@ -401,7 +382,18 @@ export default function DataPreviewScreen() {
             if (parsed?.data) setTable(parsed.data as any);
             else setTextContent(text);
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-            setTextContent("Excel preview is not supported. Convert to CSV for editing.");
+            if (!XLSX) {
+              setTextContent(
+                '[xlsx library not installed – install "xlsx" to preview Excel files]',
+              );
+            } else {
+              const arrayBuffer = await blob.arrayBuffer();
+              const wb = XLSX.read(arrayBuffer, { type: "array" });
+              const firstSheet = wb.SheetNames[0];
+              const ws = wb.Sheets[firstSheet];
+              const json = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+              setTable(json as string[][]);
+            }
           } else {
             // Try CSV by MIME fallback
             try {
@@ -585,8 +577,31 @@ export default function DataPreviewScreen() {
           const csv = Papa.unparse(trimmed);
           blob = new Blob([csv], { type: "text/csv" });
         } else {
-          showAlert("Error", "Excel saving is not supported. Convert to CSV for editing.");
-          return;
+          try {
+            // eslint-disable-next-line import/no-unresolved
+            if (!XLSX) XLSX = await import(/* webpackIgnore: true */ "xlsx");
+          } catch {
+            XLSX = null;
+          }
+          if (!XLSX) {
+            showAlert(
+              "Error",
+              "xlsx library not installed – cannot save Excel files",
+            );
+            return;
+          }
+          const ws = XLSX.utils.aoa_to_sheet(trimmed);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+          const wbout = XLSX.write(wb, {
+            bookType: ext.endsWith(".xls") ? "xls" : "xlsx",
+            type: "array",
+          });
+          blob = new Blob([wbout], {
+            type: ext.endsWith(".xls")
+              ? "application/vnd.ms-excel"
+              : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
         }
       } else {
         return;
@@ -769,9 +784,10 @@ export default function DataPreviewScreen() {
           headerTransparent: Platform.OS === "ios",
           headerBlurEffect:
             Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+          headerStyle:
+            Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5" },
+          headerTitleStyle: { color: textPrimary },
         }}
       />
       <View style={styles.outerContainer}>
@@ -914,7 +930,9 @@ export default function DataPreviewScreen() {
           style={[styles.actionButton, styles.closeButton]}
           onPress={() => router.back()}
         >
-          <Text style={[styles.actionButtonText, { color: "#9A9A9A" }]}>Close</Text>
+          <Text style={[styles.actionButtonText, { color: textSecondary }]}>
+            Close
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -987,122 +1005,169 @@ export default function DataPreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  content: { flex: 1, padding: 12 },
-  contentScroll: { flex: 1, minHeight: 0 },
-  outerHScroll: { flex: 1 },
-  outerContainer: { flex: 1 },
-  contentContainer: { flex: 1, padding: 12 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, color: "#9A9A9A" },
-  errorText: { color: "#FF4444", fontSize: 16 },
-  // table/text styles moved into components
-  actions: { flexDirection: "row", gap: 12, padding: 16 },
-  actionButton: {
-    flex: 1,
-    backgroundColor: "#2A2A2A",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  closeButton: { backgroundColor: "#1A1A1A" },
-  actionButtonText: { color: "#F5F5F5", fontWeight: "600" },
-  headerCell: {
-    backgroundColor: "#151515",
-    borderRightWidth: 1,
-    borderRightColor: "#2A2A2A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  headerText: { color: "#9A9A9A", fontSize: 10, fontWeight: "600" },
-  markdownWrapper: {},
-  zoomWrapper: { flex: 1 },
-  // Scrollable viewport on web to avoid tearing and allow panning when zoomed
-  zoomViewportWeb: { flex: 1, overflow: "scroll" as any },
-  // Inner content gets scaled
-  zoomContentWeb: {
-    minWidth: "100%",
-    minHeight: "100%",
-    maxWidth: "500%",
-    maxHeight: "500%",
-  },
-  // Autosave indicator
-  autosaveIndicator: {
-    position: "absolute",
-    top: 60,
-    right: 16,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  autosaveText: { color: "#9A9A9A", fontSize: 12 },
-  // Modal styles
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#1E1E1A",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#333",
-    width: "100%",
-    maxWidth: 400,
-  },
-  modalTitle: { color: "#F5F5F5", fontWeight: "700", fontSize: 18, marginBottom: 8 },
-  modalText: { color: "#9A9A9A", marginBottom: 16, lineHeight: 22 },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
-  modalButton: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  modalButtonPrimary: { backgroundColor: "#2A2A2A", borderColor: "#FF2A2A" },
-  modalButtonText: { color: "#F5F5F5", fontWeight: "600" },
-  // Unsupported 3D format display
-  unsupportedContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  unsupportedIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  unsupportedTitle: {
-    color: "#F5F5F5",
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  unsupportedText: {
-    color: "#9A9A9A",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  unsupportedHint: {
-    color: "#6A6A6A",
-    fontSize: 14,
-    textAlign: "center",
-    maxWidth: 300,
-    lineHeight: 20,
-  },
-});
+const getMarkdownCss = (isDarkMode: boolean) => {
+  const bodyText = isDarkMode ? "#EAEAEA" : "#1F1F1F";
+  const headingText = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const mutedText = isDarkMode ? "#CCCCCC" : "#555555";
+  const borderColor = isDarkMode ? "#333" : "#D9D9D9";
+  const codeBackground = isDarkMode ? "#1A1A1A" : "#F1F1F1";
+  const preBackground = isDarkMode ? "#0A0A0A" : "#FAFAFA";
+  const tableHeaderBackground = isDarkMode ? "#1A1A1A" : "#F4F4F4";
+  const viewportBackground = isDarkMode ? "#111111" : "#FFFFFF";
+
+  return `
+      /* Global markdown styles for web */
+      .markdown-body { color: ${bodyText}; line-height: 1.6; font-size: 14px; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 { color: ${headingText}; margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600; }
+      .markdown-body h1 { font-size: 2em; border-bottom: 1px solid ${borderColor}; padding-bottom: 0.3em; }
+      .markdown-body h2 { font-size: 1.5em; }
+      .markdown-body h3 { font-size: 1.25em; }
+      .markdown-body p { margin: 0 0 1em 0; color: ${bodyText}; }
+      .markdown-body code { background: ${codeBackground}; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.95em; font-family: SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; color: #FF6B6B; }
+      .markdown-body pre { background: ${preBackground}; padding: 1em; border-radius: 6px; overflow: auto; margin: 0 0 1em 0; }
+      .markdown-body pre code { background: transparent; padding: 0; color: ${bodyText}; }
+      .markdown-body blockquote { border-left: 4px solid #FF2A2A; padding-left: 1em; margin-left: 0; color: ${mutedText}; font-style: italic; }
+      .markdown-body ul, .markdown-body ol { padding-left: 2em; margin: 0 0 1em 0; }
+      .markdown-body li { margin-bottom: 0.5em; }
+      .markdown-body a { color: #FF2A2A; text-decoration: none; }
+      .markdown-body a:hover { text-decoration: underline; }
+      .markdown-body table { border-collapse: collapse; width: 100%; margin: 0 0 1em 0; }
+      .markdown-body th, .markdown-body td { border: 1px solid ${borderColor}; padding: 0.5em; text-align: left; }
+      .markdown-body th { background: ${tableHeaderBackground}; font-weight: 600; }
+      .markdown-body img { max-width: 100%; height: auto; }
+      .markdown-body hr { border: none; border-top: 1px solid ${borderColor}; margin: 1.5em 0; }
+      /* Extra elements */
+      .markdown-body mark { background: ${isDarkMode ? "#665500" : "#FFF3BF"}; color: ${isDarkMode ? "#fff3cd" : "#5C4400"}; padding: 0.1em 0.2em; border-radius: 2px; }
+      .markdown-body ins { text-decoration: none; border-bottom: 2px solid #1db954; background: rgba(29,185,84,0.1); }
+      .markdown-body sup { vertical-align: super; font-size: 0.75em; }
+      .markdown-body sub { vertical-align: sub; font-size: 0.75em; }
+      /* KaTeX layout */
+      .markdown-body .katex-display { margin: 1em 0; overflow-x: auto; }
+      .markdown-body .katex { font-size: 1em; }
+      /* Preview viewport refinements */
+      #preview-viewport { outline: none !important; background-color: ${viewportBackground} !important; }
+      #preview-viewport *:focus { outline: none !important; }
+      #preview-content { transform-origin: 0 0 !important; background-color: ${viewportBackground} !important; }
+      #preview-viewport iframe { border: 0 !important; background: ${viewportBackground} !important; }
+      #preview-viewport model-viewer { background: ${viewportBackground} !important; }
+    `;
+};
+
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
+    outerContainer: { flex: 1 },
+    contentContainer: { flex: 1, padding: 12 },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingText: { marginTop: 12, color: isDarkMode ? "#9A9A9A" : "#666666" },
+    errorText: { color: "#FF4444", fontSize: 16 },
+    actions: { flexDirection: "row", gap: 12, padding: 16 },
+    actionButton: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      padding: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    closeButton: { backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF" },
+    actionButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    zoomWrapper: { flex: 1 },
+    zoomViewportWeb: { flex: 1, overflow: "scroll" as any },
+    zoomContentWeb: {
+      minWidth: "100%",
+      minHeight: "100%",
+      maxWidth: "500%",
+      maxHeight: "500%",
+    },
+    autosaveIndicator: {
+      position: "absolute",
+      top: 60,
+      right: 16,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.92)",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    autosaveText: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 12 },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+      width: "100%",
+      maxWidth: 400,
+    },
+    modalTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "700",
+      fontSize: 18,
+      marginBottom: 8,
+    },
+    modalText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 16,
+      lineHeight: 22,
+    },
+    modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
+    modalButton: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    modalButtonPrimary: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#FFFFFF",
+      borderColor: "#FF2A2A",
+    },
+    modalButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    unsupportedContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    unsupportedIcon: {
+      fontSize: 64,
+      marginBottom: 16,
+    },
+    unsupportedTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 20,
+      fontWeight: "700",
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    unsupportedText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 16,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    unsupportedHint: {
+      color: isDarkMode ? "#6A6A6A" : "#888888",
+      fontSize: 14,
+      textAlign: "center",
+      maxWidth: 300,
+      lineHeight: 20,
+    },
+  });

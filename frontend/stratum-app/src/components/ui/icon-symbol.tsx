@@ -34,24 +34,78 @@ import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<
-  SymbolViewProps["name"],
-  ComponentProps<typeof MaterialIcons>["name"]
->;
-type IconSymbolName = keyof typeof MAPPING;
+type MaterialIconName = ComponentProps<typeof MaterialIcons>["name"];
+type IconSymbolName = SymbolViewProps["name"];
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
  * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
-const MAPPING = {
+const MAPPING: Record<string, MaterialIconName> = {
   "house.fill": "home",
+  "folder.fill": "folder",
+  "globe.americas.fill": "public",
+  "message.fill": "message",
+  "gearshape.fill": "settings",
+  "chevron.backward": "arrow-back",
+  "chevron.left": "chevron-left",
   "paperplane.fill": "send",
+  "note.text": "description",
+  "bubble.left.and.bubble.right.fill": "forum",
+  "photo.on.rectangle": "photo-library",
+  "map": "map",
+  "clock.arrow.circlepath": "history",
+  "chart.bar.fill": "bar-chart",
+  "chart.bar.doc.horizontal": "assessment",
+  "cube.fill": "inventory-2",
+  "dice": "casino",
+  "ellipsis.circle": "more-horiz",
+  "exclamationmark.triangle.fill": "warning",
+  "mountain.2.fill": "terrain",
+  "person.2.fill": "groups",
+  "plus": "add",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "line.3.horizontal": "menu",
-} as IconMapping;
+};
+
+const FALLBACK_ICON: MaterialIconName = "help-outline";
+
+function resolveMaterialName(name: string): MaterialIconName {
+  const direct = MAPPING[name];
+  if (direct) {
+    return direct;
+  }
+
+  const withoutFill = name.replace(/\.fill$/u, "");
+  if (MAPPING[withoutFill]) {
+    return MAPPING[withoutFill];
+  }
+
+  // Common SF Symbol aliases used in app route/layout code.
+  if (withoutFill.startsWith("chevron.")) {
+    return withoutFill.includes("left") ? "chevron-left" : "chevron-right";
+  }
+
+  if (withoutFill.includes("message") || withoutFill.includes("bubble")) {
+    return "message";
+  }
+
+  if (withoutFill.includes("folder")) {
+    return "folder";
+  }
+
+  if (withoutFill.includes("gear")) {
+    return "settings";
+  }
+
+  if (withoutFill.includes("chart")) {
+    return "bar-chart";
+  }
+
+  return FALLBACK_ICON;
+}
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
@@ -70,7 +124,5 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return (
-    <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />
-  );
+  return <MaterialIcons color={color} size={size} name={resolveMaterialName(name)} style={style} />;
 }

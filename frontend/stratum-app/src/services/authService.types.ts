@@ -47,6 +47,8 @@ export interface User {
   link_bsky?: string;
   link_linkedin?: string;
   link_website?: string;
+  is_emonument_privileged?: boolean;
+  is_dashboard_admin?: boolean;
   created_at?: string;
 }
 

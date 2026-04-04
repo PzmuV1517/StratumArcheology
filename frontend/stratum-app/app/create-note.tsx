@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { noteService } from "@/services/noteService";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const isIOS = Platform.OS === "ios";
 
@@ -55,9 +56,11 @@ const isIOS = Platform.OS === "ios";
 function GlassCard({
   children,
   style,
+  styles,
 }: {
   children: React.ReactNode;
   style?: object;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return <View style={[styles.solidCard, style]}>{children}</View>;
 }
@@ -69,6 +72,8 @@ function GlassButton({
   icon,
   disabled,
   loading: isLoading,
+  styles,
+  secondaryTextColor,
 }: {
   onPress: () => void;
   title: string;
@@ -76,6 +81,8 @@ function GlassButton({
   icon?: string;
   disabled?: boolean;
   loading?: boolean;
+  styles: ReturnType<typeof createStyles>;
+  secondaryTextColor: string;
 }) {
   const isPrimary = variant === "primary";
   const content = (
@@ -84,7 +91,7 @@ function GlassButton({
         <Ionicons
           name={icon as keyof typeof Ionicons.glyphMap}
           size={20}
-          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          color={isPrimary ? "#FFFFFF" : secondaryTextColor}
           style={{ marginRight: 8 }}
         />
       )}
@@ -125,6 +132,13 @@ if (Platform.OS !== "web") {
 }
 
 export default function CreateNoteScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const placeholderTextColor = isDarkMode ? "#555" : "#7A7A7A";
+
   const { projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -416,10 +430,10 @@ export default function CreateNoteScreen() {
           title: "Create Note",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
-          headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+          headerStyle: isIOS ? {} : { backgroundColor: pageBackground },
           headerTintColor: "#FF2A2A",
           headerTitleStyle: {
-            color: "#F5F5F5",
+            color: textPrimary,
             fontWeight: "600",
           },
           headerBackTitle: "Project",
@@ -455,7 +469,7 @@ export default function CreateNoteScreen() {
         onRequestClose={() => setShowDraftModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalContent}>
+          <GlassCard style={styles.modalContent} styles={styles}>
             <Text style={styles.modalTitle}>Restore Draft?</Text>
             <Text style={styles.modalText}>
               You have an unsaved draft from a previous session. Would you like to
@@ -466,12 +480,16 @@ export default function CreateNoteScreen() {
                 onPress={handleDiscardDraft}
                 title="Discard"
                 variant="secondary"
+                styles={styles}
+                secondaryTextColor={textSecondary}
               />
               <GlassButton
                 onPress={handleRestoreDraft}
                 title="Restore"
                 variant="primary"
                 icon="refresh"
+                styles={styles}
+                secondaryTextColor={textSecondary}
               />
             </View>
           </GlassCard>
@@ -514,23 +532,23 @@ export default function CreateNoteScreen() {
         <Text style={styles.subtitle}>Add a text or voice note to your project</Text>
 
         {/* Title card */}
-        <GlassCard style={styles.card}>
+        <GlassCard style={styles.card} styles={styles}>
           <Text style={styles.label}>
-            <Ionicons name="text" size={14} color="#9A9A9A" /> Title
+            <Ionicons name="text" size={14} color={textSecondary} /> Title
           </Text>
           <TextInput
             style={styles.input}
             placeholder="Enter note title"
-            placeholderTextColor="#555"
+            placeholderTextColor={placeholderTextColor}
             value={title}
             onChangeText={setTitle}
           />
         </GlassCard>
 
         {/* Note type toggle */}
-        <GlassCard style={styles.card}>
+        <GlassCard style={styles.card} styles={styles}>
           <Text style={styles.label}>
-            <Ionicons name="options" size={14} color="#9A9A9A" /> Note Type
+            <Ionicons name="options" size={14} color={textSecondary} /> Note Type
           </Text>
           <TouchableOpacity
             style={[styles.toggleButton, isVoiceNote && styles.toggleActive]}
@@ -544,7 +562,7 @@ export default function CreateNoteScreen() {
             <Ionicons
               name={isVoiceNote ? "mic" : "mic-off"}
               size={18}
-              color={isVoiceNote ? "#FF2A2A" : "#9A9A9A"}
+              color={isVoiceNote ? "#FF2A2A" : textSecondary}
               style={{ marginRight: 8 }}
             />
             <Text style={[styles.toggleText, isVoiceNote && { color: "#FF2A2A" }]}>
@@ -555,14 +573,15 @@ export default function CreateNoteScreen() {
 
         {/* Content card (text mode) */}
         {!isVoiceNote && (
-          <GlassCard style={styles.card}>
+          <GlassCard style={styles.card} styles={styles}>
             <Text style={styles.label}>
-              <Ionicons name="document-text" size={14} color="#9A9A9A" /> Content
+              <Ionicons name="document-text" size={14} color={textSecondary} />{" "}
+              Content
             </Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Describe your archaeological findings, observations, or thoughts..."
-              placeholderTextColor="#555"
+              placeholderTextColor={placeholderTextColor}
               value={content}
               onChangeText={setContent}
               multiline
@@ -574,15 +593,23 @@ export default function CreateNoteScreen() {
 
         {/* Voice recording card */}
         {isVoiceNote && (
-          <GlassCard style={styles.card}>
+          <GlassCard style={styles.card} styles={styles}>
             <Text style={styles.label}>
-              <Ionicons name="mic" size={14} color="#9A9A9A" /> Voice Recording
+              <Ionicons name="mic" size={14} color={textSecondary} /> Voice Recording
             </Text>
             {Platform.OS === "web" && (
-              <LiveWaveform stream={liveStream} isRecording={isRecording} />
+              <LiveWaveform
+                stream={liveStream}
+                isRecording={isRecording}
+                isDarkMode={isDarkMode}
+              />
             )}
             {Platform.OS !== "web" && (
-              <NativeLevelBar active={isRecording} meterLevel={meterLevel} />
+              <NativeLevelBar
+                active={isRecording}
+                meterLevel={meterLevel}
+                isDarkMode={isDarkMode}
+              />
             )}
             {recording ? (
               <TouchableOpacity
@@ -631,7 +658,7 @@ export default function CreateNoteScreen() {
                     style={{ width: "100%", marginBottom: 8 }}
                   />
                 ) : (
-                  <NativeAudioPreview uri={recordedUri} />
+                  <NativeAudioPreview uri={recordedUri} isDarkMode={isDarkMode} />
                 )}
                 <TouchableOpacity
                   style={styles.clearAudio}
@@ -663,12 +690,16 @@ export default function CreateNoteScreen() {
             icon="checkmark-circle"
             disabled={loading}
             loading={loading}
+            styles={styles}
+            secondaryTextColor={textSecondary}
           />
           <GlassButton
             onPress={() => router.back()}
             title="Cancel"
             variant="secondary"
             disabled={loading}
+            styles={styles}
+            secondaryTextColor={textSecondary}
           />
         </View>
       </ScrollView>
@@ -680,9 +711,11 @@ export default function CreateNoteScreen() {
 function LiveWaveform({
   stream,
   isRecording,
+  isDarkMode,
 }: {
   stream: MediaStream | null;
   isRecording: boolean;
+  isDarkMode: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const acRef = useRef<AudioContext | null>(null);
@@ -732,7 +765,7 @@ function LiveWaveform({
       style={{
         width: "100%",
         height: 120,
-        backgroundColor: "#111",
+        backgroundColor: isDarkMode ? "#111" : "#F0F0F0",
         borderRadius: 8,
         marginBottom: 12,
       }}
@@ -744,9 +777,11 @@ function LiveWaveform({
 function NativeLevelBar({
   active,
   meterLevel,
+  isDarkMode,
 }: {
   active: boolean;
   meterLevel: number;
+  isDarkMode: boolean;
 }) {
   // meterLevel is typically in dBFS, range roughly -160 (silence) to 0 (max)
   // Convert to a percentage (0-100) for display
@@ -759,7 +794,7 @@ function NativeLevelBar({
       <View
         style={{
           height: 12,
-          backgroundColor: "#2A2A2A",
+          backgroundColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
           borderRadius: 6,
           overflow: "hidden",
         }}
@@ -776,7 +811,7 @@ function NativeLevelBar({
       {active && (
         <Text
           style={{
-            color: "#9A9A9A",
+            color: isDarkMode ? "#9A9A9A" : "#666666",
             fontSize: 11,
             marginTop: 4,
             textAlign: "center",
@@ -790,7 +825,14 @@ function NativeLevelBar({
 }
 
 // Native audio preview player for recorded audio
-function NativeAudioPreview({ uri }: { uri: string }) {
+function NativeAudioPreview({
+  uri,
+  isDarkMode,
+}: {
+  uri: string;
+  isDarkMode: boolean;
+}) {
+  const previewStyles = useMemo(() => createPreviewStyles(isDarkMode), [isDarkMode]);
   const soundRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -882,257 +924,267 @@ function NativeAudioPreview({ uri }: { uri: string }) {
   );
 }
 
-const previewStyles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    gap: 12,
-  },
-  playBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FF2A2A",
-  },
-  playIcon: {
-    color: "#FF2A2A",
-    fontSize: 18,
-  },
-  progress: {
-    flex: 1,
-    height: 6,
-    backgroundColor: "#333",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#FF2A2A",
-  },
-  time: {
-    color: "#9A9A9A",
-    fontSize: 12,
-    minWidth: 80,
-    textAlign: "right",
-  },
-});
+const createPreviewStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    playBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#F1F1F1",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "#FF2A2A",
+    },
+    playIcon: {
+      color: "#FF2A2A",
+      fontSize: 18,
+    },
+    progress: {
+      flex: 1,
+      height: 6,
+      backgroundColor: isDarkMode ? "#333" : "#D9D9D9",
+      borderRadius: 3,
+      overflow: "hidden",
+    },
+    progressBar: {
+      height: "100%",
+      backgroundColor: "#FF2A2A",
+    },
+    time: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 12,
+      minWidth: 80,
+      textAlign: "right",
+    },
+  });
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 24,
-    paddingBottom: 48,
-  },
-  // Header
-  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  // Cards
-  card: { marginBottom: 16 },
-  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
-  blurCard: {
-    borderRadius: 20,
-    padding: 20,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  solidCard: {
-    borderRadius: 20,
-    padding: 20,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 12,
-  },
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  textArea: {
-    height: 200,
-    textAlignVertical: "top",
-  },
-  // Toggle
-  toggleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-  },
-  toggleActive: {
-    borderColor: "rgba(255, 42, 42, 0.4)",
-    backgroundColor: "rgba(255, 42, 42, 0.08)",
-  },
-  toggleText: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  // Voice
-  recButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 12,
-  },
-  start: { backgroundColor: "#FF2A2A" },
-  stop: { backgroundColor: "#FF4444" },
-  reRecord: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#FF2A2A",
-  },
-  recButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 14 },
-  recordedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  recInfo: { color: "#9A9A9A", fontSize: 13 },
-  clearAudio: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 68, 68, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 68, 68, 0.3)",
-  },
-  clearAudioText: { color: "#FF4444", fontSize: 13, fontWeight: "600" },
-  errorText: { color: "#FF5555", fontSize: 12, marginTop: 4 },
-  // Buttons
-  buttonContainer: { gap: 12, marginTop: 8 },
-  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
-  primaryButtonGlass: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.4)",
-  },
-  primaryButtonBlur: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.3)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FF2A2A",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  disabledButton: { opacity: 0.5 },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  secondaryButtonText: { color: "#9A9A9A" },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    maxWidth: 420,
-    width: "100%",
-  },
-  modalTitle: {
-    color: "#F5F5F5",
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  modalText: {
-    color: "#9A9A9A",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  // Save status bar
-  saveStatusBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: "rgba(30, 30, 30, 0.95)",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  saveStatusText: {
-    color: "#9A9A9A",
-    fontSize: 12,
-    textAlign: "center",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    content: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 24,
+      paddingTop: 24,
+      paddingBottom: 48,
+    },
+    // Header
+    headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+    title: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    // Cards
+    card: { marginBottom: 16 },
+    glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+    blurCard: {
+      borderRadius: 20,
+      padding: 20,
+      overflow: "hidden",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+    },
+    solidCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 12,
+    },
+    input: {
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#D9D9D9",
+    },
+    textArea: {
+      height: 200,
+      textAlignVertical: "top",
+    },
+    // Toggle
+    toggleButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#F1F1F1",
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#D9D9D9",
+    },
+    toggleActive: {
+      borderColor: "rgba(255, 42, 42, 0.4)",
+      backgroundColor: "rgba(255, 42, 42, 0.08)",
+    },
+    toggleText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    // Voice
+    recButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 14,
+      borderRadius: 14,
+      marginBottom: 12,
+    },
+    start: { backgroundColor: "#FF2A2A" },
+    stop: { backgroundColor: "#FF4444" },
+    reRecord: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: "#FF2A2A",
+    },
+    recButtonText: { color: "#F5F5F5", fontWeight: "600", fontSize: 14 },
+    recordedRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    recInfo: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 13 },
+    clearAudio: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: "rgba(255, 68, 68, 0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 68, 68, 0.3)",
+    },
+    clearAudioText: { color: "#FF4444", fontSize: 13, fontWeight: "600" },
+    errorText: { color: "#FF5555", fontSize: 12, marginTop: 4 },
+    // Buttons
+    buttonContainer: { gap: 12, marginTop: 8 },
+    buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+    primaryButtonGlass: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.4)",
+    },
+    primaryButtonBlur: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.3)",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    primaryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FF2A2A",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+    },
+    secondaryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    disabledButton: { opacity: 0.5 },
+    buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+    secondaryButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666" },
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalContent: {
+      maxWidth: 420,
+      width: "100%",
+    },
+    modalTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 20,
+      fontWeight: "700",
+      marginBottom: 12,
+    },
+    modalText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+      lineHeight: 20,
+      marginBottom: 24,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+    },
+    // Save status bar
+    saveStatusBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      backgroundColor: isDarkMode
+        ? "rgba(30, 30, 30, 0.95)"
+        : "rgba(255,255,255,0.95)",
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(0, 0, 0, 0.08)",
+    },
+    saveStatusText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 12,
+      textAlign: "center",
+    },
+  });

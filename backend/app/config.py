@@ -62,6 +62,19 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "stratum-files"
     MINIO_USE_SSL: bool = False
 
+    # Dashboard Maintainer
+    MAINTAINER_EMAIL: str
+    MAINTAINER_PASSWORD: str
+
+    # Backup System
+    BACKUP_BUCKET_NAME: str = "stratum-db-backups"
+    BACKUP_INTERVAL_MINUTES: int = 60
+    BACKUP_RETENTION_COUNT: int = 5
+    BACKUP_AUTO_START: bool = True
+    BACKUP_PGDUMP_BIN: str = "pg_dump"
+    BACKUP_PSQL_BIN: str = "psql"
+    BACKUP_DATABASES: str = ""
+
     # App
     APP_SECRET_KEY: str
     APP_DEBUG: bool = True

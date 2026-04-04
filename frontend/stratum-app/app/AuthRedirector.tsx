@@ -28,10 +28,11 @@
  * SOFTWARE.
  */
 // app/AuthRedirector.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSegments, usePathname } from "expo-router";
 import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /**
  * AuthRedirector handles auth-based navigation:
@@ -43,6 +44,8 @@ const AuthRedirector: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const router = useRouter();
   const segments = useSegments();
   const pathname = usePathname();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const { user, loading, sessionExpired, clearSessionExpired } = useAuth();
   const [mounted, setMounted] = useState(false);
 
@@ -106,13 +109,14 @@ const AuthRedirector: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+  });
 
 export default AuthRedirector;

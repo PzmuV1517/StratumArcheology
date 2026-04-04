@@ -27,8 +27,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import { Platform, View, Text, TextInput, StyleSheet } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface Props {
   table: string[][];
@@ -38,6 +39,9 @@ interface Props {
 }
 
 export default function GridPanel({ table, setTable, editing, onDirty }: Props) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+
   // Simple fallback grid for all platforms; you can extend with react-window/auto-sizer for web later
   return (
     <View style={[styles.tableWrapper, { padding: 8 }]}>
@@ -90,40 +94,51 @@ export default function GridPanel({ table, setTable, editing, onDirty }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
-  tableWrapper: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#0E0E0E",
-  },
-  tableRow: { flexDirection: "row" },
-  tableCell: {
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRightWidth: 1,
-    borderRightColor: "#2A2A2A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-    width: 160,
-  },
-  cellText: {
-    color: "#EAEAEA",
-    fontFamily: Platform.select({ web: "monospace", default: undefined }),
-    fontSize: 12,
-    lineHeight: 14,
-  },
-  cellInput: {
-    color: "#EAEAEA",
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderWidth: 1,
-    borderColor: "#333",
-    borderRadius: 4,
-    minHeight: 24,
-    backgroundColor: "#151515",
-    fontSize: 12,
-  },
-  moreText: { color: "#9A9A9A", padding: 8 },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    surface: isDarkMode ? "#0E0E0E" : "#FFFFFF",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    inputBorder: isDarkMode ? "#333333" : "#CFCFCF",
+    inputBackground: isDarkMode ? "#151515" : "#F5F5F5",
+    textPrimary: isDarkMode ? "#EAEAEA" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#9A9A9A" : "#666666",
+  };
+
+  return StyleSheet.create({
+    tableWrapper: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.surface,
+    },
+    tableRow: { flexDirection: "row" },
+    tableCell: {
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+      borderRightWidth: 1,
+      borderRightColor: palette.border,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+      width: 160,
+    },
+    cellText: {
+      color: palette.textPrimary,
+      fontFamily: Platform.select({ web: "monospace", default: undefined }),
+      fontSize: 12,
+      lineHeight: 14,
+    },
+    cellInput: {
+      color: palette.textPrimary,
+      paddingVertical: 2,
+      paddingHorizontal: 4,
+      borderWidth: 1,
+      borderColor: palette.inputBorder,
+      borderRadius: 4,
+      minHeight: 24,
+      backgroundColor: palette.inputBackground,
+      fontSize: 12,
+    },
+    moreText: { color: palette.textSecondary, padding: 8 },
+  });
+};

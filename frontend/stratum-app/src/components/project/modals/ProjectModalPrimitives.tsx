@@ -52,34 +52,34 @@ type ProjectModalStyleKey =
 const styles = StyleSheet.create({
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.24)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   modalCard: {
-    backgroundColor: "#1E1E1A",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
     width: "100%",
   },
   modalTitle: {
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     fontWeight: "700",
     fontSize: 18,
     marginBottom: 6,
   },
   modalText: {
-    color: "#9A9A9A",
+    color: "#666666",
     marginBottom: 12,
   },
   input: {
-    color: "#EAEAEA",
-    backgroundColor: "#1A1A1A",
+    color: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -91,23 +91,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
   },
   buttonText: {
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     fontWeight: "600",
   },
   primary: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#FFFFFF",
     borderColor: "#FF2A2A",
   },
   danger: {
-    backgroundColor: "#3A0C0C",
+    backgroundColor: "#FFF1F1",
     borderColor: "#FF4444",
   },
 });
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
 export const projectModalStyles = styles;
 
 export function getProjectModalStyle(
-  styleKey: ProjectModalStyleKey
+  styleKey: ProjectModalStyleKey,
 ): ViewStyle | TextStyle {
   return styles[styleKey];
 }

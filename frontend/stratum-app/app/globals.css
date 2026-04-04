@@ -3,7 +3,18 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
+  --stratum-page-bg: #f7f7f7;
+  --stratum-page-bg-rgb: 247, 247, 247;
+  --stratum-text-primary: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --stratum-page-bg: #000;
+    --stratum-page-bg-rgb: 0, 0, 0;
+    --stratum-text-primary: #f5f5f5;
+  }
 }
 
 html,
@@ -12,9 +23,10 @@ body,
   min-height: 100%;
   overflow-x: hidden;
 }
-/* Ensure dark base behind fixed overlays */
+/* Keep base behind fixed overlays in sync with active color scheme */
 body {
-  background-color: #000;
+  background-color: var(--stratum-page-bg);
+  color: var(--stratum-text-primary);
 }
 
 /* Hide scrollbars on web while keeping scrolling functional */
@@ -52,8 +64,12 @@ body::-webkit-scrollbar-thumb {
   height: 20rem; /* increase/decrease to control fade length */
   pointer-events: none;
   z-index: 1; /* sits above ColorBends background, below content */
-  /* Fade from transparent to the page bg (#000) */
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, #000 100%);
+  /* Fade from transparent to the active page background */
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--stratum-page-bg-rgb), 0) 0%,
+    var(--stratum-page-bg) 100%
+  );
 }
 
 /* Fade the top of the DotGrid into black so it blends into the hero area */
@@ -65,5 +81,9 @@ body::-webkit-scrollbar-thumb {
   height: 14rem; /* adjust for longer/shorter blend */
   pointer-events: none;
   z-index: 1; /* above DotGrid (z=0), below content (z>=2) and hero (z=10) */
-  background: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--stratum-page-bg) 0%,
+    rgba(var(--stratum-page-bg-rgb), 0) 100%
+  );
 }

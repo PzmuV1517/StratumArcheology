@@ -43,6 +43,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { fileService } from "../../services/fileService";
 import { showAlert } from "../../utils/alert";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface FileNode {
   id: string;
@@ -50,6 +51,7 @@ interface FileNode {
   type: "file" | "folder" | "note";
   mime_type?: string;
 }
+
 interface ArtefactMeta {
   id: string;
   name: string;
@@ -65,6 +67,12 @@ export default function ArtefactsTab({
   projectId: string;
   canEdit?: boolean;
 }) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const textTertiary = isDarkMode ? "#666666" : "#7A7A7A";
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const showSkeleton = useDelayedLoading(loading);
@@ -85,7 +93,7 @@ export default function ArtefactsTab({
   }, [artefacts, searchQuery]);
 
   useEffect(() => {
-    if (projectId) load();
+    if (projectId) void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -93,7 +101,7 @@ export default function ArtefactsTab({
   useFocusEffect(
     useCallback(() => {
       if (projectId) {
-        load();
+        void load();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]),
@@ -102,6 +110,7 @@ export default function ArtefactsTab({
   const load = async () => {
     try {
       setLoading(true);
+
       // Ensure top-level Artefacts folder exists
       const root = await fileService.listRoot(projectId);
       let af = root.find((n: any) => n.type === "folder" && n.name === "Artefacts");
@@ -109,6 +118,7 @@ export default function ArtefactsTab({
         af = await fileService.createFolder(projectId, "Artefacts");
       }
       setArtefactFolder(af);
+
       // List child folders as artefacts
       const children = await fileService.listChildren(af.id);
       const folders = children.filter((c: any) => c.type === "folder");
@@ -117,9 +127,10 @@ export default function ArtefactsTab({
         meta: ArtefactMeta | null;
         previewUrl?: string;
       }[] = [];
+
       for (const f of folders) {
         let meta: ArtefactMeta | null = null;
-        let previewUrl: string | undefined = undefined;
+        let previewUrl: string | undefined;
         try {
           const grand = await fileService.listChildren(f.id);
           const metaFile = grand.find(
@@ -132,24 +143,28 @@ export default function ArtefactsTab({
             const text = await res.blob.text();
             if (text) meta = JSON.parse(text);
           }
+
           const pv = grand.find(
             (c: any) =>
               c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
           );
           if (pv && Platform.OS === "web") {
             const blobRes = await fileService.downloadFile(pv.id);
-            const url = URL.createObjectURL(blobRes.blob);
-            previewUrl = url;
+            previewUrl = URL.createObjectURL(blobRes.blob);
           }
-        } catch {}
+        } catch {
+          // Ignore per-folder metadata read errors and keep listing.
+        }
         out.push({ folder: f, meta, previewUrl });
       }
+
       // Sort by number desc then name
       out.sort(
         (a, b) =>
           (b.meta?.number || 0) - (a.meta?.number || 0) ||
           a.folder.name.localeCompare(b.folder.name),
       );
+
       setArtefacts(out);
     } catch (e) {
       console.error("Failed to load artefacts", e);
@@ -182,7 +197,7 @@ export default function ArtefactsTab({
           marginBottom: 12,
         }}
       >
-        <Text style={{ color: "#F5F5F5", fontWeight: "700", fontSize: 16 }}>
+        <Text style={{ color: textPrimary, fontWeight: "700", fontSize: 16 }}>
           Artefacts
         </Text>
         {canEdit && (
@@ -190,7 +205,7 @@ export default function ArtefactsTab({
             <Ionicons
               name="add"
               size={16}
-              color="#F5F5F5"
+              color="#FFFFFF"
               style={{ marginRight: 4 }}
             />
             <Text style={styles.primaryBtnText}>New Artefact</Text>
@@ -204,13 +219,13 @@ export default function ArtefactsTab({
           <Ionicons
             name="search"
             size={16}
-            color="#9A9A9A"
+            color={textSecondary}
             style={{ marginRight: 8 }}
           />
           <TextInput
             style={styles.searchInput}
             placeholder="Search artefacts..."
-            placeholderTextColor="#666"
+            placeholderTextColor={textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -218,7 +233,7 @@ export default function ArtefactsTab({
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={18} color="#666" />
+              <Ionicons name="close-circle" size={18} color={textTertiary} />
             </TouchableOpacity>
           )}
         </View>
@@ -228,11 +243,11 @@ export default function ArtefactsTab({
         <ArtefactGridSkeleton count={4} />
       ) : artefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
-          <Text style={{ color: "#9A9A9A" }}>No artefacts yet</Text>
+          <Text style={{ color: textSecondary }}>No artefacts yet</Text>
         </View>
       ) : filteredArtefacts.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 24 }}>
-          <Text style={{ color: "#9A9A9A" }}>
+          <Text style={{ color: textSecondary }}>
             No artefacts match "{searchQuery}"
           </Text>
         </View>
@@ -257,7 +272,7 @@ export default function ArtefactsTab({
                     resizeMode="cover"
                   />
                 ) : (
-                  <Text style={{ color: "#9A9A9A" }}>No preview</Text>
+                  <Text style={{ color: textSecondary }}>No preview</Text>
                 )}
               </View>
               <Text style={styles.cardTitle} numberOfLines={1}>
@@ -272,52 +287,59 @@ export default function ArtefactsTab({
   );
 }
 
-const styles = StyleSheet.create({
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  searchInput: {
-    flex: 1,
-    color: "#F5F5F5",
-    fontSize: 15,
-    padding: 0,
-  },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  card: {
-    width: 180,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    padding: 8,
-  },
-  previewBox: {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 8,
-    backgroundColor: "#0A0A0A",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-    overflow: "hidden",
-  },
-  cardTitle: { color: "#F5F5F5", fontWeight: "700" },
-  cardMeta: { color: "#9A9A9A", fontSize: 12 },
-  primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  primaryBtnText: { color: "#F5F5F5", fontWeight: "700" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    searchInput: {
+      flex: 1,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 15,
+      padding: 0,
+    },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    card: {
+      width: 180,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      padding: 8,
+    },
+    previewBox: {
+      width: "100%",
+      aspectRatio: 1,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F1F1F1",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+      overflow: "hidden",
+    },
+    cardTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "700",
+    },
+    cardMeta: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 12,
+    },
+    primaryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    primaryBtnText: { color: "#FFFFFF", fontWeight: "700" },
+  });

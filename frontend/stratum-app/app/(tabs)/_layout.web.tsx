@@ -32,6 +32,7 @@ import {
   Easing,
   Image,
   Modal,
+  Pressable,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Platform,
   StyleSheet,
@@ -44,6 +45,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "@/contexts/AuthContext";
 import UsernamePromptModal from "@/components/UsernamePromptModal";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /* ─────────────────────────────────────────────
  *  Constants
@@ -53,12 +55,10 @@ const EXPANDED_W = COLLAPSED_W + 188; // 244
 const ROW_H = 72;
 const ANIM_MS = 200;
 const ACTIVE = "#FF2A2A";
-const INACTIVE = "#9A9A9A";
-const PAGE_BG = "#111111";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BORDER = "#2A2A2A";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { name: "index", label: "Overview", icon: "house.fill" as const, path: "/" },
   {
     name: "projects",
@@ -83,18 +83,18 @@ const NAV_ITEMS = [
 /* ─────────────────────────────────────────────
  *  Burger icon (three lines)
  * ─────────────────────────────────────────── */
-function Burger() {
+function Burger({ color }: { color: string }) {
   return (
     <View style={bStyles.wrap}>
-      <View style={bStyles.line} />
-      <View style={bStyles.line} />
-      <View style={bStyles.line} />
+      <View style={[bStyles.line, { backgroundColor: color }]} />
+      <View style={[bStyles.line, { backgroundColor: color }]} />
+      <View style={[bStyles.line, { backgroundColor: color }]} />
     </View>
   );
 }
 const bStyles = StyleSheet.create({
   wrap: { width: 24, height: 18, justifyContent: "space-between" },
-  line: { width: 24, height: 3, borderRadius: 1.5, backgroundColor: "#F5F5F5" },
+  line: { width: 24, height: 3, borderRadius: 1.5 },
 });
 
 /* ─────────────────────────────────────────────
@@ -102,6 +102,18 @@ const bStyles = StyleSheet.create({
  * ─────────────────────────────────────────── */
 export default function TabLayout() {
   const { user, logout } = useAuth();
+  const canAccessEmonument = Boolean(
+    user?.is_emonument_privileged || user?.is_dashboard_admin,
+  );
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const surfaceColor = isDarkMode ? "#1E1E1E" : "#FFFFFF";
+  const borderColor = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const textColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const inactiveColor = isDarkMode ? "#9A9A9A" : "#666666";
+  const profilePlaceholderColor = isDarkMode ? "#2A2A2A" : "#E8E8E8";
+  const menuBackdropColor = isDarkMode ? "rgba(0,0,0,0.32)" : "rgba(0,0,0,0.14)";
   const [usernameSet, setUsernameSet] = useState(false);
   const needsUsername = !!user && !user.username && !usernameSet;
   const handleUsernameComplete = useCallback(() => setUsernameSet(true), []);
@@ -149,10 +161,13 @@ export default function TabLayout() {
     }
   };
 
-  const handleSettingsClick = () => {
+  const handleSettingsClick = useCallback(() => {
     setShowProfileMenu(false);
-    router.push("/settings");
-  };
+    // Defer navigation until after the profile menu closes.
+    setTimeout(() => {
+      router.push("/settings");
+    }, 0);
+  }, [router]);
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -163,6 +178,18 @@ export default function TabLayout() {
     return "?";
   };
 
+  const navItems = canAccessEmonument
+    ? [
+        ...BASE_NAV_ITEMS,
+        {
+          name: "emonument",
+          label: "eMonument",
+          icon: "mountain.2.fill" as const,
+          path: "/emonument",
+        },
+      ]
+    : BASE_NAV_ITEMS;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <UsernamePromptModal
@@ -171,15 +198,15 @@ export default function TabLayout() {
       />
 
       {/* Outer shell — full viewport, column direction */}
-      <View style={s.shell}>
+      <View style={[s.shell, { backgroundColor: pageBackground }]}>
         {/* ══════════════════════════════════════════
          *  HEADER ROW — burger + STRATUM (never collapses)
          * ════════════════════════════════════════ */}
         <View style={s.headerRow}>
           <TouchableOpacity style={s.burgerBtn} onPress={toggle} activeOpacity={0.8}>
-            <Burger />
+            <Burger color={textColor} />
           </TouchableOpacity>
-          <Text style={s.logoText} numberOfLines={1}>
+          <Text style={[s.logoText, { color: textColor }]} numberOfLines={1}>
             STRATUM
           </Text>
 
@@ -193,8 +220,15 @@ export default function TabLayout() {
             {user?.photo_url ? (
               <Image source={{ uri: user.photo_url }} style={s.profileImage} />
             ) : (
-              <View style={s.profilePlaceholder}>
-                <Text style={s.profileInitial}>{getUserInitials()}</Text>
+              <View
+                style={[
+                  s.profilePlaceholder,
+                  { backgroundColor: profilePlaceholderColor },
+                ]}
+              >
+                <Text style={[s.profileInitial, { color: textColor }]}>
+                  {getUserInitials()}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -208,22 +242,26 @@ export default function TabLayout() {
             animationType="fade"
             onRequestClose={() => setShowProfileMenu(false)}
           >
-            <TouchableOpacity
-              style={s.menuBackdrop}
-              activeOpacity={1}
-              onPress={() => setShowProfileMenu(false)}
-            >
-              <View style={s.menuCard}>
+            <View style={s.menuBackdrop}>
+              <Pressable
+                style={[s.menuOverlay, { backgroundColor: menuBackdropColor }]}
+                onPress={() => setShowProfileMenu(false)}
+              />
+              <View
+                style={[s.menuCard, { backgroundColor: surfaceColor, borderColor }]}
+              >
                 <TouchableOpacity
                   style={s.menuItem}
                   onPress={handleSettingsClick}
                   activeOpacity={0.7}
                 >
-                  <IconSymbol name="gearshape.fill" size={20} color="#F5F5F5" />
-                  <Text style={s.menuItemText}>Settings</Text>
+                  <IconSymbol name="gearshape.fill" size={20} color={textColor} />
+                  <Text style={[s.menuItemText, { color: textColor }]}>
+                    Settings
+                  </Text>
                 </TouchableOpacity>
 
-                <View style={s.menuDivider} />
+                <View style={[s.menuDivider, { backgroundColor: borderColor }]} />
 
                 <TouchableOpacity
                   style={[s.menuItem, isLoggingOut && { opacity: 0.5 }]}
@@ -241,7 +279,7 @@ export default function TabLayout() {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
           </Modal>
         )}
 
@@ -250,8 +288,13 @@ export default function TabLayout() {
          * ════════════════════════════════════════ */}
         <View style={s.bodyRow}>
           {/* Sidebar nav — also driven by widthAnim */}
-          <Animated.View style={[s.sidebar, { width: widthAnim }]}>
-            {NAV_ITEMS.map(({ name, label, icon, path }) => {
+          <Animated.View
+            style={[
+              s.sidebar,
+              { width: widthAnim, backgroundColor: pageBackground },
+            ]}
+          >
+            {navItems.map(({ name, label, icon, path }) => {
               const active = isActive(path);
               return (
                 <TouchableOpacity
@@ -264,11 +307,15 @@ export default function TabLayout() {
                     <IconSymbol
                       name={icon}
                       size={26}
-                      color={active ? ACTIVE : INACTIVE}
+                      color={active ? ACTIVE : inactiveColor}
                     />
                   </View>
                   <Text
-                    style={[s.navLabel, active && s.navLabelActive]}
+                    style={[
+                      s.navLabel,
+                      { color: inactiveColor },
+                      active && s.navLabelActive,
+                    ]}
                     numberOfLines={1}
                   >
                     {label}
@@ -291,9 +338,12 @@ export default function TabLayout() {
               <Tabs.Screen name="projects" options={{ title: "Projects" }} />
               <Tabs.Screen name="explore" options={{ title: "Unearthed" }} />
               <Tabs.Screen name="messages" options={{ title: "Messages" }} />
-              <Tabs.Screen name="settings" options={{ title: "Settings" }} />
               <Tabs.Screen name="gps" options={{ href: null }} />
               <Tabs.Screen name="dm/[userId]" options={{ href: null }} />
+              <Tabs.Screen
+                name="emonument"
+                options={{ href: canAccessEmonument ? "/emonument" : null }}
+              />
             </Tabs>
           </View>
         </View>
@@ -310,7 +360,6 @@ const s = StyleSheet.create({
   shell: {
     flex: 1,
     flexDirection: "column",
-    backgroundColor: "#111111",
   },
 
   /* ── Header row — always full width, never animates ─── */
@@ -332,7 +381,6 @@ const s = StyleSheet.create({
   logoText: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#F5F5F5",
     letterSpacing: 2,
   },
 
@@ -344,7 +392,6 @@ const s = StyleSheet.create({
 
   /* Sidebar nav — same bg as page for seamless look */
   sidebar: {
-    backgroundColor: PAGE_BG,
     overflow: "hidden",
     paddingTop: 4,
     paddingBottom: 8,
@@ -366,7 +413,6 @@ const s = StyleSheet.create({
   navLabel: {
     fontSize: 15,
     fontWeight: "500",
-    color: INACTIVE,
     flexShrink: 1,
   },
   navLabelActive: {
@@ -406,29 +452,27 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#2A2A2A",
     alignItems: "center",
     justifyContent: "center",
   },
   profileInitial: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#F5F5F5",
   },
 
   /* ── Profile dropdown menu ───────────────── */
   menuBackdrop: {
     flex: 1,
-    backgroundColor: "transparent",
     alignItems: "flex-end",
     paddingTop: ROW_H,
     paddingRight: 16,
   },
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
   menuCard: {
-    backgroundColor: "#1E1E1E",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
     minWidth: 200,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -446,11 +490,9 @@ const s = StyleSheet.create({
   menuItemText: {
     fontSize: 15,
     fontWeight: "500",
-    color: "#F5F5F5",
   },
   menuDivider: {
     height: 1,
-    backgroundColor: "#2A2A2A",
     marginHorizontal: 12,
   },
 });

@@ -164,7 +164,7 @@ export default function ProjectMenuModal({
               ]}
               onPress={onClose}
             >
-              <Text style={[styles.menuItemText, { color: "#9A9A9A" }]}>Close</Text>
+              <Text style={[styles.menuItemText, { color: "#666666" }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -252,13 +252,22 @@ export default function ProjectMenuModal({
                 : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image."}
             </Text>
             <TouchableOpacity
-              style={[styles.confirmButton, !isPublic && { backgroundColor: "#1A2E1A", borderWidth: 1, borderColor: "#44AA44" }]}
+              style={[
+                styles.confirmButton,
+                !isPublic && {
+                  backgroundColor: "#EAF8EA",
+                  borderWidth: 1,
+                  borderColor: "#44AA44",
+                },
+              ]}
               onPress={() => {
                 setShowPubliciseConfirm(false);
                 onTogglePublicise?.();
               }}
             >
-              <Text style={[styles.confirmButtonText, !isPublic && { color: "#44AA44" }]}>
+              <Text
+                style={[styles.confirmButtonText, !isPublic && { color: "#44AA44" }]}
+              >
                 {isPublic ? "Privatise" : "Publicise"}
               </Text>
             </TouchableOpacity>
@@ -278,17 +287,17 @@ export default function ProjectMenuModal({
 const styles = StyleSheet.create({
   menuBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.24)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   menuCard: {
-    backgroundColor: "#1E1E1A",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
     width: "100%",
   },
   menuCardGlass: {
@@ -297,21 +306,21 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   menuItem: { paddingVertical: 12 },
-  menuItemText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
+  menuItemText: { color: "#1A1A1A", fontSize: 16, fontWeight: "600" },
   disabledMenuItem: { opacity: 0.6 },
-  disabledText: { color: "#666" },
+  disabledText: { color: "#8A8A8A" },
   exitButtonText: {
-    color: "#888",
+    color: "#A94442",
   },
   closeButton: {
     borderTopWidth: 1,
-    borderTopColor: "#333",
+    borderTopColor: "#D9D9D9",
     marginTop: 8,
     paddingTop: 16,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: "#333",
+    backgroundColor: "#E5E5E5",
     marginVertical: 8,
   },
   activeNavItem: {
@@ -328,31 +337,31 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   confirmTitle: {
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 8,
   },
   confirmText: {
-    color: "#9A9A9A",
+    color: "#666666",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
   },
   confirmButton: {
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     paddingVertical: 14,
     borderRadius: 10,
     marginBottom: 10,
     alignItems: "center",
   },
   confirmButtonText: {
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     fontSize: 16,
     fontWeight: "600",
   },
   dangerButton: {
-    backgroundColor: "#3A1515",
+    backgroundColor: "#FFF1F1",
     borderWidth: 1,
     borderColor: "#FF4444",
   },
@@ -364,7 +373,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButtonText: {
-    color: "#9A9A9A",
+    color: "#666666",
     fontSize: 16,
   },
 });

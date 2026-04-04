@@ -20,7 +20,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import type { ChatMessage, MentionRef } from "../../services/chatService.types";
+import type { ChatMessage } from "../../services/chatService.types";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface ChatBubbleProps {
   message: ChatMessage;
@@ -48,27 +49,45 @@ export default function ChatBubble({
   onDelete,
   onReply,
 }: ChatBubbleProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const lockIconColor = isOwnMessage
+    ? "rgba(255,255,255,0.65)"
+    : isDarkMode
+      ? "rgba(255,255,255,0.55)"
+      : "rgba(0,0,0,0.4)";
+
   const [showActions, setShowActions] = useState(false);
   const router = useRouter();
 
   /** Render message content with @mention highlights */
   const renderedContent = useMemo(() => {
     if (!message.mentions?.length) {
-      return <Text style={styles.content}>{message.content}</Text>;
+      return (
+        <Text style={[styles.content, isOwnMessage && styles.contentOwn]}>
+          {message.content}
+        </Text>
+      );
     }
     // Build a regex from mention names to highlight them
     const mentionNames = message.mentions.map((m) => `@${m.name}`);
-    const pattern = new RegExp(`(${mentionNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|")})`, "gi");
+    const pattern = new RegExp(
+      `(${mentionNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+      "gi",
+    );
     const parts = message.content.split(pattern);
     return (
-      <Text style={styles.content}>
+      <Text style={[styles.content, isOwnMessage && styles.contentOwn]}>
         {parts.map((part, i) => {
           const isMention = mentionNames.some(
-            (n) => n.toLowerCase() === part.toLowerCase()
+            (n) => n.toLowerCase() === part.toLowerCase(),
           );
           if (isMention) {
             return (
-              <Text key={i} style={styles.mention}>
+              <Text
+                key={i}
+                style={[styles.mention, isOwnMessage && styles.mentionOwn]}
+              >
                 {part}
               </Text>
             );
@@ -77,7 +96,7 @@ export default function ChatBubble({
         })}
       </Text>
     );
-  }, [message.content, message.mentions]);
+  }, [isOwnMessage, message.content, message.mentions, styles]);
 
   const navigateToProfile = () => {
     router.push({
@@ -104,7 +123,10 @@ export default function ChatBubble({
     const buttons: any[] = [];
     if (onReply) buttons.push({ text: "Reply", onPress: () => onReply(message) });
     if (isOwnMessage && onEdit)
-      buttons.push({ text: "Edit", onPress: () => onEdit(message.id, message.content) });
+      buttons.push({
+        text: "Edit",
+        onPress: () => onEdit(message.id, message.content),
+      });
     if (isOwnMessage && onDelete)
       buttons.push({
         text: "Delete",
@@ -118,21 +140,29 @@ export default function ChatBubble({
   const initial = (message.sender_name ?? "?")[0].toUpperCase();
 
   return (
-    <View style={[styles.row, isOwnMessage && styles.rowOwn, isGrouped && styles.rowGrouped]}>
+    <View
+      style={[
+        styles.row,
+        isOwnMessage && styles.rowOwn,
+        isGrouped && styles.rowGrouped,
+      ]}
+    >
       {/* Avatar — tap to view profile (hidden when grouped) */}
-      {!isOwnMessage && (
-        isGrouped ? (
+      {!isOwnMessage &&
+        (isGrouped ? (
           <View style={styles.avatarSpacer} />
         ) : (
           <TouchableOpacity onPress={navigateToProfile} style={styles.avatar}>
             {message.sender_photo ? (
-              <Image source={{ uri: message.sender_photo }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: message.sender_photo }}
+                style={styles.avatarImage}
+              />
             ) : (
               <Text style={styles.avatarText}>{initial}</Text>
             )}
           </TouchableOpacity>
-        )
-      )}
+        ))}
 
       <TouchableOpacity
         onLongPress={handleLongPress}
@@ -142,7 +172,8 @@ export default function ChatBubble({
           styles.bubble,
           isOwnMessage ? styles.bubbleOwn : styles.bubbleOther,
           // Only first message in group gets the tail; grouped = fully rounded
-          isGrouped && (isOwnMessage ? styles.bubbleOwnGrouped : styles.bubbleOtherGrouped),
+          isGrouped &&
+            (isOwnMessage ? styles.bubbleOwnGrouped : styles.bubbleOtherGrouped),
         ]}
       >
         {!isOwnMessage && !isGrouped && (
@@ -153,10 +184,16 @@ export default function ChatBubble({
         {renderedContent}
         <View style={styles.meta}>
           {message._e2ee && (
-            <Ionicons name="lock-closed" size={10} color="rgba(255,255,255,0.5)" />
+            <Ionicons name="lock-closed" size={10} color={lockIconColor} />
           )}
-          <Text style={styles.time}>{formatTime(message.created_at)}</Text>
-          {message.edited_at && <Text style={styles.edited}>(edited)</Text>}
+          <Text style={[styles.time, isOwnMessage && styles.timeOwn]}>
+            {formatTime(message.created_at)}
+          </Text>
+          {message.edited_at && (
+            <Text style={[styles.edited, isOwnMessage && styles.editedOwn]}>
+              (edited)
+            </Text>
+          )}
         </View>
       </TouchableOpacity>
 
@@ -164,20 +201,31 @@ export default function ChatBubble({
       {showActions && Platform.OS === "web" && (
         <View style={styles.actionsRow}>
           {onReply && (
-            <TouchableOpacity onPress={() => { onReply(message); setShowActions(false); }}>
+            <TouchableOpacity
+              onPress={() => {
+                onReply(message);
+                setShowActions(false);
+              }}
+            >
               <Text style={styles.actionBtn}>↩ Reply</Text>
             </TouchableOpacity>
           )}
           {isOwnMessage && onEdit && (
             <TouchableOpacity
-              onPress={() => { onEdit(message.id, message.content); setShowActions(false); }}
+              onPress={() => {
+                onEdit(message.id, message.content);
+                setShowActions(false);
+              }}
             >
               <Text style={styles.actionBtn}>✏️ Edit</Text>
             </TouchableOpacity>
           )}
           {isOwnMessage && onDelete && (
             <TouchableOpacity
-              onPress={() => { onDelete(message.id); setShowActions(false); }}
+              onPress={() => {
+                onDelete(message.id);
+                setShowActions(false);
+              }}
             >
               <Text style={[styles.actionBtn, { color: "#FF3B30" }]}>🗑 Delete</Text>
             </TouchableOpacity>
@@ -188,110 +236,126 @@ export default function ChatBubble({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    marginBottom: 8,
-    paddingHorizontal: 8,
-    alignItems: "flex-end",
-  },
-  rowOwn: {
-    justifyContent: "flex-end",
-  },
-  rowGrouped: {
-    marginBottom: 2,
-  },
-  avatarSpacer: {
-    width: 32, // 24 avatar + 8 marginRight
-  },
-  avatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  avatarText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  avatarImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  bubble: {
-    maxWidth: "75%",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  bubbleOwn: {
-    backgroundColor: "#FF2A2A",
-    borderBottomRightRadius: 2,
-  },
-  bubbleOwnGrouped: {
-    borderBottomRightRadius: 16,
-  },
-  bubbleOther: {
-    backgroundColor: "#1A1A1A",
-    borderBottomLeftRadius: 2,
-  },
-  bubbleOtherGrouped: {
-    borderBottomLeftRadius: 16,
-  },
-  bubbleDeleted: {
-    backgroundColor: "#0E0E0E",
-    opacity: 0.6,
-  },
-  senderName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 2,
-  },
-  content: {
-    fontSize: 15,
-    color: "#F5F5F5",
-    lineHeight: 20,
-  },
-  meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    gap: 6,
-  },
-  time: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
-  },
-  edited: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.4)",
-    fontStyle: "italic",
-  },
-  deletedText: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    fontStyle: "italic",
-  },
-  mention: {
-    color: "#FF2A2A",
-    fontWeight: "600",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginLeft: 8,
-    alignItems: "center",
-  },
-  actionBtn: {
-    fontSize: 13,
-    color: "#FF2A2A",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      marginBottom: 8,
+      paddingHorizontal: 8,
+      alignItems: "flex-end",
+    },
+    rowOwn: {
+      justifyContent: "flex-end",
+    },
+    rowGrouped: {
+      marginBottom: 2,
+    },
+    avatarSpacer: {
+      width: 32, // 24 avatar + 8 marginRight
+    },
+    avatar: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#E8E8E8",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+    },
+    avatarText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    avatarImage: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+    },
+    bubble: {
+      maxWidth: "75%",
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    bubbleOwn: {
+      backgroundColor: "#FF2A2A",
+      borderBottomRightRadius: 2,
+    },
+    bubbleOwnGrouped: {
+      borderBottomRightRadius: 16,
+    },
+    bubbleOther: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomLeftRadius: 2,
+      borderWidth: isDarkMode ? 0 : 1,
+      borderColor: isDarkMode ? "transparent" : "#D9D9D9",
+    },
+    bubbleOtherGrouped: {
+      borderBottomLeftRadius: 16,
+    },
+    bubbleDeleted: {
+      backgroundColor: isDarkMode ? "#0E0E0E" : "#F0F0F0",
+      opacity: 0.6,
+    },
+    senderName: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 2,
+    },
+    content: {
+      fontSize: 15,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      lineHeight: 20,
+    },
+    contentOwn: {
+      color: "#FFFFFF",
+    },
+    meta: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 4,
+      gap: 6,
+    },
+    time: {
+      fontSize: 11,
+      color: isDarkMode ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.45)",
+    },
+    timeOwn: {
+      color: "rgba(255,255,255,0.75)",
+    },
+    edited: {
+      fontSize: 11,
+      color: isDarkMode ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.35)",
+      fontStyle: "italic",
+    },
+    editedOwn: {
+      color: "rgba(255,255,255,0.65)",
+    },
+    deletedText: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontStyle: "italic",
+    },
+    mention: {
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    mentionOwn: {
+      color: "#FFE3E3",
+      textDecorationLine: "underline",
+    },
+    actionsRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginLeft: 8,
+      alignItems: "center",
+    },
+    actionBtn: {
+      fontSize: 13,
+      color: "#FF2A2A",
+      paddingVertical: 4,
+      paddingHorizontal: 6,
+    },
+  });

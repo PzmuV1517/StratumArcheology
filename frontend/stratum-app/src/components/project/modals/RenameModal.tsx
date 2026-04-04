@@ -62,7 +62,7 @@ export default function RenameModal({
       <TextInput
         style={projectModalStyles.input}
         placeholder="New name"
-        placeholderTextColor="#666"
+        placeholderTextColor="#8A8A8A"
         value={name}
         onChangeText={setName}
       />

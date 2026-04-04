@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -40,6 +40,7 @@ import {
   Easing,
 } from "react-native";
 import { showAlert } from "../../utils/alert";
+import { useColorScheme } from "../../hooks/use-color-scheme";
 
 // Types for expo-location (dynamically imported)
 type LocationSubscription = { remove: () => void };
@@ -78,6 +79,9 @@ let cachedHeadingSubscription: { remove: () => void } | null = null;
 let lastHeading = 0;
 
 export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+
   const [locationPermission, setLocationPermission] = useState<boolean | null>(
     cachedLocationPermission,
   );
@@ -590,311 +594,312 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0A0A0A",
-  },
-  loadingText: {
-    marginTop: 16,
-    color: "#9A9A9A",
-    fontSize: 14,
-  },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0A0A0A",
-    padding: 32,
-  },
-  permissionIcon: {
-    fontSize: 64,
-    marginBottom: 24,
-  },
-  permissionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  permissionText: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  permissionButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  permissionButtonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  webContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0A0A0A",
-    padding: 32,
-  },
-  webIcon: {
-    fontSize: 64,
-    marginBottom: 24,
-  },
-  webTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 12,
-  },
-  webSubtitle: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  webHint: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  section: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 16,
-  },
-  compassContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    height: 200,
-    position: "relative",
-  },
-  compass: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "#0E0E0E",
-    borderWidth: 3,
-    borderColor: "#2A2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  compassRose: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-  },
-  compassDirection: {
-    position: "absolute",
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#9A9A9A",
-  },
-  compassN: {
-    top: 12,
-    alignSelf: "center",
-    left: "50%",
-    marginLeft: -6,
-    color: "#FF2A2A",
-  },
-  compassE: {
-    right: 12,
-    top: "50%",
-    marginTop: -10,
-  },
-  compassS: {
-    bottom: 12,
-    alignSelf: "center",
-    left: "50%",
-    marginLeft: -5,
-  },
-  compassW: {
-    left: 12,
-    top: "50%",
-    marginTop: -10,
-  },
-  compassNeedle: {
-    width: 6,
-    height: 120,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  needleRed: {
-    width: 6,
-    height: 60,
-    backgroundColor: "#FF2A2A",
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-  },
-  needleWhite: {
-    width: 6,
-    height: 60,
-    backgroundColor: "#F5F5F5",
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-  },
-  compassCenter: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#2A2A2A",
-    borderWidth: 2,
-    borderColor: "#FF2A2A",
-  },
-  headingInfo: {
-    alignItems: "center",
-    marginTop: 16,
-  },
-  headingValue: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-  },
-  headingDirection: {
-    fontSize: 18,
-    color: "#FF2A2A",
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  watchButton: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  watchButtonActive: {
-    backgroundColor: "#FF2A2A",
-  },
-  watchButtonText: {
-    color: "#9A9A9A",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  watchButtonTextActive: {
-    color: "#F5F5F5",
-  },
-  coordinatesContainer: {
-    marginTop: 8,
-  },
-  coordinateRow: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  coordinateLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  coordinateLabelText: {
-    fontSize: 12,
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  copyFeedback: {
-    fontSize: 12,
-    color: "#4CAF50",
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  coordinateValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginTop: 4,
-  },
-  coordinateDecimal: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 2,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
-  accuracyGood: {
-    color: "#4CAF50",
-  },
-  accuracyModerate: {
-    color: "#FFC107",
-  },
-  accuracyPoor: {
-    color: "#FF9800",
-  },
-  copyAllButton: {
-    backgroundColor: "#2A2A2A",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  copyAllButtonText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  refreshButton: {
-    backgroundColor: "#FF2A2A",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  refreshButtonDisabled: {
-    backgroundColor: "#4A2020",
-    opacity: 0.7,
-  },
-  refreshButtonText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  timestampText: {
-    fontSize: 11,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 12,
-  },
-  acquiringContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    gap: 8,
-  },
-  acquiringText: {
-    fontSize: 13,
-    color: "#FF2A2A",
-    fontWeight: "500",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 100,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+    },
+    loadingText: {
+      marginTop: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+    },
+    permissionContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+      padding: 32,
+    },
+    permissionIcon: {
+      fontSize: 64,
+      marginBottom: 24,
+    },
+    permissionTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    permissionText: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 22,
+    },
+    permissionButton: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 12,
+    },
+    permissionButtonText: {
+      color: "#F5F5F5",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    webContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+      padding: 32,
+    },
+    webIcon: {
+      fontSize: 64,
+      marginBottom: 24,
+    },
+    webTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 12,
+    },
+    webSubtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    webHint: {
+      fontSize: 12,
+      color: isDarkMode ? "#666" : "#7A7A7A",
+      textAlign: "center",
+    },
+    section: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 16,
+    },
+    compassContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      height: 200,
+      position: "relative",
+    },
+    compass: {
+      width: 180,
+      height: 180,
+      borderRadius: 90,
+      backgroundColor: isDarkMode ? "#0E0E0E" : "#F2F2F2",
+      borderWidth: 3,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D0D0D0",
+      justifyContent: "center",
+      alignItems: "center",
+      position: "relative",
+    },
+    compassRose: {
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+    },
+    compassDirection: {
+      position: "absolute",
+      fontSize: 16,
+      fontWeight: "700",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    compassN: {
+      top: 12,
+      alignSelf: "center",
+      left: "50%",
+      marginLeft: -6,
+      color: "#FF2A2A",
+    },
+    compassE: {
+      right: 12,
+      top: "50%",
+      marginTop: -10,
+    },
+    compassS: {
+      bottom: 12,
+      alignSelf: "center",
+      left: "50%",
+      marginLeft: -5,
+    },
+    compassW: {
+      left: 12,
+      top: "50%",
+      marginTop: -10,
+    },
+    compassNeedle: {
+      width: 6,
+      height: 120,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    needleRed: {
+      width: 6,
+      height: 60,
+      backgroundColor: "#FF2A2A",
+      borderTopLeftRadius: 3,
+      borderTopRightRadius: 3,
+    },
+    needleWhite: {
+      width: 6,
+      height: 60,
+      backgroundColor: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      borderBottomLeftRadius: 3,
+      borderBottomRightRadius: 3,
+    },
+    compassCenter: {
+      position: "absolute",
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#FFFFFF",
+      borderWidth: 2,
+      borderColor: "#FF2A2A",
+    },
+    headingInfo: {
+      alignItems: "center",
+      marginTop: 16,
+    },
+    headingValue: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    headingDirection: {
+      fontSize: 18,
+      color: "#FF2A2A",
+      fontWeight: "600",
+      marginTop: 4,
+    },
+    watchButton: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+    },
+    watchButtonActive: {
+      backgroundColor: "#FF2A2A",
+    },
+    watchButtonText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    watchButtonTextActive: {
+      color: "#F5F5F5",
+    },
+    coordinatesContainer: {
+      marginTop: 8,
+    },
+    coordinateRow: {
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    coordinateLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    coordinateLabelText: {
+      fontSize: 12,
+      color: isDarkMode ? "#666" : "#6A6A6A",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    copyFeedback: {
+      fontSize: 12,
+      color: "#4CAF50",
+      marginLeft: 8,
+      fontWeight: "600",
+    },
+    coordinateValue: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginTop: 4,
+    },
+    coordinateDecimal: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 2,
+      fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    },
+    accuracyGood: {
+      color: "#4CAF50",
+    },
+    accuracyModerate: {
+      color: "#FFC107",
+    },
+    accuracyPoor: {
+      color: "#FF9800",
+    },
+    copyAllButton: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 16,
+    },
+    copyAllButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    refreshButton: {
+      backgroundColor: "#FF2A2A",
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 16,
+    },
+    refreshButtonDisabled: {
+      backgroundColor: isDarkMode ? "#4A2020" : "#F1B5B5",
+      opacity: 0.7,
+    },
+    refreshButtonText: {
+      color: "#F5F5F5",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    timestampText: {
+      fontSize: 11,
+      color: isDarkMode ? "#666" : "#7A7A7A",
+      textAlign: "center",
+      marginTop: 12,
+    },
+    acquiringContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 12,
+      gap: 8,
+    },
+    acquiringText: {
+      fontSize: 13,
+      color: "#FF2A2A",
+      fontWeight: "500",
+    },
+  });

@@ -26,7 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -36,8 +36,13 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function PdfPanel({ src }: { src: string | null }) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const mutedIconColor = isDarkMode ? "#444" : "#8A8A8A";
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [_currentPage, _setCurrentPage] = useState(1);
@@ -46,7 +51,7 @@ export default function PdfPanel({ src }: { src: string | null }) {
   if (!src) {
     return (
       <View style={styles.wrapper}>
-        <Ionicons name="document-text-outline" size={48} color="#444" />
+        <Ionicons name="document-text-outline" size={48} color={mutedIconColor} />
         <Text style={styles.info}>No PDF to display</Text>
       </View>
     );
@@ -120,73 +125,74 @@ export default function PdfPanel({ src }: { src: string | null }) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#0E0E0E",
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  webview: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "#0E0E0E",
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(14, 14, 14, 0.9)",
-    zIndex: 1,
-  },
-  loadingText: {
-    color: "#9A9A9A",
-    marginTop: 12,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    color: "#FF4444",
-    textAlign: "center",
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  pageIndicator: {
-    position: "absolute",
-    bottom: 10,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  pageText: {
-    color: "#666",
-    fontSize: 12,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  info: {
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginTop: 12,
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    wrapper: {
+      flex: 1,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      backgroundColor: isDarkMode ? "#0E0E0E" : "#FFFFFF",
+      overflow: "hidden",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    webview: {
+      flex: 1,
+      width: "100%",
+      backgroundColor: isDarkMode ? "#0E0E0E" : "#FFFFFF",
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "rgba(14,14,14,0.9)" : "rgba(255,255,255,0.9)",
+      zIndex: 1,
+    },
+    loadingText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 12,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    errorText: {
+      color: "#FF4444",
+      textAlign: "center",
+      marginTop: 12,
+      marginBottom: 20,
+    },
+    retryButton: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryText: {
+      color: "#FFFFFF",
+      fontWeight: "600",
+    },
+    pageIndicator: {
+      position: "absolute",
+      bottom: 10,
+      left: 0,
+      right: 0,
+      alignItems: "center",
+    },
+    pageText: {
+      color: isDarkMode ? "#666666" : "#555555",
+      fontSize: 12,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.75)",
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    info: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginTop: 12,
+    },
+  });

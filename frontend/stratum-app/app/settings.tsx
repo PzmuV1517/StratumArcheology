@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -55,23 +55,36 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "@/config/config";
 import { ConflictResolutionModal } from "@/components/sync/ConflictResolutionModal";
 import type { FileConflict } from "@/services/offlineQueueService";
-import {
-  offlineFilesStorage,
-  recentProjectsCache,
-} from "@/services/offlineService";
+import { offlineFilesStorage, recentProjectsCache } from "@/services/offlineService";
 import {
   offlineQueue,
   getOfflineStorageStats,
   OfflineStorageStats,
 } from "@/services/offlineQueueService";
 import { OfflineFile } from "@/db/schema";
+import {
+  useThemePreference,
+  type ThemeMode,
+} from "@/contexts/ThemePreferenceContext";
 
 /* ── Social link definitions ────────────────────────────────────── */
 const SOCIAL_LINKS = [
   { key: "link_x", label: "X (Twitter)", placeholder: "https://x.com/handle" },
-  { key: "link_discord", label: "Discord", placeholder: "username#0000 or invite link" },
-  { key: "link_bsky", label: "Bluesky", placeholder: "https://bsky.app/profile/handle" },
-  { key: "link_linkedin", label: "LinkedIn", placeholder: "https://linkedin.com/in/..." },
+  {
+    key: "link_discord",
+    label: "Discord",
+    placeholder: "username#0000 or invite link",
+  },
+  {
+    key: "link_bsky",
+    label: "Bluesky",
+    placeholder: "https://bsky.app/profile/handle",
+  },
+  {
+    key: "link_linkedin",
+    label: "LinkedIn",
+    placeholder: "https://linkedin.com/in/...",
+  },
   { key: "link_website", label: "Website", placeholder: "https://yoursite.com" },
 ] as const;
 
@@ -79,10 +92,42 @@ type SocialKey = (typeof SOCIAL_LINKS)[number]["key"];
 
 /* ── Timezone options ───────────────────────────────────────── */
 const TIMEZONES = [
-  "UTC", "America/New_York", "America/Chicago", "America/Denver",
-  "America/Los_Angeles", "Europe/London", "Europe/Paris", "Europe/Berlin",
-  "Europe/Bucharest", "Europe/Moscow", "Asia/Tokyo", "Asia/Shanghai",
-  "Asia/Kolkata", "Australia/Sydney",
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Bucharest",
+  "Europe/Moscow",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Asia/Kolkata",
+  "Australia/Sydney",
+];
+
+const THEME_OPTIONS: {
+  value: ThemeMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "system",
+    label: "System",
+    description: "Follows your device appearance",
+  },
+  {
+    value: "light",
+    label: "Light",
+    description: "Always use light mode",
+  },
+  {
+    value: "dark",
+    label: "Dark",
+    description: "Always use dark mode",
+  },
 ];
 
 // Storage bar component
@@ -90,15 +135,23 @@ function StorageBar({
   stratumUsed,
   otherUsed,
   totalStorage,
+  isDarkMode,
 }: {
   stratumUsed: number;
   otherUsed: number;
   totalStorage: number;
+  isDarkMode: boolean;
 }) {
+  const storageStyles = useMemo(() => createStorageStyles(isDarkMode), [isDarkMode]);
+
   const free = totalStorage - stratumUsed - otherUsed;
   const stratumPercent = (stratumUsed / totalStorage) * 100;
   const otherPercent = (otherUsed / totalStorage) * 100;
   const freePercent = (free / totalStorage) * 100;
+
+  const otherSegmentColor = isDarkMode ? "#666" : "#8A8A8A";
+  const freeSegmentColor = isDarkMode ? "#2A2A2A" : "#E2E2E2";
+  const freeBorderColor = isDarkMode ? "#444" : "#C8C8C8";
 
   const formatSize = (bytes: number) => {
     if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
@@ -119,13 +172,13 @@ function StorageBar({
         <View
           style={[
             storageStyles.segment,
-            { width: `${otherPercent}%`, backgroundColor: "#666" },
+            { width: `${otherPercent}%`, backgroundColor: otherSegmentColor },
           ]}
         />
         <View
           style={[
             storageStyles.segment,
-            { width: `${freePercent}%`, backgroundColor: "#2A2A2A" },
+            { width: `${freePercent}%`, backgroundColor: freeSegmentColor },
           ]}
         />
       </View>
@@ -137,7 +190,9 @@ function StorageBar({
           </Text>
         </View>
         <View style={storageStyles.legendItem}>
-          <View style={[storageStyles.legendDot, { backgroundColor: "#666" }]} />
+          <View
+            style={[storageStyles.legendDot, { backgroundColor: otherSegmentColor }]}
+          />
           <Text style={storageStyles.legendText}>
             Other ({formatSize(otherUsed)})
           </Text>
@@ -146,7 +201,11 @@ function StorageBar({
           <View
             style={[
               storageStyles.legendDot,
-              { backgroundColor: "#2A2A2A", borderWidth: 1, borderColor: "#444" },
+              {
+                backgroundColor: freeSegmentColor,
+                borderWidth: 1,
+                borderColor: freeBorderColor,
+              },
             ]}
           />
           <Text style={storageStyles.legendText}>Free ({formatSize(free)})</Text>
@@ -156,27 +215,37 @@ function StorageBar({
   );
 }
 
-const storageStyles = StyleSheet.create({
-  container: { marginVertical: 16 },
-  bar: {
-    height: 12,
-    borderRadius: 6,
-    flexDirection: "row",
-    overflow: "hidden",
-    backgroundColor: "#2A2A2A",
-  },
-  segment: { height: "100%" },
-  legend: { marginTop: 12, gap: 8 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
-  legendDot: { width: 12, height: 12, borderRadius: 3 },
-  legendText: { color: "#9A9A9A", fontSize: 12 },
-});
+const createStorageStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: { marginVertical: 16 },
+    bar: {
+      height: 12,
+      borderRadius: 6,
+      flexDirection: "row",
+      overflow: "hidden",
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#E2E2E2",
+    },
+    segment: { height: "100%" },
+    legend: { marginTop: 12, gap: 8 },
+    legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+    legendDot: { width: 12, height: 12, borderRadius: 3 },
+    legendText: { color: isDarkMode ? "#9A9A9A" : "#5F5F5F", fontSize: 12 },
+  });
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
   const { replayOnboarding } = useOnboarding();
+  const { themeMode, setThemeMode, resolvedColorScheme } = useThemePreference();
+  const isDarkMode = resolvedColorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const placeholderTextColor = isDarkMode ? "#9A9A9A" : "#6F6F6F";
+  const subduedTextColor = isDarkMode ? "#9A9A9A" : "#666666";
+  const tertiaryTextColor = isDarkMode ? "#666" : "#7A7A7A";
+  const borderColor = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const dangerBackground = isDarkMode ? "#3A0C0C" : "#FFEAEA";
+  const inverseTextColor = isDarkMode ? "#F5F5F5" : "#FFFFFF";
 
   // Storage stats
   const [stratumUsed, setStratumUsed] = useState(0);
@@ -206,20 +275,26 @@ export default function SettingsScreen() {
   // Profile settings (simple modal fields)
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState(user?.display_name || "");
-  const [newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
+  const [_newPhotoUrl, setNewPhotoUrl] = useState(user?.photo_url || "");
   const [newBio, setNewBio] = useState(user?.bio || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Extended profile edit fields
-  const [selectedBannerImage, setSelectedBannerImage] = useState<string | null>(null);
+  const [selectedBannerImage, setSelectedBannerImage] = useState<string | null>(
+    null,
+  );
   const [editUsername, setEditUsername] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editTimezone, setEditTimezone] = useState("");
   const [editShowProjects, setEditShowProjects] = useState(true);
   const [editSocials, setEditSocials] = useState<Record<SocialKey, string>>({
-    link_x: "", link_discord: "", link_bsky: "", link_linkedin: "", link_website: "",
+    link_x: "",
+    link_discord: "",
+    link_bsky: "",
+    link_linkedin: "",
+    link_website: "",
   });
   const [showTzPicker, setShowTzPicker] = useState(false);
 
@@ -354,28 +429,43 @@ export default function SettingsScreen() {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
         setConnectionStatus("disconnected");
-        showAlert("No Network", "Your device is not connected to a network. Check your Wi-Fi or cellular data.");
+        showAlert(
+          "No Network",
+          "Your device is not connected to a network. Check your Wi-Fi or cellular data.",
+        );
         setCheckingConnection(false);
         return;
       }
       if (!netState.isInternetReachable) {
         setConnectionStatus("disconnected");
-        showAlert("No Internet", "Network connected but internet is not reachable. Try again later.");
+        showAlert(
+          "No Internet",
+          "Network connected but internet is not reachable. Try again later.",
+        );
         setCheckingConnection(false);
         return;
       }
       const response = await api.get("/health");
       if (response.status === 200) {
         setConnectionStatus("connected");
-        const pendingMessage = pendingQueueCount > 0 ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.` : "";
-        showAlert("Connected \u2713", `Successfully connected to STRATUM backend.${pendingMessage}`);
+        const pendingMessage =
+          pendingQueueCount > 0
+            ? `\n\n${pendingQueueCount} pending action(s) waiting to sync.`
+            : "";
+        showAlert(
+          "Connected \u2713",
+          `Successfully connected to STRATUM backend.${pendingMessage}`,
+        );
       } else {
         setConnectionStatus("disconnected");
         showAlert("Connection Failed", "Could not reach STRATUM backend.");
       }
     } catch {
       setConnectionStatus("disconnected");
-      showAlert("Connection Failed", "Could not reach STRATUM backend. The server may be temporarily unavailable.");
+      showAlert(
+        "Connection Failed",
+        "Could not reach STRATUM backend. The server may be temporarily unavailable.",
+      );
     } finally {
       setCheckingConnection(false);
     }
@@ -433,9 +523,13 @@ export default function SettingsScreen() {
   // ─── Image pickers ───────────────────────────────────
   const pickImage = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        showAlert("Permission Required", "Please allow access to your photo library to upload a profile picture.");
+        showAlert(
+          "Permission Required",
+          "Please allow access to your photo library to upload a profile picture.",
+        );
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -460,9 +554,13 @@ export default function SettingsScreen() {
 
   const pickBannerImage = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        showAlert("Permission Required", "Please allow access to your photo library to upload a banner.");
+        showAlert(
+          "Permission Required",
+          "Please allow access to your photo library to upload a banner.",
+        );
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -495,7 +593,11 @@ export default function SettingsScreen() {
         const blob = await response.blob();
         formData.append("file", blob, filename);
       } else {
-        formData.append("file", { uri: selectedImage, type: "image/jpeg", name: filename } as any);
+        formData.append("file", {
+          uri: selectedImage,
+          type: "image/jpeg",
+          name: filename,
+        } as any);
       }
       const response = await api.post("/files/profile-picture", formData);
       return response.data.url;
@@ -526,7 +628,11 @@ export default function SettingsScreen() {
             const blob = await res.blob();
             bannerForm.append("file", blob, bannerFilename);
           } else {
-            bannerForm.append("file", { uri: selectedBannerImage, type: "image/jpeg", name: bannerFilename } as any);
+            bannerForm.append("file", {
+              uri: selectedBannerImage,
+              type: "image/jpeg",
+              name: bannerFilename,
+            } as any);
           }
           await api.post("/files/banner-image", bannerForm);
         } catch {
@@ -565,7 +671,12 @@ export default function SettingsScreen() {
       setSelectedImage(null);
       setSelectedBannerImage(null);
     } catch (error: any) {
-      showAlert("Error", error?.response?.data?.detail || error.message || "Failed to update profile.");
+      showAlert(
+        "Error",
+        error?.response?.data?.detail ||
+          error.message ||
+          "Failed to update profile.",
+      );
     } finally {
       setSavingProfile(false);
     }
@@ -598,7 +709,12 @@ export default function SettingsScreen() {
       "This will show you the STRATUM onboarding walkthrough again.",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Start Tutorial", onPress: () => { replayOnboarding(); } },
+        {
+          text: "Start Tutorial",
+          onPress: () => {
+            replayOnboarding();
+          },
+        },
       ],
     );
   };
@@ -636,7 +752,10 @@ export default function SettingsScreen() {
 
   const saveApiOverride = async () => {
     if (!validateUrl(apiInput)) {
-      showAlert("Invalid URL", "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api");
+      showAlert(
+        "Invalid URL",
+        "Please enter a valid http(s) URL, e.g. http://192.168.1.10:8000/api",
+      );
       return;
     }
     try {
@@ -676,22 +795,29 @@ export default function SettingsScreen() {
     projectId: "project-xyz",
     fileName: "field-notes-sector-B.txt",
     localVersion: {
-      nodeId: "node-abc-123", projectId: "project-xyz",
-      name: "field-notes-sector-B.txt", localVersion: 3, remoteVersion: 4,
+      nodeId: "node-abc-123",
+      projectId: "project-xyz",
+      name: "field-notes-sector-B.txt",
+      localVersion: 3,
+      remoteVersion: 4,
       localUpdatedAt: new Date(Date.now() - 3600000).toISOString(),
       remoteUpdatedAt: new Date(Date.now() - 1800000).toISOString(),
-      hasLocalEdits: true, localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
+      hasLocalEdits: true,
+      localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
     },
     remoteVersion: {
-      version: 4, updatedAt: new Date(Date.now() - 1800000).toISOString(),
+      version: 4,
+      updatedAt: new Date(Date.now() - 1800000).toISOString(),
       updatedBy: "Dr. Petrova",
     },
     localEditPath: "/offline/project-xyz/field-notes-sector-B.txt",
     createdAt: new Date().toISOString(),
     resolved: false,
   };
-  const demoLocalContent = "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.";
-  const demoRemoteContent = "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.\n\nUpdate: Fragment catalogued as SB-L4-0042. Cross-ref with GPS marker B-17.";
+  const demoLocalContent =
+    "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.";
+  const demoRemoteContent =
+    "Excavation notes \u2013 Sector B, Layer 4\n\nFound ceramic fragment at 1.2m depth.\nSoil: dark brown clay with charcoal inclusions.\nPossible hearth feature identified in NE quadrant.\n\nUpdate: Fragment catalogued as SB-L4-0042. Cross-ref with GPS marker B-17.";
 
   // Group offline files by project
   const groupedOfflineFiles = offlineFiles.reduce(
@@ -712,6 +838,14 @@ export default function SettingsScreen() {
     return `${bytes} B`;
   };
 
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace("/");
+  }, [router]);
+
   /* ======================================================
    *  RENDER
    * ==================================================== */
@@ -719,8 +853,13 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>
-        <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
+        <Text style={styles.headerSubtitle}>
+          Manage your account and preferences
+        </Text>
       </View>
 
       <ScrollView
@@ -757,7 +896,12 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push({ pathname: "/profile/[userId]", params: { userId: String(user?.id ?? "") } })}
+            onPress={() =>
+              router.push({
+                pathname: "/profile/[userId]",
+                params: { userId: String(user?.id ?? "") },
+              })
+            }
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.menuItemText}>View My Profile</Text>
@@ -779,6 +923,50 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Appearance Section ────────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Color Mode</Text>
+            <View style={styles.themeModeRow}>
+              {THEME_OPTIONS.map((option) => {
+                const isActive = themeMode === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.themeModeButton,
+                      isActive && styles.themeModeButtonActive,
+                    ]}
+                    onPress={() => {
+                      void setThemeMode(option.value);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.themeModeButtonText,
+                        isActive && styles.themeModeButtonTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.themeModeButtonSubtext,
+                        isActive && styles.themeModeButtonSubtextActive,
+                      ]}
+                    >
+                      {option.description}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
         {/* ── Storage Section - Mobile Only ─────────────── */}
         {Platform.OS !== "web" && (
           <View style={styles.section}>
@@ -793,11 +981,16 @@ export default function SettingsScreen() {
                   stratumUsed={stratumUsed}
                   otherUsed={otherUsed}
                   totalStorage={totalStorage}
+                  isDarkMode={isDarkMode}
                 />
               ) : (
                 <View style={{ paddingVertical: 16, alignItems: "center" }}>
                   <Text
-                    style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center" }}
+                    style={{
+                      color: subduedTextColor,
+                      fontSize: 13,
+                      textAlign: "center",
+                    }}
                   >
                     Storage info unavailable in this environment.{"\n"}
                     Build a development build for accurate data.
@@ -867,7 +1060,7 @@ export default function SettingsScreen() {
                         ? "#4CAF50"
                         : connectionStatus === "disconnected"
                           ? "#FF4444"
-                          : "#666",
+                          : tertiaryTextColor,
                   },
                 ]}
               />
@@ -924,12 +1117,17 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={openDevModal}>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuItemText}>Backend API Base URL</Text>
-              <Text style={styles.menuItemSubtext} numberOfLines={1}>{effectiveApi}</Text>
+              <Text style={styles.menuItemSubtext} numberOfLines={1}>
+                {effectiveApi}
+              </Text>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => setShowConflictTest(true)}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowConflictTest(true)}
+          >
             <View style={{ flex: 1 }}>
               <Text style={styles.menuItemText}>Test Conflict Resolution</Text>
             </View>
@@ -961,7 +1159,7 @@ export default function SettingsScreen() {
               disabled={checkingConnection}
             >
               {checkingConnection ? (
-                <ActivityIndicator color="#F5F5F5" />
+                <ActivityIndicator color={inverseTextColor} />
               ) : (
                 <>
                   <Text style={styles.actionButtonText}>Check Connection</Text>
@@ -1013,7 +1211,7 @@ export default function SettingsScreen() {
                     styles.storageStatRow,
                     {
                       borderTopWidth: 1,
-                      borderTopColor: "#2A2A2A",
+                      borderTopColor: borderColor,
                       paddingTop: 8,
                       marginTop: 8,
                     },
@@ -1081,7 +1279,7 @@ export default function SettingsScreen() {
                   style={[
                     styles.actionButton,
                     {
-                      backgroundColor: "#3A0C0C",
+                      backgroundColor: dangerBackground,
                       borderColor: "#FF4444",
                       borderWidth: 1,
                       marginTop: 16,
@@ -1142,188 +1340,223 @@ export default function SettingsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowProfileModal(false)}
       >
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowProfileModal(false)}>
-              <Text style={styles.backText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity
-              onPress={saveProfile}
-              disabled={savingProfile}
-              style={{ opacity: savingProfile ? 0.5 : 1 }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowProfileModal(false)}>
+                <Text style={styles.backText}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity
+                onPress={saveProfile}
+                disabled={savingProfile}
+                style={{ opacity: savingProfile ? 0.5 : 1 }}
+              >
+                {savingProfile ? (
+                  <ActivityIndicator color="#FF2A2A" size="small" />
+                ) : (
+                  <Text style={styles.backText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
             >
-              {savingProfile ? (
-                <ActivityIndicator color="#FF2A2A" size="small" />
-              ) : (
-                <Text style={[styles.backText, { color: "#FF2A2A" }]}>Save</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
-            {/* Banner */}
-            <TouchableOpacity onPress={pickBannerImage} activeOpacity={0.7}>
-              <View style={styles.bannerEditWrap}>
-                {selectedBannerImage || user?.banner_url ? (
-                  <Image
-                    source={{ uri: selectedBannerImage || user?.banner_url }}
-                    style={styles.bannerEditImage}
-                  />
-                ) : (
-                  <View style={styles.bannerEditPlaceholder}>
-                    <Text style={{ color: "#9A9A9A", fontSize: 13 }}>Tap to set banner</Text>
+              {/* Banner */}
+              <TouchableOpacity onPress={pickBannerImage} activeOpacity={0.7}>
+                <View style={styles.bannerEditWrap}>
+                  {selectedBannerImage || user?.banner_url ? (
+                    <Image
+                      source={{ uri: selectedBannerImage || user?.banner_url }}
+                      style={styles.bannerEditImage}
+                    />
+                  ) : (
+                    <View style={styles.bannerEditPlaceholder}>
+                      <Text style={{ color: subduedTextColor, fontSize: 13 }}>
+                        Tap to set banner
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.bannerEditBadge}>
+                    <Text style={styles.editBadgeText}>Edit</Text>
                   </View>
-                )}
-                <View style={styles.bannerEditBadge}>
-                  <Text style={styles.editBadgeText}>Edit</Text>
                 </View>
+              </TouchableOpacity>
+
+              {/* Profile Picture */}
+              <View style={styles.profileEditSection}>
+                <TouchableOpacity
+                  onPress={pickImage}
+                  style={styles.profileImageEdit}
+                >
+                  {selectedImage || user?.photo_url ? (
+                    <Image
+                      source={{ uri: selectedImage || user?.photo_url }}
+                      style={styles.profileImageLarge}
+                    />
+                  ) : (
+                    <View style={styles.profilePlaceholderLarge}>
+                      <Text style={styles.profilePlaceholderTextLarge}>
+                        {user?.display_name?.charAt(0).toUpperCase() || "U"}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.editBadge}>
+                    <Text style={styles.editBadgeText}>Edit</Text>
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.profileEditHint}>Tap to change photo</Text>
               </View>
-            </TouchableOpacity>
 
-            {/* Profile Picture */}
-            <View style={styles.profileEditSection}>
-              <TouchableOpacity onPress={pickImage} style={styles.profileImageEdit}>
-                {selectedImage || user?.photo_url ? (
-                  <Image
-                    source={{ uri: selectedImage || user?.photo_url }}
-                    style={styles.profileImageLarge}
-                  />
-                ) : (
-                  <View style={styles.profilePlaceholderLarge}>
-                    <Text style={styles.profilePlaceholderTextLarge}>
-                      {user?.display_name?.charAt(0).toUpperCase() || "U"}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.editBadge}>
-                  <Text style={styles.editBadgeText}>Edit</Text>
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.profileEditHint}>Tap to change photo</Text>
-            </View>
-
-            {/* Display Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Display Name</Text>
-              <TextInput
-                style={styles.input}
-                value={newDisplayName}
-                onChangeText={setNewDisplayName}
-                placeholder="Enter display name"
-                placeholderTextColor="#9A9A9A"
-                autoCapitalize="words"
-              />
-            </View>
-
-            {/* Username */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Username</Text>
-              <TextInput
-                style={styles.input}
-                value={editUsername}
-                onChangeText={(t) => setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
-                placeholder="unique_username"
-                placeholderTextColor="#9A9A9A"
-                autoCapitalize="none"
-                maxLength={30}
-              />
-            </View>
-
-            {/* Bio */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Bio</Text>
-              <TextInput
-                style={[styles.input, styles.bioInput]}
-                value={newBio}
-                onChangeText={setNewBio}
-                placeholder="Tell us about yourself..."
-                placeholderTextColor="#9A9A9A"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                maxLength={300}
-              />
-              <Text style={styles.charCount}>{newBio.length}/300</Text>
-            </View>
-
-            {/* Description */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, { height: 100, textAlignVertical: "top" }]}
-                value={editDescription}
-                onChangeText={setEditDescription}
-                placeholder="Tell others about yourself..."
-                placeholderTextColor="#9A9A9A"
-                multiline
-                maxLength={500}
-              />
-            </View>
-
-            {/* Phone */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone</Text>
-              <TextInput
-                style={styles.input}
-                value={editPhone}
-                onChangeText={setEditPhone}
-                placeholder="+1 234 567 8900"
-                placeholderTextColor="#9A9A9A"
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            {/* Timezone */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Timezone</Text>
-              <TouchableOpacity style={styles.input} onPress={() => setShowTzPicker(true)}>
-                <Text style={{ color: editTimezone ? "#F5F5F5" : "#666", fontSize: 16 }}>
-                  {editTimezone || "Select timezone..."}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Social Links */}
-            <Text style={[styles.inputLabel, { marginTop: 8, marginBottom: 4 }]}>Social Links</Text>
-            {SOCIAL_LINKS.map(({ key, label, placeholder }) => (
-              <View key={key} style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { fontSize: 12 }]}>{label}</Text>
+              {/* Display Name */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Display Name</Text>
                 <TextInput
                   style={styles.input}
-                  value={editSocials[key]}
-                  onChangeText={(t) => setEditSocials((p) => ({ ...p, [key]: t }))}
-                  placeholder={placeholder}
-                  placeholderTextColor="#9A9A9A"
-                  autoCapitalize="none"
-                  autoCorrect={false}
+                  value={newDisplayName}
+                  onChangeText={setNewDisplayName}
+                  placeholder="Enter display name"
+                  placeholderTextColor={placeholderTextColor}
+                  autoCapitalize="words"
                 />
               </View>
-            ))}
 
-            {/* Show Projects Toggle */}
-            <View style={[styles.switchRow, { marginVertical: 16 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.inputLabel}>Show Projects on Profile</Text>
-                <Text style={styles.switchHint}>
-                  When enabled, others can see which projects you belong to.
-                </Text>
+              {/* Username */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editUsername}
+                  onChangeText={(t) =>
+                    setEditUsername(t.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))
+                  }
+                  placeholder="unique_username"
+                  placeholderTextColor={placeholderTextColor}
+                  autoCapitalize="none"
+                  maxLength={30}
+                />
               </View>
-              <Switch
-                value={editShowProjects}
-                onValueChange={setEditShowProjects}
-                trackColor={{ false: "#3A3A3C", true: "#FF2A2A80" }}
-                thumbColor={editShowProjects ? "#FF2A2A" : "#9A9A9A"}
-              />
-            </View>
-          </ScrollView>
-        </View>
+
+              {/* Bio */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Bio</Text>
+                <TextInput
+                  style={[styles.input, styles.bioInput]}
+                  value={newBio}
+                  onChangeText={setNewBio}
+                  placeholder="Tell us about yourself..."
+                  placeholderTextColor={placeholderTextColor}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  maxLength={300}
+                />
+                <Text style={styles.charCount}>{newBio.length}/300</Text>
+              </View>
+
+              {/* Description */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.input, { height: 100, textAlignVertical: "top" }]}
+                  value={editDescription}
+                  onChangeText={setEditDescription}
+                  placeholder="Tell others about yourself..."
+                  placeholderTextColor={placeholderTextColor}
+                  multiline
+                  maxLength={500}
+                />
+              </View>
+
+              {/* Phone */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  placeholder="+1 234 567 8900"
+                  placeholderTextColor={placeholderTextColor}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              {/* Timezone */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Timezone</Text>
+                <TouchableOpacity
+                  style={styles.input}
+                  onPress={() => setShowTzPicker(true)}
+                >
+                  <Text
+                    style={{
+                      color: editTimezone
+                        ? isDarkMode
+                          ? "#F5F5F5"
+                          : "#1A1A1A"
+                        : tertiaryTextColor,
+                      fontSize: 16,
+                    }}
+                  >
+                    {editTimezone || "Select timezone..."}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Social Links */}
+              <Text style={[styles.inputLabel, { marginTop: 8, marginBottom: 4 }]}>
+                Social Links
+              </Text>
+              {SOCIAL_LINKS.map(({ key, label, placeholder }) => (
+                <View key={key} style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { fontSize: 12 }]}>{label}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editSocials[key]}
+                    onChangeText={(t) => setEditSocials((p) => ({ ...p, [key]: t }))}
+                    placeholder={placeholder}
+                    placeholderTextColor={placeholderTextColor}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </View>
+              ))}
+
+              {/* Show Projects Toggle */}
+              <View style={[styles.switchRow, { marginVertical: 16 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Show Projects on Profile</Text>
+                  <Text style={styles.switchHint}>
+                    When enabled, others can see which projects you belong to.
+                  </Text>
+                </View>
+                <Switch
+                  value={editShowProjects}
+                  onValueChange={setEditShowProjects}
+                  trackColor={{
+                    false: isDarkMode ? "#3A3A3C" : "#D4D4D8",
+                    true: isDarkMode ? "#FF2A2A80" : "#FF8080",
+                  }}
+                  thumbColor={editShowProjects ? "#FF2A2A" : placeholderTextColor}
+                />
+              </View>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Timezone picker modal ──────────────────────── */}
-      <Modal visible={showTzPicker} transparent animationType="slide" onRequestClose={() => setShowTzPicker(false)}>
+      <Modal
+        visible={showTzPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTzPicker(false)}
+      >
         <View style={styles.tzModalBackdrop}>
           <View style={[styles.tzModalCard, { maxHeight: "60%" }]}>
             <Text style={styles.tzModalTitle}>Select Timezone</Text>
@@ -1332,13 +1565,26 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   key={tz}
                   style={[styles.tzItem, editTimezone === tz && styles.tzItemActive]}
-                  onPress={() => { setEditTimezone(tz); setShowTzPicker(false); }}
+                  onPress={() => {
+                    setEditTimezone(tz);
+                    setShowTzPicker(false);
+                  }}
                 >
-                  <Text style={[styles.tzText, editTimezone === tz && { color: "#FF2A2A" }]}>{tz}</Text>
+                  <Text
+                    style={[
+                      styles.tzText,
+                      editTimezone === tz && { color: "#FF2A2A" },
+                    ]}
+                  >
+                    {tz}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <TouchableOpacity style={[styles.tzCancelBtn, { alignSelf: "flex-end", marginTop: 12 }]} onPress={() => setShowTzPicker(false)}>
+            <TouchableOpacity
+              style={[styles.tzCancelBtn, { alignSelf: "flex-end", marginTop: 12 }]}
+              onPress={() => setShowTzPicker(false)}
+            >
               <Text style={styles.tzCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -1346,35 +1592,70 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* ── Dev API modal ──────────────────────────────── */}
-      <Modal visible={showDevModal} transparent animationType="fade" onRequestClose={() => setShowDevModal(false)}>
+      <Modal
+        visible={showDevModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDevModal(false)}
+      >
         <View style={styles.tzModalBackdrop}>
           <View style={styles.tzModalCard}>
             <Text style={styles.tzModalTitle}>Backend API Base URL</Text>
             <Text style={styles.devModalText}>
-              Enter the full API url including /api.{"\n"}Example: http://192.168.1.100:8000/api
+              Enter the full API url including /api.{"\n"}Example:
+              http://192.168.1.100:8000/api
             </Text>
             <TextInput
               style={styles.devModalInput}
               placeholder="http://host:port/api"
-              placeholderTextColor="#9A9A9A"
+              placeholderTextColor={placeholderTextColor}
               value={apiInput}
               onChangeText={setApiInput}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <View style={styles.devModalActions}>
-              <TouchableOpacity style={styles.devModalBtn} onPress={() => setShowDevModal(false)} disabled={savingApi}>
+              <TouchableOpacity
+                style={styles.devModalBtn}
+                onPress={() => setShowDevModal(false)}
+                disabled={savingApi}
+              >
                 <Text style={styles.devModalBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.devModalBtn, { backgroundColor: "#3A0C0C", borderWidth: 1, borderColor: "#FF4444" }]}
+                style={[
+                  styles.devModalBtn,
+                  {
+                    backgroundColor: dangerBackground,
+                    borderWidth: 1,
+                    borderColor: "#FF4444",
+                  },
+                ]}
                 onPress={resetApiOverride}
                 disabled={savingApi}
               >
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.devModalBtnText, { color: "#FF4444" }]}>Reset</Text>}
+                {savingApi ? (
+                  <ActivityIndicator color={inverseTextColor} />
+                ) : (
+                  <Text style={[styles.devModalBtnText, { color: "#FF4444" }]}>
+                    Reset
+                  </Text>
+                )}
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.devModalBtn, { backgroundColor: "#FF2A2A" }]} onPress={saveApiOverride} disabled={savingApi}>
-                {savingApi ? <ActivityIndicator color="#F5F5F5" /> : <Text style={[styles.devModalBtnText, { color: "#F5F5F5" }]}>Save</Text>}
+              <TouchableOpacity
+                style={[styles.devModalBtn, { backgroundColor: "#FF2A2A" }]}
+                onPress={saveApiOverride}
+                disabled={savingApi}
+              >
+                {savingApi ? (
+                  <ActivityIndicator color={inverseTextColor} />
+                ) : (
+                  <Text
+                    style={[styles.devModalBtnText, { color: inverseTextColor }]}
+                  >
+                    Save
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1385,7 +1666,10 @@ export default function SettingsScreen() {
       <ConflictResolutionModal
         visible={showConflictTest}
         conflict={demoConflict}
-        onResolve={(resolution) => { setShowConflictTest(false); showAlert("Resolution", `You chose: ${resolution}`); }}
+        onResolve={(resolution) => {
+          setShowConflictTest(false);
+          showAlert("Resolution", `You chose: ${resolution}`);
+        }}
         onCancel={() => setShowConflictTest(false)}
         localContent={demoLocalContent}
         remoteContent={demoRemoteContent}
@@ -1394,499 +1678,548 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 8 : 60,
-    paddingBottom: 16,
-    backgroundColor: "#111111",
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  backText: {
-    color: "#FF2A2A",
-    fontSize: 18,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginTop: 6,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  card: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  menuItem: {
-    backgroundColor: "#1A1A1A",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: "#F5F5F5",
-  },
-  menuItemSubtext: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 4,
-  },
-  menuItemArrow: {
-    fontSize: 18,
-    color: "#9A9A9A",
-  },
-  profilePreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  profileImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  profilePlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FF2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profilePlaceholderText: {
-    fontSize: 18,
-    color: "#F5F5F5",
-    fontWeight: "700",
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-  },
-  modalContent: {
-    flex: 1,
-    padding: 16,
-  },
-  actionButton: {
-    backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  actionButtonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  emptyText: {
-    color: "#9A9A9A",
-    fontSize: 14,
-    textAlign: "center",
-    marginVertical: 16,
-  },
-  descriptionText: {
-    color: "#9A9A9A",
-    fontSize: 13,
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  projectGroup: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  projectGroupTitle: {
-    fontSize: 12,
-    color: "#FF2A2A",
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  fileItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  fileName: {
-    fontSize: 14,
-    color: "#F5F5F5",
-  },
-  fileSize: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 2,
-  },
-  removeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#3A0C0C",
-    borderRadius: 8,
-  },
-  removeButtonText: {
-    color: "#FF4444",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  projectItem: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  projectName: {
-    fontSize: 16,
-    color: "#F5F5F5",
-    fontWeight: "600",
-  },
-  projectDate: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 4,
-  },
-  // Profile edit modal
-  profileEditSection: {
-    alignItems: "center",
-    marginVertical: 16,
-  },
-  profileImageEdit: {
-    position: "relative",
-  },
-  profileImageLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  profilePlaceholderLarge: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#FF2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profilePlaceholderTextLarge: {
-    fontSize: 48,
-    color: "#F5F5F5",
-    fontWeight: "700",
-  },
-  editBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#111111",
-  },
-  editBadgeText: {
-    color: "#F5F5F5",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  profileEditHint: {
-    color: "#9A9A9A",
-    fontSize: 13,
-    marginTop: 12,
-  },
-  // Banner edit
-  bannerEditWrap: {
-    width: "100%",
-    height: 120,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#1A1A1A",
-    marginBottom: 8,
-    position: "relative",
-  },
-  bannerEditImage: {
-    width: "100%",
-    height: 120,
-    resizeMode: "cover",
-  },
-  bannerEditPlaceholder: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 12,
-  },
-  bannerEditBadge: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#111111",
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 16,
-    color: "#F5F5F5",
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  bioInput: {
-    height: 100,
-    textAlignVertical: "top",
-  },
-  charCount: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    textAlign: "right",
-    marginTop: 4,
-  },
-  // Switch row
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  switchHint: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 2,
-  },
-  // Connection & Sync styles
-  connectionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  connectionIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  connectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-  },
-  connectionSubtitle: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 2,
-  },
-  refreshButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#FF2A2A",
-  },
-  refreshButtonText: {
-    color: "#FF2A2A",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  syncQueueInfo: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  syncQueueText: {
-    fontSize: 14,
-    color: "#FF9500",
-    fontWeight: "500",
-  },
-  syncQueueHint: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 4,
-  },
-  storageStatRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  storageStatLabel: {
-    fontSize: 14,
-    color: "#9A9A9A",
-  },
-  storageStatValue: {
-    fontSize: 14,
-    color: "#F5F5F5",
-    fontWeight: "500",
-  },
-  pendingQueueCount: {
-    fontSize: 48,
-    fontWeight: "700",
-    color: "#FF9500",
-    textAlign: "center",
-    marginVertical: 8,
-  },
-  pendingQueueDescription: {
-    fontSize: 13,
-    color: "#666",
-    textAlign: "center",
-  },
-  // Timezone picker modal
-  tzModalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  tzModalCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    width: "100%",
-  },
-  tzModalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  tzItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  tzItemActive: {
-    backgroundColor: "#1A0505",
-  },
-  tzText: {
-    fontSize: 15,
-    color: "#F5F5F5",
-  },
-  tzCancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  tzCancelText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  // Dev modal
-  devModalText: {
-    fontSize: 14,
-    color: "#CFCFCF",
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  devModalInput: {
-    backgroundColor: "#0A0A0A",
-    color: "#F5F5F5",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    marginBottom: 16,
-  },
-  devModalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  devModalBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  devModalBtnText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    pageBackground: isDarkMode ? "#111111" : "#F6F6F6",
+    surface: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+    surfaceAlt: isDarkMode ? "#101010" : "#F2F2F2",
+    mutedSurface: isDarkMode ? "#2A2A2A" : "#E8E8E8",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#9A9A9A" : "#666666",
+    textTertiary: isDarkMode ? "#666" : "#7A7A7A",
+    overlay: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+    dangerBackground: isDarkMode ? "#3A0C0C" : "#FFEAEA",
+    activeBackground: isDarkMode ? "#1A0505" : "#FFECEC",
+    modalInputBackground: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+    bodyText: isDarkMode ? "#CFCFCF" : "#555555",
+  };
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === "web" ? 8 : 60,
+      paddingBottom: 16,
+      backgroundColor: palette.pageBackground,
+    },
+    backButton: {
+      padding: 8,
+      marginRight: 8,
+    },
+    backText: {
+      color: "#FF2A2A",
+      fontSize: 18,
+    },
+    headerTitle: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: palette.textPrimary,
+      letterSpacing: 0.5,
+    },
+    headerSubtitle: {
+      fontSize: 15,
+      color: palette.textSecondary,
+      marginTop: 6,
+    },
+    content: {
+      flex: 1,
+      padding: 16,
+    },
+    section: {
+      marginBottom: 32,
+    },
+    sectionTitle: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: palette.textSecondary,
+      marginBottom: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    card: {
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: palette.border,
+      marginBottom: 12,
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: palette.textPrimary,
+      marginBottom: 8,
+    },
+    themeModeRow: {
+      gap: 8,
+    },
+    themeModeButton: {
+      backgroundColor: palette.surfaceAlt,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    themeModeButtonActive: {
+      borderColor: "#FF2A2A",
+      backgroundColor: palette.activeBackground,
+    },
+    themeModeButtonText: {
+      color: palette.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    themeModeButtonTextActive: {
+      color: "#FF2A2A",
+    },
+    themeModeButtonSubtext: {
+      color: palette.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    themeModeButtonSubtextActive: {
+      color: "#FF8F8F",
+    },
+    menuItem: {
+      backgroundColor: palette.surface,
+      padding: 16,
+      borderRadius: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    menuItemText: {
+      fontSize: 16,
+      color: palette.textPrimary,
+    },
+    menuItemSubtext: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 4,
+    },
+    menuItemArrow: {
+      fontSize: 18,
+      color: palette.textSecondary,
+    },
+    profilePreview: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    profileImage: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+    },
+    profilePlaceholder: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: "#FF2A2A",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    profilePlaceholderText: {
+      fontSize: 18,
+      color: "#FFFFFF",
+      fontWeight: "700",
+    },
+    // Modal styles
+    modalContainer: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    modalContent: {
+      flex: 1,
+      padding: 16,
+    },
+    actionButton: {
+      backgroundColor: "#FF2A2A",
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
+    },
+    actionButtonText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    statusDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    emptyText: {
+      color: palette.textSecondary,
+      fontSize: 14,
+      textAlign: "center",
+      marginVertical: 16,
+    },
+    descriptionText: {
+      color: palette.textSecondary,
+      fontSize: 13,
+      marginBottom: 16,
+      lineHeight: 18,
+    },
+    projectGroup: {
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    projectGroupTitle: {
+      fontSize: 12,
+      color: "#FF2A2A",
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    fileItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      borderTopWidth: 1,
+      borderTopColor: palette.border,
+    },
+    fileName: {
+      fontSize: 14,
+      color: palette.textPrimary,
+    },
+    fileSize: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 2,
+    },
+    removeButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: palette.dangerBackground,
+      borderRadius: 8,
+    },
+    removeButtonText: {
+      color: "#FF4444",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    projectItem: {
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: palette.border,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    projectName: {
+      fontSize: 16,
+      color: palette.textPrimary,
+      fontWeight: "600",
+    },
+    projectDate: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 4,
+    },
+    // Profile edit modal
+    profileEditSection: {
+      alignItems: "center",
+      marginVertical: 16,
+    },
+    profileImageEdit: {
+      position: "relative",
+    },
+    profileImageLarge: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+    },
+    profilePlaceholderLarge: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: "#FF2A2A",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    profilePlaceholderTextLarge: {
+      fontSize: 48,
+      color: "#F5F5F5",
+      fontWeight: "700",
+    },
+    editBadge: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      backgroundColor: palette.mutedSurface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: palette.pageBackground,
+    },
+    editBadgeText: {
+      color: palette.textPrimary,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    profileEditHint: {
+      color: palette.textSecondary,
+      fontSize: 13,
+      marginTop: 12,
+    },
+    // Banner edit
+    bannerEditWrap: {
+      width: "100%",
+      height: 120,
+      borderRadius: 12,
+      overflow: "hidden",
+      backgroundColor: palette.surface,
+      marginBottom: 8,
+      position: "relative",
+    },
+    bannerEditImage: {
+      width: "100%",
+      height: 120,
+      resizeMode: "cover",
+    },
+    bannerEditPlaceholder: {
+      flex: 1,
+      backgroundColor: palette.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 12,
+    },
+    bannerEditBadge: {
+      position: "absolute",
+      bottom: 8,
+      right: 8,
+      backgroundColor: palette.mutedSurface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: palette.pageBackground,
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    inputLabel: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: palette.surface,
+      borderRadius: 12,
+      padding: 16,
+      color: palette.textPrimary,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    bioInput: {
+      height: 100,
+      textAlignVertical: "top",
+    },
+    charCount: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      textAlign: "right",
+      marginTop: 4,
+    },
+    // Switch row
+    switchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    switchHint: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 2,
+    },
+    // Connection & Sync styles
+    connectionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    connectionIndicator: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    connectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: palette.textPrimary,
+    },
+    connectionSubtitle: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 2,
+    },
+    refreshButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: palette.surface,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "#FF2A2A",
+    },
+    refreshButtonText: {
+      color: "#FF2A2A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    syncQueueInfo: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: palette.border,
+    },
+    syncQueueText: {
+      fontSize: 14,
+      color: "#FF9500",
+      fontWeight: "500",
+    },
+    syncQueueHint: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 4,
+    },
+    storageStatRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 6,
+    },
+    storageStatLabel: {
+      fontSize: 14,
+      color: palette.textSecondary,
+    },
+    storageStatValue: {
+      fontSize: 14,
+      color: palette.textPrimary,
+      fontWeight: "500",
+    },
+    pendingQueueCount: {
+      fontSize: 48,
+      fontWeight: "700",
+      color: "#FF9500",
+      textAlign: "center",
+      marginVertical: 8,
+    },
+    pendingQueueDescription: {
+      fontSize: 13,
+      color: palette.textTertiary,
+      textAlign: "center",
+    },
+    // Timezone picker modal
+    tzModalBackdrop: {
+      flex: 1,
+      backgroundColor: palette.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    tzModalCard: {
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: palette.border,
+      width: "100%",
+    },
+    tzModalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: palette.textPrimary,
+      marginBottom: 8,
+    },
+    tzItem: {
+      paddingVertical: 14,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    tzItemActive: {
+      backgroundColor: palette.activeBackground,
+    },
+    tzText: {
+      fontSize: 15,
+      color: palette.textPrimary,
+    },
+    tzCancelBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: palette.mutedSurface,
+    },
+    tzCancelText: {
+      color: palette.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    // Dev modal
+    devModalText: {
+      fontSize: 14,
+      color: palette.bodyText,
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    devModalInput: {
+      backgroundColor: palette.modalInputBackground,
+      color: palette.textPrimary,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: palette.border,
+      marginBottom: 16,
+    },
+    devModalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+    },
+    devModalBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: palette.mutedSurface,
+    },
+    devModalBtnText: {
+      color: palette.textPrimary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+  });
+};

@@ -8,12 +8,14 @@
  */
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface TypingIndicatorProps {
   names: string[];
 }
 
 export default function TypingIndicator({ names }: TypingIndicatorProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
   if (names.length === 0) return null;
 
   const label =
@@ -25,7 +27,9 @@ export default function TypingIndicator({ names }: TypingIndicatorProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>{label}</Text>
+      <Text style={[styles.text, { color: isDarkMode ? "#9A9A9A" : "#666666" }]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -37,7 +41,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    color: "#9A9A9A",
     fontStyle: "italic",
   },
 });

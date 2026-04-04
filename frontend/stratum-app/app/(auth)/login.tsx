@@ -49,6 +49,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "@/services/api";
 import { showAlert } from "@/utils/alert";
 import { config } from "@/config/config";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import RAnimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -72,8 +73,10 @@ if (Platform.OS === "web") {
     FaEye = fa.FaEye;
   } catch {}
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const FaultyTerminal = require("@/components/effects/FaultyTerminal.jsx").default;
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    const FaultyTerminal =
+      require("@/components/effects/FaultyTerminal.jsx").default;
+    /* eslint-enable @typescript-eslint/no-require-imports */
     MemoFaultyTerminal = React.memo(FaultyTerminal);
     // @ts-ignore - CSS handled by web bundler
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -82,6 +85,11 @@ if (Platform.OS === "web") {
 }
 
 export default function LoginScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const placeholderTextColor = isDarkMode ? "#4A4A4A" : "#7A7A7A";
+  const modalPlaceholderTextColor = isDarkMode ? "#777777" : "#888888";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
   const fadeDelayMs = useMemo(() => {
     const v = params.fadeDelay ? parseInt(String(params.fadeDelay), 10) : NaN;
@@ -336,7 +344,10 @@ export default function LoginScreen() {
       return;
     }
     if (!/^[a-z0-9_.-]+$/.test(trimmedUsername)) {
-      showAlert("Error", "Username can only contain lowercase letters, numbers, dots, hyphens, and underscores");
+      showAlert(
+        "Error",
+        "Username can only contain lowercase letters, numbers, dots, hyphens, and underscores",
+      );
       return;
     }
     if (regPassword !== regConfirmPassword) {
@@ -348,7 +359,12 @@ export default function LoginScreen() {
       return;
     }
     setRegLoading(true);
-    const result = await register(regEmail, regPassword, regDisplayName, trimmedUsername);
+    const result = await register(
+      regEmail,
+      regPassword,
+      regDisplayName,
+      trimmedUsername,
+    );
     setRegLoading(false);
     if (!result.success) {
       showAlert("Registration Failed", result.error);
@@ -390,7 +406,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Enter your email"
-          placeholderTextColor="#4A4A4A"
+          placeholderTextColor={placeholderTextColor}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -415,7 +431,7 @@ export default function LoginScreen() {
             ref={loginPasswordRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="Enter your password"
-            placeholderTextColor="#4A4A4A"
+            placeholderTextColor={placeholderTextColor}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -463,7 +479,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Enter your full name"
-          placeholderTextColor="#4A4A4A"
+          placeholderTextColor={placeholderTextColor}
           value={regDisplayName}
           onChangeText={setRegDisplayName}
           autoComplete="name"
@@ -479,9 +495,11 @@ export default function LoginScreen() {
           ref={regUsernameRef}
           style={styles.input}
           placeholder="e.g. john.doe (unique, lowercase)"
-          placeholderTextColor="#4A4A4A"
+          placeholderTextColor={placeholderTextColor}
           value={regUsername}
-          onChangeText={(text) => setRegUsername(text.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+          onChangeText={(text) =>
+            setRegUsername(text.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))
+          }
           autoCapitalize="none"
           autoCorrect={false}
           spellCheck={false}
@@ -499,7 +517,7 @@ export default function LoginScreen() {
           ref={regEmailRef}
           style={styles.input}
           placeholder="Enter your email"
-          placeholderTextColor="#4A4A4A"
+          placeholderTextColor={placeholderTextColor}
           value={regEmail}
           onChangeText={setRegEmail}
           autoCapitalize="none"
@@ -520,7 +538,7 @@ export default function LoginScreen() {
             ref={regPasswordRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="At least 6 characters"
-            placeholderTextColor="#4A4A4A"
+            placeholderTextColor={placeholderTextColor}
             value={regPassword}
             onChangeText={setRegPassword}
             secureTextEntry={!showRegPassword}
@@ -546,7 +564,7 @@ export default function LoginScreen() {
             ref={regConfirmRef}
             style={[styles.input, styles.passwordInput]}
             placeholder="Re-enter password"
-            placeholderTextColor="#4A4A4A"
+            placeholderTextColor={placeholderTextColor}
             value={regConfirmPassword}
             onChangeText={setRegConfirmPassword}
             secureTextEntry={!showRegConfirmPassword}
@@ -699,7 +717,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="http://host:port/api"
-              placeholderTextColor="#777"
+              placeholderTextColor={modalPlaceholderTextColor}
               value={apiInput}
               onChangeText={setApiInput}
               autoCapitalize="none"
@@ -754,203 +772,204 @@ export default function LoginScreen() {
   );
 }
 
-const styles: any = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    padding: 24,
-  },
-  logo: {
-    color: "#ffffff",
-    opacity: 0.9,
-    fontSize: 14,
-    letterSpacing: 6,
-    fontWeight: "800",
-    marginBottom: 25,
-    textAlign: "center",
-  },
-  cardStack: {
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-  },
-  card: {
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-  },
-  cardAbsolute: {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  cardContent: {
-    flexGrow: 1,
-  },
-  header: {
-    minHeight: 80,
-    justifyContent: "flex-end",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    letterSpacing: 0.5,
-  },
-  form: {
-    marginBottom: 24,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-    fontWeight: "600",
-  },
-  input: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 16,
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  inputWrapper: {
-    position: "relative",
-    justifyContent: "center",
-  },
-  passwordInput: {
-    paddingRight: 48,
-  },
-  passwordToggle: {
-    position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  button: {
-    backgroundColor: "#FF2A2A",
-    padding: 16,
-    borderRadius: 16,
-    alignItems: "center",
-    marginTop: 8,
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  buttonText: {
-    color: "#F5F5F5",
-    fontSize: 16,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  footerText: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginRight: 8,
-    letterSpacing: 0.5,
-  },
-  linkText: {
-    fontSize: 14,
-    color: "#FF2A2A",
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  devButton: {
-    marginTop: 12,
-    padding: 10,
-    borderRadius: 12,
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  devButtonText: {
-    color: "#F5F5F5",
-    fontWeight: "600",
-  },
-  docsLink: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-  docsLinkText: {
-    color: "#FF2A2A",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    opacity: 0.8,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#333",
-    width: "100%",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 14,
-    color: "#CCCCCC",
-    marginBottom: 12,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  modalButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#2A2A2A",
-  },
-  modalButtonText: {
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
+const createStyles = (isDarkMode: boolean): any =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "transparent",
+      justifyContent: "center",
+      padding: 24,
+    },
+    logo: {
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      opacity: 0.9,
+      fontSize: 14,
+      letterSpacing: 6,
+      fontWeight: "800",
+      marginBottom: 25,
+      textAlign: "center",
+    },
+    cardStack: {
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+    },
+    card: {
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 16,
+      padding: 20,
+      width: "100%",
+    },
+    cardAbsolute: {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      right: 0,
+    },
+    cardContent: {
+      flexGrow: 1,
+    },
+    header: {
+      minHeight: 80,
+      justifyContent: "flex-end",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    title: {
+      fontSize: 48,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+      letterSpacing: 1,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.5,
+    },
+    form: {
+      marginBottom: 24,
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+      fontWeight: "600",
+    },
+    input: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 16,
+      padding: 16,
+      fontSize: 16,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.5,
+    },
+    inputWrapper: {
+      position: "relative",
+      justifyContent: "center",
+    },
+    passwordInput: {
+      paddingRight: 48,
+    },
+    passwordToggle: {
+      position: "absolute",
+      right: 12,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 6,
+    },
+    button: {
+      backgroundColor: "#FF2A2A",
+      padding: 16,
+      borderRadius: 16,
+      alignItems: "center",
+      marginTop: 8,
+      shadowColor: "#FF2A2A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+    buttonText: {
+      color: "#F5F5F5",
+      fontSize: 16,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingTop: 24,
+      borderTopWidth: 1,
+      borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    footerText: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginRight: 8,
+      letterSpacing: 0.5,
+    },
+    linkText: {
+      fontSize: 14,
+      color: "#FF2A2A",
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    devButton: {
+      marginTop: 12,
+      padding: 10,
+      borderRadius: 12,
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    devButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    docsLink: {
+      marginTop: 16,
+      alignItems: "center",
+    },
+    docsLinkText: {
+      color: "#FF2A2A",
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      opacity: 0.8,
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+      width: "100%",
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    modalText: {
+      fontSize: 14,
+      color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
+      marginBottom: 12,
+    },
+    modalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+    },
+    modalButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+    },
+    modalButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+  });

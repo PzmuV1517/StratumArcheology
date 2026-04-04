@@ -27,12 +27,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import { DarkTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
-import { useEffect } from "react";
-import { View, Platform, StyleSheet } from "react-native";
+import { useEffect, type ComponentType, type ReactNode } from "react";
+import { View, Platform, StyleSheet, UIManager } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AuthRedirector from "./AuthRedirector";
@@ -40,28 +40,99 @@ import AuthRedirector from "./AuthRedirector";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import {
+  ThemePreferenceProvider,
+  useThemePreference,
+} from "@/contexts/ThemePreferenceContext";
 import ConnectionStatusIndicator from "@/components/common/OfflineBanner";
 import CustomAlertOverride from "@/components/common/AndroidAlertOverride";
 import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+
+type LiquidAppearanceMode = "system" | "auto" | "light" | "dark";
+
+type LiquidAppearanceProviderProps = {
+  mode?: LiquidAppearanceMode;
+  children?: ReactNode;
+};
+
+let LiquidReactAppearanceProvider: ComponentType<LiquidAppearanceProviderProps> | null =
+  null;
+if (Platform.OS === "ios") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Constants = require("expo-constants").default;
+    const isExpoGo = Constants.executionEnvironment === "storeClient";
+    if (!isExpoGo) {
+      // Guard native module import to avoid runtime crashes on unsupported hosts.
+      const hasNativeViews = !!UIManager.getViewManagerConfig?.("LRNativeToolbar");
+      if (hasNativeViews) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const liquidReact = require("liquid-react");
+        LiquidReactAppearanceProvider =
+          liquidReact.LiquidReactAppearanceProvider ?? null;
+      }
+    }
+  } catch {
+    LiquidReactAppearanceProvider = null;
+  }
+}
+
+function LiquidAppearanceModeProvider({
+  children,
+  mode,
+}: {
+  children: ReactNode;
+  mode: LiquidAppearanceMode;
+}) {
+  if (!LiquidReactAppearanceProvider) {
+    return <>{children}</>;
+  }
+
+  return (
+    <LiquidReactAppearanceProvider mode={mode}>
+      {children}
+    </LiquidReactAppearanceProvider>
+  );
+}
+
+const STRATUM_ACCENT = "#FF2A2A";
+
+const StratumLightTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: STRATUM_ACCENT,
+    background: "#F7F7F7",
+    card: "#FFFFFF",
+    text: "#1A1A1A",
+    border: "#D9D9D9",
+    notification: STRATUM_ACCENT,
+  },
+};
 
 // Custom STRATUM Dark Theme
 const StratumDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#FF2A2A",
+    primary: STRATUM_ACCENT,
     background: "#111111",
     card: "#1A1A1A",
     text: "#F5F5F5",
     border: "#2A2A2A",
-    notification: "#FF2A2A",
+    notification: STRATUM_ACCENT,
   },
 };
 
 function RootLayoutNav() {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+
   // Web-only: register the precaching service worker
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    if (process.env.NODE_ENV !== "production") return;
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker
       .register("/sw.js")
@@ -72,7 +143,10 @@ function RootLayoutNav() {
           const installing = reg.installing;
           if (!installing) return;
           installing.onstatechange = () => {
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+            if (
+              installing.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
               // New content is available – activate immediately
               installing.postMessage({ type: "SKIP_WAITING" });
             }
@@ -88,9 +162,16 @@ function RootLayoutNav() {
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const STYLE_ID = "stratum-autofill-dark";
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
+    const autofillTextColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+    const autofillBackground = isDarkMode ? "#111111" : "#F7F7F7";
+    const existingStyle = document.getElementById(
+      STYLE_ID,
+    ) as HTMLStyleElement | null;
+    const style = existingStyle ?? document.createElement("style");
+    if (!existingStyle) {
+      style.id = STYLE_ID;
+      document.head.appendChild(style);
+    }
     style.textContent = `
       input:-webkit-autofill,
       input:-webkit-autofill:hover,
@@ -101,19 +182,21 @@ function RootLayoutNav() {
       select:-webkit-autofill,
       select:-webkit-autofill:hover,
       select:-webkit-autofill:focus {
-        -webkit-text-fill-color: #F5F5F5 !important;
+        -webkit-text-fill-color: ${autofillTextColor} !important;
         caret-color: #FF2A2A !important;
         transition: background-color 9999s ease-in-out 0s !important;
-        box-shadow: 0 0 0px 1000px #111111 inset !important;
+        box-shadow: 0 0 0px 1000px ${autofillBackground} inset !important;
       }
     `;
-    document.head.appendChild(style);
-  }, []);
+  }, [isDarkMode]);
+
+  const navigationTheme = isDarkMode ? StratumDarkTheme : StratumLightTheme;
+  const statusBarStyle = isDarkMode ? "light" : "dark";
 
   // Use AuthRedirector to handle navigation gating after mount
   return (
     <AuthRedirector>
-      <ThemeProvider value={StratumDarkTheme}>
+      <ThemeProvider value={navigationTheme}>
         <View style={styles.container}>
           <Stack
             screenOptions={{
@@ -125,9 +208,13 @@ function RootLayoutNav() {
           >
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="dm/[userId]" options={{ headerShown: false }} />
             <Stack.Screen
-              name="dm/[userId]"
-              options={{ headerShown: false }}
+              name="settings"
+              options={{
+                headerShown: false,
+                presentation: Platform.OS === "web" ? "card" : "fullScreenModal",
+              }}
             />
             <Stack.Screen
               name="modal"
@@ -136,7 +223,7 @@ function RootLayoutNav() {
           </Stack>
           <ConnectionStatusIndicator />
         </View>
-        <StatusBar style="light" />
+        <StatusBar style={statusBarStyle} />
       </ThemeProvider>
     </AuthRedirector>
   );
@@ -148,19 +235,31 @@ const styles = StyleSheet.create({
   },
 });
 
+function RootAppProviders() {
+  const { themeMode } = useThemePreference();
+
+  return (
+    <LiquidAppearanceModeProvider mode={themeMode}>
+      <AuthProvider>
+        <WebSocketProvider>
+          <OnboardingProvider>
+            <RootLayoutNav />
+            <OnboardingOverlay />
+            <CustomAlertOverride />
+          </OnboardingProvider>
+        </WebSocketProvider>
+      </AuthProvider>
+    </LiquidAppearanceModeProvider>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <WebSocketProvider>
-            <OnboardingProvider>
-              <RootLayoutNav />
-              <OnboardingOverlay />
-              <CustomAlertOverride />
-            </OnboardingProvider>
-          </WebSocketProvider>
-        </AuthProvider>
+        <ThemePreferenceProvider>
+          <RootAppProviders />
+        </ThemePreferenceProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
