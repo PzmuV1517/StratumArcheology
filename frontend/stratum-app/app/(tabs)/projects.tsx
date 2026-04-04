@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -39,20 +39,21 @@ import {
   Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { ProjectListSkeleton } from "../../src/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { ProjectListSkeleton } from "@/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
-import { projectService } from "../../src/services/projectService";
-import { activityService } from "../../src/services/activityService";
-import { ProjectActionModal } from "../../src/components/project/modals/ProjectActionModal";
+import { projectService } from "@/services/projectService";
+import { activityService } from "@/services/activityService";
+import { ProjectActionModal } from "@/components/project/modals/ProjectActionModal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useAuth } from "../../src/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   useOnboarding,
   DEV_ALWAYS_SHOW_ONBOARDING,
-} from "../../src/contexts/OnboardingContext";
-import type { Project } from "../../src/services/projectService.types";
-import type { ProjectActivity } from "../../src/services/activityService.types";
+} from "@/contexts/OnboardingContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import type { Project } from "@/services/projectService.types";
+import type { ProjectActivity } from "@/services/activityService.types";
 
 type MyActivity = ProjectActivity & {
   project_name?: string;
@@ -72,6 +73,29 @@ export default function ProjectsScreen() {
   const { user } = useAuth();
   const { triggerPrompt, showPrompt, showOnboarding } = useOnboarding();
   const hasTriggeredPrompt = useRef(false);
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const surfaceBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+  const borderColor = isDarkMode ? "#2A2A2A" : "#D9D9D9";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const coverGradient = isDarkMode
+    ? [
+        "#1A1A1A",
+        "rgba(26,26,26,0.92)",
+        "rgba(26,26,26,0.5)",
+        "rgba(26,26,26,0.15)",
+        "transparent",
+      ]
+    : [
+        "#FFFFFF",
+        "rgba(255,255,255,0.9)",
+        "rgba(255,255,255,0.55)",
+        "rgba(255,255,255,0.2)",
+        "transparent",
+      ];
 
   // Show onboarding prompt once for new users (or always in dev mode)
   useEffect(() => {
@@ -144,7 +168,10 @@ export default function ProjectsScreen() {
     // During onboarding, tag the demo project card (or first card as fallback)
     return (
       <TouchableOpacity
-        style={styles.projectCard}
+        style={[
+          styles.projectCard,
+          { backgroundColor: surfaceBackground, borderColor },
+        ]}
         onPress={() =>
           router.push({
             pathname: "/project/[id]",
@@ -160,7 +187,7 @@ export default function ProjectsScreen() {
               resizeMode="cover"
             />
             <LinearGradient
-              colors={["#1A1A1A", "rgba(26,26,26,0.92)", "rgba(26,26,26,0.5)", "rgba(26,26,26,0.15)", "transparent"]}
+              colors={coverGradient}
               locations={[0, 0.2, 0.35, 0.45, 0.6]}
               start={{ x: 0, y: 1 }}
               end={{ x: 1, y: 0 }}
@@ -168,13 +195,24 @@ export default function ProjectsScreen() {
             />
           </View>
         )}
-        <View style={styles.cardTextContent}>
-          <Text style={styles.projectName}>{item.name}</Text>
-          <Text style={styles.projectDescription}>
+        <View
+          style={[
+            styles.cardTextContent,
+            {
+              backgroundColor: item.cover_image_url
+                ? "transparent"
+                : surfaceBackground,
+            },
+          ]}
+        >
+          <Text style={[styles.projectName, { color: textPrimary }]}>
+            {item.name}
+          </Text>
+          <Text style={[styles.projectDescription, { color: textSecondary }]}>
             {item.description || "No description"}
           </Text>
           <View style={styles.projectMeta}>
-            <Text style={styles.dateText}>
+            <Text style={[styles.dateText, { color: textSecondary }]}>
               Created: {new Date(item.created_at).toLocaleDateString()}
             </Text>
           </View>
@@ -185,7 +223,10 @@ export default function ProjectsScreen() {
 
   const renderActivity = ({ item }: { item: MyActivity }) => (
     <TouchableOpacity
-      style={styles.activityCard}
+      style={[
+        styles.activityCard,
+        { backgroundColor: surfaceBackground, borderColor },
+      ]}
       onPress={() =>
         router.push({
           pathname: "/project/[id]",
@@ -197,25 +238,29 @@ export default function ProjectsScreen() {
         <Text style={styles.activityProjectName}>
           {item.project_name || "Project"}
         </Text>
-        <Text style={styles.activityDate}>
+        <Text style={[styles.activityDate, { color: textSecondary }]}>
           {activityService.formatTimestamp(item.created_at)}
         </Text>
       </View>
-      <Text style={styles.activityDescription}>
+      <Text style={[styles.activityDescription, { color: textPrimary }]}>
         {activityService.getActivityDescription(item)}
       </Text>
       {item.user_name && (
-        <Text style={styles.activityUser}>by {item.user_name}</Text>
+        <Text style={[styles.activityUser, { color: textSecondary }]}>
+          by {item.user_name}
+        </Text>
       )}
     </TouchableOpacity>
   );
 
   if (showSkeleton) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Projects</Text>
-          <Text style={styles.headerSubtitle}>Manage your excavation projects</Text>
+      <View style={[styles.container, { backgroundColor: pageBackground }]}>
+        <View style={[styles.header, { backgroundColor: pageBackground }]}>
+          <Text style={[styles.headerTitle, { color: textPrimary }]}>Projects</Text>
+          <Text style={[styles.headerSubtitle, { color: textSecondary }]}>
+            Manage your excavation projects
+          </Text>
         </View>
         <ProjectListSkeleton count={4} />
       </View>
@@ -223,21 +268,28 @@ export default function ProjectsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Projects</Text>
-        <Text style={styles.headerSubtitle}>Manage your excavation projects</Text>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
+      <View style={[styles.header, { backgroundColor: pageBackground }]}>
+        <Text style={[styles.headerTitle, { color: textPrimary }]}>Projects</Text>
+        <Text style={[styles.headerSubtitle, { color: textSecondary }]}>
+          Manage your excavation projects
+        </Text>
       </View>
 
       {/* Sub-tab selector */}
-      <View style={styles.subTabContainer}>
+      <View style={[styles.subTabContainer, { backgroundColor: pageBackground }]}>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === "projects" && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            { backgroundColor: surfaceBackground, borderColor },
+            activeSubTab === "projects" && styles.subTabActive,
+          ]}
           onPress={() => handleSubTabChange("projects")}
         >
           <Text
             style={[
               styles.subTabText,
+              { color: textSecondary },
               activeSubTab === "projects" && styles.subTabTextActive,
             ]}
           >
@@ -245,12 +297,17 @@ export default function ProjectsScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === "mystuff" && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            { backgroundColor: surfaceBackground, borderColor },
+            activeSubTab === "mystuff" && styles.subTabActive,
+          ]}
           onPress={() => handleSubTabChange("mystuff")}
         >
           <Text
             style={[
               styles.subTabText,
+              { color: textSecondary },
               activeSubTab === "mystuff" && styles.subTabTextActive,
             ]}
           >
@@ -263,8 +320,10 @@ export default function ProjectsScreen() {
         <>
           {projects.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No projects yet</Text>
-              <Text style={styles.emptySubtext}>
+              <Text style={[styles.emptyText, { color: textPrimary }]}>
+                No projects yet
+              </Text>
+              <Text style={[styles.emptySubtext, { color: textSecondary }]}>
                 Create your first project to get started
               </Text>
             </View>
@@ -286,14 +345,25 @@ export default function ProjectsScreen() {
         >
           {/* My Folder quick access - shows folders from all projects */}
           <View style={styles.myFolderSection}>
-            <Text style={styles.myFolderSectionTitle}>My Folders</Text>
-            <Text style={styles.myFolderSectionSubtitle}>
+            <Text style={[styles.myFolderSectionTitle, { color: textPrimary }]}>
+              My Folders
+            </Text>
+            <Text style={[styles.myFolderSectionSubtitle, { color: textSecondary }]}>
               Access your private folders from each project
             </Text>
             {projects.length === 0 ? (
-              <View style={styles.emptyTimeline}>
-                <Text style={styles.emptyTimelineText}>No projects yet</Text>
-                <Text style={styles.emptyTimelineSubtext}>
+              <View
+                style={[
+                  styles.emptyTimeline,
+                  { backgroundColor: surfaceBackground, borderColor },
+                ]}
+              >
+                <Text style={[styles.emptyTimelineText, { color: textPrimary }]}>
+                  No projects yet
+                </Text>
+                <Text
+                  style={[styles.emptyTimelineSubtext, { color: textSecondary }]}
+                >
                   Join or create a project to get your personal folder
                 </Text>
               </View>
@@ -301,7 +371,10 @@ export default function ProjectsScreen() {
               projects.map((project) => (
                 <TouchableOpacity
                   key={project.id}
-                  style={styles.myFolderButton}
+                  style={[
+                    styles.myFolderButton,
+                    { backgroundColor: surfaceBackground, borderColor },
+                  ]}
                   onPress={() =>
                     router.push({
                       pathname: "/project/[id]",
@@ -311,8 +384,12 @@ export default function ProjectsScreen() {
                 >
                   <Text style={styles.myFolderIcon}>📁</Text>
                   <View style={styles.myFolderInfo}>
-                    <Text style={styles.myFolderTitle}>{project.name}</Text>
-                    <Text style={styles.myFolderSubtitle}>
+                    <Text style={[styles.myFolderTitle, { color: textPrimary }]}>
+                      {project.name}
+                    </Text>
+                    <Text
+                      style={[styles.myFolderSubtitle, { color: textSecondary }]}
+                    >
                       Open your private folder
                     </Text>
                   </View>
@@ -324,11 +401,22 @@ export default function ProjectsScreen() {
 
           {/* Activity timeline */}
           <View style={styles.timelineSection}>
-            <Text style={styles.timelineSectionTitle}>Recent Activity</Text>
+            <Text style={[styles.timelineSectionTitle, { color: textPrimary }]}>
+              Recent Activity
+            </Text>
             {activities.length === 0 ? (
-              <View style={styles.emptyTimeline}>
-                <Text style={styles.emptyTimelineText}>No recent activity</Text>
-                <Text style={styles.emptyTimelineSubtext}>
+              <View
+                style={[
+                  styles.emptyTimeline,
+                  { backgroundColor: surfaceBackground, borderColor },
+                ]}
+              >
+                <Text style={[styles.emptyTimelineText, { color: textPrimary }]}>
+                  No recent activity
+                </Text>
+                <Text
+                  style={[styles.emptyTimelineSubtext, { color: textSecondary }]}
+                >
                   Your actions across all projects will appear here
                 </Text>
               </View>
@@ -345,7 +433,7 @@ export default function ProjectsScreen() {
       )}
 
       <TouchableOpacity style={styles.fab} onPress={() => setShowActionModal(true)}>
-        <IconSymbol name="plus" size={28} color="#F5F5F5" />
+        <IconSymbol name="plus" size={28} color={textPrimary} />
       </TouchableOpacity>
 
       <ProjectActionModal
@@ -358,274 +446,282 @@ export default function ProjectsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: Platform.OS === "web" ? 8 : 60,
-    paddingBottom: 16,
-    backgroundColor: "#111111",
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    marginTop: 6,
-  },
-  // Sub-tab styles
-  subTabContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-    backgroundColor: "#111111",
-  },
-  subTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  subTabActive: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  subTabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    letterSpacing: 0.3,
-  },
-  subTabTextActive: {
-    color: "#F5F5F5",
-  },
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingTop: Platform.OS === "web" ? 8 : 60,
+      paddingBottom: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    headerTitle: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.5,
+    },
+    headerSubtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 6,
+    },
+    // Sub-tab styles
+    subTabContainer: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 8,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    subTab: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    subTabActive: {
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+    },
+    subTabText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.3,
+    },
+    subTabTextActive: {
+      color: "#F5F5F5",
+    },
 
-  listContainer: { padding: 16 },
-  projectCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 8,
-    overflow: "hidden",
-  },
-  coverImageWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end",
-    alignItems: "flex-end",
-  },
-  coverImage: {
-    width: "100%",
-    height: "100%",
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
-  cardTextContent: {
-    padding: 16,
-  },
-  projectName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  projectDescription: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  projectMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingTop: 8,
-  },
-  roleText: {
-    fontSize: 12,
-    color: "#FF2A2A",
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  dateText: { fontSize: 12, color: "#9A9A9A", letterSpacing: 0.5 },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: "#F5F5F5",
-    marginBottom: 10,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-    letterSpacing: 0.5,
-  },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: Platform.OS === "android" ? 110 : 100,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#FF2A2A",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#FF2A2A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-    zIndex: 999,
-  },
+    listContainer: { padding: 16 },
+    projectCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDarkMode ? 0.4 : 0.14,
+      shadowRadius: 20,
+      elevation: 8,
+      overflow: "hidden",
+    },
+    coverImageWrapper: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: "flex-end",
+      alignItems: "flex-end",
+    },
+    coverImage: {
+      width: "100%",
+      height: "100%",
+      position: "absolute",
+      right: 0,
+      top: 0,
+    },
+    cardTextContent: {
+      padding: 16,
+    },
+    projectName: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    projectDescription: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 12,
+      lineHeight: 20,
+    },
+    projectMeta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingTop: 8,
+    },
+    roleText: {
+      fontSize: 12,
+      color: "#FF2A2A",
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    dateText: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.5,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyText: {
+      fontSize: 18,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 10,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      letterSpacing: 0.5,
+    },
+    fab: {
+      position: "absolute",
+      right: 24,
+      bottom: Platform.OS === "android" ? 110 : 100,
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: "#FF2A2A",
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#FF2A2A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 12,
+      zIndex: 999,
+    },
 
-  // My Stuff styles
-  myStuffContainer: {
-    flex: 1,
-  },
-  myStuffContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  myFolderButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  myFolderIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  myFolderInfo: {
-    flex: 1,
-  },
-  myFolderTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  myFolderSubtitle: {
-    fontSize: 13,
-    color: "#9A9A9A",
-    letterSpacing: 0.3,
-  },
-  myFolderArrow: {
-    fontSize: 18,
-    color: "#FF2A2A",
-    fontWeight: "600",
-  },
-  myFolderSection: {
-    marginBottom: 24,
-  },
-  myFolderSectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  myFolderSectionSubtitle: {
-    fontSize: 13,
-    color: "#9A9A9A",
-    marginBottom: 16,
-    letterSpacing: 0.3,
-  },
-  timelineSection: {
-    marginBottom: 16,
-  },
-  timelineSectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 16,
-    letterSpacing: 0.5,
-  },
-  emptyTimeline: {
-    alignItems: "center",
-    paddingVertical: 32,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  emptyTimelineText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  emptyTimelineSubtext: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-  },
-  activityCard: {
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  activityHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  activityProjectName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FF2A2A",
-    letterSpacing: 0.3,
-  },
-  activityDate: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    letterSpacing: 0.3,
-  },
-  activityDescription: {
-    fontSize: 15,
-    color: "#F5F5F5",
-    lineHeight: 22,
-    letterSpacing: 0.3,
-  },
-  activityUser: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 8,
-    letterSpacing: 0.3,
-  },
-});
+    // My Stuff styles
+    myStuffContainer: {
+      flex: 1,
+    },
+    myStuffContent: {
+      padding: 16,
+      paddingBottom: 100,
+    },
+    myFolderButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    myFolderIcon: {
+      fontSize: 24,
+      marginRight: 16,
+    },
+    myFolderInfo: {
+      flex: 1,
+    },
+    myFolderTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 2,
+      letterSpacing: 0.5,
+    },
+    myFolderSubtitle: {
+      fontSize: 13,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.3,
+    },
+    myFolderArrow: {
+      fontSize: 18,
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    myFolderSection: {
+      marginBottom: 24,
+    },
+    myFolderSectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 4,
+      letterSpacing: 0.5,
+    },
+    myFolderSectionSubtitle: {
+      fontSize: 13,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 16,
+      letterSpacing: 0.3,
+    },
+    timelineSection: {
+      marginBottom: 16,
+    },
+    timelineSectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 16,
+      letterSpacing: 0.5,
+    },
+    emptyTimeline: {
+      alignItems: "center",
+      paddingVertical: 32,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    emptyTimelineText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptyTimelineSubtext: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+    },
+    activityCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    activityHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    activityProjectName: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: "#FF2A2A",
+      letterSpacing: 0.3,
+    },
+    activityDate: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.3,
+    },
+    activityDescription: {
+      fontSize: 15,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      lineHeight: 22,
+      letterSpacing: 0.3,
+    },
+    activityUser: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 8,
+      letterSpacing: 0.3,
+    },
+  });

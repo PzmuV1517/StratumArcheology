@@ -7,7 +7,7 @@
  * The user drags the image behind a transparent crop window, then taps
  * "Crop" to produce a cropped result via expo-image-manipulator.
  */
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 import * as ImageManipulator from "expo-image-manipulator";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const ASPECT = 16 / 5;
 
@@ -40,6 +41,8 @@ export default function ImageCropModal({
   onCrop,
   onCancel,
 }: Props) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const [imageSize, setImageSize] = useState({ w: 0, h: 0 });
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const [cropping, setCropping] = useState(false);
@@ -217,19 +220,19 @@ export default function ImageCropModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={s.backdrop}>
-        <View style={s.container}>
-          <Text style={s.title}>Crop Image</Text>
-          <Text style={s.subtitle}>Drag to reposition</Text>
+      <View style={styles.backdrop}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Crop Image</Text>
+          <Text style={styles.subtitle}>Drag to reposition</Text>
 
           {/* Crop area */}
-          <View style={s.cropOuter} onLayout={onContainerLayout}>
+          <View style={styles.cropOuter} onLayout={onContainerLayout}>
             {cropW > 0 && cropH > 0 && (
-              <View style={[s.cropBox, { width: cropW, height: cropH }]}>
+              <View style={[styles.cropBox, { width: cropW, height: cropH }]}>
                 <View
                   {...panResponder.panHandlers}
                   style={[
-                    s.imageWrapper,
+                    styles.imageWrapper,
                     {
                       width: displayW,
                       height: displayH,
@@ -248,19 +251,19 @@ export default function ImageCropModal({
           </View>
 
           {/* Buttons */}
-          <View style={s.buttons}>
-            <TouchableOpacity style={s.cancelBtn} onPress={onCancel}>
-              <Text style={s.cancelText}>Cancel</Text>
+          <View style={styles.buttons}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={s.cropBtn}
+              style={styles.cropBtn}
               onPress={handleCrop}
               disabled={cropping}
             >
               {cropping ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={s.cropText}>Crop</Text>
+                <Text style={styles.cropText}>Crop</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -270,78 +273,82 @@ export default function ImageCropModal({
   );
 }
 
-const s = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  container: {
-    width: "90%",
-    maxWidth: 600,
-    backgroundColor: "#1E1E1E",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-  },
-  title: {
-    color: "#F5F5F5",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: "#999",
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  cropOuter: {
-    width: "100%",
-    aspectRatio: ASPECT,
-    backgroundColor: "#000",
-    borderRadius: 8,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cropBox: {
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,42,42,0.6)",
-    borderRadius: 4,
-  },
-  imageWrapper: {
-    position: "absolute",
-  },
-  buttons: {
-    flexDirection: "row",
-    marginTop: 16,
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#444",
-    alignItems: "center",
-  },
-  cancelText: {
-    color: "#CCC",
-    fontWeight: "600",
-  },
-  cropBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#FF2A2A",
-    alignItems: "center",
-  },
-  cropText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.35)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    container: {
+      width: "90%",
+      maxWidth: 600,
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    title: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    subtitle: {
+      color: isDarkMode ? "#999999" : "#666666",
+      fontSize: 13,
+      marginBottom: 16,
+    },
+    cropOuter: {
+      width: "100%",
+      aspectRatio: ASPECT,
+      backgroundColor: isDarkMode ? "#000000" : "#F1F1F1",
+      borderRadius: 8,
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cropBox: {
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "rgba(255,42,42,0.6)",
+      borderRadius: 4,
+    },
+    imageWrapper: {
+      position: "absolute",
+    },
+    buttons: {
+      flexDirection: "row",
+      marginTop: 16,
+      gap: 12,
+    },
+    cancelBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#444444" : "#CFCFCF",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "transparent" : "#F7F7F7",
+    },
+    cancelText: {
+      color: isDarkMode ? "#CCCCCC" : "#1A1A1A",
+      fontWeight: "600",
+    },
+    cropBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      backgroundColor: "#FF2A2A",
+      alignItems: "center",
+    },
+    cropText: {
+      color: "#FFFFFF",
+      fontWeight: "700",
+    },
+  });

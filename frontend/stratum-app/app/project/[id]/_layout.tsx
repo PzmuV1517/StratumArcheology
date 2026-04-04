@@ -40,25 +40,26 @@ import {
   UIManager,
   View,
   StyleSheet,
+  useColorScheme,
 } from "react-native";
 import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import styles from "@/src/components/project/ProjectDetailStyles";
-import ProjectOverlays from "@/src/components/project/ProjectOverlays";
-import { projectService } from "@/src/services/projectService";
+import { useProjectDetailStyles } from "@/components/project/ProjectDetailStyles";
+import ProjectOverlays from "@/components/project/ProjectOverlays";
+import { projectService } from "@/services/projectService";
 import {
   ProjectDetailProvider,
   useProjectDetail,
-} from "@/src/contexts/ProjectDetailContext";
+} from "@/contexts/ProjectDetailContext";
 import {
   ProjectGalleryScreen,
   ProjectMapScreen,
   ProjectHistoryScreen,
   ProjectToolsScreen,
   ProjectWheelerScreen,
-} from "@/src/components/project/ProjectTabsScreens";
+} from "@/components/project/ProjectTabsScreens";
 
 // liquid-react native components — loaded at module scope.
 // Only available in dev client / production builds (not Expo Go).
@@ -91,6 +92,10 @@ if (Platform.OS === "ios") {
 type FullScreenModal = "gallery" | "gps" | "history" | "tools" | "wheeler" | null;
 
 function ProjectStack() {
+  const styles = useProjectDetailStyles();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
+  const modalStyles = useMemo(() => createModalStyles(isDarkMode), [isDarkMode]);
   const {
     loading,
     project,
@@ -152,6 +157,10 @@ function ProjectStack() {
   const dispatchMenuAction = useCallback(
     (id: string) => {
       switch (id) {
+        case "settings":
+          // Native toolbar menus can emit parent item ids; route to modal settings menu.
+          setShowMenu(true);
+          break;
         case "edit":
           setShowMenu(true);
           break;
@@ -299,6 +308,24 @@ function ProjectStack() {
     );
   }, [moreMenuItems, dispatchMenuAction]);
 
+  const ModalHeader = ({ title, onBack }: { title: string; onBack: () => void }) => {
+    return (
+      <View style={modalStyles.header}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={modalStyles.backButton}
+          activeOpacity={0.6}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <IconSymbol name="chevron.backward" size={20} color="#FF2A2A" />
+          <Text style={modalStyles.backText}>Back</Text>
+        </TouchableOpacity>
+        <Text style={modalStyles.headerTitle}>{title}</Text>
+        <View style={modalStyles.headerSpacer} />
+      </View>
+    );
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <Stack
@@ -309,7 +336,7 @@ function ProjectStack() {
           headerStyle:
             Platform.OS === "ios"
               ? { backgroundColor: "transparent" }
-              : { backgroundColor: "#111111" },
+              : { backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
           headerShadowVisible: Platform.OS !== "ios",
           headerTintColor: "#FF2A2A",
         }}
@@ -319,7 +346,7 @@ function ProjectStack() {
           options={{
             headerTitle: loading ? "Loading..." : project ? "" : "Project Not Found",
             headerTitleStyle: {
-              color: project ? "transparent" : "#F5F5F5",
+              color: project ? "transparent" : isDarkMode ? "#F5F5F5" : "#1A1A1A",
               fontSize: 18,
               fontWeight: "600",
             },
@@ -522,59 +549,55 @@ function ProjectStack() {
   );
 }
 
-function ModalHeader({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View style={modalStyles.header}>
-      <TouchableOpacity
-        onPress={onBack}
-        style={modalStyles.backButton}
-        activeOpacity={0.6}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <IconSymbol name="chevron.backward" size={20} color="#FF2A2A" />
-        <Text style={modalStyles.backText}>Back</Text>
-      </TouchableOpacity>
-      <Text style={modalStyles.headerTitle}>{title}</Text>
-      <View style={modalStyles.headerSpacer} />
-    </View>
-  );
-}
-
-const modalStyles = StyleSheet.create({
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: "#111111",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: "#111111",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#333333",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    minWidth: 70,
-  },
-  backText: {
-    color: "#FF2A2A",
-    fontSize: 17,
-    marginLeft: 4,
-  },
-  headerTitle: {
-    color: "#F5F5F5",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  headerSpacer: {
-    minWidth: 70,
+  iconButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
 });
+
+const createModalStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 12,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 70,
+    },
+    backText: {
+      color: "#FF2A2A",
+      fontSize: 17,
+      marginLeft: 4,
+    },
+    headerTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 17,
+      fontWeight: "600",
+    },
+    headerSpacer: {
+      minWidth: 70,
+    },
+  });
 
 export default function ProjectLayout() {
   return (

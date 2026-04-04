@@ -7,7 +7,7 @@
  *
  * Copyright (c) 2026 Andrei Banu & Levin Mircea
  */
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   TextInput,
@@ -25,6 +25,7 @@ import type {
   Mentionable,
 } from "../../services/chatService.types";
 import { chatService } from "../../services/chatService";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface MessageInputProps {
   onSend: (content: string, replyToId?: string, mentions?: MentionRef[]) => void;
@@ -51,6 +52,10 @@ export default function MessageInput({
   projectId,
   disabled = false,
 }: MessageInputProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const placeholderTextColor = isDarkMode ? "#9A9A9A" : "#6F6F6F";
+
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
   /** @mention autocomplete state */
@@ -225,7 +230,7 @@ export default function MessageInput({
           onChangeText={handleChange}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          placeholderTextColor="#9A9A9A"
+          placeholderTextColor={placeholderTextColor}
           multiline
           maxLength={4000}
           selectionColor="#FF2A2A"
@@ -254,100 +259,101 @@ export default function MessageInput({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: "#111111",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  rowDisabled: {
-    opacity: 0.4,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === "ios" ? 10 : 8,
-    paddingBottom: Platform.OS === "ios" ? 10 : 8,
-    fontSize: 15,
-    color: "#F5F5F5",
-    minHeight: 40,
-    maxHeight: 120,
-    ...(Platform.OS === "web" ? { outlineStyle: "none" } : {}),
-  } as any,
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#2A2A2A",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 3,
-  },
-  sendBtnActive: {
-    backgroundColor: "#FF2A2A",
-  },
-  sendText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#9A9A9A",
-  },
-  sendTextActive: {
-    color: "#F5F5F5",
-  },
-  /* Reply banner */
-  replyBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#1A1A1A",
-    gap: 8,
-  },
-  replyBar: {
-    width: 3,
-    height: "100%",
-    backgroundColor: "#FF2A2A",
-    borderRadius: 2,
-  } as any,
-  replyName: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#FF2A2A",
-  },
-  replyText: {
-    fontSize: 13,
-    color: "#9A9A9A",
-  },
-  replyCancel: {
-    fontSize: 16,
-    color: "#9A9A9A",
-    paddingHorizontal: 4,
-  },
-  /* @mention popup */
-  mentionPopup: {
-    backgroundColor: "#1A1A1A",
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-    borderRadius: 12,
-    marginHorizontal: 8,
-    marginBottom: 4,
-    overflow: "hidden",
-  },
-  mentionItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#2A2A2A",
-  },
-  mentionText: {
-    fontSize: 14,
-    color: "#F5F5F5",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    wrapper: {
+      backgroundColor: isDarkMode ? "#111111" : "#F6F6F6",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      gap: 8,
+    },
+    rowDisabled: {
+      opacity: 0.4,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingTop: Platform.OS === "ios" ? 10 : 8,
+      paddingBottom: Platform.OS === "ios" ? 10 : 8,
+      fontSize: 15,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      minHeight: 40,
+      maxHeight: 120,
+      ...(Platform.OS === "web" ? { outlineStyle: "none" } : {}),
+    } as any,
+    sendBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#E8E8E8",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 3,
+    },
+    sendBtnActive: {
+      backgroundColor: "#FF2A2A",
+    },
+    sendText: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#9A9A9A" : "#6F6F6F",
+    },
+    sendTextActive: {
+      color: "#FFFFFF",
+    },
+    /* Reply banner */
+    replyBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      gap: 8,
+    },
+    replyBar: {
+      width: 3,
+      height: "100%",
+      backgroundColor: "#FF2A2A",
+      borderRadius: 2,
+    } as any,
+    replyName: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: "#FF2A2A",
+    },
+    replyText: {
+      fontSize: 13,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    replyCancel: {
+      fontSize: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      paddingHorizontal: 4,
+    },
+    /* @mention popup */
+    mentionPopup: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderTopWidth: 1,
+      borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 12,
+      marginHorizontal: 8,
+      marginBottom: 4,
+      overflow: "hidden",
+    },
+    mentionItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    mentionText: {
+      fontSize: 14,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+  });

@@ -38,6 +38,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useActivity } from "../../hooks";
 import { activityService, ProjectActivity, authService } from "../../services";
 import { Loading, Card } from "../common";
@@ -60,6 +61,9 @@ export default function Timeline({
   maxHeight,
   onActivityPress,
 }: TimelineProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const searchPlaceholderColor = isDarkMode ? "#666666" : "#7A7A7A";
   const [mode, setMode] = useState<TimelineMode>("project");
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
@@ -332,7 +336,7 @@ export default function Timeline({
         <TextInput
           style={styles.searchInput}
           placeholder="Search activity..."
-          placeholderTextColor="#666"
+          placeholderTextColor={searchPlaceholderColor}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -409,239 +413,251 @@ export default function Timeline({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0C0C0E",
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  toggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#1C1C1E",
-    borderRadius: 8,
-    padding: 3,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    height: 36,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 30,
-  },
-  toggleButtonActive: {
-    backgroundColor: "#FF2A2A",
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#8E8E93",
-  },
-  toggleTextActive: {
-    color: "#FFFFFF",
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  activityItem: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    backgroundColor: "#1C1C1E",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  activityItemExpanded: {
-    borderColor: "#3A3A3A",
-    backgroundColor: "#222224",
-  },
-  timelineConnector: {
-    width: 40,
-    alignItems: "center",
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#2C2C2E",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  line: {
-    position: "absolute",
-    top: 32,
-    bottom: -16,
-    width: 2,
-    backgroundColor: "#2C2C2E",
-    left: 19,
-    display: "none",
-  },
-  content: {
-    flex: 1,
-    paddingLeft: 12,
-    paddingTop: 4,
-  },
-  description: {
-    fontSize: 14,
-    color: "#FFFFFF",
-    lineHeight: 20,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: "#8E8E93",
-    marginTop: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#8E8E93",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  loadMoreButton: {
-    alignItems: "center",
-    padding: 16,
-  },
-  loadMoreText: {
-    fontSize: 14,
-    color: "#007AFF",
-    fontWeight: "500",
-  },
-  errorCard: {
-    margin: 16,
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 14,
-    color: "#FF3B30",
-    marginBottom: 8,
-  },
-  retryText: {
-    fontSize: 14,
-    color: "#007AFF",
-  },
-  // Search styles
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginVertical: 6,
-    backgroundColor: "#1C1C1E",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  searchInput: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: "#F5F5F5",
-  },
-  searchClear: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchClearText: {
-    color: "#666",
-    fontSize: 14,
-  },
-  // Filter bar styles
-  filterBar: {
-    minHeight: 52,
-    marginBottom: 8,
-  },
-  filterBarContent: {
-    paddingHorizontal: 16,
-    gap: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1C1C1E",
-    paddingHorizontal: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    height: 36,
-    minWidth: 60,
-  },
-  filterChipActive: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  filterChipIcon: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  filterChipText: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    fontWeight: "500",
-  },
-  filterChipTextActive: {
-    color: "#FFFFFF",
-  },
-  // Expanded detail styles
-  detailsContainer: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#3A3A3A",
-  },
-  detailRow: {
-    flexDirection: "row",
-    marginBottom: 6,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "600",
-    width: 70,
-  },
-  detailValue: {
-    fontSize: 12,
-    color: "#CFCFCF",
-    flex: 1,
-  },
-  detailLink: {
-    color: "#FF2A2A",
-  },
-  detailTimestamp: {
-    fontSize: 11,
-    color: "#555",
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-});
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    pageBackground: isDarkMode ? "#0C0C0E" : "#F7F7F7",
+    surface: isDarkMode ? "#1C1C1E" : "#FFFFFF",
+    surfaceAlt: isDarkMode ? "#222224" : "#F1F1F1",
+    surfaceStrong: isDarkMode ? "#2C2C2E" : "#E8E8E8",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    borderStrong: isDarkMode ? "#3A3A3A" : "#C9C9C9",
+    textPrimary: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#8E8E93" : "#666666",
+    textTertiary: isDarkMode ? "#666666" : "#7A7A7A",
+    textQuaternary: isDarkMode ? "#555555" : "#8A8A8A",
+  };
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: palette.pageBackground,
+      borderRadius: 16,
+      overflow: "hidden",
+    },
+    toggleContainer: {
+      flexDirection: "row",
+      backgroundColor: palette.surface,
+      borderRadius: 8,
+      padding: 3,
+      marginHorizontal: 16,
+      marginVertical: 8,
+      height: 36,
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 6,
+      alignItems: "center",
+      justifyContent: "center",
+      height: 30,
+    },
+    toggleButtonActive: {
+      backgroundColor: "#FF2A2A",
+    },
+    toggleText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: palette.textSecondary,
+    },
+    toggleTextActive: {
+      color: "#FFFFFF",
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    activityItem: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginHorizontal: 16,
+      marginVertical: 4,
+      backgroundColor: palette.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    activityItemExpanded: {
+      borderColor: palette.borderStrong,
+      backgroundColor: palette.surfaceAlt,
+    },
+    timelineConnector: {
+      width: 40,
+      alignItems: "center",
+    },
+    iconContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: palette.surfaceStrong,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    icon: {
+      fontSize: 16,
+    },
+    line: {
+      position: "absolute",
+      top: 32,
+      bottom: -16,
+      width: 2,
+      backgroundColor: palette.surfaceStrong,
+      left: 19,
+      display: "none",
+    },
+    content: {
+      flex: 1,
+      paddingLeft: 12,
+      paddingTop: 4,
+    },
+    description: {
+      fontSize: 14,
+      color: palette.textPrimary,
+      lineHeight: 20,
+    },
+    timestamp: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      marginTop: 4,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 32,
+    },
+    emptyIcon: {
+      fontSize: 48,
+      marginBottom: 16,
+    },
+    emptyText: {
+      fontSize: 17,
+      fontWeight: "600",
+      color: palette.textPrimary,
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: palette.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    loadMoreButton: {
+      alignItems: "center",
+      padding: 16,
+    },
+    loadMoreText: {
+      fontSize: 14,
+      color: "#007AFF",
+      fontWeight: "500",
+    },
+    errorCard: {
+      margin: 16,
+      alignItems: "center",
+    },
+    errorText: {
+      fontSize: 14,
+      color: "#FF3B30",
+      marginBottom: 8,
+    },
+    retryText: {
+      fontSize: 14,
+      color: "#007AFF",
+    },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginHorizontal: 16,
+      marginVertical: 6,
+      backgroundColor: palette.surface,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    searchInput: {
+      flex: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: palette.textPrimary,
+    },
+    searchClear: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    searchClearText: {
+      color: palette.textTertiary,
+      fontSize: 14,
+    },
+    filterBar: {
+      minHeight: 52,
+      marginBottom: 8,
+    },
+    filterBarContent: {
+      paddingHorizontal: 16,
+      gap: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: palette.surface,
+      paddingHorizontal: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      height: 36,
+      minWidth: 60,
+    },
+    filterChipActive: {
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+    },
+    filterChipIcon: {
+      fontSize: 12,
+      marginRight: 4,
+    },
+    filterChipText: {
+      fontSize: 12,
+      color: palette.textSecondary,
+      fontWeight: "500",
+    },
+    filterChipTextActive: {
+      color: "#FFFFFF",
+    },
+    detailsContainer: {
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: palette.borderStrong,
+    },
+    detailRow: {
+      flexDirection: "row",
+      marginBottom: 6,
+    },
+    detailLabel: {
+      fontSize: 12,
+      color: palette.textTertiary,
+      fontWeight: "600",
+      width: 70,
+    },
+    detailValue: {
+      fontSize: 12,
+      color: isDarkMode ? "#CFCFCF" : "#4D4D4D",
+      flex: 1,
+    },
+    detailLink: {
+      color: "#FF2A2A",
+    },
+    detailTimestamp: {
+      fontSize: 11,
+      color: palette.textQuaternary,
+      marginTop: 4,
+      fontStyle: "italic",
+    },
+  });
+};

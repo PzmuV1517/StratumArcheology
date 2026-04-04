@@ -31,14 +31,21 @@ import React, { useState } from "react";
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
-import MoreToolsSheet from "@/src/components/project/MoreToolsSheet";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
+import MoreToolsSheet from "@/components/project/MoreToolsSheet";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const ACTIVE_COLOR = "#FF2A2A";
-const INACTIVE_COLOR = "#9A9A9A";
 
 export default function ProjectTabsLayout() {
   const { navigateToTab } = useProjectDetail();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const inactiveColor = isDarkMode ? "#9A9A9A" : "#666666";
+  const tabSurfaceColor = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+  const tabBorderColor = isDarkMode
+    ? "rgba(255, 255, 255, 0.1)"
+    : "rgba(0, 0, 0, 0.1)";
   const [showMore, setShowMore] = useState(false);
 
   return (
@@ -46,15 +53,15 @@ export default function ProjectTabsLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: ACTIVE_COLOR,
-          tabBarInactiveTintColor: INACTIVE_COLOR,
+          tabBarInactiveTintColor: inactiveColor,
           headerShown: false,
           tabBarStyle: {
             position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
-            backgroundColor: "#1A1A1A",
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
+            backgroundColor: tabSurfaceColor,
+            borderTopColor: tabBorderColor,
             borderTopWidth: StyleSheet.hairlineWidth,
             height: Platform.OS === "android" ? 84 : 60,
             paddingBottom: Platform.OS === "android" ? 24 : 8,

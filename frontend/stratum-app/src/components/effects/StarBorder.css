@@ -1,3 +1,31 @@
+:root {
+  --star-border-inner-border: #d9d9d9;
+  --star-border-inner-bg: #fff;
+  --star-border-inner-text: #1a1a1a;
+  --star-border-hover-bg: #f3f3f3;
+  --star-border-hover-text: #ff0000;
+  --star-border-active-bg: #ffecec;
+  --star-border-active-text: #a63a3a;
+  --star-border-accent: #ff0000;
+  --star-border-glow-hover: rgba(255, 0, 0, 0.2);
+  --star-border-glow-active: rgba(255, 0, 0, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --star-border-inner-border: #222;
+    --star-border-inner-bg: #000;
+    --star-border-inner-text: #fff;
+    --star-border-hover-bg: #181818;
+    --star-border-hover-text: #ff0000;
+    --star-border-active-bg: #2a0000;
+    --star-border-active-text: #fff;
+    --star-border-accent: #ff0000;
+    --star-border-glow-hover: rgba(255, 0, 0, 0.2);
+    --star-border-glow-active: rgba(255, 0, 0, 0.35);
+  }
+}
+
 .star-border-container {
   display: inline-block;
   position: relative;
@@ -37,9 +65,9 @@
 
 .inner-content {
   position: relative;
-  border: 1px solid #222;
-  background: #000;
-  color: white;
+  border: 1px solid var(--star-border-inner-border);
+  background: var(--star-border-inner-bg);
+  color: var(--star-border-inner-text);
   font-size: 16px;
   text-align: center;
   padding: 16px 26px;
@@ -54,17 +82,17 @@
 
 .star-border-container:hover .inner-content,
 .star-border-container:focus .inner-content {
-  background: #181818;
-  color: #ff0000;
-  border: 1.5px solid #ff0000;
-  box-shadow: 0 0 0 3px #ff000033;
+  background: var(--star-border-hover-bg);
+  color: var(--star-border-hover-text);
+  border: 1.5px solid var(--star-border-accent);
+  box-shadow: 0 0 0 3px var(--star-border-glow-hover);
 }
 
 .star-border-container:active .inner-content {
-  background: #2a0000;
-  color: #fff;
-  border: 2px solid #ff0000;
-  box-shadow: 0 0 0 4px #ff000055;
+  background: var(--star-border-active-bg);
+  color: var(--star-border-active-text);
+  border: 2px solid var(--star-border-accent);
+  box-shadow: 0 0 0 4px var(--star-border-glow-active);
 }
 
 @keyframes star-movement-bottom {

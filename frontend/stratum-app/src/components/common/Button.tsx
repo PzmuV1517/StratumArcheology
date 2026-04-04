@@ -37,6 +37,7 @@ import {
   TextStyle,
   StyleProp,
 } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface ButtonProps {
   title: string;
@@ -50,24 +51,10 @@ interface ButtonProps {
   icon?: React.ReactNode;
 }
 
-const variantStyles: Record<string, ViewStyle> = {
-  primary: { backgroundColor: "#007AFF" },
-  secondary: { backgroundColor: "#2C2C2E", borderWidth: 1, borderColor: "#3C3C3E" },
-  danger: { backgroundColor: "#FF3B30" },
-  ghost: { backgroundColor: "transparent" },
-};
-
 const sizeStyles: Record<string, ViewStyle> = {
   small: { paddingHorizontal: 12, paddingVertical: 6 },
   medium: { paddingHorizontal: 16, paddingVertical: 10 },
   large: { paddingHorizontal: 24, paddingVertical: 14 },
-};
-
-const textVariantStyles: Record<string, TextStyle> = {
-  primary: { color: "#FFFFFF" },
-  secondary: { color: "#FFFFFF" },
-  danger: { color: "#FFFFFF" },
-  ghost: { color: "#007AFF" },
 };
 
 const textSizeStyles: Record<string, TextStyle> = {
@@ -92,6 +79,27 @@ export default function Button({
   textStyle,
   icon,
 }: ButtonProps) {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+
+  const variantStyles: Record<string, ViewStyle> = {
+    primary: { backgroundColor: "#007AFF" },
+    secondary: {
+      backgroundColor: isDarkMode ? "#2C2C2E" : "#EFEFF1",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3C3C3E" : "#D0D0D4",
+    },
+    danger: { backgroundColor: "#FF3B30" },
+    ghost: { backgroundColor: "transparent" },
+  };
+
+  const textVariantStyles: Record<string, TextStyle> = {
+    primary: { color: "#FFFFFF" },
+    secondary: { color: isDarkMode ? "#FFFFFF" : "#1A1A1A" },
+    danger: { color: "#FFFFFF" },
+    ghost: { color: "#007AFF" },
+  };
+
   const buttonStyles: StyleProp<ViewStyle> = [
     styles.base,
     variantStyles[variant],
@@ -118,7 +126,11 @@ export default function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === "ghost" ? "#007AFF" : "#FFFFFF"}
+          color={
+            variant === "ghost"
+              ? "#007AFF"
+              : ((textVariantStyles[variant]?.color as string) ?? "#FFFFFF")
+          }
         />
       ) : (
         <>

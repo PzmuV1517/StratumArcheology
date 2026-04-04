@@ -907,7 +907,7 @@ export default function HarrisMatrix({
               value={newCtxId}
               onChangeText={setNewCtxId}
               placeholder="e.g., 1001"
-              placeholderTextColor="#555"
+              placeholderTextColor="#8A8A8A"
               autoCapitalize="characters"
             />
 
@@ -943,7 +943,7 @@ export default function HarrisMatrix({
               value={newCtxDesc}
               onChangeText={setNewCtxDesc}
               placeholder="Brief description"
-              placeholderTextColor="#555"
+              placeholderTextColor="#8A8A8A"
               multiline
             />
 
@@ -1089,7 +1089,7 @@ export default function HarrisMatrix({
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="Description"
-              placeholderTextColor="#555"
+              placeholderTextColor="#8A8A8A"
               multiline
               editable={canEdit}
             />
@@ -1160,14 +1160,14 @@ export default function HarrisMatrix({
 /* ─────────────────────── Styles ─────────────────────── */
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0A0A0A" },
+  root: { flex: 1, backgroundColor: "#F6F6F6" },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#F6F6F6",
   },
-  loadingText: { color: "#9A9A9A", marginTop: 12, fontSize: 16 },
+  loadingText: { color: "#666666", marginTop: 12, fontSize: 16 },
 
   /* status bar */
   statusBar: {
@@ -1176,13 +1176,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: "#D9D9D9",
   },
   statusLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, color: "#CFCFCF", fontWeight: "500" },
+  statusText: { fontSize: 13, color: "#1A1A1A", fontWeight: "500" },
   pendingBadge: {
     backgroundColor: "rgba(255,193,7,0.2)",
     paddingHorizontal: 8,
@@ -1202,7 +1202,7 @@ const styles = StyleSheet.create({
   canvas: {
     flex: 1,
     overflow: "hidden",
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#F6F6F6",
   },
   gestureLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -1224,7 +1224,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   nodeText: {
-    color: "#FFFFFF",
+    color: "#1A1A1A",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -1238,12 +1238,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: "#9A9A9A",
+    color: "#666666",
     textAlign: "center",
     paddingHorizontal: 40,
   },
@@ -1255,60 +1255,60 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: "#D9D9D9",
   },
   toolBtn: {
     flex: 1,
     minWidth: 70,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     alignItems: "center",
   },
   toolBtnAccent: { backgroundColor: ACCENT },
-  toolBtnText: { color: "#CFCFCF", fontSize: 13, fontWeight: "600" },
+  toolBtnText: { color: "#1A1A1A", fontSize: 13, fontWeight: "600" },
 
   /* modal */
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.24)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   modalCard: {
-    backgroundColor: "#1E1E1E",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 20,
     width: "100%",
     maxWidth: 420,
     maxHeight: "85%",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 16,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#9A9A9A",
+    color: "#666666",
     marginBottom: 6,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: "#111",
-    color: "#F5F5F5",
+    backgroundColor: "#FFFFFF",
+    color: "#1A1A1A",
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#D9D9D9",
     fontSize: 16,
     marginBottom: 12,
   },
@@ -1316,22 +1316,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     marginRight: 8,
   },
   chipBtnActive: { backgroundColor: ACCENT },
-  chipText: { color: "#CFCFCF", fontSize: 13, fontWeight: "600" },
+  chipText: { color: "#1A1A1A", fontSize: 13, fontWeight: "600" },
   chipTextActive: { color: "#FFF" },
 
   relRow: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     marginBottom: 6,
   },
   relRowActive: { backgroundColor: ACCENT },
-  relRowText: { color: "#CFCFCF", fontSize: 14 },
+  relRowText: { color: "#1A1A1A", fontSize: 14 },
   relRowTextActive: { color: "#FFF", fontWeight: "600" },
 
   relInfoRow: {
@@ -1340,11 +1340,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#F5F5F5",
     borderRadius: 8,
     marginBottom: 4,
   },
-  relInfoText: { color: "#CFCFCF", fontSize: 13, flex: 1 },
+  relInfoText: { color: "#1A1A1A", fontSize: 13, flex: 1 },
   deleteRelText: {
     color: "#dc3545",
     fontSize: 16,
@@ -1364,25 +1364,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionBtnAccent: { backgroundColor: ACCENT },
-  actionBtnCancel: { backgroundColor: "#555" },
+  actionBtnCancel: { backgroundColor: "#8A8A8A" },
   actionBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
 
   /* stats */
   statsRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
   statBox: {
     flex: 1,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#EFEFEF",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
   },
   statValue: { fontSize: 28, fontWeight: "800", color: ACCENT },
-  statLabel: { fontSize: 12, color: "#9A9A9A", marginTop: 4 },
+  statLabel: { fontSize: 12, color: "#666666", marginTop: 4 },
   closeModalBtn: {
-    backgroundColor: "#555",
+    backgroundColor: "#EFEFEF",
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
   },
-  closeModalBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
+  closeModalBtnText: { color: "#1A1A1A", fontSize: 15, fontWeight: "600" },
 });

@@ -63,7 +63,7 @@ export function ProjectActionModal({
           <View style={styles.header}>
             <Text style={styles.title}>Project</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#9A9A9A" />
+              <Ionicons name="close" size={24} color="#666666" />
             </TouchableOpacity>
           </View>
 
@@ -89,7 +89,7 @@ export function ProjectActionModal({
                   Start a new archaeological project
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
+              <Ionicons name="chevron-forward" size={20} color="#8A8A8A" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -109,7 +109,7 @@ export function ProjectActionModal({
                   Join with invite link or code
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#666" />
+              <Ionicons name="chevron-forward" size={20} color="#8A8A8A" />
             </TouchableOpacity>
           </View>
         </View>
@@ -121,18 +121,18 @@ export function ProjectActionModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.24)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
   },
   container: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     width: "100%",
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#D9D9D9",
     overflow: "hidden",
   },
   header: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     letterSpacing: 0.5,
   },
   closeButton: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#E5E5E5",
   },
   optionsContainer: {
     padding: 12,
@@ -162,17 +162,17 @@ const styles = StyleSheet.create({
   optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#222222",
+    backgroundColor: "#F7F7F7",
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#E0E0E0",
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#FFECEC",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 14,
@@ -183,13 +183,13 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#F5F5F5",
+    color: "#1A1A1A",
     marginBottom: 4,
     letterSpacing: 0.3,
   },
   optionSubtitle: {
     fontSize: 13,
-    color: "#9A9A9A",
+    color: "#666666",
     letterSpacing: 0.2,
   },
 });

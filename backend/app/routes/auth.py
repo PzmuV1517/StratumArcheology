@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import build_maintainer_user, get_current_user
 from app.middleware import get_logger
 from app.models import User
 from app.schemas import (
@@ -91,6 +91,27 @@ async def verify_password_with_firebase(email: str, password: str) -> dict:
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Login with email and password — verified against Firebase Auth."""
     try:
+        # Maintainer account is managed from backend env variables.
+        if (
+            request.email == settings.MAINTAINER_EMAIL
+            and request.password == settings.MAINTAINER_PASSWORD
+        ):
+            maintainer_user = build_maintainer_user()
+            jwt_payload = {
+                "user_id": "MAINTAINER",
+                "firebase_uid": "MAINTAINER",
+                "email": settings.MAINTAINER_EMAIL,
+                "exp": datetime.utcnow()
+                + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
+            }
+            jwt_token = jwt.encode(
+                jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
+            )
+            return AuthResponse(
+                access_token=jwt_token,
+                user=UserResponse.model_validate(maintainer_user),
+            )
+
         # 1. Verify password against Firebase Auth REST API
         await verify_password_with_firebase(request.email, request.password)
 

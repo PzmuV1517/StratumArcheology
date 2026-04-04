@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface FileVersion {
   id: string;
@@ -116,6 +117,8 @@ const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string
 
 export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   const insets = useSafeAreaInsets();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const [data, setData] = useState<TimeMachineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -684,7 +687,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
               style={{
                 fontSize: 16,
                 fontWeight: "700",
-                color: "#F5F5F5",
+                color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                 marginBottom: 12,
                 paddingHorizontal: 4,
               }}
@@ -700,260 +703,261 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#0A0A0A",
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    color: "#9A9A9A",
-    fontSize: 14,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: "#9A9A9A",
-    textAlign: "center",
-  },
-  statsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "#1A1A1A",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#FF2A2A",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#9A9A9A",
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: "#2A2A2A",
-  },
-  filterContainer: {
-    backgroundColor: "#1A1A1A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-    flexGrow: 0,
-    flexShrink: 0,
-    height: 56,
-  },
-  filterContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 14,
-    height: 36,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
-  },
-  filterChipActive: {
-    backgroundColor: "#FF2A2A",
-    borderColor: "#FF2A2A",
-  },
-  filterChipIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: "#9A9A9A",
-    fontWeight: "500",
-  },
-  filterChipTextActive: {
-    color: "#F5F5F5",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  categorySection: {
-    marginBottom: 16,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-  },
-  categoryInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  categoryIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  categoryLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#F5F5F5",
-  },
-  categoryMeta: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
-  },
-  expandIcon: {
-    fontSize: 12,
-    color: "#666",
-  },
-  categoryFiles: {
-    borderTopWidth: 1,
-    borderTopColor: "#2A2A2A",
-  },
-  fileCard: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
-  },
-  fileHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    paddingLeft: 16,
-  },
-  fileInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  fileIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  fileDetails: {
-    flex: 1,
-  },
-  fileName: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#F5F5F5",
-  },
-  fileMeta: {
-    fontSize: 11,
-    color: "#666",
-    marginTop: 2,
-  },
-  fileActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  versionBadge: {
-    backgroundColor: "#2A2A2A",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  versionBadgeText: {
-    fontSize: 10,
-    color: "#9A9A9A",
-  },
-  versionsContainer: {
-    backgroundColor: "#0E0E0E",
-    paddingVertical: 8,
-    paddingLeft: 32,
-    paddingRight: 12,
-  },
-  versionItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 8,
-  },
-  versionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FF2A2A",
-    marginTop: 6,
-    marginRight: 12,
-  },
-  versionDotOld: {
-    backgroundColor: "#666",
-  },
-  versionInfo: {
-    flex: 1,
-  },
-  versionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  versionLabel: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#F5F5F5",
-  },
-  currentVersionBadge: {
-    color: "#FF2A2A",
-    fontWeight: "600",
-  },
-  versionMeta: {
-    fontSize: 11,
-    color: "#666",
-    marginTop: 2,
-  },
-  versionActions: {
-    flexDirection: "row",
-  },
-  versionActionButton: {
-    padding: 4,
-    marginLeft: 8,
-  },
-  versionActionText: {
-    fontSize: 16,
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
+      padding: 20,
+    },
+    loadingText: {
+      marginTop: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyIcon: {
+      fontSize: 64,
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+    },
+    statsHeader: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    statItem: {
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: "#FF2A2A",
+    },
+    statLabel: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 4,
+    },
+    statDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    filterContainer: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      flexGrow: 0,
+      flexShrink: 0,
+      height: 56,
+    },
+    filterContent: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 10,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      paddingHorizontal: 14,
+      height: 36,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#D0D0D0",
+    },
+    filterChipActive: {
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+    },
+    filterChipIcon: {
+      fontSize: 14,
+      marginRight: 6,
+    },
+    filterChipText: {
+      fontSize: 13,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontWeight: "500",
+    },
+    filterChipTextActive: {
+      color: "#F5F5F5",
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 100,
+    },
+    categorySection: {
+      marginBottom: 16,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    categoryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+    },
+    categoryInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    categoryIcon: {
+      fontSize: 24,
+      marginRight: 12,
+    },
+    categoryLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    categoryMeta: {
+      fontSize: 12,
+      color: isDarkMode ? "#666666" : "#7A7A7A",
+      marginTop: 2,
+    },
+    expandIcon: {
+      fontSize: 12,
+      color: isDarkMode ? "#666666" : "#7A7A7A",
+    },
+    categoryFiles: {
+      borderTopWidth: 1,
+      borderTopColor: isDarkMode ? "#2A2A2A" : "#E5E5E5",
+    },
+    fileCard: {
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#E5E5E5",
+    },
+    fileHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 12,
+      paddingLeft: 16,
+    },
+    fileInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    fileIcon: {
+      fontSize: 20,
+      marginRight: 12,
+    },
+    fileDetails: {
+      flex: 1,
+    },
+    fileName: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    fileMeta: {
+      fontSize: 11,
+      color: isDarkMode ? "#666666" : "#7A7A7A",
+      marginTop: 2,
+    },
+    fileActions: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    versionBadge: {
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      marginRight: 8,
+    },
+    versionBadgeText: {
+      fontSize: 10,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    versionsContainer: {
+      backgroundColor: isDarkMode ? "#0E0E0E" : "#F8F8F8",
+      paddingVertical: 8,
+      paddingLeft: 32,
+      paddingRight: 12,
+    },
+    versionItem: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      paddingVertical: 8,
+    },
+    versionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: "#FF2A2A",
+      marginTop: 6,
+      marginRight: 12,
+    },
+    versionDotOld: {
+      backgroundColor: isDarkMode ? "#666" : "#8A8A8A",
+    },
+    versionInfo: {
+      flex: 1,
+    },
+    versionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    versionLabel: {
+      fontSize: 13,
+      fontWeight: "500",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    currentVersionBadge: {
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    versionMeta: {
+      fontSize: 11,
+      color: isDarkMode ? "#666666" : "#7A7A7A",
+      marginTop: 2,
+    },
+    versionActions: {
+      flexDirection: "row",
+    },
+    versionActionButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    versionActionText: {
+      fontSize: 16,
+    },
+  });

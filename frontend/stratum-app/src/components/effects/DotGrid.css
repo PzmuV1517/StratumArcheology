@@ -5,7 +5,7 @@
   height: 100%;
   width: 100%;
   position: relative;
-  background-color: #000; /* solid black background behind the dots */
+  background-color: var(--stratum-page-bg, #000);
 }
 
 .dot-grid__wrap {

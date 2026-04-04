@@ -36,22 +36,23 @@ import React, {
   useState,
 } from "react";
 import { Platform, RefreshControl, View, Text, Image } from "react-native";
-import { ProjectDetailSkeleton } from "@/src/components/common/Skeleton";
+import { ProjectDetailSkeleton } from "@/components/common/Skeleton";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGlobalSearchParams, useLocalSearchParams, useRouter } from "expo-router";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { LiquidGlassButton } from "@/src/components/ui/LiquidGlassButton";
-import { projectService } from "@/src/services/projectService";
-import { noteService } from "@/src/services/noteService";
-import { showAlert } from "@/src/utils/alert";
-import { fileService } from "@/src/services/fileService";
+import { LiquidGlassButton } from "@/components/ui/LiquidGlassButton";
+import { projectService } from "@/services/projectService";
+import { noteService } from "@/services/noteService";
+import { showAlert } from "@/utils/alert";
+import { fileService } from "@/services/fileService";
 import * as DocumentPicker from "expo-document-picker";
-import { conflicts, FileConflict } from "@/src/services/offlineQueueService";
-import { useWebSocket } from "@/src/contexts/WebSocketContext";
-import type { Project as ServiceProject } from "@/src/services/projectService.types";
-import styles from "@/src/components/project/ProjectDetailStyles";
+import { conflicts, FileConflict } from "@/services/offlineQueueService";
+import { useWebSocket } from "@/contexts/WebSocketContext";
+import type { Project as ServiceProject } from "@/services/projectService.types";
+import { useProjectDetailStyles } from "@/components/project/ProjectDetailStyles";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /** Represents a project note with title, content, and metadata. */
 export interface Note {
@@ -177,8 +178,11 @@ const ProjectDetailContext = createContext<ProjectDetailContextValue | null>(nul
  * @returns A context provider wrapping children with project detail state
  */
 export function ProjectDetailProvider({ children }: { children: React.ReactNode }) {
+  const styles = useProjectDetailStyles();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? "light";
+  const refreshProgressBackground = colorScheme === "dark" ? "#1C1C1E" : "#ECECEC";
   const iosHeaderPad =
     Platform.OS === "ios"
       ? Math.max(headerHeight || 0, (insets.top || 0) + 44) + 8
@@ -224,7 +228,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   useEffect(() => {
-    import("@/src/components/matrix")
+    import("@/components/matrix")
       .then((mod) => setHarrisMatrixComponent(() => mod.default))
       .catch(() => {
         /* HarrisMatrix not available on native - expected */
@@ -234,7 +238,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     (async () => {
       try {
-        const { authService } = await import("@/src/services/authService");
+        const { authService } = await import("@/services/authService");
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
       } catch {
@@ -427,8 +431,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       setMembers(projectData.members || []);
 
       try {
-        const { recentProjectsCache } =
-          await import("@/src/services/offlineService");
+        const { recentProjectsCache } = await import("@/services/offlineService");
         await recentProjectsCache.saveRecentProject(
           id,
           projectData,
@@ -440,8 +443,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       }
     } catch {
       try {
-        const { recentProjectsCache } =
-          await import("@/src/services/offlineService");
+        const { recentProjectsCache } = await import("@/services/offlineService");
         const cached = await recentProjectsCache.getCachedProject(id);
         if (cached) {
           setProject(cached.project);
@@ -1001,6 +1003,8 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
   };
 
   const handleProjectSettings = () => {
+    setShowMenu(false);
+
     if (!canChangeSettings) {
       const role = getCurrentUserRole() || "GUEST";
       showAlert(
@@ -1010,13 +1014,21 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
       return;
     }
 
-    if (project?.id) {
+    if (!project?.id) {
+      showAlert("Please wait", "Project is still loading.");
+      return;
+    }
+
+    try {
       router.push({
         pathname: "/edit-project",
-        params: { projectId: project.id },
+        params: { projectId: String(project.id) },
       });
-    } else {
-      showAlert("Please wait", "Project is still loading.");
+    } catch {
+      showAlert(
+        "Navigation Error",
+        "Could not open project settings. Please try again.",
+      );
     }
   };
 
@@ -1048,7 +1060,7 @@ export function ProjectDetailProvider({ children }: { children: React.ReactNode 
         onRefresh={handleRefresh}
         tintColor="#C41E3A"
         colors={["#C41E3A"]}
-        progressBackgroundColor="#1C1C1E"
+        progressBackgroundColor={refreshProgressBackground}
       />
     ) : undefined;
 
@@ -1215,6 +1227,7 @@ export function ProjectLoadingState() {
  * @returns The not-found UI element
  */
 export function ProjectNotFoundState({ onReturn }: { onReturn: () => void }) {
+  const styles = useProjectDetailStyles();
   return (
     <View style={styles.safeArea}>
       <View style={styles.centerContainer}>
@@ -1247,6 +1260,7 @@ export function ProjectHeaderActions({
   onOpenFiles: () => void;
   onOpenMenu: () => void;
 }) {
+  const styles = useProjectDetailStyles();
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <LiquidGlassButton

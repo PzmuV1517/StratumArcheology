@@ -27,24 +27,32 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { Stack } from "expo-router";
 
-import MapEditor from "@/src/components/map/MapEditor";
+import MapEditor from "@/components/map/MapEditor";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function GPSScreen() {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const headerTextColor = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
       <Stack.Screen
         options={{
           title: "GPS",
           headerTransparent: Platform.OS === "ios",
           headerBlurEffect:
             Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+          headerStyle:
+            Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5" },
+          headerTitleStyle: { color: headerTextColor },
         }}
       />
       <MapEditor projectId={""} />
@@ -52,6 +60,10 @@ export default function GPSScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+  });

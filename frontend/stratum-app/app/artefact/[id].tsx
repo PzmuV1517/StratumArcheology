@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -40,16 +40,17 @@ import {
   Modal,
   TextInput,
   FlatList,
+  useColorScheme,
 } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
-import QRCodeView from "../../src/components/common/QRCodeView";
-import { ArtefactDetailSkeleton } from "../../src/components/common/Skeleton";
-import { useDelayedLoading } from "../../src/hooks/useDelayedLoading";
-import { fileService } from "../../src/services/fileService";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { showAlert } from "../../src/utils/alert";
+import QRCodeView from "@/components/common/QRCodeView";
+import { ArtefactDetailSkeleton } from "@/components/common/Skeleton";
+import { useDelayedLoading } from "@/hooks/useDelayedLoading";
+import { fileService } from "@/services/fileService";
+import { useAuth } from "@/contexts/AuthContext";
+import { showAlert } from "@/utils/alert";
 import {
   buildManifestFromChildren,
   ArtefactManifest,
@@ -57,90 +58,6 @@ import {
 import api from "../../src/services/api";
 
 const isIOS = Platform.OS === "ios";
-
-// ---------------------------------------------------------------------------
-// Shared UI components (matching new-project / join-project)
-// ---------------------------------------------------------------------------
-function GlassCard({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: object;
-}) {
-  return <View style={[s.solidCard, style]}>{children}</View>;
-}
-
-function GlassButton({
-  onPress,
-  title,
-  variant = "primary",
-  icon,
-  disabled,
-  loading: isLoading,
-}: {
-  onPress: () => void;
-  title: string;
-  variant?: "primary" | "secondary" | "destructive";
-  icon?: string;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  const isPrimary = variant === "primary";
-  const isDestructive = variant === "destructive";
-  const content = (
-    <>
-      {icon && (
-        <Ionicons
-          name={icon as keyof typeof Ionicons.glyphMap}
-          size={20}
-          color={isDestructive ? "#FF4444" : isPrimary ? "#FFFFFF" : "#9A9A9A"}
-          style={{ marginRight: 8 }}
-        />
-      )}
-      {isLoading ? (
-        <ActivityIndicator color={isDestructive ? "#FF4444" : "#FFFFFF"} />
-      ) : (
-        <Text
-          style={[
-            s.buttonText,
-            !isPrimary && !isDestructive && s.secondaryButtonText,
-            isDestructive && s.destructiveButtonText,
-          ]}
-        >
-          {title}
-        </Text>
-      )}
-    </>
-  );
-
-  if (isDestructive) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        disabled={disabled || isLoading}
-        activeOpacity={0.7}
-        style={[s.destructiveButton, disabled && s.disabledButton]}
-      >
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled || isLoading}
-      activeOpacity={0.7}
-      style={[
-        isPrimary ? s.primaryButton : s.secondaryBtn,
-        disabled && s.disabledButton,
-      ]}
-    >
-      {content}
-    </TouchableOpacity>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -169,6 +86,10 @@ export default function ArtefactDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const s = styles;
   const [loading, setLoading] = useState(true);
   const showSkeleton = useDelayedLoading(loading);
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -197,6 +118,95 @@ export default function ArtefactDetail() {
     name: string;
   } | null>(null);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+  const GlassCard = ({
+    children,
+    style,
+  }: {
+    children: React.ReactNode;
+    style?: object;
+  }) => {
+    return <View style={[s.solidCard, style]}>{children}</View>;
+  };
+
+  const GlassButton = ({
+    onPress,
+    title,
+    variant = "primary",
+    icon,
+    disabled,
+    loading: isLoading,
+  }: {
+    onPress: () => void;
+    title: string;
+    variant?: "primary" | "secondary" | "destructive";
+    icon?: string;
+    disabled?: boolean;
+    loading?: boolean;
+  }) => {
+    const isPrimary = variant === "primary";
+    const isDestructive = variant === "destructive";
+    const content = (
+      <>
+        {icon && (
+          <Ionicons
+            name={icon as keyof typeof Ionicons.glyphMap}
+            size={20}
+            color={
+              isDestructive
+                ? "#FF4444"
+                : isPrimary
+                  ? "#FFFFFF"
+                  : isDarkMode
+                    ? "#9A9A9A"
+                    : "#666666"
+            }
+            style={{ marginRight: 8 }}
+          />
+        )}
+        {isLoading ? (
+          <ActivityIndicator color={isDestructive ? "#FF4444" : "#FFFFFF"} />
+        ) : (
+          <Text
+            style={[
+              s.buttonText,
+              !isPrimary && !isDestructive && s.secondaryButtonText,
+              isDestructive && s.destructiveButtonText,
+            ]}
+          >
+            {title}
+          </Text>
+        )}
+      </>
+    );
+
+    if (isDestructive) {
+      return (
+        <TouchableOpacity
+          onPress={onPress}
+          disabled={disabled || isLoading}
+          activeOpacity={0.7}
+          style={[s.destructiveButton, disabled && s.disabledButton]}
+        >
+          {content}
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={disabled || isLoading}
+        activeOpacity={0.7}
+        style={[
+          isPrimary ? s.primaryButton : s.secondaryBtn,
+          disabled && s.disabledButton,
+        ]}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  };
 
   useEffect(() => {
     if (id) load();
@@ -494,9 +504,14 @@ export default function ArtefactDetail() {
             title: "Artefact",
             headerTransparent: isIOS,
             headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
-            headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+            headerStyle: isIOS
+              ? {}
+              : { backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
             headerTintColor: "#FF2A2A",
-            headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
+            headerTitleStyle: {
+              color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+              fontWeight: "600",
+            },
             headerShown: true,
           }}
         />
@@ -513,9 +528,14 @@ export default function ArtefactDetail() {
           title: meta?.name ? `${meta.name} #${meta.number ?? "—"}` : "Artefact",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
-          headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+          headerStyle: isIOS
+            ? {}
+            : { backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" },
+          headerTitleStyle: {
+            color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+            fontWeight: "600",
+          },
           headerBackTitle: "Artefacts",
           headerShown: true,
           presentation: "card",
@@ -539,9 +559,7 @@ export default function ArtefactDetail() {
             >
               <Ionicons name="chevron-back" size={22} color="#FF2A2A" />
               {Platform.OS === "ios" && (
-                <Text
-                  style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 4 }}
-                >
+                <Text style={{ color: "#FF2A2A", fontSize: 17, marginLeft: 4 }}>
                   Artefacts
                 </Text>
               )}
@@ -626,11 +644,13 @@ export default function ArtefactDetail() {
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#F4F4F4",
                 borderRadius: 12,
                 padding: 14,
                 borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.08)",
+                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E4E4E4",
                 gap: 12,
               }}
             >
@@ -650,7 +670,13 @@ export default function ArtefactDetail() {
                 }}
               />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#F5F5F5", fontSize: 15, fontWeight: "600" }}>
+                <Text
+                  style={{
+                    color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
                   {hmContextInfo.id}
                   <Text
                     style={{
@@ -672,7 +698,11 @@ export default function ArtefactDetail() {
                 </Text>
                 {hmContextInfo.description ? (
                   <Text
-                    style={{ color: "#888", fontSize: 13, marginTop: 2 }}
+                    style={{
+                      color: isDarkMode ? "#888888" : "#666666",
+                      fontSize: 13,
+                      marginTop: 2,
+                    }}
                     numberOfLines={2}
                   >
                     {hmContextInfo.description}
@@ -689,12 +719,20 @@ export default function ArtefactDetail() {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="close-circle" size={20} color="#9A9A9A" />
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={isDarkMode ? "#9A9A9A" : "#666666"}
+                />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={s.emptyInCard}>
-              <Ionicons name="git-network-outline" size={32} color="#555" />
+              <Ionicons
+                name="git-network-outline"
+                size={32}
+                color={isDarkMode ? "#555555" : "#888888"}
+              />
               <Text style={s.emptyText}>No context linked</Text>
             </View>
           )}
@@ -710,21 +748,29 @@ export default function ArtefactDetail() {
           {meta?.latitude != null && meta?.longitude != null ? (
             <View
               style={{
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                backgroundColor: isDarkMode
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "#F4F4F4",
                 borderRadius: 12,
                 padding: 14,
                 borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.08)",
+                borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E4E4E4",
               }}
             >
               <View style={{ flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#666", fontSize: 11, marginBottom: 2 }}>
+                  <Text
+                    style={{
+                      color: isDarkMode ? "#666666" : "#7A7A7A",
+                      fontSize: 11,
+                      marginBottom: 2,
+                    }}
+                  >
                     LAT
                   </Text>
                   <Text
                     style={{
-                      color: "#F5F5F5",
+                      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                       fontSize: 15,
                       fontWeight: "600",
                       fontVariant: ["tabular-nums"],
@@ -734,12 +780,18 @@ export default function ArtefactDetail() {
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "#666", fontSize: 11, marginBottom: 2 }}>
+                  <Text
+                    style={{
+                      color: isDarkMode ? "#666666" : "#7A7A7A",
+                      fontSize: 11,
+                      marginBottom: 2,
+                    }}
+                  >
                     LNG
                   </Text>
                   <Text
                     style={{
-                      color: "#F5F5F5",
+                      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                       fontSize: 15,
                       fontWeight: "600",
                       fontVariant: ["tabular-nums"],
@@ -752,7 +804,11 @@ export default function ArtefactDetail() {
             </View>
           ) : (
             <View style={s.emptyInCard}>
-              <Ionicons name="location-outline" size={32} color="#555" />
+              <Ionicons
+                name="location-outline"
+                size={32}
+                color={isDarkMode ? "#555555" : "#888888"}
+              />
               <Text style={s.emptyText}>No coordinates set</Text>
             </View>
           )}
@@ -945,7 +1001,12 @@ export default function ArtefactDetail() {
             </Text>
             <Text style={[s.modalText, { marginTop: 8 }]}>
               Artefact name:{" "}
-              <Text style={{ color: "#F5F5F5", fontWeight: "700" }}>
+              <Text
+                style={{
+                  color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+                  fontWeight: "700",
+                }}
+              >
                 {meta?.name || "—"}
               </Text>
             </Text>
@@ -953,7 +1014,7 @@ export default function ArtefactDetail() {
               value={confirmName}
               onChangeText={setConfirmName}
               placeholder="Type the artefact name"
-              placeholderTextColor="#555"
+              placeholderTextColor={isDarkMode ? "#555555" : "#888888"}
               style={s.input}
               autoCapitalize="none"
               autoCorrect={false}
@@ -1072,7 +1133,7 @@ export default function ArtefactDetail() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.6)",
+            backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
             justifyContent: "center",
             alignItems: "center",
             padding: 24,
@@ -1083,10 +1144,10 @@ export default function ArtefactDetail() {
               width: "100%",
               maxWidth: 420,
               maxHeight: "70%",
-              backgroundColor: "#1A1A1A",
+              backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: "#2A2A2A",
+              borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
               overflow: "hidden",
             }}
           >
@@ -1094,13 +1155,25 @@ export default function ArtefactDetail() {
               style={{
                 padding: 20,
                 borderBottomWidth: 1,
-                borderBottomColor: "#2A2A2A",
+                borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
               }}
             >
-              <Text style={{ fontSize: 18, fontWeight: "700", color: "#F5F5F5" }}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+                }}
+              >
                 Select Context
               </Text>
-              <Text style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: isDarkMode ? "#666666" : "#7A7A7A",
+                  marginTop: 4,
+                }}
+              >
                 Link to a Harris Matrix stratigraphic context
               </Text>
             </View>
@@ -1127,7 +1200,9 @@ export default function ArtefactDetail() {
                       marginBottom: 4,
                       backgroundColor: isSelected
                         ? "rgba(255,42,42,0.15)"
-                        : "transparent",
+                        : isDarkMode
+                          ? "transparent"
+                          : "#F8F8F8",
                     }}
                     onPress={async () => {
                       const updatedMeta = {
@@ -1154,7 +1229,7 @@ export default function ArtefactDetail() {
                     <View style={{ flex: 1 }}>
                       <Text
                         style={{
-                          color: "#F5F5F5",
+                          color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
                           fontSize: 15,
                           fontWeight: "600",
                         }}
@@ -1174,7 +1249,7 @@ export default function ArtefactDetail() {
                       {item.description ? (
                         <Text
                           style={{
-                            color: "#888",
+                            color: isDarkMode ? "#888888" : "#666666",
                             fontSize: 13,
                             marginTop: 2,
                           }}
@@ -1193,7 +1268,7 @@ export default function ArtefactDetail() {
               ListEmptyComponent={
                 <Text
                   style={{
-                    color: "#666",
+                    color: isDarkMode ? "#666666" : "#7A7A7A",
                     textAlign: "center",
                     padding: 20,
                   }}
@@ -1206,12 +1281,19 @@ export default function ArtefactDetail() {
               style={{
                 padding: 16,
                 borderTopWidth: 1,
-                borderTopColor: "#2A2A2A",
+                borderTopColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
                 alignItems: "center",
               }}
               onPress={() => setShowHmPicker(false)}
             >
-              <Text style={{ color: "#9A9A9A", fontWeight: "600" }}>Cancel</Text>
+              <Text
+                style={{
+                  color: isDarkMode ? "#9A9A9A" : "#666666",
+                  fontWeight: "600",
+                }}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1248,7 +1330,11 @@ export default function ArtefactDetail() {
               setViewingImageUrl(null);
             }}
           >
-            <Ionicons name="close" size={28} color="#F5F5F5" />
+            <Ionicons
+              name="close"
+              size={28}
+              color={isDarkMode ? "#F5F5F5" : "#1A1A1A"}
+            />
           </TouchableOpacity>
 
           {viewingImageUrl ? (
@@ -1262,11 +1348,19 @@ export default function ArtefactDetail() {
             />
           ) : (
             <View style={{ alignItems: "center", gap: 12 }}>
-              <Ionicons name="image" size={64} color="#555" />
-              <Text style={{ color: "#888", fontSize: 14 }}>
+              <Ionicons
+                name="image"
+                size={64}
+                color={isDarkMode ? "#555555" : "#888888"}
+              />
+              <Text
+                style={{ color: isDarkMode ? "#888888" : "#666666", fontSize: 14 }}
+              >
                 {viewingImage?.name}
               </Text>
-              <Text style={{ color: "#555", fontSize: 12 }}>
+              <Text
+                style={{ color: isDarkMode ? "#555555" : "#7A7A7A", fontSize: 12 }}
+              >
                 Image preview available on web
               </Text>
             </View>
@@ -1321,195 +1415,221 @@ export default function ArtefactDetail() {
 // ---------------------------------------------------------------------------
 // Styles — matching new-project / join-project design language
 // ---------------------------------------------------------------------------
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  scrollView: { flex: 1 },
-  content: { padding: 24, paddingTop: 24, paddingBottom: 48 },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  loadingText: { fontSize: 16, color: "#9A9A9A", marginTop: 16 },
-  // Header
-  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
-  heroPreview: {
-    width: "100%" as any,
-    aspectRatio: 4 / 3,
-    borderRadius: 20,
-    backgroundColor: "#0A0A0A",
-    maxHeight: 280,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  // Cards
-  card: { marginBottom: 16 },
-  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
-  blurCard: {
-    borderRadius: 20,
-    padding: 20,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  solidCard: {
-    borderRadius: 20,
-    padding: 20,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  // Section
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  label: { fontSize: 14, fontWeight: "600", color: "#9A9A9A" },
-  countBadge: { fontWeight: "400", color: "#666" },
-  inlineBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  inlineBtnText: { color: "#FF2A2A", fontWeight: "600", fontSize: 13 },
-  // File rows
-  fileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-  },
-  fileRowText: { flex: 1, color: "#F5F5F5", fontSize: 14 },
-  emptyInCard: {
-    alignItems: "center",
-    paddingVertical: 20,
-    gap: 8,
-  },
-  emptyText: { fontSize: 14, color: "#666" },
-  // Input
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    marginTop: 8,
-  },
-  // Buttons
-  buttonContainer: { gap: 12, marginTop: 8 },
-  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
-  primaryButtonGlass: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.4)",
-  },
-  primaryButtonBlur: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.3)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FF2A2A",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  secondaryBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  destructiveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 68, 68, 0.1)",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255, 68, 68, 0.3)",
-  },
-  disabledButton: { opacity: 0.5 },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  secondaryButtonText: { color: "#9A9A9A" },
-  destructiveButtonText: { color: "#FF4444", fontSize: 16, fontWeight: "600" },
-  // Modal
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: { width: "100%", maxWidth: 420 },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F5F5F5",
-    marginBottom: 8,
-  },
-  modalText: { fontSize: 14, color: "#9A9A9A", lineHeight: 20 },
-  // Note card styles
-  noteCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-  },
-  noteHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
-  },
-  noteTitle: {
-    flex: 1,
-    color: "#F5F5F5",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  noteBodyText: {
-    color: "#D0D0D0",
-    fontSize: 13,
-    lineHeight: 20,
-    paddingLeft: 28,
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    scrollView: { flex: 1 },
+    content: { padding: 24, paddingTop: 24, paddingBottom: 48 },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 16,
+    },
+    // Header
+    headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+    heroPreview: {
+      width: "100%" as any,
+      aspectRatio: 4 / 3,
+      borderRadius: 20,
+      backgroundColor: isDarkMode ? "#0A0A0A" : "#EDEDED",
+      maxHeight: 280,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    // Cards
+    card: { marginBottom: 16 },
+    glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+    blurCard: {
+      borderRadius: 20,
+      padding: 20,
+      overflow: "hidden",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+    },
+    solidCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    // Section
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+    },
+    countBadge: { fontWeight: "400", color: isDarkMode ? "#666666" : "#7A7A7A" },
+    inlineBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+    inlineBtnText: { color: "#FF2A2A", fontWeight: "600", fontSize: 13 },
+    // File rows
+    fileRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#F4F4F4",
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E4E4E4",
+    },
+    fileRowText: {
+      flex: 1,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+    },
+    emptyInCard: {
+      alignItems: "center",
+      paddingVertical: 20,
+      gap: 8,
+    },
+    emptyText: { fontSize: 14, color: isDarkMode ? "#666666" : "#7A7A7A" },
+    // Input
+    input: {
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#D9D9D9",
+      marginTop: 8,
+    },
+    // Buttons
+    buttonContainer: { gap: 12, marginTop: 8 },
+    buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+    primaryButtonGlass: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.4)",
+    },
+    primaryButtonBlur: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.3)",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    primaryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FF2A2A",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+    },
+    secondaryBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    destructiveButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255, 68, 68, 0.1)",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderWidth: 1,
+      borderColor: "rgba(255, 68, 68, 0.3)",
+    },
+    disabledButton: { opacity: 0.5 },
+    buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+    secondaryButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666" },
+    destructiveButtonText: {
+      color: "#FF4444",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    // Modal
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalContent: { width: "100%", maxWidth: 420 },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    modalText: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      lineHeight: 20,
+    },
+    // Note card styles
+    noteCard: {
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "#F4F4F4",
+      borderRadius: 12,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E4E4E4",
+    },
+    noteHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 8,
+    },
+    noteTitle: {
+      flex: 1,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    noteBodyText: {
+      color: isDarkMode ? "#D0D0D0" : "#444444",
+      fontSize: 13,
+      lineHeight: 20,
+      paddingLeft: 28,
+    },
+  });
 
 function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");

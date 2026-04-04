@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -40,6 +40,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { showAlert } from "../../utils/alert";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface FileUploadMenuProps {
   visible: boolean;
@@ -62,6 +63,9 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
   onFileSelected,
   allowMultiple = true,
 }) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+
   const [loading, setLoading] = useState(false);
 
   const requestCameraPermission = async (): Promise<boolean> => {
@@ -236,7 +240,11 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
           <View style={styles.header}>
             <Text style={styles.title}>Upload</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#fff" />
+              <Ionicons
+                name="close"
+                size={24}
+                color={isDarkMode ? "#FFFFFF" : "#1A1A1A"}
+              />
             </TouchableOpacity>
           </View>
 
@@ -261,7 +269,11 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
                   <Text style={styles.menuItemLabel}>{item.label}</Text>
                   <Text style={styles.menuItemDescription}>{item.description}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#666" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={isDarkMode ? "#666" : "#8A8A8A"}
+                />
               </TouchableOpacity>
             ))}
           </View>
@@ -283,92 +295,96 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "flex-end",
-  },
-  container: {
-    backgroundColor: "#1a1a1a",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
-    borderWidth: 1,
-    borderColor: "#333",
-    borderBottomWidth: 0,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#333",
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  menuItems: {
-    padding: 8,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    marginVertical: 4,
-  },
-  menuItemDisabled: {
-    opacity: 0.5,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  menuItemContent: {
-    flex: 1,
-  },
-  menuItemLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  menuItemDescription: {
-    fontSize: 13,
-    color: "#888",
-  },
-  loadingContainer: {
-    padding: 16,
-    alignItems: "center",
-  },
-  loadingText: {
-    color: "#888",
-    fontSize: 14,
-  },
-  cancelButton: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    padding: 14,
-    backgroundColor: "#333",
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0, 0, 0, 0.7)" : "rgba(0, 0, 0, 0.24)",
+      justifyContent: "flex-end",
+    },
+    container: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingBottom: Platform.OS === "ios" ? 34 : 20,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333" : "#D9D9D9",
+      borderBottomWidth: 0,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#333" : "#E5E5E5",
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+    },
+    closeButton: {
+      padding: 4,
+    },
+    menuItems: {
+      padding: 8,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+      borderRadius: 12,
+      marginVertical: 4,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+    },
+    menuItemDisabled: {
+      opacity: 0.5,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    menuItemContent: {
+      flex: 1,
+    },
+    menuItemLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      marginBottom: 2,
+    },
+    menuItemDescription: {
+      fontSize: 13,
+      color: isDarkMode ? "#888" : "#666",
+    },
+    loadingContainer: {
+      padding: 16,
+      alignItems: "center",
+    },
+    loadingText: {
+      color: isDarkMode ? "#888" : "#666",
+      fontSize: 14,
+    },
+    cancelButton: {
+      marginHorizontal: 16,
+      marginTop: 8,
+      padding: 14,
+      backgroundColor: isDarkMode ? "#333" : "#EFEFEF",
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "transparent" : "#D9D9D9",
+    },
+    cancelButtonText: {
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      fontSize: 16,
+      fontWeight: "500",
+    },
+  });
 
 export default FileUploadMenu;

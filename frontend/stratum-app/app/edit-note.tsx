@@ -42,9 +42,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { noteService } from "../src/services/noteService";
-import { useAutoSave } from "../src/hooks/useAutoSave";
-import { showAlert } from "../src/utils/alert";
+import { noteService } from "@/services/noteService";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { showAlert } from "@/utils/alert";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const isIOS = Platform.OS === "ios";
 
@@ -54,9 +55,11 @@ const isIOS = Platform.OS === "ios";
 function GlassCard({
   children,
   style,
+  styles,
 }: {
   children: React.ReactNode;
   style?: object;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return <View style={[styles.solidCard, style]}>{children}</View>;
 }
@@ -68,6 +71,8 @@ function GlassButton({
   icon,
   disabled,
   loading: isLoading,
+  styles,
+  secondaryIconColor,
 }: {
   onPress: () => void;
   title: string;
@@ -75,6 +80,8 @@ function GlassButton({
   icon?: string;
   disabled?: boolean;
   loading?: boolean;
+  styles: ReturnType<typeof createStyles>;
+  secondaryIconColor: string;
 }) {
   const isPrimary = variant === "primary";
   const content = (
@@ -83,7 +90,7 @@ function GlassButton({
         <Ionicons
           name={icon as keyof typeof Ionicons.glyphMap}
           size={20}
-          color={isPrimary ? "#FFFFFF" : "#9A9A9A"}
+          color={isPrimary ? "#FFFFFF" : secondaryIconColor}
           style={{ marginRight: 8 }}
         />
       )}
@@ -123,6 +130,13 @@ interface Note {
 }
 
 export default function EditNoteScreen() {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
+  const placeholderTextColor = isDarkMode ? "#555" : "#7A7A7A";
+
   const { noteId, projectId: _projectId } = useLocalSearchParams();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -248,9 +262,9 @@ export default function EditNoteScreen() {
   const stackScreenOpts = {
     headerTransparent: isIOS,
     headerBlurEffect: isIOS ? ("systemChromeMaterial" as const) : undefined,
-    headerStyle: isIOS ? {} : { backgroundColor: "#111111" },
+    headerStyle: isIOS ? {} : { backgroundColor: pageBackground },
     headerTintColor: "#FF2A2A",
-    headerTitleStyle: { color: "#F5F5F5", fontWeight: "600" as const },
+    headerTitleStyle: { color: textPrimary, fontWeight: "600" as const },
     headerBackTitle: "Note",
     headerShown: true,
   };
@@ -277,7 +291,7 @@ export default function EditNoteScreen() {
         onRequestClose={() => setShowDraftModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalContent}>
+          <GlassCard style={styles.modalContent} styles={styles}>
             <Text style={styles.modalTitle}>Unsaved Draft Found</Text>
             <Text style={styles.modalText}>
               You have an unsaved draft from a previous editing session. Would you
@@ -288,12 +302,16 @@ export default function EditNoteScreen() {
                 onPress={handleDiscardDraft}
                 title="Discard"
                 variant="secondary"
+                styles={styles}
+                secondaryIconColor={textSecondary}
               />
               <GlassButton
                 onPress={handleRestoreDraft}
                 title="Restore"
                 variant="primary"
                 icon="refresh"
+                styles={styles}
+                secondaryIconColor={textSecondary}
               />
             </View>
           </GlassCard>
@@ -338,28 +356,28 @@ export default function EditNoteScreen() {
         <Text style={styles.subtitle}>Update your note details and content</Text>
 
         {/* Title card */}
-        <GlassCard style={styles.card}>
+        <GlassCard style={styles.card} styles={styles}>
           <Text style={styles.label}>
-            <Ionicons name="text" size={14} color="#9A9A9A" /> Title
+            <Ionicons name="text" size={14} color={textSecondary} /> Title
           </Text>
           <TextInput
             style={styles.input}
             placeholder="Enter note title"
-            placeholderTextColor="#555"
+            placeholderTextColor={placeholderTextColor}
             value={title}
             onChangeText={setTitle}
           />
         </GlassCard>
 
         {/* Content card */}
-        <GlassCard style={styles.card}>
+        <GlassCard style={styles.card} styles={styles}>
           <Text style={styles.label}>
-            <Ionicons name="document-text" size={14} color="#9A9A9A" /> Content
+            <Ionicons name="document-text" size={14} color={textSecondary} /> Content
           </Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Describe your archaeological findings, observations, or thoughts..."
-            placeholderTextColor="#555"
+            placeholderTextColor={placeholderTextColor}
             value={content}
             onChangeText={setContent}
             multiline
@@ -377,12 +395,16 @@ export default function EditNoteScreen() {
             icon="checkmark-circle"
             disabled={saving}
             loading={saving}
+            styles={styles}
+            secondaryIconColor={textSecondary}
           />
           <GlassButton
             onPress={() => router.back()}
             title="Cancel"
             variant="secondary"
             disabled={saving}
+            styles={styles}
+            secondaryIconColor={textSecondary}
           />
         </View>
       </ScrollView>
@@ -390,171 +412,178 @@ export default function EditNoteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#111111",
-    padding: 24,
-    gap: 16,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 24,
-    paddingBottom: 48,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#9A9A9A",
-    marginTop: 16,
-  },
-  // Header
-  headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#9A9A9A",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  // Cards
-  card: { marginBottom: 16 },
-  glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
-  blurCard: {
-    borderRadius: 20,
-    padding: 20,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  solidCard: {
-    borderRadius: 20,
-    padding: 20,
-    backgroundColor: "#1A1A1A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#9A9A9A",
-    marginBottom: 12,
-  },
-  input: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  textArea: {
-    height: 200,
-    textAlignVertical: "top",
-  },
-  // Buttons
-  buttonContainer: { gap: 12, marginTop: 8 },
-  buttonTouchable: { borderRadius: 14, overflow: "hidden" },
-  primaryButtonGlass: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.4)",
-  },
-  primaryButtonBlur: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(255, 42, 42, 0.3)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FF2A2A",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  disabledButton: { opacity: 0.5 },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  secondaryButtonText: { color: "#9A9A9A" },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalContent: {
-    maxWidth: 420,
-    width: "100%",
-  },
-  modalTitle: {
-    color: "#F5F5F5",
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  modalText: {
-    color: "#9A9A9A",
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  // Save status bar
-  saveStatusBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: "rgba(30, 30, 30, 0.95)",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  saveStatusText: {
-    color: "#9A9A9A",
-    fontSize: 12,
-    textAlign: "center",
-  },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      padding: 24,
+      gap: 16,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 24,
+      paddingTop: 24,
+      paddingBottom: 48,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 16,
+    },
+    // Header
+    headerIcon: { alignItems: "center", marginBottom: 16, marginTop: 16 },
+    title: {
+      fontSize: 28,
+      fontWeight: "bold",
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 22,
+    },
+    // Cards
+    card: { marginBottom: 16 },
+    glassCard: { borderRadius: 20, padding: 20, overflow: "hidden" },
+    blurCard: {
+      borderRadius: 20,
+      padding: 20,
+      overflow: "hidden",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.12)",
+    },
+    solidCard: {
+      borderRadius: 20,
+      padding: 20,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 12,
+    },
+    input: {
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#D9D9D9",
+    },
+    textArea: {
+      height: 200,
+      textAlignVertical: "top",
+    },
+    // Buttons
+    buttonContainer: { gap: 12, marginTop: 8 },
+    buttonTouchable: { borderRadius: 14, overflow: "hidden" },
+    primaryButtonGlass: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.4)",
+    },
+    primaryButtonBlur: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      backgroundColor: "rgba(255, 42, 42, 0.3)",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    primaryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FF2A2A",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+    },
+    secondaryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+      borderRadius: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    disabledButton: { opacity: 0.5 },
+    buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+    secondaryButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666" },
+    // Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalContent: {
+      maxWidth: 420,
+      width: "100%",
+    },
+    modalTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 20,
+      fontWeight: "700",
+      marginBottom: 12,
+    },
+    modalText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+      lineHeight: 20,
+      marginBottom: 24,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+    },
+    // Save status bar
+    saveStatusBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 100,
+      backgroundColor: isDarkMode
+        ? "rgba(30, 30, 30, 0.95)"
+        : "rgba(255,255,255,0.95)",
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(0, 0, 0, 0.08)",
+    },
+    saveStatusText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 12,
+      textAlign: "center",
+    },
+  });

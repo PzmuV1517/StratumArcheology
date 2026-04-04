@@ -1,7 +1,5 @@
 # Dependencies
 node_modules/
-!stratum-app/dist/assets/node_modules/
-!stratum-app/dist/assets/node_modules/**
 
 # Expo
 .expo/

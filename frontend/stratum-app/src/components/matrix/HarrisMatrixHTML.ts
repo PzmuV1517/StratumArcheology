@@ -48,18 +48,18 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         :root {
-            --primary-bg: #111111;
-            --container-bg: #1A1A1A;
-            --panel-bg: #222222;
-            --header-color: #F5F5F5;
-            --text-color: #EAEAEA;
-            --border-color: #2A2A2A;
+            --primary-bg: #F6F6F6;
+            --container-bg: #FFFFFF;
+            --panel-bg: #FFFFFF;
+            --header-color: #1A1A1A;
+            --text-color: #1A1A1A;
+            --border-color: #D9D9D9;
             --primary-accent: #FF2A2A;
-            --primary-accent-hover: #CC2222;
+            --primary-accent-hover: #E02525;
             --danger-accent: #dc3545;
             --success-accent: #28a745;
             --warning-accent: #ffc107;
-            --cancel-accent: #6c757d;
+            --cancel-accent: #8a8a8a;
         }
         
         * {
@@ -101,7 +101,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         .header p {
             margin: 5px 0 0 0;
             font-size: 12px;
-            color: #6c757d;
+            color: #666666;
         }
         
         .workspace {
@@ -150,7 +150,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
         .btn-primary { background: var(--primary-accent); }
         .btn-success { background: var(--success-accent); }
         .btn-danger { background: var(--danger-accent); }
-        .btn-warning { background: var(--warning-accent); color: #333; }
+        .btn-warning { background: var(--warning-accent); color: #1A1A1A; }
         
         /* Context node styles */
         .context-node-group { cursor: pointer; }
@@ -212,7 +212,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.24);
             display: none;
             align-items: center;
             justify-content: center;
@@ -287,7 +287,7 @@ export function getHarrisMatrixHTML(options: HarrisMatrixHTMLOptions): string {
             background: var(--panel-bg, #151a23);
             border-radius: 12px;
             padding: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
             max-height: 200px;
             overflow-y: auto;
             display: none;

@@ -40,6 +40,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
+from app.backup_service import backup_service
 from app.config import settings
 from app.firebase_config import initialize_firebase
 from app.middleware import ErrorHandlingMiddleware, configure_logging, get_logger
@@ -51,6 +52,9 @@ from app.routes import (
     channels,
     chat,
     convert,
+    emonument_dashboard,
+    emonument_backups,
+    emonument_instances,
     files,
     forms,
     gps,
@@ -124,6 +128,9 @@ app.include_router(qrcodes.router, prefix="/api")
 app.include_router(activities.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(channels.router, prefix="/api")
+app.include_router(emonument_dashboard.router, prefix="/api")
+app.include_router(emonument_backups.router, prefix="/api")
+app.include_router(emonument_instances.router, prefix="/api")
 
 logger.info(
     "STRATUM API started",
@@ -145,6 +152,16 @@ async def root():
 async def health_check():
     """Health check endpoint (available at both /health and /api/health)"""
     return {"status": "healthy", "database": "connected", "storage": "connected"}
+
+
+@app.on_event("startup")
+async def _start_backup_scheduler():
+    await backup_service.start_scheduler()
+
+
+@app.on_event("shutdown")
+async def _stop_backup_scheduler():
+    await backup_service.stop_scheduler()
 
 
 if __name__ == "__main__":

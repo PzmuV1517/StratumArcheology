@@ -37,6 +37,7 @@ import {
   WheelerLacuna,
 } from "../../hooks/useWheelerData";
 import { WheelerPublicationView } from "./WheelerPublicationView.web";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /* ───────────────── Micro-icons (inline SVG) ───────────────── */
 
@@ -273,180 +274,6 @@ interface WheelerDiagramProps {
 
 /* ───────────────────────── CSS ───────────────────────── */
 
-const containerStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100%",
-  width: "100%",
-  backgroundColor: "#111111",
-  color: "#F5F5F5",
-  fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif",
-  overflow: "hidden",
-  position: "relative",
-};
-
-const toolbarStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-  padding: "8px 16px",
-  backgroundColor: "#1A1A1A",
-  borderBottom: "1px solid rgba(255,255,255,0.1)",
-  flexShrink: 0,
-  minHeight: TOOLBAR_H,
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: "6px 14px",
-  borderRadius: 6,
-  border: "1px solid rgba(255,255,255,0.15)",
-  backgroundColor: "#222222",
-  color: "#F5F5F5",
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: "pointer",
-  transition: "background-color 0.15s",
-};
-
-const accentButtonStyle: React.CSSProperties = {
-  ...buttonStyle,
-  backgroundColor: "#FF2A2A",
-  borderColor: "#FF2A2A",
-};
-
-const svgContainerStyle: React.CSSProperties = {
-  flex: 1,
-  minHeight: 0,
-  overflow: "auto",
-  backgroundColor: "#0A0A0A",
-};
-
-const legendStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 16,
-  padding: "8px 16px",
-  backgroundColor: "#1A1A1A",
-  borderTop: "1px solid rgba(255,255,255,0.1)",
-  flexShrink: 0,
-};
-
-const legendItemStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
-  fontSize: 12,
-  color: "#EAEAEA",
-};
-
-const tooltipStyle: React.CSSProperties = {
-  position: "fixed",
-  padding: "8px 12px",
-  backgroundColor: "#222222",
-  border: "1px solid rgba(255,255,255,0.15)",
-  borderRadius: 8,
-  color: "#F5F5F5",
-  fontSize: 12,
-  pointerEvents: "none",
-  zIndex: 1000,
-  maxWidth: 240,
-  boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-};
-
-const statusBarStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  marginLeft: "auto",
-  fontSize: 12,
-  color: "#888",
-};
-
-const emptyStateStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  height: "100%",
-  gap: 16,
-  color: "#888",
-  fontSize: 14,
-};
-
-/* ── Modal/Overlay styles ── */
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  backgroundColor: "rgba(0,0,0,0.6)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  zIndex: 2000,
-};
-
-const modalContentStyle: React.CSSProperties = {
-  backgroundColor: "#1A1A1A",
-  border: "1px solid #2A2A2A",
-  borderRadius: 12,
-  padding: 24,
-  minWidth: 360,
-  maxWidth: 480,
-  boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "8px 12px",
-  borderRadius: 6,
-  border: "1px solid #3A3A3A",
-  backgroundColor: "#222222",
-  color: "#F5F5F5",
-  fontSize: 14,
-  outline: "none",
-  boxSizing: "border-box",
-};
-
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  cursor: "pointer",
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: 12,
-  fontWeight: 600,
-  color: "#999",
-  marginBottom: 4,
-  textTransform: "uppercase",
-  letterSpacing: 0.5,
-};
-
-/* ───────────────── Help walkthrough styles ───────────────── */
-
-const helpOverlayStyle: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  backgroundColor: "rgba(0,0,0,0.75)",
-  zIndex: 3000,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const helpCardStyle: React.CSSProperties = {
-  backgroundColor: "#1A1A1A",
-  border: "1px solid #FF2A2A",
-  borderRadius: 16,
-  padding: 32,
-  maxWidth: 520,
-  width: "90%",
-  boxShadow: "0 8px 40px rgba(255,42,42,0.15)",
-};
-
 /* ───────────────────────── Helpers ───────────────────────── */
 
 function buildOccupancy(
@@ -620,6 +447,8 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
   projectId,
   canEdit = true,
 }) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+
   const {
     data,
     loading,
@@ -697,6 +526,246 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
   // Collapse the edit toolbar buttons
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+
+  const palette = useMemo(
+    () => ({
+      pageBackground: isDarkMode ? "#111111" : "#F7F7F7",
+      surface: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      surfaceAlt: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+      card: isDarkMode ? "#222222" : "#F1F1F1",
+      border: isDarkMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.14)",
+      borderSubtle: isDarkMode ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+      textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      textSecondary: isDarkMode ? "#EAEAEA" : "#444444",
+      textMuted: isDarkMode ? "#888" : "#666",
+      label: isDarkMode ? "#999" : "#666",
+      overlay: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.24)",
+      overlayStrong: isDarkMode ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.3)",
+      shadow: isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.2)",
+      shadowSoft: isDarkMode ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.12)",
+      graphFill: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+    }),
+    [isDarkMode],
+  );
+
+  const containerStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+      width: "100%",
+      backgroundColor: palette.pageBackground,
+      color: palette.textPrimary,
+      fontFamily: "'Inter', 'SF Pro Display', system-ui, sans-serif",
+      overflow: "hidden",
+      position: "relative",
+    }),
+    [palette],
+  );
+
+  const toolbarStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      padding: "8px 16px",
+      backgroundColor: palette.surface,
+      borderBottom: `1px solid ${palette.borderSubtle}`,
+      flexShrink: 0,
+      minHeight: TOOLBAR_H,
+    }),
+    [palette],
+  );
+
+  const buttonStyle: React.CSSProperties = useMemo(
+    () => ({
+      padding: "6px 14px",
+      borderRadius: 6,
+      border: `1px solid ${palette.border}`,
+      backgroundColor: palette.card,
+      color: palette.textPrimary,
+      fontSize: 13,
+      fontWeight: 600,
+      cursor: "pointer",
+      transition: "background-color 0.15s",
+    }),
+    [palette],
+  );
+
+  const accentButtonStyle: React.CSSProperties = useMemo(
+    () => ({
+      ...buttonStyle,
+      backgroundColor: "#FF2A2A",
+      borderColor: "#FF2A2A",
+      color: "#FFFFFF",
+    }),
+    [buttonStyle],
+  );
+
+  const svgContainerStyle: React.CSSProperties = useMemo(
+    () => ({
+      flex: 1,
+      minHeight: 0,
+      overflow: "auto",
+      backgroundColor: palette.surfaceAlt,
+    }),
+    [palette],
+  );
+
+  const legendStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      padding: "8px 16px",
+      backgroundColor: palette.surface,
+      borderTop: `1px solid ${palette.borderSubtle}`,
+      flexShrink: 0,
+    }),
+    [palette],
+  );
+
+  const legendItemStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      fontSize: 12,
+      color: palette.textSecondary,
+    }),
+    [palette],
+  );
+
+  const tooltipStyle: React.CSSProperties = useMemo(
+    () => ({
+      position: "fixed",
+      padding: "8px 12px",
+      backgroundColor: palette.card,
+      border: `1px solid ${palette.border}`,
+      borderRadius: 8,
+      color: palette.textPrimary,
+      fontSize: 12,
+      pointerEvents: "none",
+      zIndex: 1000,
+      maxWidth: 240,
+      boxShadow: `0 4px 12px ${palette.shadowSoft}`,
+    }),
+    [palette],
+  );
+
+  const statusBarStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      marginLeft: "auto",
+      fontSize: 12,
+      color: palette.textMuted,
+    }),
+    [palette],
+  );
+
+  const emptyStateStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      gap: 16,
+      color: palette.textMuted,
+      fontSize: 14,
+    }),
+    [palette],
+  );
+
+  const modalOverlayStyle: React.CSSProperties = useMemo(
+    () => ({
+      position: "fixed",
+      inset: 0,
+      backgroundColor: palette.overlay,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2000,
+    }),
+    [palette],
+  );
+
+  const modalContentStyle: React.CSSProperties = useMemo(
+    () => ({
+      backgroundColor: palette.surface,
+      border: `1px solid ${isDarkMode ? "#2A2A2A" : "#D9D9D9"}`,
+      borderRadius: 12,
+      padding: 24,
+      minWidth: 360,
+      maxWidth: 480,
+      boxShadow: `0 8px 32px ${palette.shadow}`,
+    }),
+    [isDarkMode, palette],
+  );
+
+  const inputStyle: React.CSSProperties = useMemo(
+    () => ({
+      width: "100%",
+      padding: "8px 12px",
+      borderRadius: 6,
+      border: `1px solid ${isDarkMode ? "#3A3A3A" : "#D0D0D0"}`,
+      backgroundColor: palette.card,
+      color: palette.textPrimary,
+      fontSize: 14,
+      outline: "none",
+      boxSizing: "border-box",
+    }),
+    [isDarkMode, palette],
+  );
+
+  const selectStyle: React.CSSProperties = useMemo(
+    () => ({ ...inputStyle, cursor: "pointer" }),
+    [inputStyle],
+  );
+
+  const labelStyle: React.CSSProperties = useMemo(
+    () => ({
+      display: "block",
+      fontSize: 12,
+      fontWeight: 600,
+      color: palette.label,
+      marginBottom: 4,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    }),
+    [palette],
+  );
+
+  const helpOverlayStyle: React.CSSProperties = useMemo(
+    () => ({
+      position: "fixed",
+      inset: 0,
+      backgroundColor: palette.overlayStrong,
+      zIndex: 3000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }),
+    [palette],
+  );
+
+  const helpCardStyle: React.CSSProperties = useMemo(
+    () => ({
+      backgroundColor: palette.surface,
+      border: "1px solid #FF2A2A",
+      borderRadius: 16,
+      padding: 32,
+      maxWidth: 520,
+      width: "90%",
+      boxShadow: "0 8px 40px rgba(255,42,42,0.15)",
+    }),
+    [palette],
+  );
 
   // Check for server updates on mount
   useEffect(() => {
@@ -1416,7 +1485,13 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
         </defs>
 
         {/* ── Background ── */}
-        <rect x={PAD_L} y={PAD_T} width={graphW} height={graphH} fill="#0A0A0A" />
+        <rect
+          x={PAD_L}
+          y={PAD_T}
+          width={graphW}
+          height={graphH}
+          fill={palette.graphFill}
+        />
 
         {/* Subtle horizontal time-lines */}
         {Array.from({ length: totalRows + 1 }, (_, r) => (
@@ -1555,7 +1630,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 x={cx}
                 y={cy}
                 textAnchor="middle"
-                fill="#F5F5F5"
+                fill={palette.textPrimary}
                 fontSize={13}
                 fontWeight={700}
                 fontFamily="'Inter', system-ui, sans-serif"
@@ -1567,7 +1642,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   x={cx}
                   y={cy + 14}
                   textAnchor="middle"
-                  fill="rgba(255,255,255,0.5)"
+                  fill={isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)"}
                   fontSize={9}
                   fontFamily="'Inter', system-ui, sans-serif"
                 >
@@ -1801,7 +1876,12 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       {/* ─── Toolbar ─── */}
       <div style={toolbarStyle}>
         <span
-          style={{ fontWeight: 700, fontSize: 14, color: "#F5F5F5", marginRight: 4 }}
+          style={{
+            fontWeight: 700,
+            fontSize: 14,
+            color: palette.textPrimary,
+            marginRight: 4,
+          }}
         >
           Wheeler Diagram
         </span>
@@ -1824,7 +1904,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 position: "relative",
                 flexShrink: 0,
                 borderRadius: 8,
-                backgroundColor: "#111",
+                backgroundColor: palette.pageBackground,
                 overflow: "hidden",
                 width: wrapperW,
                 transition: "width 0.25s cubic-bezier(0.4,0,0.2,1)",
@@ -2536,14 +2616,14 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           {(tooltip.placement.type || tooltip.placement.description) && (
             <>
               {tooltip.placement.type && (
-                <div style={{ color: "#EAEAEA", marginBottom: 2 }}>
+                <div style={{ color: palette.textSecondary, marginBottom: 2 }}>
                   Type: {tooltip.placement.type}
                 </div>
               )}
               {tooltip.placement.description && (
                 <div
                   style={{
-                    color: "#EAEAEA",
+                    color: palette.textSecondary,
                     marginBottom: tooltip.placement.notes ? 2 : 0,
                   }}
                 >
@@ -2551,13 +2631,19 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 </div>
               )}
               {tooltip.placement.notes && (
-                <div style={{ color: "#aaa", fontStyle: "italic", fontSize: 11 }}>
+                <div
+                  style={{
+                    color: palette.textMuted,
+                    fontStyle: "italic",
+                    fontSize: 11,
+                  }}
+                >
                   {tooltip.placement.notes}
                 </div>
               )}
             </>
           )}
-          <div style={{ color: "#888", marginTop: 4, fontSize: 11 }}>
+          <div style={{ color: palette.textMuted, marginTop: 4, fontSize: 11 }}>
             Trenches: {tooltip.placement.trenchIds.join(", ")} · Rows t
             {totalRows - tooltip.placement.rowStart}–t
             {totalRows - tooltip.placement.rowEnd}
@@ -2579,7 +2665,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 margin: "0 0 16px",
                 fontSize: 18,
                 fontWeight: 700,
-                color: "#F5F5F5",
+                color: palette.textPrimary,
               }}
             >
               Add Trench / Section
@@ -2653,7 +2739,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 margin: "0 0 16px",
                 fontSize: 18,
                 fontWeight: 700,
-                color: "#F5F5F5",
+                color: palette.textPrimary,
               }}
             >
               {ctxEditMode ? "Edit Context" : "Add Context"}
@@ -3075,7 +3161,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 style={{
                   marginLeft: "auto",
                   fontSize: 12,
-                  color: "#666",
+                  color: palette.textMuted,
                 }}
               >
                 {helpStepIdx + 1} / {HELP_STEPS.length}
@@ -3096,7 +3182,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                 margin: "0 0 8px",
                 fontSize: 20,
                 fontWeight: 700,
-                color: "#F5F5F5",
+                color: palette.textPrimary,
               }}
             >
               {helpStep.title}

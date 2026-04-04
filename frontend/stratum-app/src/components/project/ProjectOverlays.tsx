@@ -30,18 +30,18 @@
 import React from "react";
 import { Modal } from "react-native";
 
-import ProjectMenuModal from "@/src/components/project/modals/ProjectMenuModal";
-import MembersModal from "@/src/components/project/MembersModal";
-import FilesOverlay from "@/src/components/project/FilesOverlay";
-import NewFolderModal from "@/src/components/project/modals/NewFolderModal";
-import DeleteConfirmModal from "@/src/components/project/modals/DeleteConfirmModal";
-import RenameModal from "@/src/components/project/modals/RenameModal";
-import MoveBanner from "@/src/components/project/MoveBanner";
-import { ConflictResolutionModal } from "@/src/components/sync/ConflictResolutionModal";
-import { showAlert } from "@/src/utils/alert";
-import { fileService } from "@/src/services/fileService";
-import { projectService } from "@/src/services/projectService";
-import { useProjectDetail } from "@/src/contexts/ProjectDetailContext";
+import ProjectMenuModal from "@/components/project/modals/ProjectMenuModal";
+import MembersModal from "@/components/project/MembersModal";
+import FilesOverlay from "@/components/project/FilesOverlay";
+import NewFolderModal from "@/components/project/modals/NewFolderModal";
+import DeleteConfirmModal from "@/components/project/modals/DeleteConfirmModal";
+import RenameModal from "@/components/project/modals/RenameModal";
+import MoveBanner from "@/components/project/MoveBanner";
+import { ConflictResolutionModal } from "@/components/sync/ConflictResolutionModal";
+import { showAlert } from "@/utils/alert";
+import { fileService } from "@/services/fileService";
+import { projectService } from "@/services/projectService";
+import { useProjectDetail } from "@/contexts/ProjectDetailContext";
 
 export default function ProjectOverlays() {
   const {

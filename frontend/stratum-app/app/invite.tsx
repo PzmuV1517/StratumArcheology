@@ -27,14 +27,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { projectService } from "../src/services/projectService";
+import { projectService } from "@/services/projectService";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function InviteAcceptScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const [status, setStatus] = useState<"idle" | "accepting" | "success" | "error">(
     "idle",
   );
@@ -62,33 +69,46 @@ export default function InviteAcceptScreen() {
   }, [token]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Project Invitation</Text>
-      <Text style={styles.text}>{message || "Processing invite…"}</Text>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
+      <Text style={[styles.title, { color: textPrimary }]}>Project Invitation</Text>
+      <Text style={[styles.text, { color: textSecondary }]}>
+        {message || "Processing invite…"}
+      </Text>
       {status !== "accepting" && (
         <TouchableOpacity style={styles.button} onPress={() => router.replace("/")}>
-          <Text style={styles.buttonText}>Go Home</Text>
+          <Text style={[styles.buttonText, { color: textPrimary }]}>Go Home</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#111111",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: { color: "#F5F5F5", fontSize: 22, fontWeight: "700", marginBottom: 12 },
-  text: { color: "#9A9A9A", fontSize: 14, textAlign: "center", marginBottom: 16 },
-  button: {
-    backgroundColor: "#FF2A2A",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  buttonText: { color: "#F5F5F5", fontWeight: "600" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    title: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 12,
+    },
+    text: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      fontSize: 14,
+      textAlign: "center",
+      marginBottom: 16,
+    },
+    button: {
+      backgroundColor: "#FF2A2A",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    buttonText: { color: isDarkMode ? "#F5F5F5" : "#1A1A1A", fontWeight: "600" },
+  });

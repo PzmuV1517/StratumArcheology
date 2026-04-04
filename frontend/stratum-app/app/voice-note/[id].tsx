@@ -27,14 +27,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { noteService } from "../../src/services/noteService";
-import AudioPanel from "../../src/components/data/AudioPanel"; // platform auto-resolution
+import { noteService } from "@/services/noteService";
+import AudioPanel from "@/components/data/AudioPanel"; // platform auto-resolution
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function VoiceNoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const [note, setNote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -56,26 +63,27 @@ export default function VoiceNoteScreen() {
   }, [id]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
       <Stack.Screen
         options={{
           title: note?.title || "Voice Note",
-          headerStyle: { backgroundColor: "#111" },
+          headerStyle: { backgroundColor: pageBackground },
           headerTintColor: "#FF2A2A",
+          headerTitleStyle: { color: textPrimary },
         }}
       />
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color="#FF2A2A" />
-          <Text style={styles.loading}>Loading…</Text>
+          <Text style={[styles.loading, { color: textSecondary }]}>Loading…</Text>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{note?.title}</Text>
+          <Text style={[styles.title, { color: textPrimary }]}>{note?.title}</Text>
           <View style={{ flex: 1, marginTop: 16 }}>
             <AudioPanel audioUrl={audioUrl || ""} />
             {!audioUrl && (
-              <Text style={{ color: "#9A9A9A", marginTop: 12 }}>
+              <Text style={{ color: textSecondary, marginTop: 12 }}>
                 No audio attachment found.
               </Text>
             )}
@@ -86,9 +94,18 @@ export default function VoiceNoteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111", padding: 16 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loading: { color: "#9A9A9A", marginTop: 8 },
-  title: { color: "#F5F5F5", fontSize: 20, fontWeight: "700" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+      padding: 16,
+    },
+    center: { flex: 1, alignItems: "center", justifyContent: "center" },
+    loading: { color: isDarkMode ? "#9A9A9A" : "#666666", marginTop: 8 },
+    title: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 20,
+      fontWeight: "700",
+    },
+  });

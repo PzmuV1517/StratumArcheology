@@ -25,7 +25,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import { ProjectToolsScreen } from "@/src/components/project/ProjectTabsScreens";
+import { ProjectToolsScreen } from "@/components/project/ProjectTabsScreens";
 
 export default function ProjectToolsRoute() {
   return <ProjectToolsScreen />;

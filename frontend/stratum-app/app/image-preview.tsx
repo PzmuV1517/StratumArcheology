@@ -26,7 +26,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -36,13 +36,22 @@ import {
   Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { fileService } from "../src/services/fileService";
-import PhotoPanel from "../src/components/data/PhotoPanel";
-import { showAlert } from "../src/utils/alert";
+import { fileService } from "@/services/fileService";
+import PhotoPanel from "@/components/data/PhotoPanel";
+import { showAlert } from "@/utils/alert";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function ImagePreviewScreen() {
   const { nodeId, name } = useLocalSearchParams<{ nodeId: string; name: string }>();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const pageBackground = isDarkMode ? "#111111" : "#F7F7F7";
+  const surfaceBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
+  const borderColor = isDarkMode ? "#333" : "#D9D9D9";
+  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const [loading, setLoading] = useState(true);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,23 +123,26 @@ export default function ImagePreviewScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: pageBackground }]}>
       <Stack.Screen
         options={{
           title: (name as string) || "Image",
           headerTransparent: Platform.OS === "ios",
           headerBlurEffect:
             Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
-          headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: "#111111" },
+          headerStyle:
+            Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
           headerTintColor: "#FF2A2A",
-          headerTitleStyle: { color: "#F5F5F5" },
+          headerTitleStyle: { color: textPrimary },
         }}
       />
       <View style={styles.content}>
         {loading && (
           <View style={styles.center}>
             <ActivityIndicator color="#FF2A2A" />
-            <Text style={styles.loadingText}>Loading image…</Text>
+            <Text style={[styles.loadingText, { color: textSecondary }]}>
+              Loading image…
+            </Text>
           </View>
         )}
         {!loading && error && (
@@ -142,39 +154,57 @@ export default function ImagePreviewScreen() {
       </View>
       <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[
+            styles.actionButton,
+            { backgroundColor: surfaceBackground, borderColor },
+          ]}
           onPress={handleDownload}
           disabled={!blobUrl}
         >
-          <Text style={styles.actionButtonText}>Download</Text>
+          <Text style={[styles.actionButtonText, { color: textPrimary }]}>
+            Download
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.actionButton, styles.closeButton]}
+          style={[
+            styles.actionButton,
+            styles.closeButton,
+            { backgroundColor: isDarkMode ? "#1A1A1A" : "#EFEFEF", borderColor },
+          ]}
           onPress={() => router.back()}
         >
-          <Text style={[styles.actionButtonText, { color: "#9A9A9A" }]}>Close</Text>
+          <Text style={[styles.actionButtonText, { color: textSecondary }]}>
+            Close
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  content: { flex: 1, padding: 12 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 12, color: "#9A9A9A" },
-  errorText: { color: "#FF4444", fontSize: 16 },
-  actions: { flexDirection: "row", gap: 12, padding: 16 },
-  actionButton: {
-    flex: 1,
-    backgroundColor: "#2A2A2A",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  closeButton: { backgroundColor: "#1A1A1A" },
-  actionButtonText: { color: "#F5F5F5", fontWeight: "600" },
-});
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    content: { flex: 1, padding: 12 },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingText: { marginTop: 12, color: isDarkMode ? "#9A9A9A" : "#666666" },
+    errorText: { color: "#FF4444", fontSize: 16 },
+    actions: { flexDirection: "row", gap: 12, padding: 16 },
+    actionButton: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#FFFFFF",
+      padding: 14,
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    closeButton: { backgroundColor: isDarkMode ? "#1A1A1A" : "#EFEFEF" },
+    actionButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "600",
+    },
+  });

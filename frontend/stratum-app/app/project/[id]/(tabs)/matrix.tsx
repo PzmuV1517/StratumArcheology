@@ -28,7 +28,7 @@
  * SOFTWARE.
  */
 import React from "react";
-import { ProjectMatrixScreen } from "@/src/components/project/ProjectTabsScreens";
+import { ProjectMatrixScreen } from "@/components/project/ProjectTabsScreens";
 
 export default function ProjectMatrixRoute() {
   return <ProjectMatrixScreen />;

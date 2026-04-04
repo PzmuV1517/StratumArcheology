@@ -29,6 +29,7 @@
  */
 import React from "react";
 import { View, Text, StyleSheet, ViewStyle, TouchableOpacity } from "react-native";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface CardProps {
   title?: string;
@@ -52,16 +53,41 @@ export default function Card({
   onPress,
   footer,
 }: CardProps) {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDarkMode = colorScheme === "dark";
+  const cardBackground = isDarkMode ? "#1C1C1E" : "#FFFFFF";
+  const borderColor = isDarkMode ? "#2C2C2E" : "#D9D9D9";
+  const titleColor = isDarkMode ? "#FFFFFF" : "#1A1A1A";
+  const subtitleColor = isDarkMode ? "#8E8E93" : "#666666";
+  const footerBackground = isDarkMode ? "#0C0C0E" : "#F3F3F3";
+
   const content = (
-    <View style={[styles.card, style]}>
+    <View
+      style={[styles.card, { backgroundColor: cardBackground, borderColor }, style]}
+    >
       {(title || subtitle) && (
-        <View style={styles.header}>
-          {title && <Text style={styles.title}>{title}</Text>}
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <View style={[styles.header, { borderBottomColor: borderColor }]}>
+          {title && (
+            <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
+          )}
+          {subtitle && (
+            <Text style={[styles.subtitle, { color: subtitleColor }]}>
+              {subtitle}
+            </Text>
+          )}
         </View>
       )}
       <View style={styles.body}>{children}</View>
-      {footer && <View style={styles.footer}>{footer}</View>}
+      {footer && (
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: borderColor, backgroundColor: footerBackground },
+          ]}
+        >
+          {footer}
+        </View>
+      )}
     </View>
   );
 
@@ -78,10 +104,8 @@ export default function Card({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#1C1C1E",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#2C2C2E",
     overflow: "hidden",
   },
   header: {
@@ -89,16 +113,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#2C2C2E",
   },
   title: {
     fontSize: 17,
     fontWeight: "600",
-    color: "#FFFFFF",
   },
   subtitle: {
     fontSize: 14,
-    color: "#8E8E93",
     marginTop: 4,
   },
   body: {
@@ -108,7 +129,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: "#2C2C2E",
-    backgroundColor: "#0C0C0E",
   },
 });

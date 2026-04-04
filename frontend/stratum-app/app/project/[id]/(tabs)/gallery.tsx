@@ -33,7 +33,7 @@ import {
   ProjectMapScreen,
   ProjectHistoryScreen,
   ProjectToolsScreen,
-} from "@/src/components/project/ProjectTabsScreens";
+} from "@/components/project/ProjectTabsScreens";
 
 type MoreSubScreen = "hub" | "gallery" | "gps" | "history" | "tools";
 

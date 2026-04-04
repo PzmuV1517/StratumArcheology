@@ -27,7 +27,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -38,19 +38,28 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 // Only import these on web to avoid native compilation issues
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ColorBends =
-  Platform.OS === "web" ? require("../components/ColorBends.jsx").default : null;
+  Platform.OS === "web"
+    ? require("../src/components/effects/ColorBends.jsx").default
+    : null;
 const StarBorder =
-  Platform.OS === "web" ? require("../components/StarBorder.jsx").default : null;
+  Platform.OS === "web"
+    ? require("../src/components/effects/StarBorder.jsx").default
+    : null;
 const DotGrid =
-  Platform.OS === "web" ? require("../components/DotGrid.jsx").default : null;
+  Platform.OS === "web"
+    ? require("../src/components/effects/DotGrid.jsx").default
+    : null;
 const GradualBlur =
-  Platform.OS === "web" ? require("../components/GradualBlur.jsx").default : null;
+  Platform.OS === "web"
+    ? require("../src/components/effects/GradualBlur.jsx").default
+    : null;
 const CardSwapModule =
-  Platform.OS === "web" ? require("../components/CardSwap.jsx") : null;
+  Platform.OS === "web" ? require("../src/components/effects/CardSwap.jsx") : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 const CardSwap = CardSwapModule?.default || CardSwapModule;
 const Card = CardSwapModule?.Card;
@@ -58,16 +67,20 @@ const Card = CardSwapModule?.Card;
 // Load component CSS only on web to avoid native errors
 if (Platform.OS === "web") {
   /* eslint-disable @typescript-eslint/no-require-imports */
-  require("../components/ColorBends.css");
-  require("../components/DotGrid.css");
-  require("../components/StarBorder.css");
-  require("../components/CardSwap.css");
+  require("../src/components/effects/ColorBends.css");
+  require("../src/components/effects/DotGrid.css");
+  require("../src/components/effects/StarBorder.css");
+  require("../src/components/effects/CardSwap.css");
   /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const dotGridBaseColor = isDarkMode ? "#1a0000" : "#e6d2d2";
+  const dotGridBackground = isDarkMode ? "#000000" : "#F6F6F6";
   const isNarrow = width < 900;
 
   // Don't render on native - this is a web-only landing page
@@ -89,14 +102,14 @@ export default function LandingPage() {
         <DotGrid
           dotSize={4}
           gap={18}
-          baseColor="#1a0000"
+          baseColor={dotGridBaseColor}
           activeColor="#ff0000"
           proximity={150}
           shockwaveSpeed={15}
           style={{
             width: "100%",
             height: "100%",
-            backgroundColor: "#000",
+            backgroundColor: dotGridBackground,
           }}
         />
       </div>
@@ -436,249 +449,269 @@ export default function LandingPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "transparent",
-    position: "relative",
-    zIndex: 2,
-  },
-  hero: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    zIndex: 10,
-    backgroundColor: "#000",
-  },
-  bg: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  center: {
-    width: "100%",
-    maxWidth: 960,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    zIndex: 2,
-  },
-  logo: {
-    color: "#ffffff",
-    opacity: 0.9,
-    fontSize: 14,
-    letterSpacing: 6,
-    fontWeight: "800",
-    marginBottom: 12,
-  },
-  title: {
-    color: "#ffffff",
-    fontSize: 34,
-    lineHeight: 40,
-    textAlign: "center",
-    fontWeight: "800",
-    letterSpacing: 0.4,
-  },
-  subtitle: {
-    color: "#e5e5e5",
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
-    marginTop: 12,
-    maxWidth: 720,
-  },
-  infoSection: {
-    backgroundColor: "transparent",
-    alignItems: "center",
-    paddingTop: 48,
-    paddingBottom: 80,
-    paddingHorizontal: 24,
-  },
-  sectionHeading: {
-    color: "#F5F5F5",
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    marginBottom: 24,
-  },
-  cards: {
-    width: "100%",
-    maxWidth: 1040,
-  },
-  docsCard: {
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 12,
-    width: "100%",
-    maxWidth: 1040,
-  },
-  docsLink: {
-    color: "#8bb4f0",
-    fontSize: 14,
-    lineHeight: 20,
-    textDecorationLine: "underline",
-  },
-  mosaicRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    maxWidth: 1040,
-  },
-  mosaicCol: {
-    flex: 1,
-    gap: 12,
-  },
-  sectionBlock: {
-    backgroundColor: "transparent",
-    alignItems: "center",
-    paddingTop: 40,
-    paddingBottom: 60,
-    paddingHorizontal: 24,
-  },
-  card: {
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-  },
-  cardTall: {
-    minHeight: 140,
-  },
-  cardInset: {
-    backgroundColor: "#0C0C0C",
-  },
-  cardAccent: {
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#fb00007a",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-  },
-  cardBadge: {
-    alignSelf: "flex-start",
-    color: "#fff",
-    backgroundColor: "#ff0000c7",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    maxWidth: 1040,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: "center",
-  },
-  statNumber: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  statLabel: {
-    color: "#CFCFCF",
-    marginTop: 4,
-    fontSize: 13,
-  },
-  compareRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    maxWidth: 1040,
-  },
-  compareHalf: {
-    flex: 1,
-  },
+const createStyles = (isDarkMode: boolean) => {
+  const palette = {
+    heroBackground: isDarkMode ? "#000000" : "#F6F6F6",
+    logo: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+    textPrimary: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    textSecondary: isDarkMode ? "#CFCFCF" : "#555555",
+    subtitle: isDarkMode ? "#E5E5E5" : "#444444",
+    cardBackground: isDarkMode ? "#0A0A0A" : "#FFFFFF",
+    cardBackgroundAlt: isDarkMode ? "#0C0C0C" : "#F3F3F3",
+    border: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    docsLink: isDarkMode ? "#8BB4F0" : "#0A7EA4",
+    statNumber: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+    badgeBackground: isDarkMode ? "#FF0000C7" : "#FF2A2A",
+    badgeText: "#FFFFFF",
+    stepNumberBackground: isDarkMode ? "#2A2A2A" : "#E5E5E5",
+    stepNumberText: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+    accentBorder: isDarkMode ? "#FB00007A" : "#FF2A2A66",
+  };
 
-  cardSwapRow: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    maxWidth: 1040,
-    alignItems: "stretch",
-  },
-  cardSwapLeft: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  cardSwapRight: {
-    flex: 1,
-    minHeight: 600,
-    width: "100%",
-    alignItems: "stretch",
-  },
-  stepList: {
-    width: "100%",
-    maxWidth: 1040,
-  },
-  stepItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#0A0A0A",
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    textAlign: "center",
-    textAlignVertical: "center",
-    color: "#fff",
-    backgroundColor: "#2A2A2A",
-    marginRight: 12,
-    fontWeight: "800",
-    lineHeight: 32,
-  },
-  ctaSection: {
-    alignItems: "center",
-    paddingVertical: 64,
-    paddingHorizontal: 24,
-  },
-  ctaHeading: {
-    color: "#F5F5F5",
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  ctaSub: {
-    color: "#CFCFCF",
-    fontSize: 16,
-    lineHeight: 22,
-    textAlign: "center",
-    maxWidth: 720,
-  },
-  cardTitle: {
-    color: "#F5F5F5",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 6,
-    letterSpacing: 0.3,
-  },
-  cardBody: {
-    color: "#CFCFCF",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-});
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "transparent",
+      position: "relative",
+      zIndex: 2,
+    },
+    hero: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      zIndex: 10,
+      backgroundColor: palette.heroBackground,
+    },
+    bg: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 0,
+    },
+    center: {
+      width: "100%",
+      maxWidth: 960,
+      paddingHorizontal: 24,
+      alignItems: "center",
+      zIndex: 2,
+    },
+    logo: {
+      color: palette.logo,
+      opacity: 0.9,
+      fontSize: 14,
+      letterSpacing: 6,
+      fontWeight: "800",
+      marginBottom: 12,
+    },
+    title: {
+      color: palette.textPrimary,
+      fontSize: 34,
+      lineHeight: 40,
+      textAlign: "center",
+      fontWeight: "800",
+      letterSpacing: 0.4,
+    },
+    subtitle: {
+      color: palette.subtitle,
+      fontSize: 16,
+      lineHeight: 24,
+      textAlign: "center",
+      marginTop: 12,
+      maxWidth: 720,
+    },
+    infoSection: {
+      backgroundColor: "transparent",
+      alignItems: "center",
+      paddingTop: 48,
+      paddingBottom: 80,
+      paddingHorizontal: 24,
+    },
+    sectionHeading: {
+      color: palette.textPrimary,
+      fontSize: 28,
+      fontWeight: "800",
+      letterSpacing: 0.4,
+      marginBottom: 24,
+    },
+    cards: {
+      width: "100%",
+      maxWidth: 1040,
+    },
+    docsCard: {
+      backgroundColor: palette.cardBackground,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 16,
+      padding: 20,
+      marginTop: 12,
+      width: "100%",
+      maxWidth: 1040,
+    },
+    docsLink: {
+      color: palette.docsLink,
+      fontSize: 14,
+      lineHeight: 20,
+      textDecorationLine: "underline",
+    },
+    mosaicRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+      maxWidth: 1040,
+    },
+    mosaicCol: {
+      flex: 1,
+      gap: 12,
+    },
+    sectionBlock: {
+      backgroundColor: "transparent",
+      alignItems: "center",
+      paddingTop: 40,
+      paddingBottom: 60,
+      paddingHorizontal: 24,
+    },
+    card: {
+      backgroundColor: palette.cardBackground,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 12,
+    },
+    cardTall: {
+      minHeight: 140,
+    },
+    cardInset: {
+      backgroundColor: palette.cardBackgroundAlt,
+    },
+    cardAccent: {
+      backgroundColor: palette.cardBackground,
+      borderWidth: 1,
+      borderColor: palette.accentBorder,
+      borderRadius: 16,
+      padding: 20,
+      marginBottom: 12,
+    },
+    cardBadge: {
+      alignSelf: "flex-start",
+      color: palette.badgeText,
+      backgroundColor: palette.badgeBackground,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    statsRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+      maxWidth: 1040,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: palette.cardBackground,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 16,
+      paddingVertical: 18,
+      paddingHorizontal: 16,
+      alignItems: "center",
+    },
+    statNumber: {
+      color: palette.statNumber,
+      fontSize: 28,
+      fontWeight: "800",
+    },
+    statLabel: {
+      color: palette.textSecondary,
+      marginTop: 4,
+      fontSize: 13,
+    },
+    compareRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+      maxWidth: 1040,
+    },
+    compareHalf: {
+      flex: 1,
+    },
+
+    cardSwapRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+      maxWidth: 1040,
+      alignItems: "stretch",
+    },
+    cardSwapLeft: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    cardSwapRight: {
+      flex: 1,
+      minHeight: 600,
+      width: "100%",
+      alignItems: "stretch",
+    },
+    stepList: {
+      width: "100%",
+      maxWidth: 1040,
+    },
+    stepItem: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      backgroundColor: palette.cardBackground,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+    },
+    stepNumber: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      textAlign: "center",
+      textAlignVertical: "center",
+      color: palette.stepNumberText,
+      backgroundColor: palette.stepNumberBackground,
+      marginRight: 12,
+      fontWeight: "800",
+      lineHeight: 32,
+    },
+    ctaSection: {
+      alignItems: "center",
+      paddingVertical: 64,
+      paddingHorizontal: 24,
+    },
+    ctaHeading: {
+      color: palette.textPrimary,
+      fontSize: 28,
+      fontWeight: "800",
+      letterSpacing: 0.4,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    ctaSub: {
+      color: palette.textSecondary,
+      fontSize: 16,
+      lineHeight: 22,
+      textAlign: "center",
+      maxWidth: 720,
+    },
+    cardTitle: {
+      color: palette.textPrimary,
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 6,
+      letterSpacing: 0.3,
+    },
+    cardBody: {
+      color: palette.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+  });
+};

@@ -18,12 +18,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
-  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../../src/services/api";
-import { useAuth } from "../../src/contexts/AuthContext";
+import api from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 interface ProfileUser {
   id: number;
@@ -55,11 +55,14 @@ export default function ProfileViewScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user: currentUser } = useAuth();
   const router = useRouter();
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isOwnProfile = currentUser && profile && String(currentUser.id) === String(profile.id);
+  const isOwnProfile =
+    currentUser && profile && String(currentUser.id) === String(profile.id);
 
   useEffect(() => {
     if (!userId) return;
@@ -194,7 +197,9 @@ export default function ProfileViewScreen() {
                   <Text style={styles.socialIcon}>{icon}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.socialLabel}>{label}</Text>
-                    <Text style={styles.socialValue} numberOfLines={1}>{val}</Text>
+                    <Text style={styles.socialValue} numberOfLines={1}>
+                      {val}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -229,69 +234,132 @@ export default function ProfileViewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111111" },
-  center: { justifyContent: "center", alignItems: "center" },
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: isDarkMode ? "#111111" : "#F7F7F7" },
+    center: { justifyContent: "center", alignItems: "center" },
 
-  topBar: {
-    position: "absolute", top: 0, left: 0, right: 0, zIndex: 10,
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 16, paddingBottom: 8,
-    backgroundColor: "rgba(17,17,17,0.7)",
-  },
-  backArrow: { paddingVertical: 8 },
-  backArrowText: { color: "#007AFF", fontSize: 16, fontWeight: "600" },
-  editLink: { color: "#007AFF", fontSize: 16, fontWeight: "600" },
+    topBar: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      backgroundColor: isDarkMode ? "rgba(17,17,17,0.7)" : "rgba(247,247,247,0.9)",
+      borderBottomWidth: isDarkMode ? 0 : StyleSheet.hairlineWidth,
+      borderBottomColor: isDarkMode ? "transparent" : "#D9D9D9",
+    },
+    backArrow: { paddingVertical: 8 },
+    backArrowText: { color: "#007AFF", fontSize: 16, fontWeight: "600" },
+    editLink: { color: "#007AFF", fontSize: 16, fontWeight: "600" },
 
-  banner: { width: "100%", height: 160, resizeMode: "cover" },
-  bannerPlaceholder: { width: "100%", height: 160, backgroundColor: "#1E1E1E" },
+    banner: { width: "100%", height: 160, resizeMode: "cover" },
+    bannerPlaceholder: {
+      width: "100%",
+      height: 160,
+      backgroundColor: isDarkMode ? "#1E1E1E" : "#E6E6E6",
+    },
 
-  avatarRow: { paddingHorizontal: 24, marginTop: -44 },
-  avatar: {
-    width: 88, height: 88, borderRadius: 44,
-    borderWidth: 4, borderColor: "#111111",
-  },
-  avatarFallback: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: "#FF2A2A", justifyContent: "center", alignItems: "center",
-    borderWidth: 4, borderColor: "#111111",
-  },
-  avatarText: { fontSize: 36, color: "#F5F5F5", fontWeight: "700" },
+    avatarRow: { paddingHorizontal: 24, marginTop: -44 },
+    avatar: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      borderWidth: 4,
+      borderColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    avatarFallback: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: "#FF2A2A",
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 4,
+      borderColor: isDarkMode ? "#111111" : "#F7F7F7",
+    },
+    avatarText: {
+      fontSize: 36,
+      color: isDarkMode ? "#F5F5F5" : "#FFFFFF",
+      fontWeight: "700",
+    },
 
-  nameSection: { paddingHorizontal: 24, paddingTop: 12 },
-  displayName: { fontSize: 24, fontWeight: "700", color: "#F5F5F5" },
-  username: { fontSize: 15, color: "#9A9A9A", marginTop: 2 },
+    nameSection: { paddingHorizontal: 24, paddingTop: 12 },
+    displayName: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    username: {
+      fontSize: 15,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 2,
+    },
 
-  infoRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 24, marginTop: 16,
-  },
-  infoLabel: { fontSize: 14, color: "#9A9A9A" },
-  infoValue: { fontSize: 14, color: "#CCCCCC" },
+    infoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 24,
+      marginTop: 16,
+    },
+    infoLabel: { fontSize: 14, color: isDarkMode ? "#9A9A9A" : "#666666" },
+    infoValue: { fontSize: 14, color: isDarkMode ? "#CCCCCC" : "#4D4D4D" },
 
-  section: { paddingHorizontal: 24, marginTop: 24 },
-  sectionTitle: {
-    fontSize: 12, fontWeight: "600", color: "#9A9A9A",
-    marginBottom: 10, letterSpacing: 0.5, textTransform: "uppercase",
-  },
-  descriptionText: { fontSize: 15, color: "#E0E0E0", lineHeight: 22 },
-  fieldValue: { fontSize: 15, color: "#CCCCCC" },
+    section: { paddingHorizontal: 24, marginTop: 24 },
+    sectionTitle: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 10,
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    descriptionText: {
+      fontSize: 15,
+      color: isDarkMode ? "#E0E0E0" : "#2E2E2E",
+      lineHeight: 22,
+    },
+    fieldValue: { fontSize: 15, color: isDarkMode ? "#CCCCCC" : "#4D4D4D" },
 
-  socialRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#1A1A1A",
-  },
-  socialIcon: { fontSize: 18, width: 28, textAlign: "center" },
-  socialLabel: { fontSize: 13, color: "#9A9A9A" },
-  socialValue: { fontSize: 14, color: "#007AFF", marginTop: 2 },
+    socialRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#1A1A1A" : "#D9D9D9",
+    },
+    socialIcon: { fontSize: 18, width: 28, textAlign: "center" },
+    socialLabel: { fontSize: 13, color: isDarkMode ? "#9A9A9A" : "#666666" },
+    socialValue: { fontSize: 14, color: "#007AFF", marginTop: 2 },
 
-  dmButton: {
-    backgroundColor: "#007AFF", padding: 16, borderRadius: 16,
-    alignItems: "center", marginTop: 32, marginHorizontal: 24,
-  },
-  dmButtonText: { color: "#F5F5F5", fontSize: 16, fontWeight: "600" },
+    dmButton: {
+      backgroundColor: "#007AFF",
+      padding: 16,
+      borderRadius: 16,
+      alignItems: "center",
+      marginTop: 32,
+      marginHorizontal: 24,
+    },
+    dmButtonText: {
+      color: isDarkMode ? "#F5F5F5" : "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
 
-  errorText: { color: "#FF4444", fontSize: 16, marginBottom: 16 },
-  backBtn: { padding: 12, borderRadius: 12, backgroundColor: "#2A2A2A" },
-  backBtnText: { color: "#F5F5F5", fontSize: 14 },
-});
+    errorText: { color: "#FF4444", fontSize: 16, marginBottom: 16 },
+    backBtn: {
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+    },
+    backBtnText: { color: isDarkMode ? "#F5F5F5" : "#1A1A1A", fontSize: 14 },
+  });

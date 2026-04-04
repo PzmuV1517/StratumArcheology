@@ -27,4 +27,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-export { useColorScheme } from "react-native";
+import { useThemePreference } from "@/contexts/ThemePreferenceContext";
+
+/**
+ * Returns the app-resolved color scheme.
+ *
+ * If a user override is set in theme preferences, this returns that override.
+ * Otherwise it follows the current system color scheme.
+ */
+export function useColorScheme() {
+  const { resolvedColorScheme } = useThemePreference();
+  return resolvedColorScheme;
+}
