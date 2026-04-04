@@ -63,6 +63,8 @@ web-build/
 
 # Track the exported web app dist folder
 !frontend/stratum-app/dist/
+!frontend/stratum-app/dist/assets/node_modules/
+!frontend/stratum-app/dist/assets/node_modules/**
 
 # MinIO/Storage
 minio-data/
