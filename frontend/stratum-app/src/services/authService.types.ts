@@ -49,6 +49,9 @@ export interface User {
   link_website?: string;
   is_emonument_privileged?: boolean;
   is_dashboard_admin?: boolean;
+  is_account_disabled?: boolean;
+  is_soft_deleted?: boolean;
+  soft_deleted_at?: string | null;
   created_at?: string;
 }
 
@@ -58,6 +61,8 @@ export interface AuthResult {
   token?: string;
   user?: User;
   error?: string;
+  verificationRequired?: boolean;
+  message?: string;
 }
 
 /** Credentials payload for user login. */

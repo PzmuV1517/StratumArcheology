@@ -57,6 +57,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 FIREBASE_SIGN_IN_URL = (
     "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
 )
+FIREBASE_SEND_OOB_URL = (
+    "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode"
+)
 
 
 async def verify_password_with_firebase(email: str, password: str) -> dict:
@@ -82,6 +85,42 @@ async def verify_password_with_firebase(email: str, password: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        )
+
+    return response.json()
+
+
+async def send_firebase_oob_code(
+    request_type: str,
+    *,
+    email: str | None = None,
+    id_token: str | None = None,
+) -> dict:
+    """Send Firebase OOB email action (verify email, password reset, etc.)."""
+    payload: dict[str, str] = {"requestType": request_type}
+    if email:
+        payload["email"] = email
+    if id_token:
+        payload["idToken"] = id_token
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            FIREBASE_SEND_OOB_URL,
+            params={"key": settings.FIREBASE_WEB_API_KEY},
+            json=payload,
+            timeout=10.0,
+        )
+
+    if response.status_code != 200:
+        logger.warning(
+            "Firebase OOB action failed",
+            request_type=request_type,
+            status_code=response.status_code,
+            response=response.text,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Firebase email action failed",
         )
 
     return response.json()
@@ -115,7 +154,20 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         # 1. Verify password against Firebase Auth REST API
         await verify_password_with_firebase(request.email, request.password)
 
-        # 2. Look up the local user record
+        # 2. Require verified email for self-signup users and block disabled Firebase accounts
+        firebase_user = firebase_auth.get_user_by_email(request.email)
+        if firebase_user.disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
+            )
+        if not firebase_user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Check your inbox for the verification link.",
+            )
+
+        # 3. Look up the local user record
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
             raise HTTPException(
@@ -123,11 +175,23 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 detail="Invalid email or password",
             )
 
-        # 3. Update last login
+        if user.is_soft_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account has been deleted",
+            )
+
+        if user.is_account_disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
+            )
+
+        # 4. Update last login
         user.last_login = datetime.utcnow()
         db.commit()
 
-        # 4. Issue our API JWT
+        # 5. Issue our API JWT
         jwt_payload = {
             "user_id": user.id,
             "firebase_uid": user.firebase_uid,
@@ -158,7 +222,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/register", response_model=AuthResponse)
 async def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    """Register new user with email and password"""
+    """Register new user and require immediate Firebase email verification."""
     try:
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == request.email).first()
@@ -204,27 +268,57 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             username=username,
             display_name=request.display_name,
             created_at=datetime.utcnow(),
-            last_login=datetime.utcnow(),
+            last_login=None,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
 
-        # Generate JWT token for our API
-        jwt_payload = {
-            "user_id": user.id,
-            "firebase_uid": user.firebase_uid,
-            "email": user.email,
-            "exp": datetime.utcnow()
-            + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
-        }
+        try:
+            sign_in = await verify_password_with_firebase(
+                request.email, request.password
+            )
+            id_token = sign_in.get("idToken")
+            if not id_token:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Could not initialize verification flow",
+                )
 
-        jwt_token = jwt.encode(
-            jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
-        )
+            await send_firebase_oob_code("VERIFY_EMAIL", id_token=id_token)
+        except Exception as verification_error:
+            logger.exception(
+                "Failed to send verification email after registration",
+                email=request.email,
+                error=str(verification_error),
+            )
+            # Roll back created account to allow clean retry.
+            try:
+                db.delete(user)
+                db.commit()
+            except Exception:
+                db.rollback()
+            try:
+                firebase_auth.delete_user(firebase_user.uid)
+            except Exception as firebase_cleanup_error:
+                logger.warning(
+                    "Failed to cleanup Firebase user after verification failure",
+                    email=request.email,
+                    error=str(firebase_cleanup_error),
+                )
+
+            if isinstance(verification_error, HTTPException):
+                raise verification_error
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Could not send verification email. Please try again.",
+            )
 
         return AuthResponse(
-            access_token=jwt_token, user=UserResponse.model_validate(user)
+            access_token=None,
+            user=UserResponse.model_validate(user),
+            verification_required=True,
+            message="Verification email sent. Confirm your email before logging in.",
         )
 
     except firebase_auth.EmailAlreadyExistsError:
@@ -280,6 +374,16 @@ async def verify_firebase_token(
             db.commit()
             db.refresh(user)
         else:
+            if user.is_soft_deleted:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account has been deleted",
+                )
+            if user.is_account_disabled:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account is disabled",
+                )
             # Update last login
             user.last_login = datetime.utcnow()
             db.commit()
@@ -296,7 +400,10 @@ async def verify_firebase_token(
             jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256"
         )
 
-        return AuthResponse(access_token=access_token, user=user)
+        return AuthResponse(
+            access_token=access_token,
+            user=UserResponse.model_validate(user),
+        )
 
     except firebase_auth.InvalidIdTokenError:
         raise HTTPException(

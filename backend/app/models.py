@@ -159,6 +159,9 @@ class User(Base):
     # eMonument Roles
     is_emonument_privileged = Column(Boolean, default=False, nullable=False)
     is_dashboard_admin = Column(Boolean, default=False, nullable=False)
+    is_account_disabled = Column(Boolean, default=False, nullable=False)
+    is_soft_deleted = Column(Boolean, default=False, nullable=False)
+    soft_deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -759,51 +762,65 @@ class DataVersion(Base):
 # eMonument Models
 # =====================================================================
 
+
 class DeviceWhitelist(Base):
     """Devices authorized for eMonument offline collection."""
+
     __tablename__ = "device_whitelist"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     device_id = Column(String, unique=True, nullable=False, index=True)
     model_name = Column(String, nullable=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     is_approved = Column(Boolean, default=True)
     last_sync = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
-    user = relationship("User", backref=backref("devices", cascade="all, delete-orphan"))
+    user = relationship(
+        "User", backref=backref("devices", cascade="all, delete-orphan")
+    )
 
 
 class Monument(Base):
     """Monumente Istorice (LMI / ZP)"""
+
     __tablename__ = "monuments"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     lmi_code = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
-    county = Column(String, nullable=True) # Județ
-    locality = Column(String, nullable=True) # UAT/Localitate
+    county = Column(String, nullable=True)  # Județ
+    locality = Column(String, nullable=True)  # UAT/Localitate
     address = Column(String, nullable=True)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)
     status = Column(String, nullable=True)
-    
+
     # Relationships
     instances = relationship("FisaInstance", back_populates="monument")
 
 
 class MonumentAllocation(Base):
     """Join table allocating monuments to users for field work"""
+
     __tablename__ = "monument_allocations"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    monument_id = Column(String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    monument_id = Column(
+        String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False
+    )
     allocated_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint("user_id", "monument_id", name="uq_user_monument_allocation"),
+        UniqueConstraint(
+            "user_id", "monument_id", name="uq_user_monument_allocation"
+        ),
     )
 
 
@@ -819,23 +836,36 @@ class FisaInstanceStatus(str, enum.Enum):
 
 class FisaInstance(Base):
     """O instanta de fisa (un formular completat pentru un monument)"""
+
     __tablename__ = "fisa_instances"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    monument_id = Column(String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True) # whoever collected it
-    device_id = Column(String, ForeignKey("device_whitelist.device_id", ondelete="SET NULL"), nullable=True)
-    
-    status = Column(SQLEnum(FisaInstanceStatus), default=FisaInstanceStatus.DRAFT, nullable=False)
-    
-    data = Column(JSON, nullable=False, default={}) # all the sections and fields
+    monument_id = Column(
+        String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )  # whoever collected it
+    device_id = Column(
+        String,
+        ForeignKey("device_whitelist.device_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    status = Column(
+        SQLEnum(FisaInstanceStatus), default=FisaInstanceStatus.DRAFT, nullable=False
+    )
+
+    data = Column(JSON, nullable=False, default={})  # all the sections and fields
     version = Column(Integer, default=1, nullable=False)
-    
-    rejection_reason = Column(Text, nullable=True) # motiv reintoarcere if status == REINTORS
+
+    rejection_reason = Column(
+        Text, nullable=True
+    )  # motiv reintoarcere if status == REINTORS
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     monument = relationship("Monument", back_populates="instances")
     user = relationship("User", foreign_keys=[user_id])
@@ -878,4 +908,3 @@ class FisaInstanceVersion(Base):
             "fisa_instance_id", "version", name="uq_fisa_instance_version"
         ),
     )
-

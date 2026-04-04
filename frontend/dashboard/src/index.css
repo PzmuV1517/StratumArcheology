@@ -184,7 +184,7 @@ button:disabled {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 1rem;
-  align-items: start;
+  align-items: stretch;
   min-height: 0;
 }
 
@@ -235,6 +235,22 @@ button:disabled {
   max-height: 60vh;
   border: 1px solid var(--line);
   border-radius: 12px;
+}
+
+.panel > .table-wrap.tall {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.managed-users-panel {
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.users-table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 table {
@@ -395,6 +411,47 @@ th {
 .icon-btn:hover {
   background: #f1f5f9;
   color: var(--ink);
+}
+
+.user-actions-cell {
+  width: 56px;
+  text-align: right;
+}
+
+.user-row-menu {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.user-row-menu-trigger {
+  width: 30px;
+  height: 30px;
+  margin-left: 0;
+  padding: 0;
+}
+
+.user-row-menu-popover {
+  min-width: 170px;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+
+.user-row-menu-popover .small {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.user-row-menu-popover-floating {
+  position: fixed;
+  z-index: 2000;
+  max-height: min(72vh, 360px);
+  overflow: auto;
 }
 
 .pagination-row {

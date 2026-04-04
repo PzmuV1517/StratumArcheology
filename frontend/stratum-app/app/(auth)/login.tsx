@@ -84,6 +84,11 @@ if (Platform.OS === "web") {
   } catch {}
 }
 
+type PendingVerification = {
+  email: string;
+  password: string;
+};
+
 export default function LoginScreen() {
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const placeholderTextColor = isDarkMode ? "#4A4A4A" : "#7A7A7A";
@@ -215,6 +220,11 @@ export default function LoginScreen() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] =
+    useState<PendingVerification | null>(null);
+  const [verificationCheckLoading, setVerificationCheckLoading] = useState(false);
+  const [verificationStatusText, setVerificationStatusText] =
+    useState<string | null>(null);
 
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState("");
@@ -366,10 +376,91 @@ export default function LoginScreen() {
       trimmedUsername,
     );
     setRegLoading(false);
+    if (result.success) {
+      if (result.message) {
+        setPendingVerification({
+          email: regEmail.trim().toLowerCase(),
+          password: regPassword,
+        });
+        setVerificationStatusText(
+          `${result.message} Check inbox and spam for the verification link.`,
+        );
+        setRegPassword("");
+        setRegConfirmPassword("");
+        setShowRegPassword(false);
+        setShowRegConfirmPassword(false);
+      }
+      return;
+    }
+
     if (!result.success) {
       showAlert("Registration Failed", result.error);
     }
   };
+
+  const checkVerificationStatus = useCallback(
+    async (silent = false) => {
+      if (!pendingVerification || verificationCheckLoading) {
+        return;
+      }
+
+      setVerificationCheckLoading(true);
+      if (!silent) {
+        setVerificationStatusText("Checking verification status...");
+      }
+
+      try {
+        await api.post("/auth/login", {
+          email: pendingVerification.email,
+          password: pendingVerification.password,
+        });
+
+        setPendingVerification(null);
+        setVerificationStatusText(null);
+        setEmail(pendingVerification.email);
+        setPassword("");
+        switchToLogin();
+      } catch (error: any) {
+        const detail = error?.response?.data?.detail;
+        const detailText =
+          typeof detail === "string"
+            ? detail
+            : "Could not check verification status right now.";
+        const normalized = detailText.toLowerCase();
+        const isNotVerified =
+          normalized.includes("not verified") || normalized.includes("verification");
+
+        if (!silent || !isNotVerified) {
+          setVerificationStatusText(
+            isNotVerified
+              ? "Not verified yet. Check inbox and spam, then try again."
+              : detailText,
+          );
+        }
+      } finally {
+        setVerificationCheckLoading(false);
+      }
+    },
+    [
+      pendingVerification,
+      verificationCheckLoading,
+      switchToLogin,
+      setEmail,
+      setPassword,
+    ],
+  );
+
+  useEffect(() => {
+    if (activeCard !== "register" || !pendingVerification) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void checkVerificationStatus(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeCard, pendingVerification, checkVerificationStatus]);
 
   const EyeToggle = ({
     visible,
@@ -596,6 +687,49 @@ export default function LoginScreen() {
     </View>
   );
 
+  const renderVerificationCard = () => (
+    <View style={styles.form}>
+      <View style={styles.verifyCard}>
+        <Text style={styles.verifyTitle}>Check Your Email</Text>
+        <Text style={styles.verifyText}>
+          We sent a verification email to
+          {"\n"}
+          <Text style={styles.verifyEmail}>{pendingVerification?.email}</Text>
+        </Text>
+        <Text style={styles.verifyText}>
+          Check your inbox and spam folder. Once verified, this card moves you to
+          login.
+        </Text>
+        {verificationStatusText ? (
+          <Text style={styles.verifyStatusText}>{verificationStatusText}</Text>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => void checkVerificationStatus(false)}
+          disabled={verificationCheckLoading}
+        >
+          {verificationCheckLoading ? (
+            <ActivityIndicator color="#F5F5F5" />
+          ) : (
+            <Text style={styles.buttonText}>I VERIFIED, CHECK NOW</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
+          onPress={() => {
+            setPendingVerification(null);
+            setVerificationStatusText(null);
+          }}
+          disabled={verificationCheckLoading}
+        >
+          <Text style={styles.secondaryActionButtonText}>Use a Different Email</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const wrapForm = (
     content: React.ReactNode,
     onSubmit: () => void,
@@ -680,7 +814,9 @@ export default function LoginScreen() {
                 <Text style={styles.logo}>STRATUM</Text>
               </View>
               {activeCard === "register"
-                ? wrapForm(renderRegisterForm(), handleRegister, regLoading)
+                ? pendingVerification
+                  ? renderVerificationCard()
+                  : wrapForm(renderRegisterForm(), handleRegister, regLoading)
                 : null}
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
@@ -885,6 +1021,49 @@ const createStyles = (isDarkMode: boolean): any =>
       fontSize: 16,
       fontWeight: "600",
       letterSpacing: 0.5,
+    },
+    verifyCard: {
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#FAFAFA",
+      gap: 12,
+    },
+    verifyTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    verifyText: {
+      fontSize: 14,
+      lineHeight: 21,
+      color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
+    },
+    verifyEmail: {
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      fontWeight: "700",
+    },
+    verifyStatusText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    secondaryActionButton: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#D0D0D0",
+      backgroundColor: "transparent",
+    },
+    secondaryActionButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: isDarkMode ? "#DDDDDD" : "#333333",
+      letterSpacing: 0.3,
     },
     footer: {
       flexDirection: "row",

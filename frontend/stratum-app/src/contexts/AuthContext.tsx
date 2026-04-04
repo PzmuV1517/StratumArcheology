@@ -68,13 +68,13 @@ interface AuthContextType {
   login: (
     email: string,
     password: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (
     email: string,
     password: string,
     displayName: string,
     username: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearSessionExpired: () => void;
@@ -192,6 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (result.success) {
         console.log("[AuthContext] Setting user:", result.user);
         setUser(result.user || null);
+        clearSessionExpired();
         return { success: true };
       } else {
         console.log("[AuthContext] Login failed:", result.error);
@@ -217,7 +218,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         username,
       );
       if (result.success) {
+        if (result.verificationRequired) {
+          setUser(null);
+          return {
+            success: true,
+            message:
+              result.message ||
+              "Verification email sent. Confirm your email before logging in.",
+          };
+        }
         setUser(result.user || null);
+        clearSessionExpired();
         return { success: true };
       } else {
         return { success: false, error: result.error };

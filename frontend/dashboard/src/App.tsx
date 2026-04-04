@@ -7,14 +7,16 @@ import {
   Download,
   FileText,
   LogOut,
+  MoreVertical,
   RotateCcw,
   Search,
   Shield,
   UserPlus,
   Users,
 } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react'
 
 type User = {
   id: string
@@ -24,6 +26,11 @@ type User = {
   firebase_uid: string
   is_emonument_privileged: boolean
   is_dashboard_admin: boolean
+  is_account_disabled: boolean
+  is_soft_deleted: boolean
+  soft_deleted_at: string | null
+  email_verified: boolean | null
+  firebase_disabled: boolean | null
   is_maintainer: boolean
   created_at: string
   last_login: string | null
@@ -109,6 +116,12 @@ type BackupScheduleResponse = {
   seconds_until_next_backup: number | null
 }
 
+type UserMenuState = {
+  userId: string
+  top: number
+  left: number
+}
+
 const INSTANCE_META_FIELDS = [
   'id',
   'status',
@@ -158,6 +171,11 @@ function App() {
   const [password, setPassword] = useState('')
 
   const [users, setUsers] = useState<User[]>([])
+  const [userSearch, setUserSearch] = useState('')
+  const [includeSoftDeletedUsers, setIncludeSoftDeletedUsers] = useState(true)
+  const [userPage, setUserPage] = useState(1)
+  const [userPageSize, setUserPageSize] = useState(20)
+  const [openUserMenu, setOpenUserMenu] = useState<UserMenuState | null>(null)
   const [instances, setInstances] = useState<Instance[]>([])
 
   const [newUserEmail, setNewUserEmail] = useState('')
@@ -192,6 +210,11 @@ function App() {
   const isMaintainer = useMemo(
     () => Boolean(me?.is_maintainer),
     [me?.is_maintainer],
+  )
+
+  const openUserMenuUser = useMemo(
+    () => (openUserMenu ? users.find((user) => user.id === openUserMenu.userId) ?? null : null),
+    [openUserMenu, users],
   )
 
   const secondsUntilNextBackup = useMemo(
@@ -278,6 +301,46 @@ function App() {
     const end = Math.min(start + instancePageSize - 1, filteredSortedInstances.length)
     return `${start}-${end}`
   }, [filteredSortedInstances.length, instancePage, instancePageSize])
+
+  const filteredUsers = useMemo(() => {
+    const query = userSearch.trim().toLowerCase()
+
+    return users
+      .filter((user) => (includeSoftDeletedUsers ? true : !user.is_soft_deleted))
+      .filter((user) => {
+        if (!query) return true
+        const haystack = [
+          user.email,
+          user.display_name ?? '',
+          user.username ?? '',
+          user.id,
+          user.firebase_uid,
+          user.is_emonument_privileged ? 'privileged' : 'standard',
+          user.is_dashboard_admin ? 'admin' : 'user',
+          user.email_verified === true ? 'verified' : 'unverified',
+          user.is_account_disabled || user.firebase_disabled ? 'disabled' : 'enabled',
+          user.is_soft_deleted ? 'deleted' : 'active',
+        ]
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(query)
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [users, userSearch, includeSoftDeletedUsers])
+
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / userPageSize))
+
+  const paginatedUsers = useMemo(() => {
+    const start = (userPage - 1) * userPageSize
+    return filteredUsers.slice(start, start + userPageSize)
+  }, [filteredUsers, userPage, userPageSize])
+
+  const usersVisibleRangeLabel = useMemo(() => {
+    if (filteredUsers.length === 0) return '0-0'
+    const start = (userPage - 1) * userPageSize + 1
+    const end = Math.min(start + userPageSize - 1, filteredUsers.length)
+    return `${start}-${end}`
+  }, [filteredUsers.length, userPage, userPageSize])
 
   const statusLabel = (status: InstanceStatus) =>
     ({
@@ -949,8 +1012,60 @@ function App() {
   }, [instancePage, totalInstancePages])
 
   useEffect(() => {
+    setUserPage(1)
+  }, [userSearch, includeSoftDeletedUsers, userPageSize])
+
+  useEffect(() => {
+    if (userPage > totalUserPages) {
+      setUserPage(totalUserPages)
+    }
+  }, [userPage, totalUserPages])
+
+  const toggleUserMenu = (event: ReactMouseEvent<HTMLButtonElement>, userId: string) => {
+    const triggerRect = event.currentTarget.getBoundingClientRect()
+    const menuWidth = 182
+    const viewportPadding = 8
+
+    const left = Math.min(
+      Math.max(viewportPadding, triggerRect.right - menuWidth),
+      window.innerWidth - menuWidth - viewportPadding,
+    )
+    const top = Math.max(
+      viewportPadding,
+      Math.min(triggerRect.bottom + 6, window.innerHeight - 300),
+    )
+
+    setOpenUserMenu((previous) =>
+      previous?.userId === userId ? null : { userId, top, left },
+    )
+  }
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('.user-row-menu') || target?.closest('.user-row-menu-popover')) return
+      setOpenUserMenu(null)
+    }
+
+    const closeOnViewportChange = () => setOpenUserMenu(null)
+
+    document.addEventListener('click', handleDocumentClick)
+    window.addEventListener('resize', closeOnViewportChange)
+    window.addEventListener('scroll', closeOnViewportChange, true)
+    return () => {
+      document.removeEventListener('click', handleDocumentClick)
+      window.removeEventListener('resize', closeOnViewportChange)
+      window.removeEventListener('scroll', closeOnViewportChange, true)
+    }
+  }, [])
+
+  useEffect(() => {
     setExpandedPinMapKey(null)
   }, [selectedInstanceId])
+
+  useEffect(() => {
+    setOpenUserMenu(null)
+  }, [tab, userPage, userSearch, includeSoftDeletedUsers, userPageSize])
 
   const fillLoginDev = () => {
     setEmail(import.meta.env.VITE_DEV_DASHBOARD_EMAIL ?? 'admin@example.com')
@@ -1218,6 +1333,181 @@ function App() {
     }
   }
 
+  const patchDashboardUser = async (userId: string, payload: Record<string, unknown>) => {
+    if (!authHeaders) return
+    setError(null)
+    try {
+      await api.patch(`/emonument-dashboard/users/${userId}`, payload, { headers: authHeaders })
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not update user'
+        : 'Could not update user'
+      setError(message)
+    }
+  }
+
+  const handleEditUser = async (user: User) => {
+    const email = window.prompt('Email', user.email)
+    if (email == null) return
+    const displayName = window.prompt('Display name', user.display_name ?? '')
+    if (displayName == null) return
+    const username = window.prompt('Username (optional)', user.username ?? '')
+    if (username == null) return
+
+    await patchDashboardUser(user.id, {
+      email: email.trim(),
+      display_name: displayName.trim(),
+      username: username.trim() || null,
+    })
+  }
+
+  const handleTogglePrivileged = async (user: User) => {
+    if (!authHeaders) return
+    const nextValue = !user.is_emonument_privileged
+    const ok = window.confirm(
+      `Set eMonument privileged to ${nextValue ? 'Yes' : 'No'} for ${user.email}?`,
+    )
+    if (!ok) return
+    await patchDashboardUser(user.id, { is_emonument_privileged: nextValue })
+  }
+
+  const handleToggleDashboardAdmin = async (user: User) => {
+    if (!authHeaders) return
+    const nextValue = !user.is_dashboard_admin
+    const ok = window.confirm(
+      `Set dashboard admin to ${nextValue ? 'Yes' : 'No'} for ${user.email}?`,
+    )
+    if (!ok) return
+    await patchDashboardUser(user.id, { is_dashboard_admin: nextValue })
+  }
+
+  const handleSendVerification = async (user: User) => {
+    if (!authHeaders) return
+    setError(null)
+    try {
+      const res = await api.post(
+        `/emonument-dashboard/users/${user.id}/verification-email`,
+        {},
+        { headers: authHeaders },
+      )
+
+      const verificationLink = res.data?.verification_link
+      if (verificationLink) {
+        await copyToClipboard(String(verificationLink))
+        alert('Verification link generated and copied to clipboard.')
+      } else {
+        alert('Verification email sent.')
+      }
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not send verification email'
+        : 'Could not send verification email'
+      setError(message)
+    }
+  }
+
+  const handleDisableUser = async (user: User) => {
+    if (!authHeaders) return
+    const ok = window.confirm(`Disable account ${user.email}?`)
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.post(`/emonument-dashboard/users/${user.id}/disable`, {}, { headers: authHeaders })
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not disable account'
+        : 'Could not disable account'
+      setError(message)
+    }
+  }
+
+  const handleEnableUser = async (user: User) => {
+    if (!authHeaders) return
+    const ok = window.confirm(`Enable account ${user.email}?`)
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.post(`/emonument-dashboard/users/${user.id}/enable`, {}, { headers: authHeaders })
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not enable account'
+        : 'Could not enable account'
+      setError(message)
+    }
+  }
+
+  const handleSoftDeleteUser = async (user: User) => {
+    if (!authHeaders) return
+    const ok = window.confirm(
+      `Soft-delete account ${user.email}? This keeps data but blocks sign-in.`,
+    )
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.post(`/emonument-dashboard/users/${user.id}/soft-delete`, {}, { headers: authHeaders })
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not soft-delete account'
+        : 'Could not soft-delete account'
+      setError(message)
+    }
+  }
+
+  const handleRestoreUser = async (user: User) => {
+    if (!authHeaders) return
+    const ok = window.confirm(`Restore account ${user.email}?`)
+    if (!ok) return
+
+    setError(null)
+    try {
+      await api.post(`/emonument-dashboard/users/${user.id}/restore`, {}, { headers: authHeaders })
+      await loadUsers()
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not restore account'
+        : 'Could not restore account'
+      setError(message)
+    }
+  }
+
+  const handleHardDeleteUser = async (user: User) => {
+    if (!authHeaders) return
+
+    const phrase = window.prompt(
+      `Permanently delete ${user.email}. This cannot be undone. Type HARD DELETE to continue:`,
+      '',
+    )
+
+    if (phrase !== 'HARD DELETE') {
+      alert('Hard delete cancelled. Confirmation phrase must be exactly HARD DELETE.')
+      return
+    }
+
+    setError(null)
+    try {
+      await api.post(
+        `/emonument-dashboard/users/${user.id}/hard-delete`,
+        { confirmation_text: phrase },
+        { headers: authHeaders },
+      )
+      await loadUsers()
+      alert('Account permanently deleted.')
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.detail ?? 'Could not hard-delete account'
+        : 'Could not hard-delete account'
+      setError(message)
+    }
+  }
+
   const updateInstanceStatus = async (instanceId: string, action: 'to-approval' | 'approve') => {
     if (!authHeaders) return
     setError(null)
@@ -1360,6 +1650,9 @@ function App() {
             <h3>
               <UserPlus size={18} /> Create Account
             </h3>
+            <p className="panel-subtle">
+              Dashboard-created users are auto-verified in Firebase and can sign in immediately.
+            </p>
             <form className="stack" onSubmit={handleCreateUser}>
               <label>
                 Email
@@ -1396,14 +1689,16 @@ function App() {
                 />
                 eMonument privileged
               </label>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={newUserAdmin}
-                  onChange={(e) => setNewUserAdmin(e.target.checked)}
-                />
-                Dashboard admin
-              </label>
+              {isMaintainer ? (
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={newUserAdmin}
+                    onChange={(e) => setNewUserAdmin(e.target.checked)}
+                  />
+                  Dashboard admin
+                </label>
+              ) : null}
 
               <button type="submit" disabled={loading}>
                 {loading ? 'Creating...' : 'Create'}
@@ -1416,35 +1711,129 @@ function App() {
             </form>
           </article>
 
-          <article className="panel">
+          <article className="panel managed-users-panel">
             <h3>Managed Accounts</h3>
-            <div className="table-wrap">
-              <table>
+            <div className="db-toolbar">
+              <label className="db-search">
+                <Search size={14} />
+                <input
+                  value={userSearch}
+                  onChange={(event) => setUserSearch(event.target.value)}
+                  placeholder="Search by email, name, username, status"
+                />
+              </label>
+
+              <label>
+                Rows
+                <select
+                  value={userPageSize}
+                  onChange={(event) => setUserPageSize(Number(event.target.value))}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+
+              <label className="switch-row">
+                <input
+                  type="checkbox"
+                  checked={includeSoftDeletedUsers}
+                  onChange={(event) => setIncludeSoftDeletedUsers(event.target.checked)}
+                />
+                Include deleted
+              </label>
+            </div>
+
+            <div className="db-stats">
+              <span className="stat-chip">Total: {users.length}</span>
+              <span className="stat-chip">Filtered: {filteredUsers.length}</span>
+              <span className="stat-chip">
+                Unverified: {filteredUsers.filter((u) => u.email_verified === false).length}
+              </span>
+              <span className="stat-chip">
+                Disabled:{' '}
+                {filteredUsers.filter((u) => u.is_account_disabled || u.firebase_disabled).length}
+              </span>
+              <span className="stat-chip">
+                Deleted: {filteredUsers.filter((u) => u.is_soft_deleted).length}
+              </span>
+            </div>
+
+            <div className="table-wrap tall users-table-wrap">
+              <table className="db-table">
                 <thead>
                   <tr>
                     <th>Email</th>
                     <th>Name</th>
+                    <th>Username</th>
+                    <th>Verified</th>
+                    <th>Disabled</th>
+                    <th>Deleted</th>
                     <th>eMonument</th>
                     <th>Admin</th>
-                    <th></th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {paginatedUsers.map((user) => (
                     <tr key={user.id}>
                       <td>{user.email}</td>
                       <td>{user.display_name ?? '-'}</td>
+                      <td>{user.username ?? '-'}</td>
+                      <td>
+                        {user.email_verified == null
+                          ? 'Unknown'
+                          : user.email_verified
+                            ? 'Yes'
+                            : 'No'}
+                      </td>
+                      <td>{user.is_account_disabled || user.firebase_disabled ? 'Yes' : 'No'}</td>
+                      <td>{user.is_soft_deleted ? 'Yes' : 'No'}</td>
                       <td>{user.is_emonument_privileged ? 'Yes' : 'No'}</td>
                       <td>{user.is_dashboard_admin ? 'Yes' : 'No'}</td>
-                      <td>
-                        <button className="small" onClick={() => handleResetPassword(user.id)}>
-                          Reset
-                        </button>
+                      <td>{user.last_login ? new Date(user.last_login).toLocaleString() : '-'}</td>
+                      <td className="user-actions-cell">
+                        <div className="user-row-menu">
+                          <button
+                            className="icon-btn user-row-menu-trigger"
+                            title="Account actions"
+                            onClick={(event) => toggleUserMenu(event, user.id)}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="pagination-row">
+              <span>
+                Showing {usersVisibleRangeLabel} of {filteredUsers.length}
+              </span>
+              <div className="pagination-actions">
+                <button
+                  className="small ghost"
+                  disabled={userPage <= 1}
+                  onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}
+                >
+                  Prev
+                </button>
+                <span>
+                  Page {userPage} / {totalUserPages}
+                </span>
+                <button
+                  className="small ghost"
+                  disabled={userPage >= totalUserPages}
+                  onClick={() => setUserPage((prev) => Math.min(totalUserPages, prev + 1))}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </article>
         </section>
@@ -1969,6 +2358,114 @@ function App() {
           )}
         </section>
       )}
+      {openUserMenu && openUserMenuUser
+        ? createPortal(
+            <div
+              className="user-row-menu-popover user-row-menu-popover-floating"
+              style={{ top: openUserMenu.top, left: openUserMenu.left }}
+            >
+              <button
+                className="small ghost"
+                onClick={() => {
+                  setOpenUserMenu(null)
+                  void handleEditUser(openUserMenuUser)
+                }}
+              >
+                Edit
+              </button>
+              <button
+                className="small ghost"
+                onClick={() => {
+                  setOpenUserMenu(null)
+                  void handleTogglePrivileged(openUserMenuUser)
+                }}
+              >
+                {openUserMenuUser.is_emonument_privileged ? 'Priv Off' : 'Priv On'}
+              </button>
+              {isMaintainer ? (
+                <button
+                  className="small ghost"
+                  onClick={() => {
+                    setOpenUserMenu(null)
+                    void handleToggleDashboardAdmin(openUserMenuUser)
+                  }}
+                >
+                  {openUserMenuUser.is_dashboard_admin ? 'Admin Off' : 'Admin On'}
+                </button>
+              ) : null}
+              <button
+                className="small ghost"
+                onClick={() => {
+                  setOpenUserMenu(null)
+                  void handleSendVerification(openUserMenuUser)
+                }}
+              >
+                Verify
+              </button>
+              <button
+                className="small"
+                onClick={() => {
+                  setOpenUserMenu(null)
+                  void handleResetPassword(openUserMenuUser.id)
+                }}
+              >
+                Reset
+              </button>
+              {openUserMenuUser.is_account_disabled || openUserMenuUser.firebase_disabled ? (
+                <button
+                  className="small"
+                  onClick={() => {
+                    setOpenUserMenu(null)
+                    void handleEnableUser(openUserMenuUser)
+                  }}
+                >
+                  Enable
+                </button>
+              ) : (
+                <button
+                  className="small danger"
+                  onClick={() => {
+                    setOpenUserMenu(null)
+                    void handleDisableUser(openUserMenuUser)
+                  }}
+                >
+                  Disable
+                </button>
+              )}
+              {openUserMenuUser.is_soft_deleted ? (
+                <button
+                  className="small"
+                  onClick={() => {
+                    setOpenUserMenu(null)
+                    void handleRestoreUser(openUserMenuUser)
+                  }}
+                >
+                  Restore
+                </button>
+              ) : (
+                <button
+                  className="small danger"
+                  onClick={() => {
+                    setOpenUserMenu(null)
+                    void handleSoftDeleteUser(openUserMenuUser)
+                  }}
+                >
+                  Soft Delete
+                </button>
+              )}
+              <button
+                className="small danger"
+                onClick={() => {
+                  setOpenUserMenu(null)
+                  void handleHardDeleteUser(openUserMenuUser)
+                }}
+              >
+                Hard Delete
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
     </main>
   )
 }

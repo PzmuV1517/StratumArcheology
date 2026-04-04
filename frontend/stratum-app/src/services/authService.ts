@@ -52,6 +52,13 @@ export const authService = {
       });
       const { access_token, user } = response.data;
 
+      if (!access_token) {
+        return {
+          success: false,
+          error: "Login response missing access token",
+        };
+      }
+
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
       await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
 
@@ -81,7 +88,18 @@ export const authService = {
         display_name: displayName,
         username,
       });
-      const { access_token, user } = response.data;
+      const { access_token, user, verification_required, message } = response.data;
+
+      if (verification_required || !access_token) {
+        return {
+          success: true,
+          user,
+          verificationRequired: true,
+          message:
+            message ||
+            "Verification email sent. Confirm your address before logging in.",
+        };
+      }
 
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, access_token);
       await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
