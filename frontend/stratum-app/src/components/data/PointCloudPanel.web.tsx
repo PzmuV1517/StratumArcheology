@@ -31,6 +31,7 @@ import * as THREE from "three";
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
 import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
 import { parseLAS } from "./las";
 
@@ -347,8 +348,14 @@ export default function PointCloudPanel({ src, name }: Props) {
             const form = new FormData();
             form.append("file", blob, name || `upload.${ext}`);
             if (name) form.append("name", name);
+            const token = await AsyncStorage.getItem("authToken");
+            const headers: Record<string, string> = {};
+            if (token) {
+              headers.Authorization = `Bearer ${token}`;
+            }
             const resp = await fetch(`${config.apiBaseUrl}/convert/pointcloud`, {
               method: "POST",
+              headers,
               body: form,
             });
             if (!resp.ok) {
@@ -367,29 +374,9 @@ export default function PointCloudPanel({ src, name }: Props) {
             const data = await resp.json();
             convertedUrl = data?.url;
           } else {
-            setLoadingText("Requesting conversion…");
-            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
-            const qs = new URLSearchParams();
-            if (src) qs.set("src", src);
-            if (name) qs.set("name", name);
-            const resp = await fetch(
-              `${config.apiBaseUrl}/convert/pointcloud?${qs.toString()}`,
+            throw new Error(
+              "Remote URL conversion is disabled. Please upload the point cloud file from your device.",
             );
-            if (!resp.ok) {
-              let msg = `Convert HTTP ${resp.status}`;
-              try {
-                const j = await resp.json();
-                if (j?.detail) msg += `: ${j.detail}`;
-                else if (j?.message) msg += `: ${j.message}`;
-              } catch {
-                try {
-                  msg += `: ${await resp.text()}`;
-                } catch {}
-              }
-              throw new Error(msg);
-            }
-            const data = await resp.json();
-            convertedUrl = data?.url;
           }
 
           if (!convertedUrl) throw new Error("No URL returned from converter");

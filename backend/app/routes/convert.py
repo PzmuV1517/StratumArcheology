@@ -28,11 +28,12 @@ SOFTWARE.
 import hashlib
 from io import BytesIO
 
-import aiohttp
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.dependencies import get_current_user
 from app.minio_client import minio_client
+from app.models import User
 
 router = APIRouter(prefix="/convert", tags=["convert"])
 
@@ -56,38 +57,6 @@ def detect_ext(name_or_url: str) -> str:
     if "." in path and not path.startswith("."):
         return path.rsplit(".", 1)[-1].lower()
     return ""
-
-
-async def fetch_bytes(url: str) -> bytes:
-    """Download the contents of a URL as bytes.
-
-    Only ``http://`` and ``https://`` schemes are allowed.
-
-    Args:
-        url: The URL to fetch.
-
-    Returns:
-        The raw response body bytes.
-
-    Raises:
-        HTTPException: 400 if the URL scheme is unsupported, 502 if the
-            upstream request fails.
-    """
-    timeout = aiohttp.ClientTimeout(total=120)
-    # Only allow http/https URLs; browser-only schemes (blob:, data:) can't be fetched server-side
-    if not (url.startswith("http://") or url.startswith("https://")):
-        raise HTTPException(
-            status_code=400,
-            detail="Only http/https URLs are supported for 'src'. For local/blob URLs, POST the file to this endpoint.",
-        )
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Upstream fetch failed: HTTP {resp.status}",
-                )
-            return await resp.read()
 
 
 def write_ply_ascii(positions, colors=None) -> bytes:
@@ -585,92 +554,18 @@ def parse_laz_laspy(
 async def convert_pointcloud(
     src: str = Query(..., description="Source URL to point cloud"),
     name: str | None = None,
+    _current_user: User = Depends(get_current_user),
 ):
-    """Convert a remote point cloud file to PLY format.
+    """Remote URL conversion is disabled for security reasons.
 
-    Fetches the file from *src*, converts LAS/LAZ to ASCII PLY, stores
-    the result in MinIO, and returns a presigned URL. PLY and PCD files
-    are passed through without conversion.
-
-    Args:
-        src: Source URL of the point cloud file.
-        name: Optional filename hint used for extension detection.
-
-    Returns:
-        JSON with ``ok``, ``format``, and ``url`` fields.
-
-    Raises:
-        HTTPException: 400 for unsupported formats or parse failures,
-            501 for formats requiring external tools (E57, RWI, RWP).
+    The ``GET /api/convert/pointcloud`` endpoint is intentionally kept to
+    provide a clear migration signal to clients. Upload-based conversion via
+    ``POST /api/convert/pointcloud`` remains supported.
     """
-    ext = detect_ext(name or src)
-    extU = ext.upper()
-    # Fast-path: pass-through formats
-    if ext in ("ply", "pcd"):
-        return JSONResponse({"ok": True, "format": extU, "url": src})
-
-    if ext == "las":
-        # Fetch, parse, and emit temporary PLY stored in MinIO
-        if src.startswith("blob:") or src.startswith("data:"):
-            # Make it explicit for frontend
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.",
-            )
-        data = await fetch_bytes(src)
-        try:
-            positions, colors = parse_las_python(data, max_points=2_000_000)
-        except ValueError as e:
-            # Try tolerant ASCII LAS (Log ASCII Standard) parsing as fallback
-            try:
-                positions, colors = parse_las_ascii(data, max_points=2_000_000)
-            except Exception:
-                # Surface backend parsing failure; frontend can fallback or report
-                raise HTTPException(status_code=400, detail=f"LAS parse failed: {e}")
-        ply_bytes = write_ply_ascii(positions, colors)
-        # store to MinIO
-        key_base = hashlib.sha1((src or name or "").encode("utf-8")).hexdigest()
-        object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(
-            ply_bytes, object_name, "application/octet-stream"
-        )
-        url = minio_client.get_presigned_url(object_name, expiry=3600)
-        return JSONResponse({"ok": True, "format": "PLY", "url": url})
-
-    if ext == "laz":
-        if src.startswith("blob:") or src.startswith("data:"):
-            raise HTTPException(
-                status_code=400,
-                detail="Cannot fetch blob/data URL on server. POST the file to /api/convert/pointcloud instead.",
-            )
-        data = await fetch_bytes(src)
-        try:
-            positions, colors = parse_laz_laspy(data, max_points=2_000_000)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"LAZ parse failed: {e}")
-        if not positions:
-            raise HTTPException(
-                status_code=400, detail="LAZ parse produced no points"
-            )
-        ply_bytes = write_ply_ascii(positions, colors)
-        key_base = hashlib.sha1((src or name or "").encode("utf-8")).hexdigest()
-        object_name = f"converted/{key_base}.ply"
-        await minio_client.upload_file(
-            ply_bytes, object_name, "application/octet-stream"
-        )
-        url = minio_client.get_presigned_url(object_name, expiry=3600)
-        return JSONResponse({"ok": True, "format": "PLY", "url": url})
-
-    # Unsupported in-browser: attempt to signal conversion requirement
-    if ext in ("e57", "rwi", "rwp"):
-        # Placeholder: require PDAL/CloudCompare on server to implement
-        raise HTTPException(
-            status_code=501,
-            detail=f"Server-side conversion for {extU} not configured. Install PDAL/CloudCompare and wire converters.",
-        )
-
+    _ = (src, name)
     raise HTTPException(
-        status_code=400, detail=f"Unsupported point cloud format: {extU}"
+        status_code=403,
+        detail="Remote URL conversion is disabled for security. Upload the file to POST /api/convert/pointcloud.",
     )
 
 
@@ -678,6 +573,7 @@ async def convert_pointcloud(
 async def convert_pointcloud_upload(
     file: UploadFile = File(..., description="Point cloud file to convert"),
     name: str | None = Form(None),
+    _current_user: User = Depends(get_current_user),
 ):
     """Accepts a file upload (multipart/form-data) and converts to a PLY stored in MinIO.
     Currently supports: LAS (uncompressed). PLY/PCD are re-uploaded as-is.
