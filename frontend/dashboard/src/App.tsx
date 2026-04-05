@@ -24,6 +24,7 @@ type User = {
   username: string | null
   display_name: string | null
   firebase_uid: string
+  auth_provider: string | null
   is_emonument_privileged: boolean
   is_dashboard_admin: boolean
   is_account_disabled: boolean

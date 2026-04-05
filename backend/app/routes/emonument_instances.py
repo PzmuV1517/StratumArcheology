@@ -2,14 +2,21 @@
 
 from datetime import datetime
 
+import firebase_admin.auth as firebase_auth
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth_provider import (
+    choose_primary_auth_provider,
+    extract_provider_ids_from_firebase_user,
+    is_google_provider,
+)
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.emonument_form_schema import schema_to_dict
 from app.emonument_validation import validate_fisa_payload
+from app.middleware import get_logger
 from app.models import (
     FisaInstance,
     FisaInstanceStatus,
@@ -19,6 +26,7 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/emonument", tags=["eMonument Workflow"])
+logger = get_logger(__name__)
 
 
 class FisaCreateRequest(BaseModel):
@@ -126,8 +134,38 @@ def _is_maintainer(user: User) -> bool:
     return bool(getattr(user, "is_maintainer", False))
 
 
-def _can_review(user: User) -> bool:
-    return _is_maintainer(user) or bool(user.is_dashboard_admin)
+def _resolve_auth_provider(user: User, db: Session) -> str | None:
+    if _is_maintainer(user):
+        return "maintainer"
+
+    if user.auth_provider:
+        return user.auth_provider
+
+    try:
+        firebase_user = firebase_auth.get_user(user.firebase_uid)
+        resolved_provider = choose_primary_auth_provider(
+            extract_provider_ids_from_firebase_user(firebase_user)
+        )
+        if resolved_provider and user.auth_provider != resolved_provider:
+            user.auth_provider = resolved_provider
+            db.commit()
+    except Exception as exc:
+        logger.warning(
+            "Failed to reconcile auth provider for eMonument access",
+            user_id=user.id,
+            firebase_uid=user.firebase_uid,
+            error=str(exc),
+        )
+
+    return user.auth_provider
+
+
+def _can_review(user: User, db: Session) -> bool:
+    if _is_maintainer(user):
+        return True
+    if not bool(user.is_dashboard_admin):
+        return False
+    return not is_google_provider(_resolve_auth_provider(user, db))
 
 
 def _can_collect(user: User) -> bool:
@@ -142,16 +180,19 @@ def _assert_collect_access(user: User) -> None:
         )
 
 
-def _assert_review_access(user: User) -> None:
-    if not _can_review(user):
+def _assert_review_access(user: User, db: Session) -> None:
+    if not _can_review(user, db):
+        detail = "Only dashboard admins or maintainer can review instances"
+        if is_google_provider(_resolve_auth_provider(user, db)):
+            detail = "Google-authenticated accounts cannot access dashboard review workflows"
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only dashboard admins or maintainer can review instances",
+            detail=detail,
         )
 
 
-def _assert_instance_access(user: User, instance: FisaInstance) -> None:
-    if _can_review(user) or _is_maintainer(user):
+def _assert_instance_access(user: User, instance: FisaInstance, db: Session) -> None:
+    if _can_review(user, db) or _is_maintainer(user):
         return
     if instance.user_id != user.id:
         raise HTTPException(
@@ -191,7 +232,7 @@ async def list_monuments(
             | (Monument.county.ilike(like_q))
         )
 
-    if not (_can_review(current_user) or _is_maintainer(current_user)):
+    if not _can_review(current_user, db):
         _assert_collect_access(current_user)
         query = (
             query.join(Monument.instances, isouter=True)
@@ -214,7 +255,7 @@ async def list_instances(
     if status_filter is not None:
         query = query.filter(FisaInstance.status == status_filter)
 
-    if not (_can_review(current_user) or _is_maintainer(current_user)):
+    if not _can_review(current_user, db):
         _assert_collect_access(current_user)
         query = query.filter(FisaInstance.user_id == current_user.id)
 
@@ -296,7 +337,7 @@ async def update_instance(
     if not instance:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
 
-    _assert_instance_access(current_user, instance)
+    _assert_instance_access(current_user, instance, db)
 
     if instance.status in {
         FisaInstanceStatus.IN_VERIFICARE,
@@ -342,7 +383,7 @@ async def submit_for_verification(
     if not instance:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
 
-    _assert_instance_access(current_user, instance)
+    _assert_instance_access(current_user, instance, db)
 
     issues = validate_fisa_payload(instance.data or {}, strict=True)
     if issues:
@@ -385,7 +426,7 @@ async def send_to_approval(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _assert_review_access(current_user)
+    _assert_review_access(current_user, db)
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
@@ -414,7 +455,7 @@ async def approve_instance(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _assert_review_access(current_user)
+    _assert_review_access(current_user, db)
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
@@ -445,7 +486,7 @@ async def return_instance(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    _assert_review_access(current_user)
+    _assert_review_access(current_user, db)
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
@@ -486,7 +527,7 @@ async def list_instance_versions(
     if not instance:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
 
-    _assert_instance_access(current_user, instance)
+    _assert_instance_access(current_user, instance, db)
 
     versions = (
         db.query(FisaInstanceVersion)
@@ -508,7 +549,7 @@ async def delete_instance(
     if not instance:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
 
-    _assert_instance_access(current_user, instance)
+    _assert_instance_access(current_user, instance, db)
 
     db.delete(instance)
     db.commit()

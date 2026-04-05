@@ -97,6 +97,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     firebase_uid: str
+    auth_provider: str | None = None
     has_completed_onboarding: bool = False
     is_emonument_privileged: bool = False
     is_dashboard_admin: bool = False

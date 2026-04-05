@@ -44,6 +44,7 @@ interface User {
   email: string;
   username?: string;
   display_name: string;
+  auth_provider?: string | null;
   photo_url?: string;
   banner_url?: string;
   bio?: string;
@@ -69,6 +70,10 @@ interface AuthContextType {
     email: string,
     password: string,
   ) => Promise<{ success: boolean; error?: string; message?: string }>;
+  loginWithGoogle: (
+    googleIdToken?: string,
+    googleAccessToken?: string,
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (
     email: string,
     password: string,
@@ -85,6 +90,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   sessionExpired: false,
   login: async () => ({ success: false }),
+  loginWithGoogle: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -152,6 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: response.data.email,
             username: response.data.username,
             display_name: response.data.display_name,
+            auth_provider: response.data.auth_provider,
             photo_url: response.data.photo_url,
             banner_url: response.data.banner_url,
             bio: response.data.bio,
@@ -201,6 +208,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("[AuthContext] Login exception:", error);
       return { success: false, error: error.message || "Login failed" };
+    }
+  };
+
+  const loginWithGoogle = async (
+    googleIdToken?: string,
+    googleAccessToken?: string,
+  ) => {
+    try {
+      const result = await authService.loginWithGoogleIdToken(
+        googleIdToken,
+        googleAccessToken,
+      );
+      if (result.success) {
+        setUser(result.user || null);
+        clearSessionExpired();
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || "Google authentication failed",
+      };
     }
   };
 
@@ -256,6 +286,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: response.data.email,
           username: response.data.username,
           display_name: response.data.display_name,
+          auth_provider: response.data.auth_provider,
           photo_url: response.data.photo_url,
           banner_url: response.data.banner_url,
           bio: response.data.bio,
@@ -287,6 +318,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         sessionExpired,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshUser,

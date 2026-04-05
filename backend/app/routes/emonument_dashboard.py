@@ -15,6 +15,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
+from app.auth_provider import (
+    PASSWORD_PROVIDER_ID,
+    choose_primary_auth_provider,
+    extract_provider_ids_from_firebase_user,
+    is_google_provider,
+)
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -35,6 +41,7 @@ class DashboardUserResponse(BaseModel):
     username: str | None = None
     display_name: str | None = None
     firebase_uid: str
+    auth_provider: str | None = None
     is_emonument_privileged: bool
     is_dashboard_admin: bool
     is_account_disabled: bool
@@ -100,9 +107,43 @@ def _is_maintainer(user: User) -> bool:
     return bool(getattr(user, "is_maintainer", False))
 
 
-def _assert_dashboard_actor(user: User) -> None:
+def _resolve_auth_provider(user: User, db: Session) -> str | None:
+    if _is_maintainer(user):
+        return "maintainer"
+
+    if user.auth_provider:
+        return user.auth_provider
+
+    try:
+        firebase_user = firebase_auth.get_user(user.firebase_uid)
+        resolved_provider = choose_primary_auth_provider(
+            extract_provider_ids_from_firebase_user(firebase_user)
+        )
+        if resolved_provider and user.auth_provider != resolved_provider:
+            user.auth_provider = resolved_provider
+            db.commit()
+    except Exception as exc:
+        logger.warning(
+            "Failed to reconcile auth provider for dashboard actor",
+            user_id=user.id,
+            firebase_uid=user.firebase_uid,
+            error=str(exc),
+        )
+
+    return user.auth_provider
+
+
+def _assert_dashboard_actor(user: User, db: Session) -> None:
     if _is_maintainer(user):
         return
+
+    resolved_provider = _resolve_auth_provider(user, db)
+    if is_google_provider(resolved_provider):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Google-authenticated accounts cannot access dashboard",
+        )
+
     if not user.is_dashboard_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -142,6 +183,7 @@ def _serialize_dashboard_user(user: User) -> DashboardUserResponse:
         username=user.username,
         display_name=user.display_name,
         firebase_uid=user.firebase_uid,
+        auth_provider=user.auth_provider,
         is_emonument_privileged=user.is_emonument_privileged,
         is_dashboard_admin=user.is_dashboard_admin,
         is_account_disabled=user.is_account_disabled,
@@ -173,7 +215,7 @@ async def list_dashboard_users(
     db: Session = Depends(get_db),
 ):
     """List users available in dashboard scope."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     query = db.query(User)
     if not _is_maintainer(current_user):
@@ -201,7 +243,7 @@ async def create_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Create a STRATUM account with optional eMonument/dashboard privileges."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     if db.query(User).filter(User.email == request.email).first():
         raise HTTPException(
@@ -274,6 +316,7 @@ async def create_dashboard_user(
         email=request.email,
         username=username,
         display_name=request.display_name,
+        auth_provider=PASSWORD_PROVIDER_ID,
         is_emonument_privileged=is_emonument_privileged,
         is_dashboard_admin=is_dashboard_admin,
         is_account_disabled=False,
@@ -297,7 +340,7 @@ async def update_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Update dashboard-manageable user fields and privileges."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -402,7 +445,7 @@ async def send_password_reset_email(
     db: Session = Depends(get_db),
 ):
     """Send Firebase password reset email for a managed user."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -443,7 +486,7 @@ async def send_verification_email(
     db: Session = Depends(get_db),
 ):
     """Send or generate a Firebase verification link for a managed user."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -503,7 +546,7 @@ async def disable_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Disable a managed account in both local DB and Firebase."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -540,7 +583,7 @@ async def enable_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Enable a managed account in both local DB and Firebase."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -583,7 +626,7 @@ async def soft_delete_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Soft-delete account locally and disable it in Firebase."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -622,7 +665,7 @@ async def restore_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Restore a soft-deleted account and re-enable it in Firebase."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
@@ -662,7 +705,7 @@ async def hard_delete_dashboard_user(
     db: Session = Depends(get_db),
 ):
     """Permanently delete an account from Firebase and local database."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     if request.confirmation_text.strip().upper() != "HARD DELETE":
         raise HTTPException(
@@ -716,7 +759,7 @@ async def list_dashboard_monuments(
     db: Session = Depends(get_db),
 ):
     """List monuments for dashboard management."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     query = db.query(Monument)
     if q:
@@ -739,7 +782,7 @@ async def create_dashboard_monument(
     db: Session = Depends(get_db),
 ):
     """Create a new monument available for eMonument forms."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     lmi_code = request.lmi_code.strip()
     if not lmi_code:
@@ -787,7 +830,7 @@ async def delete_dashboard_monument(
     db: Session = Depends(get_db),
 ):
     """Delete a monument if no forms are linked to it."""
-    _assert_dashboard_actor(current_user)
+    _assert_dashboard_actor(current_user, db)
 
     monument = db.query(Monument).filter(Monument.id == monument_id).first()
     if not monument:

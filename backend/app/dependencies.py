@@ -68,6 +68,7 @@ def build_maintainer_user() -> User:
         link_bsky=None,
         link_linkedin=None,
         link_website=None,
+        auth_provider="maintainer",
         is_emonument_privileged=True,
         is_dashboard_admin=True,
         is_account_disabled=False,

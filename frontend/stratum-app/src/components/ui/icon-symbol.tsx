@@ -48,23 +48,24 @@ const MAPPING: Record<string, MaterialIconName> = {
   "globe.americas.fill": "public",
   "message.fill": "message",
   "gearshape.fill": "settings",
+  "rectangle.portrait.and.arrow.right": "logout",
   "chevron.backward": "arrow-back",
   "chevron.left": "chevron-left",
   "paperplane.fill": "send",
   "note.text": "description",
   "bubble.left.and.bubble.right.fill": "forum",
   "photo.on.rectangle": "photo-library",
-  "map": "map",
+  map: "map",
   "clock.arrow.circlepath": "history",
   "chart.bar.fill": "bar-chart",
   "chart.bar.doc.horizontal": "assessment",
   "cube.fill": "inventory-2",
-  "dice": "casino",
+  dice: "casino",
   "ellipsis.circle": "more-horiz",
   "exclamationmark.triangle.fill": "warning",
   "mountain.2.fill": "terrain",
   "person.2.fill": "groups",
-  "plus": "add",
+  plus: "add",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "line.3.horizontal": "menu",
@@ -124,5 +125,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={resolveMaterialName(name)} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={resolveMaterialName(name)}
+      style={style}
+    />
+  );
 }

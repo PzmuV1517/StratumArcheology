@@ -56,6 +56,9 @@
       "firebaseStorageBucket": "stratum-quantumbits.firebasestorage.app",
       "firebaseMessagingSenderId": "948078666889",
       "firebaseAppId": "1:948078666889:web:c120c439d572b8680b5258",
+      "googleWebClientId": "948078666889-rfil3r02mg536u563qs81n5nf96rmmia.apps.googleusercontent.com",
+      "googleIosClientId": "948078666889-gik603tp3avghkjdkjfhh0q99qjj7qma.apps.googleusercontent.com",
+      "googleAndroidClientId": "948078666889-rhh4748veu987mee2k94ei0vfvlvuf4r.apps.googleusercontent.com",
       "router": {},
       "eas": {
         "projectId": "70f42a3a-8f7e-4f06-8f4c-d6bd3db3d486"
