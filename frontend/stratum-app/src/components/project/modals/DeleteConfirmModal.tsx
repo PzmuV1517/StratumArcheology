@@ -31,7 +31,7 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import {
   ProjectModalShell,
-  projectModalStyles,
+  useProjectModalTheme,
 } from "@/components/project/modals/ProjectModalPrimitives";
 
 export default function DeleteConfirmModal({
@@ -49,6 +49,9 @@ export default function DeleteConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { styles: projectModalStyles, destructiveTextColor } =
+    useProjectModalTheme();
+
   return (
     <ProjectModalShell
       visible={visible}
@@ -75,7 +78,9 @@ export default function DeleteConfirmModal({
           onPress={onConfirm}
           disabled={isDeleting}
         >
-          <Text style={[projectModalStyles.buttonText, { color: "#FF4444" }]}>
+          <Text
+            style={[projectModalStyles.buttonText, { color: destructiveTextColor }]}
+          >
             {isDeleting ? "Deleting..." : "Delete"}
           </Text>
         </TouchableOpacity>

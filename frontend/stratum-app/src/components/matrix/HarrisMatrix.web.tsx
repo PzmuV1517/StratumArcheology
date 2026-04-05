@@ -34,6 +34,7 @@ import { MdOutlineViewInAr } from "react-icons/md";
 import { FaArrowRotateRight } from "react-icons/fa6";
 import { HiDotsHorizontal } from "react-icons/hi";
 import "./HarrisMatrix.css";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { formsService } from "../../services/formsService";
 import {
   ContextFeatureRecord,
@@ -119,6 +120,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   projectId,
   canEdit = true,
 }) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -443,7 +445,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       let g = svg.select("g.main-group");
       if (g.empty()) g = svg.append("g").attr("class", "main-group");
       const GRID_CELL_SIZE = 60;
-      const GRID_COLOR = "#E3E3E3";
+      const GRID_COLOR = isDarkMode ? "#2F3440" : "#D5DAE1";
       const zoom = d3
         .zoom()
         .scaleExtent([0.1, 5])
@@ -3246,7 +3248,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       openGroupModalRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, isDarkMode]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -3274,7 +3276,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   return (
     <div
       ref={rootRef}
-      className="harris-matrix"
+      className={`harris-matrix ${isDarkMode ? "theme-dark" : "theme-light"}`}
       style={{ width: "100%", height: "100%" }}
     >
       <div className="container">

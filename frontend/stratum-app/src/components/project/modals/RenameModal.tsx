@@ -31,7 +31,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, TextInput } from "react-native";
 import {
   ProjectModalShell,
-  projectModalStyles,
+  useProjectModalTheme,
 } from "@/components/project/modals/ProjectModalPrimitives";
 
 export default function RenameModal({
@@ -47,6 +47,8 @@ export default function RenameModal({
   onCancel: () => void;
   onRename: (newBaseName: string) => void;
 }) {
+  const { styles: projectModalStyles, placeholderTextColor } =
+    useProjectModalTheme();
   const [name, setName] = useState("");
   useEffect(() => {
     if (visible) setName(currentName.replace(/\.[^.]+$/, ""));
@@ -62,7 +64,7 @@ export default function RenameModal({
       <TextInput
         style={projectModalStyles.input}
         placeholder="New name"
-        placeholderTextColor="#8A8A8A"
+        placeholderTextColor={placeholderTextColor}
         value={name}
         onChangeText={setName}
       />
