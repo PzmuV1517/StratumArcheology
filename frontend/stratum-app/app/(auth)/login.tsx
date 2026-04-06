@@ -47,7 +47,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "@/services/api";
@@ -108,6 +108,7 @@ export default function LoginScreen() {
   const placeholderTextColor = isDarkMode ? "#4A4A4A" : "#7A7A7A";
   const modalPlaceholderTextColor = isDarkMode ? "#777777" : "#888888";
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const router = useRouter();
 
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
   const fadeDelayMs = useMemo(() => {
@@ -643,6 +644,34 @@ export default function LoginScreen() {
     </TouchableOpacity>
   );
 
+  const renderLegalNotice = () => (
+    <View style={styles.legalNotice}>
+      <Text style={styles.legalWarningTitle}>Privacy Notice</Text>
+      <Text style={styles.legalWarningText}>
+        STRATUM uses required cookies for sign-in, secure sessions, and account
+        protection. These cookies are mandatory, and the app cannot be used
+        without them. By using STRATUM, you acknowledge and accept the Terms of Service and Privacy Policy.
+      </Text>
+      <View style={styles.legalLinksRow}>
+        <TouchableOpacity
+          onPress={() => router.push("/privacy-policy")}
+          accessibilityRole="button"
+          accessibilityLabel="Open Privacy Policy"
+        >
+          <Text style={styles.legalLink}>Privacy Policy</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalDot}>•</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/terms-of-service")}
+          accessibilityRole="button"
+          accessibilityLabel="Open Terms of Service"
+        >
+          <Text style={styles.legalLink}>Terms of Service</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const renderForm = () => (
     <View style={styles.form}>
       <View style={styles.inputGroup}>
@@ -743,6 +772,8 @@ export default function LoginScreen() {
       >
         <Text style={styles.devButtonText}>Dev: API Base URL</Text>
       </TouchableOpacity>
+
+      {renderLegalNotice()}
     </View>
   );
 
@@ -897,6 +928,8 @@ export default function LoginScreen() {
           </>
         )}
       </TouchableOpacity>
+
+      {renderLegalNotice()}
     </View>
   );
 
@@ -1349,6 +1382,44 @@ const createStyles = (isDarkMode: boolean): any =>
       color: "#FF2A2A",
       fontWeight: "600",
       letterSpacing: 0.5,
+    },
+    legalNotice: {
+      marginTop: 16,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      backgroundColor: isDarkMode ? "#111111" : "#FAFAFA",
+    },
+    legalWarningTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+      marginBottom: 6,
+    },
+    legalWarningText: {
+      color: isDarkMode ? "#C9C9C9" : "#555555",
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    legalLinksRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    legalLink: {
+      color: "#FF2A2A",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    legalDot: {
+      color: isDarkMode ? "#888888" : "#777777",
+      fontSize: 12,
+      fontWeight: "600",
     },
     devButton: {
       marginTop: 12,
