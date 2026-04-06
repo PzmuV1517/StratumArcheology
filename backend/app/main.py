@@ -34,6 +34,7 @@ SOFTWARE.
 """
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -113,7 +114,10 @@ app.add_middleware(
 @app.middleware("http")
 async def _capture_base_url(request: Request, call_next):
     set_request_base_url(str(request.base_url))
-    return await call_next(request)
+    response = await call_next(request)
+    if request.url.path.startswith("/api"):
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
+    return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -145,6 +149,20 @@ logger.info(
 async def root():
     """Root endpoint"""
     return {"message": "STRATUM API", "version": "1.0.0", "status": "operational"}
+
+
+@app.get("/api", include_in_schema=False)
+@app.get("/api/", include_in_schema=False)
+async def api_root():
+    """API root endpoint for health and crawler-safe discovery."""
+    return JSONResponse(
+        {
+            "message": "STRATUM API root",
+            "version": "1.0.0",
+            "status": "operational",
+            "health": "/api/health",
+        }
+    )
 
 
 @app.get("/health")
