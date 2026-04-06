@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /_expo/
 
-Sitemap: https://stratumarcheology.com/sitemap.xml
+Sitemap: https://stratumarcheology.com/sitemap_index.xml
