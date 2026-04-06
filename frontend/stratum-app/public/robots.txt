@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /_expo/
+
+Sitemap: https://stratumarcheology.com/sitemap.xml
