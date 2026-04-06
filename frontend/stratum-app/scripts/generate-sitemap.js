@@ -11,7 +11,8 @@ const path = require("path");
 
 const DIST = path.resolve(__dirname, "../dist");
 const SITE_URL = (process.env.SITE_URL || "https://stratumarcheology.com").replace(/\/+$/, "");
-const OUTPUT = path.join(DIST, "sitemap.xml");
+const URLSET_OUTPUT = path.join(DIST, "sitemap.xml");
+const INDEX_OUTPUT = path.join(DIST, "sitemap_index.xml");
 
 function listHtmlFiles(dir, out = []) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -58,6 +59,9 @@ function shouldIncludeRoute(route) {
   if (route.startsWith("/_expo")) return false;
   if (route === "/+not-found") return false;
   if (route === "/_sitemap") return false;
+  if (route === "/sitemap") return false;
+  if (route === "/sitemap.xml") return false;
+  if (route === "/sitemap_index.xml") return false;
   if (/[A-Z]/.test(route)) return false;
   if (/[^a-z0-9/_-]/.test(route)) return false;
   return true;
@@ -100,6 +104,19 @@ function buildXml(routes) {
   ].join("\n");
 }
 
+function buildSitemapIndex() {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    "  <sitemap>",
+    `    <loc>${SITE_URL}/sitemap.xml</loc>`,
+    `    <lastmod>${new Date().toISOString().slice(0, 10)}</lastmod>`,
+    "  </sitemap>",
+    "</sitemapindex>",
+    "",
+  ].join("\n");
+}
+
 function main() {
   if (!fs.existsSync(DIST)) {
     console.error("Dist directory not found. Run expo export first.");
@@ -119,10 +136,14 @@ function main() {
     return a.localeCompare(b);
   });
 
-  const xml = buildXml(routes);
-  fs.writeFileSync(OUTPUT, xml, "utf8");
+  const urlsetXml = buildXml(routes);
+  fs.writeFileSync(URLSET_OUTPUT, urlsetXml, "utf8");
+
+  const indexXml = buildSitemapIndex();
+  fs.writeFileSync(INDEX_OUTPUT, indexXml, "utf8");
 
   console.log(`Generated sitemap with ${routes.length} routes -> dist/sitemap.xml`);
+  console.log("Generated sitemap index -> dist/sitemap_index.xml");
 }
 
 main();
