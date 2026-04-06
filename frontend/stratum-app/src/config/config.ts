@@ -39,16 +39,26 @@ interface FirebaseConfig {
   appId?: string;
 }
 
+interface GoogleOAuthConfig {
+  webClientId?: string;
+  iosClientId?: string;
+  androidClientId?: string;
+}
+
 interface AppConfig {
   apiBaseUrl: string;
   firebase: FirebaseConfig;
+  googleOAuth: GoogleOAuthConfig;
   app: {
     name: string;
     version: string;
   };
 }
 
-const expoExtra = Constants.expoConfig?.extra as Record<string, any> | undefined;
+const expoExtra =
+  (Constants.expoConfig?.extra as Record<string, any> | undefined) ??
+  (Constants.manifest2?.extra as Record<string, any> | undefined) ??
+  ((Constants as any).manifest?.extra as Record<string, any> | undefined);
 
 /**
  * Get the appropriate API base URL for the current platform
@@ -194,6 +204,12 @@ export const config: AppConfig = {
     storageBucket: expoExtra?.firebaseStorageBucket,
     messagingSenderId: expoExtra?.firebaseMessagingSenderId,
     appId: expoExtra?.firebaseAppId,
+  },
+
+  googleOAuth: {
+    webClientId: expoExtra?.googleWebClientId,
+    iosClientId: expoExtra?.googleIosClientId,
+    androidClientId: expoExtra?.googleAndroidClientId,
   },
 
   app: {

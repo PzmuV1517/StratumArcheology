@@ -68,13 +68,17 @@ def build_maintainer_user() -> User:
         link_bsky=None,
         link_linkedin=None,
         link_website=None,
+        auth_provider="maintainer",
         is_emonument_privileged=True,
         is_dashboard_admin=True,
+        is_account_disabled=False,
+        is_soft_deleted=False,
+        soft_deleted_at=None,
         has_completed_onboarding=True,
         created_at=datetime.utcnow(),
         last_login=datetime.utcnow(),
     )
-    setattr(maintainer_user, "is_maintainer", True)
+    maintainer_user.is_maintainer = True
     return maintainer_user
 
 
@@ -121,6 +125,18 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user.is_soft_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account has been deleted",
+            )
+
+        if user.is_account_disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
             )
 
         return user
@@ -198,6 +214,18 @@ async def get_current_user_or_token(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user.is_soft_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account has been deleted",
+            )
+
+        if user.is_account_disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
             )
 
         return user

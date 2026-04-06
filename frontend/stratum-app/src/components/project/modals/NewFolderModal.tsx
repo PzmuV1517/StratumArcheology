@@ -31,7 +31,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, TextInput } from "react-native";
 import {
   ProjectModalShell,
-  projectModalStyles,
+  useProjectModalTheme,
 } from "@/components/project/modals/ProjectModalPrimitives";
 
 export default function NewFolderModal({
@@ -43,6 +43,8 @@ export default function NewFolderModal({
   onCancel: () => void;
   onCreate: (name: string) => void;
 }) {
+  const { styles: projectModalStyles, placeholderTextColor } =
+    useProjectModalTheme();
   const [name, setName] = useState("");
   useEffect(() => {
     if (visible) setName("");
@@ -58,7 +60,7 @@ export default function NewFolderModal({
       <TextInput
         style={projectModalStyles.input}
         placeholder="Folder name"
-        placeholderTextColor="#8A8A8A"
+        placeholderTextColor={placeholderTextColor}
         value={name}
         onChangeText={setName}
       />

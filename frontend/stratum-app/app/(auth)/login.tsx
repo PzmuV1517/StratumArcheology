@@ -31,6 +31,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -43,6 +44,9 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -59,6 +63,8 @@ import RAnimated, {
 } from "react-native-reanimated";
 
 import NativeTerminalBg from "@/components/effects/NativeTerminalBg";
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
 let FaEyeSlash: any = null;
@@ -83,6 +89,19 @@ if (Platform.OS === "web") {
     require("@/components/effects/FaultyTerminal.css");
   } catch {}
 }
+
+type PendingVerification = {
+  email: string;
+  password: string;
+};
+
+type ExtraConfig = {
+  googleWebClientId?: string;
+  googleIosClientId?: string;
+  googleAndroidClientId?: string;
+};
+
+const GOOGLE_LOGO = require("../../assets/images/google.png");
 
 export default function LoginScreen() {
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
@@ -111,7 +130,15 @@ export default function LoginScreen() {
     return () => clearTimeout(t);
   }, [fade, fadeDelayMs]);
 
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
+
+  const runtimeExtra =
+    ((Constants.expoConfig?.extra ??
+      Constants.manifest2?.extra ??
+      (Constants as any).manifest?.extra) as ExtraConfig | undefined) ?? {};
+  const isExpoGoClient =
+    Constants.executionEnvironment === "storeClient" ||
+    (Constants as any).appOwnership === "expo";
 
   // Card swap animation: 0 = login in front, 1 = register in front
   const SWAP_DURATION = 500;
@@ -198,6 +225,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    webClientId: config.googleOAuth.webClientId || runtimeExtra.googleWebClientId,
+    iosClientId: config.googleOAuth.iosClientId || runtimeExtra.googleIosClientId,
+    androidClientId:
+      config.googleOAuth.androidClientId || runtimeExtra.googleAndroidClientId,
+    scopes: ["openid", "profile", "email"],
+  });
 
   // Refs for iOS AutoFill focus chaining
   const loginPasswordRef = useRef<TextInput>(null);
@@ -215,6 +251,12 @@ export default function LoginScreen() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] =
+    useState<PendingVerification | null>(null);
+  const [verificationCheckLoading, setVerificationCheckLoading] = useState(false);
+  const [verificationStatusText, setVerificationStatusText] = useState<
+    string | null
+  >(null);
 
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState("");
@@ -326,6 +368,127 @@ export default function LoginScreen() {
     }
   };
 
+  const getGoogleClientIdForCurrentPlatform = () => {
+    if (Platform.OS === "ios") {
+      return (
+        config.googleOAuth.iosClientId || runtimeExtra.googleIosClientId
+      )?.trim();
+    }
+    if (Platform.OS === "android") {
+      return (
+        config.googleOAuth.androidClientId || runtimeExtra.googleAndroidClientId
+      )?.trim();
+    }
+    return (
+      config.googleOAuth.webClientId || runtimeExtra.googleWebClientId
+    )?.trim();
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (googleLoading) {
+      return;
+    }
+
+    if (Platform.OS !== "web" && isExpoGoClient) {
+      showAlert(
+        "Google Sign-In Requires Dev Build",
+        "Google OAuth on native cannot complete in Expo Go for this flow. Use a development build (npx expo run:ios / npx expo run:android) and then start with npx expo start --dev-client.",
+      );
+      return;
+    }
+
+    const platformClientId = getGoogleClientIdForCurrentPlatform();
+    if (!platformClientId) {
+      showAlert(
+        "Google Sign-In Unavailable",
+        "Google OAuth client ID is missing for this platform. Configure it in app.json extra settings.",
+      );
+      return;
+    }
+
+    if (!googleRequest) {
+      showAlert(
+        "Google Sign-In Unavailable",
+        "Google authentication is still initializing. Please try again.",
+      );
+      return;
+    }
+
+    console.log("[GoogleAuth] runtime", {
+      platform: Platform.OS,
+      executionEnvironment: (Constants as any).executionEnvironment,
+      appOwnership: (Constants as any).appOwnership,
+      redirectUri: googleRequest.redirectUri,
+      hasPlatformClientId: Boolean(platformClientId),
+    });
+
+    setGoogleLoading(true);
+    try {
+      const promptResult = await promptGoogleAsync();
+      if (promptResult.type !== "success") {
+        if (promptResult.type === "error") {
+          const mismatchError =
+            (promptResult as any)?.params?.error === "redirect_uri_mismatch" ||
+            String((promptResult as any)?.params?.error_description || "")
+              .toLowerCase()
+              .includes("redirect_uri_mismatch");
+
+          if (mismatchError) {
+            showAlert(
+              "Google Redirect URI Mismatch",
+              `Allowed redirect URI is missing in Google Cloud OAuth config. Add this URI to your Web client authorized redirect URIs: ${googleRequest.redirectUri}`,
+            );
+            return;
+          }
+
+          showAlert(
+            "Google Sign-In Failed",
+            "Could not complete Google authentication.",
+          );
+        }
+        return;
+      }
+
+      const idTokenFromAuthentication = promptResult.authentication?.idToken ?? null;
+      const idTokenFromParams =
+        typeof (promptResult as any)?.params?.id_token === "string"
+          ? (promptResult as any).params.id_token
+          : null;
+      const accessTokenFromAuthentication =
+        promptResult.authentication?.accessToken ?? null;
+      const accessTokenFromParams =
+        typeof (promptResult as any)?.params?.access_token === "string"
+          ? (promptResult as any).params.access_token
+          : null;
+      const googleIdToken = idTokenFromAuthentication || idTokenFromParams;
+      const googleAccessToken =
+        accessTokenFromAuthentication || accessTokenFromParams;
+
+      if (!googleIdToken && !googleAccessToken) {
+        showAlert(
+          "Google Sign-In Failed",
+          "Google did not return an identity or access token.",
+        );
+        return;
+      }
+
+      const result = await loginWithGoogle(
+        googleIdToken || undefined,
+        googleAccessToken || undefined,
+      );
+      if (!result.success) {
+        showAlert("Google Sign-In Failed", result.error || "Unknown error");
+      }
+    } catch (error: any) {
+      showAlert(
+        "Google Sign-In Failed",
+        error?.message || "Could not complete Google authentication.",
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!regEmail || !regPassword || !regDisplayName || !regUsername) {
       showAlert("Error", "Please fill in all fields");
@@ -366,10 +529,91 @@ export default function LoginScreen() {
       trimmedUsername,
     );
     setRegLoading(false);
+    if (result.success) {
+      if (result.message) {
+        setPendingVerification({
+          email: regEmail.trim().toLowerCase(),
+          password: regPassword,
+        });
+        setVerificationStatusText(
+          `${result.message} Check inbox and spam for the verification link.`,
+        );
+        setRegPassword("");
+        setRegConfirmPassword("");
+        setShowRegPassword(false);
+        setShowRegConfirmPassword(false);
+      }
+      return;
+    }
+
     if (!result.success) {
       showAlert("Registration Failed", result.error);
     }
   };
+
+  const checkVerificationStatus = useCallback(
+    async (silent = false) => {
+      if (!pendingVerification || verificationCheckLoading) {
+        return;
+      }
+
+      setVerificationCheckLoading(true);
+      if (!silent) {
+        setVerificationStatusText("Checking verification status...");
+      }
+
+      try {
+        await api.post("/auth/login", {
+          email: pendingVerification.email,
+          password: pendingVerification.password,
+        });
+
+        setPendingVerification(null);
+        setVerificationStatusText(null);
+        setEmail(pendingVerification.email);
+        setPassword("");
+        switchToLogin();
+      } catch (error: any) {
+        const detail = error?.response?.data?.detail;
+        const detailText =
+          typeof detail === "string"
+            ? detail
+            : "Could not check verification status right now.";
+        const normalized = detailText.toLowerCase();
+        const isNotVerified =
+          normalized.includes("not verified") || normalized.includes("verification");
+
+        if (!silent || !isNotVerified) {
+          setVerificationStatusText(
+            isNotVerified
+              ? "Not verified yet. Check inbox and spam, then try again."
+              : detailText,
+          );
+        }
+      } finally {
+        setVerificationCheckLoading(false);
+      }
+    },
+    [
+      pendingVerification,
+      verificationCheckLoading,
+      switchToLogin,
+      setEmail,
+      setPassword,
+    ],
+  );
+
+  useEffect(() => {
+    if (activeCard !== "register" || !pendingVerification) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void checkVerificationStatus(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeCard, pendingVerification, checkVerificationStatus]);
 
   const EyeToggle = ({
     visible,
@@ -460,6 +704,36 @@ export default function LoginScreen() {
           <ActivityIndicator color="#F5F5F5" />
         ) : (
           <Text style={styles.buttonText}>LOGIN</Text>
+        )}
+      </TouchableOpacity>
+
+      <View style={styles.oauthDivider}>
+        <View style={styles.oauthDividerLine} />
+        <Text style={styles.oauthDividerText}>OR</Text>
+        <View style={styles.oauthDividerLine} />
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.googleButton,
+          (googleLoading || !googleRequest) && styles.googleButtonDisabled,
+        ]}
+        onPress={() => void handleGoogleSignIn()}
+        disabled={googleLoading || !googleRequest}
+      >
+        {googleLoading ? (
+          <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
+        ) : (
+          <>
+            <View style={styles.googleIconBadge}>
+              <Image
+                source={GOOGLE_LOGO}
+                style={styles.googleIconImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.googleButtonText}>CONTINUE WITH GOOGLE</Text>
+          </>
         )}
       </TouchableOpacity>
 
@@ -593,6 +867,79 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
         )}
       </TouchableOpacity>
+
+      <View style={styles.oauthDivider}>
+        <View style={styles.oauthDividerLine} />
+        <Text style={styles.oauthDividerText}>OR</Text>
+        <View style={styles.oauthDividerLine} />
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.googleButton,
+          (googleLoading || !googleRequest) && styles.googleButtonDisabled,
+        ]}
+        onPress={() => void handleGoogleSignIn()}
+        disabled={googleLoading || !googleRequest}
+      >
+        {googleLoading ? (
+          <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
+        ) : (
+          <>
+            <View style={styles.googleIconBadge}>
+              <Image
+                source={GOOGLE_LOGO}
+                style={styles.googleIconImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.googleButtonText}>CONTINUE WITH GOOGLE</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderVerificationCard = () => (
+    <View style={styles.form}>
+      <View style={styles.verifyCard}>
+        <Text style={styles.verifyTitle}>Check Your Email</Text>
+        <Text style={styles.verifyText}>
+          We sent a verification email to
+          {"\n"}
+          <Text style={styles.verifyEmail}>{pendingVerification?.email}</Text>
+        </Text>
+        <Text style={styles.verifyText}>
+          Check your inbox and spam folder. Once verified, this card moves you to
+          login.
+        </Text>
+        {verificationStatusText ? (
+          <Text style={styles.verifyStatusText}>{verificationStatusText}</Text>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => void checkVerificationStatus(false)}
+          disabled={verificationCheckLoading}
+        >
+          {verificationCheckLoading ? (
+            <ActivityIndicator color="#F5F5F5" />
+          ) : (
+            <Text style={styles.buttonText}>I VERIFIED, CHECK NOW</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
+          onPress={() => {
+            setPendingVerification(null);
+            setVerificationStatusText(null);
+          }}
+          disabled={verificationCheckLoading}
+        >
+          <Text style={styles.secondaryActionButtonText}>Use a Different Email</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -680,7 +1027,9 @@ export default function LoginScreen() {
                 <Text style={styles.logo}>STRATUM</Text>
               </View>
               {activeCard === "register"
-                ? wrapForm(renderRegisterForm(), handleRegister, regLoading)
+                ? pendingVerification
+                  ? renderVerificationCard()
+                  : wrapForm(renderRegisterForm(), handleRegister, regLoading)
                 : null}
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
@@ -885,6 +1234,101 @@ const createStyles = (isDarkMode: boolean): any =>
       fontSize: 16,
       fontWeight: "600",
       letterSpacing: 0.5,
+    },
+    oauthDivider: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 14,
+      marginBottom: 10,
+      gap: 10,
+    },
+    oauthDividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    oauthDividerText: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 1,
+      color: isDarkMode ? "#8A8A8A" : "#7A7A7A",
+    },
+    googleButton: {
+      marginTop: 2,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#CFCFCF",
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: isDarkMode ? "#101010" : "#FFFFFF",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    },
+    googleButtonDisabled: {
+      opacity: 0.6,
+    },
+    googleIconBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#FFFFFF" : "#F5F5F5",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    googleIconImage: {
+      width: 16,
+      height: 16,
+    },
+    googleButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.4,
+    },
+    verifyCard: {
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#FAFAFA",
+      gap: 12,
+    },
+    verifyTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    verifyText: {
+      fontSize: 14,
+      lineHeight: 21,
+      color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
+    },
+    verifyEmail: {
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      fontWeight: "700",
+    },
+    verifyStatusText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    secondaryActionButton: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#D0D0D0",
+      backgroundColor: "transparent",
+    },
+    secondaryActionButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: isDarkMode ? "#DDDDDD" : "#333333",
+      letterSpacing: 0.3,
     },
     footer: {
       flexDirection: "row",

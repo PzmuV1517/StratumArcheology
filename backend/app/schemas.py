@@ -65,8 +65,10 @@ class FirebaseTokenRequest(BaseModel):
 
 
 class AuthResponse(BaseModel):
-    access_token: str
+    access_token: str | None = None
     user: "UserResponse"
+    verification_required: bool = False
+    message: str | None = None
 
 
 # User Schemas
@@ -95,9 +97,13 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     firebase_uid: str
+    auth_provider: str | None = None
     has_completed_onboarding: bool = False
     is_emonument_privileged: bool = False
     is_dashboard_admin: bool = False
+    is_account_disabled: bool = False
+    is_soft_deleted: bool = False
+    soft_deleted_at: datetime | None = None
     is_maintainer: bool = False
     created_at: datetime
     last_login: datetime | None = None
