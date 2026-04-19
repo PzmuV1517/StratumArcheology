@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
 
+    # Transcription (local Whisper)
+    WHISPER_MODEL: str = "base"  # tiny | base | small | medium | large
+
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "100 per minute"
 

@@ -33,6 +33,8 @@ from datetime import datetime
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
+    Body,
     Depends,
     File,
     HTTPException,
@@ -54,6 +56,7 @@ from app.models import (
     User,
 )
 from app.schemas import NoteCreate, NoteResponse, NoteUpdate
+from app.transcription import transcribe_note_audio
 from app.websocket import emit_content_update, log_activity
 
 router = APIRouter(prefix="/notes", tags=["notes"])
@@ -391,6 +394,7 @@ async def delete_note(
 @router.post("/{note_id}/attachments", status_code=status.HTTP_201_CREATED)
 async def add_note_attachment(
     note_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -519,6 +523,21 @@ async def add_note_attachment(
     # Notify all users in project that notes have been updated (attachment added)
     await emit_content_update(note.project_id, "notes")
 
+    # Kick off transcription for audio attachments in the background
+    is_audio = (attachment.file_type or "").startswith("audio/")
+    if is_audio:
+        note.transcription_status = "pending"
+        db.commit()
+        background_tasks.add_task(
+            transcribe_note_audio,
+            note_id=note.id,
+            attachment_id=attachment.id,
+            storage_path=attachment.file_path,
+            filename=attachment.filename,
+            project_id=note.project_id,
+            author_id=current_user.id,
+        )
+
     return {
         "id": attachment.id,
         "filename": attachment.filename,
@@ -587,6 +606,76 @@ async def delete_note_attachment(
     await emit_content_update(project_id, "notes")
 
     return None
+
+
+@router.patch("/{note_id}/transcription", status_code=status.HTTP_200_OK)
+async def update_transcription(
+    note_id: str,
+    text: str = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the transcription text for a voice note (user edits)."""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    check_project_permission(note.project_id, current_user, db)
+
+    note.transcription = text
+    note.transcription_modified = True
+    db.commit()
+
+    await log_activity(
+        db=db,
+        project_id=note.project_id,
+        activity_type="NOTE_TRANSCRIPTION_EDITED",
+        description=f'Edited transcription for voice note "{note.title}"',
+        user_id=current_user.id,
+        metadata={"note_id": note.id},
+    )
+    await emit_content_update(note.project_id, "notes")
+
+    return {
+        "transcription": note.transcription,
+        "transcription_modified": note.transcription_modified,
+    }
+
+
+@router.post("/{note_id}/transcription/reset", status_code=status.HTTP_200_OK)
+async def reset_transcription(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset transcription back to the original AI-generated text."""
+    note = db.query(Note).filter(Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    check_project_permission(note.project_id, current_user, db)
+
+    if not note.transcription_original:
+        raise HTTPException(status_code=400, detail="No original transcription to reset to")
+
+    note.transcription = note.transcription_original
+    note.transcription_modified = False
+    db.commit()
+
+    await log_activity(
+        db=db,
+        project_id=note.project_id,
+        activity_type="NOTE_TRANSCRIPTION_RESET",
+        description=f'Reset transcription to original for voice note "{note.title}"',
+        user_id=current_user.id,
+        metadata={"note_id": note.id},
+    )
+    await emit_content_update(note.project_id, "notes")
+
+    return {
+        "transcription": note.transcription,
+        "transcription_modified": note.transcription_modified,
+    }
 
 
 @router.get("/{note_id}/attachments/{attachment_id}/stream")

@@ -258,6 +258,14 @@ class Note(Base):
     )
     shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
 
+    # Transcription fields (voice notes only)
+    transcription = Column(Text, nullable=True)
+    transcription_original = Column(Text, nullable=True)
+    transcription_modified = Column(Boolean, default=False, nullable=False)
+    transcription_status = Column(
+        String, nullable=True
+    )  # 'pending' | 'processing' | 'completed' | 'failed'
+
     # Relationships
     project = relationship("Project", back_populates="notes")
     author = relationship("User", back_populates="notes")
