@@ -41,6 +41,10 @@ export interface Note {
   created_at: string;
   updated_at: string;
   attachments?: Attachment[];
+  transcription?: string | null;
+  transcription_original?: string | null;
+  transcription_modified?: boolean;
+  transcription_status?: "pending" | "processing" | "completed" | "failed" | null;
 }
 
 /** A file attachment belonging to a note. */
@@ -169,5 +173,20 @@ export const noteServiceCore = {
 
   deleteAttachment: async (noteId: string, attachmentId: string): Promise<void> => {
     await api.delete(`/notes/${noteId}/attachments/${attachmentId}`);
+  },
+
+  updateTranscription: async (
+    noteId: string,
+    text: string,
+  ): Promise<{ transcription: string; transcription_modified: boolean }> => {
+    const response = await api.patch(`/notes/${noteId}/transcription`, { text });
+    return response.data;
+  },
+
+  resetTranscription: async (
+    noteId: string,
+  ): Promise<{ transcription: string; transcription_modified: boolean }> => {
+    const response = await api.post(`/notes/${noteId}/transcription/reset`);
+    return response.data;
   },
 };

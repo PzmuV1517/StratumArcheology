@@ -34,8 +34,8 @@ SOFTWARE.
 """
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -53,8 +53,8 @@ from app.routes import (
     channels,
     chat,
     convert,
-    emonument_dashboard,
     emonument_backups,
+    emonument_dashboard,
     emonument_instances,
     files,
     forms,
@@ -64,6 +64,7 @@ from app.routes import (
     projects,
     qrcodes,
 )
+from app.transcription import load_whisper_model
 from app.websocket import sio_app
 
 # Configure structured logging based on environment
@@ -175,6 +176,12 @@ async def health_check():
 @app.on_event("startup")
 async def _start_backup_scheduler():
     await backup_service.start_scheduler()
+
+
+@app.on_event("startup")
+async def _load_whisper():
+    loop = __import__("asyncio").get_event_loop()
+    await loop.run_in_executor(None, load_whisper_model)
 
 
 @app.on_event("shutdown")

@@ -159,6 +159,8 @@ export default function CreateNoteScreen() {
   const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
   const [meterLevel, setMeterLevel] = useState(-160);
   const meterIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [noiseWarning, setNoiseWarning] = useState(false);
+  const noiseSamplesRef = useRef<number[]>([]);
   const [showDraftModal, setShowDraftModal] = useState(false);
 
   // Auto-save hook for draft recovery
@@ -220,6 +222,8 @@ export default function CreateNoteScreen() {
   const startRecording = async () => {
     try {
       setRecordingError(null);
+      setNoiseWarning(false);
+      noiseSamplesRef.current = [];
       if (Platform.OS === "web") {
         if (!navigator.mediaDevices) {
           setRecordingError("MediaDevices unavailable");
@@ -227,6 +231,26 @@ export default function CreateNoteScreen() {
         }
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setLiveStream(stream);
+
+        // Sample RMS for ~1.5s to detect background noise floor
+        const noiseCtx = new AudioContext();
+        const src = noiseCtx.createMediaStreamSource(stream);
+        const analyser = noiseCtx.createAnalyser();
+        analyser.fftSize = 512;
+        src.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+        const noiseTimer = setInterval(() => {
+          analyser.getFloatTimeDomainData(buf);
+          const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length);
+          noiseSamplesRef.current.push(rms);
+          if (noiseSamplesRef.current.length >= 8) {
+            clearInterval(noiseTimer);
+            noiseCtx.close();
+            const floor = [...noiseSamplesRef.current].sort((a, b) => a - b)[1]; // 2nd lowest
+            if (floor > 0.08) setNoiseWarning(true);
+          }
+        }, 200);
+
         const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
         mediaChunksRef.current = [];
         mr.ondataavailable = (ev) => {
@@ -258,12 +282,20 @@ export default function CreateNoteScreen() {
         setRecording(result.recording);
         setIsRecording(true);
 
-        // Start polling for metering levels
+        // Start polling for metering levels + noise floor detection
         meterIntervalRef.current = setInterval(async () => {
           try {
             const status = await result.recording.getStatusAsync();
             if (status.isRecording && status.metering !== undefined) {
               setMeterLevel(status.metering);
+              const samples = noiseSamplesRef.current;
+              if (samples.length < 15) {
+                samples.push(status.metering);
+                if (samples.length === 15) {
+                  const floor = [...samples].sort((a, b) => a - b)[2]; // 3rd lowest dBFS
+                  if (floor > -40) setNoiseWarning(true);
+                }
+              }
             }
           } catch (_err) {
             // Recording may have stopped
@@ -284,6 +316,7 @@ export default function CreateNoteScreen() {
         meterIntervalRef.current = null;
       }
       setMeterLevel(-160);
+      noiseSamplesRef.current = [];
 
       if (!recording) return;
       if (Platform.OS === "web") {
@@ -611,6 +644,15 @@ export default function CreateNoteScreen() {
                 isDarkMode={isDarkMode}
               />
             )}
+            {noiseWarning && (
+              <View style={styles.noiseWarning}>
+                <Ionicons name="warning-outline" size={15} color="#B45309" />
+                <Text style={styles.noiseWarningText}>
+                  High background noise detected — transcription may be less
+                  accurate. Try recording in a quieter spot.
+                </Text>
+              </View>
+            )}
             {recording ? (
               <TouchableOpacity
                 style={[styles.recButton, styles.stop]}
@@ -733,17 +775,19 @@ function LiveWaveform({
     const ctx = canvasRef.current.getContext("2d")!;
     let raf = 0;
     const draw = () => {
+      if (!canvasRef.current) return;
       raf = requestAnimationFrame(draw);
       analyser.getByteTimeDomainData(data);
-      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      const w = canvasRef.current.width;
+      const h = canvasRef.current.height;
+      ctx.clearRect(0, 0, w, h);
       ctx.strokeStyle = "#FF2A2A";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      const slice = canvasRef.current!.width / data.length;
+      const slice = w / data.length;
       for (let i = 0; i < data.length; i++) {
         const v = data[i] / 128.0 - 1.0;
-        const y =
-          (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+        const y = (v * h) / 2 + h / 2;
         if (i === 0) ctx.moveTo(0, y);
         else ctx.lineTo(i * slice, y);
       }
@@ -1186,5 +1230,20 @@ const createStyles = (isDarkMode: boolean) =>
       color: isDarkMode ? "#9A9A9A" : "#666666",
       fontSize: 12,
       textAlign: "center",
+    },
+    noiseWarning: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+      backgroundColor: isDarkMode ? "#2A1F0A" : "#FEF3C7",
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 8,
+    },
+    noiseWarningText: {
+      flex: 1,
+      color: "#B45309",
+      fontSize: 13,
+      lineHeight: 18,
     },
   });

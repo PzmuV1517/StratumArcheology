@@ -35,6 +35,9 @@ python-dateutil>=2.8.2
 pillow>=10.1.0
 aiohttp>=3.9.0
 
+# Transcription
+openai-whisper>=20231117
+
 # Point cloud
 laspy>=2.5.1
 lazrs>=0.5.1

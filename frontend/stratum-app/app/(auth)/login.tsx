@@ -649,8 +649,9 @@ export default function LoginScreen() {
       <Text style={styles.legalWarningTitle}>Privacy Notice</Text>
       <Text style={styles.legalWarningText}>
         STRATUM uses required cookies for sign-in, secure sessions, and account
-        protection. These cookies are mandatory, and the app cannot be used
-        without them. By using STRATUM, you acknowledge and accept the Terms of Service and Privacy Policy.
+        protection. These cookies are mandatory, and the app cannot be used without
+        them. By using STRATUM, you acknowledge and accept the Terms of Service and
+        Privacy Policy.
       </Text>
       <View style={styles.legalLinksRow}>
         <TouchableOpacity
@@ -943,8 +944,8 @@ export default function LoginScreen() {
           <Text style={styles.verifyEmail}>{pendingVerification?.email}</Text>
         </Text>
         <Text style={styles.verifyText}>
-          Check your inbox and spam folder. Once verified, this card moves you to
-          login.
+          Check your inbox. If you don't see the email, please check your spam
+          folder. Once verified, this card moves you to login.
         </Text>
         {verificationStatusText ? (
           <Text style={styles.verifyStatusText}>{verificationStatusText}</Text>

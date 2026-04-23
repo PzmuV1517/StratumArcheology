@@ -252,6 +252,10 @@ class NoteResponse(NoteBase):
     privacy: PrivacyLevel = PrivacyLevel.PROJECT
     shared_with: list[str] | None = None
     attachments: list[NoteAttachmentResponse] = []
+    transcription: str | None = None
+    transcription_original: str | None = None
+    transcription_modified: bool = False
+    transcription_status: str | None = None
 
     class Config:
         from_attributes = True
