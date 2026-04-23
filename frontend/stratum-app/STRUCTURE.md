@@ -28,6 +28,13 @@ frontend/stratum-app/
 - Do not create top-level `components/`, `hooks/`, or `constants/` folders again.
 - Use the `@/` alias for imports from `src/`.
 
+### Style And Design Rule
+
+- Use shared tokens from `src/config/theme.ts` for colors and typography.
+- Prefer themed primitives (`themed-text`, `themed-view`) for reusable surfaces.
+- Avoid introducing one-off visual values when tokenized alternatives exist.
+- Follow project design standards in `docs/frontend-styleguide.rst`.
+
 ---
 
 ## Directory Details

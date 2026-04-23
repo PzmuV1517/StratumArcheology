@@ -206,7 +206,7 @@ export function WheelerPublicationView({
       {/* Stale warning */}
       {isStale && (
         <div style={bannerStyle}>
-          <span>⚠</span>
+          <span>Notice</span>
           <span>
             This diagram has unsaved changes — the displayed render may be outdated.
             Save to refresh.
@@ -231,7 +231,7 @@ export function WheelerPublicationView({
           onClick={handleDownload}
           title="Download SVG for print / publication"
         >
-          ⬇ Download SVG
+          Download SVG
         </button>
       </div>
 

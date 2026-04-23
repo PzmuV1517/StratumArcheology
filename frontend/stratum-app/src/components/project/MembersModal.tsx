@@ -426,7 +426,7 @@ export default function MembersModal({
                 onPress={() => setIsManaging(!isManaging)}
               >
                 <Text style={styles.actionButtonText}>
-                  {isManaging ? "✓ Done" : "⚙ Manage"}
+                  {isManaging ? "Done" : "Manage"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -536,7 +536,7 @@ export default function MembersModal({
             {showTransferConfirm && (
               <View style={styles.confirmOverlay}>
                 <View style={styles.confirmCard}>
-                  <Text style={styles.confirmTitle}>⚠️ Transfer Ownership</Text>
+                  <Text style={styles.confirmTitle}>Transfer Ownership</Text>
                   <Text style={styles.confirmText}>
                     Are you sure you want to transfer project leadership to{" "}
                     <Text style={styles.confirmHighlight}>
@@ -570,7 +570,7 @@ export default function MembersModal({
             {showRemoveConfirm && (
               <View style={styles.confirmOverlay}>
                 <View style={styles.confirmCard}>
-                  <Text style={styles.confirmTitle}>⚠️ Remove Member</Text>
+                  <Text style={styles.confirmTitle}>Remove Member</Text>
                   <Text style={styles.confirmText}>
                     Are you sure you want to remove{" "}
                     <Text style={styles.confirmHighlight}>
@@ -856,7 +856,7 @@ export default function MembersModal({
                             onPress={copyCodeToClipboard}
                           >
                             <Text style={styles.copyBtnText}>
-                              {copiedCode ? "✓" : "📋"}
+                              {copiedCode ? "Copied" : "Copy"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -873,7 +873,7 @@ export default function MembersModal({
                       onPress={copyToClipboard}
                     >
                       <Text style={styles.copyBtnText}>
-                        {copiedLink ? "✓ Copied!" : "📋 Copy Link"}
+                        {copiedLink ? "Link Copied" : "Copy Link"}
                       </Text>
                     </TouchableOpacity>
 

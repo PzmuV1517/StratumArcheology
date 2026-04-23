@@ -158,7 +158,7 @@ export function ProjectOverviewScreen() {
             <View style={styles.overviewCard}>
               <View style={styles.overviewCardHeader}>
                 <View style={styles.overviewIconCircle}>
-                  <Text style={styles.overviewIcon}>📝</Text>
+                  <Ionicons name="document-text-outline" size={18} color="#FF2A2A" />
                 </View>
                 <Text style={styles.overviewCardTitle}>About</Text>
               </View>
@@ -169,7 +169,7 @@ export function ProjectOverviewScreen() {
           <View style={styles.overviewCard}>
             <View style={styles.overviewCardHeader}>
               <View style={styles.overviewIconCircle}>
-                <Text style={styles.overviewIcon}>📅</Text>
+                <Ionicons name="calendar-outline" size={18} color="#FF2A2A" />
               </View>
               <Text style={styles.overviewCardTitle}>Activity Timeline</Text>
             </View>

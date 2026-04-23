@@ -131,14 +131,14 @@ export default function FilesOverlay({
 }: Props) {
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
-  const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
+  const accentColor = "#FF2A2A";
   const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const textTertiary = isDarkMode ? "#666666" : "#7A7A7A";
   const overlayBackground = isDarkMode ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.24)";
   const dragCardBackground = isDarkMode ? "#1A1A1A" : "#FFFFFF";
 
   // Get safe area insets for proper header spacing on iOS
-  const _insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const { socket } = useWebSocket();
   const [isDragging, setIsDragging] = useState(false);
   const [_dragDepth, setDragDepth] = useState(0);
@@ -522,16 +522,18 @@ export default function FilesOverlay({
       }
     };
 
-    socket.on("files_updated", handleFilesUpdated);
-    socket.on("content_updated", (data: any) => {
+    const handleContentUpdated = (data: any) => {
       if (data.project_id === projectId && data.content_type === "files") {
         handleFilesUpdated(data);
       }
-    });
+    };
+
+    socket.on("files_updated", handleFilesUpdated);
+    socket.on("content_updated", handleContentUpdated);
 
     return () => {
       socket.off("files_updated", handleFilesUpdated);
-      socket.off("content_updated");
+      socket.off("content_updated", handleContentUpdated);
     };
   }, [socket, projectId, visible, onRefreshAfterUpload]);
 
@@ -706,6 +708,8 @@ export default function FilesOverlay({
   const selectableIds = filteredNodes.filter((n) => !n.is_locked).map((n) => n.id);
   const allSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 || extensionFilters.length > 0 || exactOnly;
 
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
@@ -713,14 +717,16 @@ export default function FilesOverlay({
   return (
     <View ref={rootRef} style={styles.root}>
       {/* Notes-style header */}
-      <View style={styles.modalHeader}>
+      <View style={[styles.modalHeader, { paddingTop: Math.max(12, insets.top) }]}>
         <TouchableOpacity
           onPress={onClose}
           style={styles.modalBackButton}
           activeOpacity={0.6}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close files overlay"
         >
-          <IconSymbol name="chevron.backward" size={20} color="#FF2A2A" />
+          <IconSymbol name="chevron.backward" size={20} color={accentColor} />
           <Text style={styles.modalBackText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.modalHeaderTitle}>{title}</Text>
@@ -745,6 +751,8 @@ export default function FilesOverlay({
               );
             }}
             style={styles.bulkBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Move selected files"
           >
             <Text style={styles.bulkBtnText}>Move</Text>
           </TouchableOpacity>
@@ -768,6 +776,8 @@ export default function FilesOverlay({
               ]);
             }}
             style={styles.bulkBtnDanger}
+            accessibilityRole="button"
+            accessibilityLabel="Delete selected files"
           >
             <Text style={styles.bulkBtnText}>Delete</Text>
           </TouchableOpacity>
@@ -782,6 +792,8 @@ export default function FilesOverlay({
               }
             }}
             style={styles.bulkBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Download selected files"
           >
             <Text style={styles.bulkBtnText}>Download</Text>
           </TouchableOpacity>
@@ -869,6 +881,9 @@ export default function FilesOverlay({
               }}
               style={[styles.bulkBtn, isSavingOffline && { opacity: 0.5 }]}
               disabled={isSavingOffline}
+              accessibilityRole="button"
+              accessibilityLabel="Save selected files for offline use"
+              accessibilityState={{ disabled: isSavingOffline }}
             >
               <Text style={styles.bulkBtnText}>
                 {isSavingOffline ? "Saving..." : "Save Offline"}
@@ -878,6 +893,8 @@ export default function FilesOverlay({
           <TouchableOpacity
             onPress={() => setSelectedIds(new Set())}
             style={styles.bulkBtnClear}
+            accessibilityRole="button"
+            accessibilityLabel="Clear selected files"
           >
             <Text style={styles.bulkBtnText}>Clear</Text>
           </TouchableOpacity>
@@ -917,14 +934,14 @@ export default function FilesOverlay({
             style={{
               backgroundColor: dragCardBackground,
               borderRadius: 12,
-              border: "2px dashed #FF2A2A",
+              border: `2px dashed ${accentColor}`,
               padding: 40,
               textAlign: "center",
             }}
           >
             <Text
               style={{
-                color: "#FF2A2A",
+                color: accentColor,
                 fontSize: 20,
                 fontWeight: "700",
                 marginBottom: 8,
@@ -940,7 +957,7 @@ export default function FilesOverlay({
       )}
       {Platform.OS === "web" && isUploading && (
         <View pointerEvents="none" style={styles.uploadingBanner}>
-          <ActivityIndicator color="#FF2A2A" />
+          <ActivityIndicator color={accentColor} />
           <Text style={styles.uploadingText}>
             Uploading {uploadCount} file{uploadCount === 1 ? "" : "s"}…
           </Text>
@@ -965,7 +982,7 @@ export default function FilesOverlay({
           onSave={handleSaveMyFolderSettings}
         />
       )}
-      <ScrollView style={{ flex: 1, padding: 24 }}>
+      <ScrollView style={styles.contentScroll}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Files</Text>
           <View style={styles.actionRow}>
@@ -979,22 +996,28 @@ export default function FilesOverlay({
                 ]}
                 onPress={handleGoToMyFolder}
                 disabled={isLoadingMyFolder || isInMyFolder}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isInMyFolder ? "Currently in My Folder" : "Open My Folder"
+                }
+                accessibilityState={{ disabled: isLoadingMyFolder || isInMyFolder }}
               >
-                <Text style={styles.actionButtonText}>
-                  {isLoadingMyFolder
-                    ? "..."
-                    : isInMyFolder
-                      ? "✓ My Folder"
-                      : "👤 My Folder"}
-                </Text>
+                <View style={styles.myFolderButtonContent}>
+                  <IconSymbol name="folder.fill" size={14} color="#FFFFFF" />
+                  <Text style={styles.myFolderButtonText}>
+                    {isLoadingMyFolder ? "Loading..." : "My Folder"}
+                  </Text>
+                </View>
               </TouchableOpacity>
               {/* Settings gear - only show when My Folder exists */}
               {(myFolderId || isInMyFolder) && currentUserId && (
                 <TouchableOpacity
                   style={styles.myFolderSettingsBtn}
                   onPress={() => setShowMyFolderSettings(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open My Folder sharing settings"
                 >
-                  <Text style={styles.myFolderSettingsIcon}>⚙️</Text>
+                  <IconSymbol name="gearshape.fill" size={16} color={accentColor} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1003,6 +1026,8 @@ export default function FilesOverlay({
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={onCreateFolder}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create folder"
                 >
                   <Text style={styles.actionButtonText}>+ Folder</Text>
                 </TouchableOpacity>
@@ -1011,11 +1036,18 @@ export default function FilesOverlay({
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => setShowUploadMenu(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open upload options"
                   >
                     <Text style={styles.actionButtonText}>+ Upload ▾</Text>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity style={styles.actionButton} onPress={onUpload}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={onUpload}
+                    accessibilityRole="button"
+                    accessibilityLabel="Upload files"
+                  >
                     <Text style={styles.actionButtonText}>+ Upload</Text>
                   </TouchableOpacity>
                 )}
@@ -1027,6 +1059,8 @@ export default function FilesOverlay({
                 onPress={() => {
                   setMultiSelect(true);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Enable multi-select mode"
               >
                 <Text style={styles.multiToggleText}>Select multiple items</Text>
               </TouchableOpacity>
@@ -1038,6 +1072,8 @@ export default function FilesOverlay({
                   setSelectedIds(new Set());
                   setShowInfoTip(false);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Disable multi-select mode"
               >
                 <Text style={styles.multiToggleText}>Done</Text>
               </TouchableOpacity>
@@ -1052,25 +1088,31 @@ export default function FilesOverlay({
             placeholderTextColor={textTertiary}
             onChangeText={setSearchQuery}
             style={styles.searchInput}
+            accessibilityLabel="Search files by name"
+            returnKeyType="search"
           />
           <TouchableOpacity
             style={styles.filterToggle}
             onPress={() => setShowExtensionFilter((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle extension filters"
+            accessibilityState={{ expanded: showExtensionFilter }}
           >
-            <Text style={{ color: textPrimary, fontSize: 12 }}>
+            <Text style={styles.filterToggleText}>
               {showExtensionFilter ? "Hide Extensions" : "Filter by extension"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setExactOnly((e) => !e)}
             style={styles.exactToggle}
+            accessibilityRole="button"
+            accessibilityLabel="Only exact matches"
+            accessibilityState={{ checked: exactOnly }}
           >
             <View style={[styles.exactBox, exactOnly && styles.exactBoxChecked]}>
-              {exactOnly && <Text style={styles.exactBoxTick}>✓</Text>}
+              {exactOnly && <View style={styles.exactBoxDot} />}
             </View>
-            <Text style={{ color: textSecondary, fontSize: 12 }}>
-              Only exact matches
-            </Text>
+            <Text style={styles.exactToggleLabel}>Only exact matches</Text>
           </TouchableOpacity>
         </View>
         {showExtensionFilter && (
@@ -1138,17 +1180,10 @@ export default function FilesOverlay({
           </View>
         )}
         {fileLoading ? (
-          <ActivityIndicator color="#FF2A2A" />
+          <ActivityIndicator color={accentColor} />
         ) : (
           <View>
-            <View
-              style={{
-                flexDirection: "row",
-                marginBottom: 12,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
+            <View style={styles.breadcrumbRow}>
               {(breadcrumbs && breadcrumbs.length
                 ? breadcrumbs
                 : [
@@ -1159,33 +1194,30 @@ export default function FilesOverlay({
                 const displayName =
                   idx === 0 ? "Root" : getBreadcrumbDisplayName(crumb.name, idx);
                 return (
-                  <View
-                    key={`${crumb.id ?? "root"}-${idx}`}
-                    style={{ flexDirection: "row", alignItems: "center" }}
-                  >
+                  <View key={`${crumb.id ?? "root"}-${idx}`} style={styles.breadcrumbItem}>
                     {idx < arr.length - 1 ? (
                       <TouchableOpacity
                         onPress={() => {
                           if (idx === 0) onLoadRoot();
                           if (onNavigateBreadcrumb) onNavigateBreadcrumb(idx);
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open folder ${displayName}`}
                       >
-                        <Text style={{ color: "#FF2A2A" }}>{displayName}</Text>
+                        <Text style={styles.breadcrumbLink}>{displayName}</Text>
                       </TouchableOpacity>
                     ) : (
-                      <Text style={{ color: textSecondary }}>{displayName}</Text>
+                      <Text style={styles.breadcrumbCurrent}>{displayName}</Text>
                     )}
                     {idx < arr.length - 1 && (
-                      <Text style={{ color: textSecondary, marginHorizontal: 6 }}>
-                        /
-                      </Text>
+                      <Text style={styles.breadcrumbSeparator}>/</Text>
                     )}
                   </View>
                 );
               })}
             </View>
 
-            {fileNodes.length > 0 ? (
+            {filteredNodes.length > 0 ? (
               <View>
                 {multiSelect && (
                   <View style={styles.listHeader}>
@@ -1196,6 +1228,9 @@ export default function FilesOverlay({
                         if (allSelected) setSelectedIds(new Set());
                         else setSelectedIds(new Set(selectableIds));
                       }}
+                      accessibilityRole="button"
+                      accessibilityLabel={allSelected ? "Deselect all" : "Select all"}
+                      accessibilityState={{ disabled: selectableIds.length === 0 }}
                     >
                       <View
                         style={[
@@ -1204,12 +1239,10 @@ export default function FilesOverlay({
                           allSelected && styles.checkboxChecked,
                         ]}
                       >
-                        {allSelected && <Text style={styles.checkboxTick}>✓</Text>}
+                        {allSelected && <View style={styles.checkboxDot} />}
                       </View>
                     </TouchableOpacity>
-                    <Text style={{ color: textSecondary, marginLeft: 8 }}>
-                      Select All
-                    </Text>
+                    <Text style={styles.listHeaderText}>Select All</Text>
                     {fileNodes.some((n) => n.is_locked) && (
                       <View
                         style={styles.infoWrapper}
@@ -1253,6 +1286,9 @@ export default function FilesOverlay({
                             else next.add(node.id);
                             setSelectedIds(next);
                           }}
+                          accessibilityRole="checkbox"
+                          accessibilityLabel={`Select ${getDisplayName(node)}`}
+                          accessibilityState={{ checked: selectedIds.has(node.id) }}
                         >
                           <View
                             style={[
@@ -1260,29 +1296,29 @@ export default function FilesOverlay({
                               selectedIds.has(node.id) && styles.checkboxChecked,
                             ]}
                           >
-                            {selectedIds.has(node.id) && (
-                              <Text style={styles.checkboxTick}>✓</Text>
-                            )}
+                              {selectedIds.has(node.id) && <View style={styles.checkboxDot} />}
                           </View>
                         </TouchableOpacity>
                       )
                     ) : (
                       <View style={styles.checkboxSpacer} />
                     )}
-                    <Text style={styles.fileIcon}>
-                      {node.type === "folder"
-                        ? "📁"
-                        : node.type === "note"
-                          ? "📝"
-                          : "📄"}
-                    </Text>
+                    <View style={styles.fileIconContainer}>
+                      <IconSymbol
+                        name={node.type === "folder" ? "folder.fill" : "note.text"}
+                        size={16}
+                        color={node.type === "folder" ? accentColor : textSecondary}
+                      />
+                    </View>
                     <TouchableOpacity
-                      style={{ flex: 1 }}
+                      style={styles.fileNamePressable}
                       onPress={() =>
                         node.type === "folder"
                           ? onOpenFolder(node)
                           : onOpenFile(node)
                       }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${node.type} ${getDisplayName(node)}`}
                     >
                       {renderNameWithExtension(
                         getDisplayName(node),
@@ -1295,22 +1331,38 @@ export default function FilesOverlay({
                     {offlineFileIds.has(node.id) && (
                       <Text style={styles.offlineBadge}>Downloaded</Text>
                     )}
-                    <View style={{ flexDirection: "row", gap: 8, marginLeft: 8 }}>
+                    <View style={styles.rowActions}>
                       {node.type === "file" && (
-                        <TouchableOpacity onPress={() => onDownload(node)}>
-                          <Text style={{ color: textSecondary }}>Download</Text>
+                        <TouchableOpacity
+                          onPress={() => onDownload(node)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Download ${getDisplayName(node)}`}
+                        >
+                          <Text style={styles.rowActionText}>Download</Text>
                         </TouchableOpacity>
                       )}
                       {!node.is_locked && canEdit && (
                         <>
-                          <TouchableOpacity onPress={() => onRename(node)}>
-                            <Text style={{ color: textSecondary }}>Rename</Text>
+                          <TouchableOpacity
+                            onPress={() => onRename(node)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Rename ${getDisplayName(node)}`}
+                          >
+                            <Text style={styles.rowActionText}>Rename</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity onPress={() => onMove(node)}>
-                            <Text style={{ color: textSecondary }}>Move</Text>
+                          <TouchableOpacity
+                            onPress={() => onMove(node)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move ${getDisplayName(node)}`}
+                          >
+                            <Text style={styles.rowActionText}>Move</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity onPress={() => onDelete(node)}>
-                            <Text style={{ color: "#FF4444" }}>Delete</Text>
+                          <TouchableOpacity
+                            onPress={() => onDelete(node)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete ${getDisplayName(node)}`}
+                          >
+                            <Text style={styles.rowDeleteText}>Delete</Text>
                           </TouchableOpacity>
                         </>
                       )}
@@ -1320,10 +1372,29 @@ export default function FilesOverlay({
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No files</Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Create a folder or upload files
+                <Text style={styles.emptyStateText}>
+                  {fileNodes.length === 0 ? "No files" : "No matching files"}
                 </Text>
+                <Text style={styles.emptyStateSubtext}>
+                  {fileNodes.length === 0
+                    ? "Create a folder or upload files"
+                    : "Try different keywords or clear filters"}
+                </Text>
+                {fileNodes.length > 0 && hasActiveFilters && (
+                  <TouchableOpacity
+                    style={styles.clearFilterPill}
+                    onPress={() => {
+                      setSearchQuery("");
+                      setExtensionFilters([]);
+                      setExactOnly(false);
+                      setShowExtensionFilter(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Clear all active file filters"
+                  >
+                    <Text style={styles.clearFilterPillText}>Clear filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -1390,10 +1461,14 @@ const createStyles = (isDarkMode: boolean) => {
     textSecondary: isDarkMode ? "#9A9A9A" : "#666666",
     textMuted: isDarkMode ? "#7A7A7A" : "#7A7A7A",
     overlaySoft: isDarkMode ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.16)",
+    accent: "#FF2A2A",
+    destructive: "#FF4444",
+    textOnAccent: "#FFFFFF",
   };
 
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: palette.pageBackground, position: "relative" },
+    contentScroll: { flex: 1, padding: 24 },
     header: {
       paddingHorizontal: 16,
       paddingVertical: 12,
@@ -1429,7 +1504,7 @@ const createStyles = (isDarkMode: boolean) => {
       minWidth: 70,
     },
     modalBackText: {
-      color: "#FF2A2A",
+      color: palette.accent,
       fontSize: 17,
       marginLeft: 4,
     },
@@ -1467,13 +1542,13 @@ const createStyles = (isDarkMode: boolean) => {
       borderRadius: 8,
     },
     bulkBtnDanger: {
-      backgroundColor: "#8B0000",
+      backgroundColor: palette.destructive,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
     },
     bulkBtnClear: {
-      backgroundColor: isDarkMode ? "#444" : "#D0D0D0",
+      backgroundColor: palette.surfaceMuted,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
@@ -1499,24 +1574,37 @@ const createStyles = (isDarkMode: boolean) => {
       alignItems: "center",
     },
     actionButton: {
-      backgroundColor: "#FF2A2A",
+      backgroundColor: palette.accent,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 12,
     },
-    myFolderButton: { backgroundColor: "#2A6AFF" },
+    myFolderButton: { backgroundColor: palette.accent },
+    myFolderButtonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    myFolderButtonText: {
+      fontSize: 12,
+      color: palette.textOnAccent,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
     myFolderContainer: { flexDirection: "row", alignItems: "center", gap: 4 },
     myFolderSettingsBtn: {
-      padding: 4,
-      borderRadius: 6,
-      backgroundColor: palette.surface,
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: palette.surfaceMuted,
       borderWidth: 1,
       borderColor: palette.border,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    myFolderSettingsIcon: { fontSize: 14 },
     actionButtonText: {
       fontSize: 12,
-      color: "#FFFFFF",
+      color: palette.textOnAccent,
       fontWeight: "600",
       letterSpacing: 0.5,
     },
@@ -1566,8 +1654,13 @@ const createStyles = (isDarkMode: boolean) => {
       alignItems: "center",
       justifyContent: "center",
     },
-    exactBoxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
-    exactBoxTick: { color: "#111", fontSize: 12, fontWeight: "700" },
+    exactBoxChecked: { backgroundColor: palette.accent, borderColor: palette.accent },
+    exactBoxDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: palette.textOnAccent,
+    },
     filterToggle: {
       backgroundColor: palette.surfaceMuted,
       paddingHorizontal: 10,
@@ -1576,6 +1669,8 @@ const createStyles = (isDarkMode: boolean) => {
       borderWidth: 1,
       borderColor: palette.border,
     },
+    filterToggleText: { color: palette.textPrimary, fontSize: 12 },
+    exactToggleLabel: { color: palette.textSecondary, fontSize: 12 },
     filterPanel: {
       backgroundColor: palette.surfaceAlt,
       padding: 12,
@@ -1593,7 +1688,7 @@ const createStyles = (isDarkMode: boolean) => {
       borderWidth: 1,
       borderColor: palette.borderStrong,
     },
-    extChipActive: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
+    extChipActive: { backgroundColor: palette.accent, borderColor: palette.accent },
     extChipText: { color: palette.textPrimary, fontSize: 12 },
     customExtRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     customExtInput: {
@@ -1615,7 +1710,7 @@ const createStyles = (isDarkMode: boolean) => {
       borderRadius: 8,
     },
     clearFilterBtn: {
-      backgroundColor: isDarkMode ? "#444" : "#D0D0D0",
+      backgroundColor: palette.surfaceMuted,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 8,
@@ -1623,15 +1718,26 @@ const createStyles = (isDarkMode: boolean) => {
     },
     addExtText: { color: palette.textPrimary, fontSize: 12 },
     matchHighlight: {
-      backgroundColor: "#FF2A2A",
-      color: "#111111",
+      backgroundColor: palette.accent,
+      color: palette.textOnAccent,
       fontWeight: "700",
       paddingHorizontal: 2,
       borderRadius: 4,
     },
     fileExt: { color: palette.textSecondary, fontSize: 12, marginLeft: 4 },
     extPreviewText: { color: palette.textSecondary, fontSize: 11, marginTop: 4 },
+    breadcrumbRow: {
+      flexDirection: "row",
+      marginBottom: 12,
+      alignItems: "center",
+      flexWrap: "wrap",
+    },
+    breadcrumbItem: { flexDirection: "row", alignItems: "center" },
+    breadcrumbLink: { color: palette.accent },
+    breadcrumbCurrent: { color: palette.textSecondary },
+    breadcrumbSeparator: { color: palette.textSecondary, marginHorizontal: 6 },
     listHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+    listHeaderText: { color: palette.textSecondary, marginLeft: 8 },
     fileRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -1642,7 +1748,11 @@ const createStyles = (isDarkMode: boolean) => {
       borderWidth: 1,
       borderColor: palette.border,
     },
-    fileRowSelected: { borderColor: "#FF2A2A", backgroundColor: palette.surface },
+    fileRowSelected: { borderColor: palette.accent, backgroundColor: palette.surface },
+    fileNamePressable: { flex: 1 },
+    rowActions: { flexDirection: "row", gap: 8, marginLeft: 8 },
+    rowActionText: { color: palette.textSecondary },
+    rowDeleteText: { color: palette.destructive },
     checkbox: {
       width: 20,
       height: 20,
@@ -1658,8 +1768,13 @@ const createStyles = (isDarkMode: boolean) => {
       backgroundColor: palette.surfaceMuted,
     },
     checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
-    checkboxChecked: { backgroundColor: "#FF2A2A", borderColor: "#FF2A2A" },
-    checkboxTick: { color: "#111111", fontSize: 14, fontWeight: "700" },
+    checkboxChecked: { backgroundColor: palette.accent, borderColor: palette.accent },
+    checkboxDot: {
+      width: 9,
+      height: 9,
+      borderRadius: 999,
+      backgroundColor: palette.textOnAccent,
+    },
     infoWrapper: { marginLeft: 10, position: "relative" },
     infoIcon: {
       width: 18,
@@ -1685,14 +1800,18 @@ const createStyles = (isDarkMode: boolean) => {
       maxWidth: 220,
     },
     infoTooltipText: { color: palette.textPrimary, fontSize: 12 },
-    fileIcon: { fontSize: 18, marginRight: 10, color: palette.textPrimary },
+    fileIconContainer: {
+      width: 20,
+      alignItems: "center",
+      marginRight: 10,
+    },
     fileName: {
       flex: 1,
       color: palette.textPrimary,
       fontSize: 16,
       letterSpacing: 0.3,
     },
-    lockBadge: { color: "#FF4444", fontSize: 12, fontWeight: "700" },
+    lockBadge: { color: palette.destructive, fontSize: 12, fontWeight: "700" },
     offlineBadge: {
       color: palette.textMuted,
       fontSize: 10,
@@ -1717,6 +1836,19 @@ const createStyles = (isDarkMode: boolean) => {
       marginBottom: 24,
       letterSpacing: 0.5,
     },
+    clearFilterPill: {
+      backgroundColor: palette.surfaceMuted,
+      borderWidth: 1,
+      borderColor: palette.border,
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    clearFilterPillText: {
+      color: palette.textPrimary,
+      fontSize: 12,
+      fontWeight: "600",
+    },
     dropMask: {
       position: "absolute",
       top: 0,
@@ -1734,7 +1866,7 @@ const createStyles = (isDarkMode: boolean) => {
       paddingHorizontal: 24,
       backgroundColor: palette.surface,
       borderWidth: 2,
-      borderColor: "#FF2A2A",
+      borderColor: palette.accent,
       borderStyle: "dashed",
       borderRadius: 16,
       alignItems: "center",
@@ -1743,7 +1875,7 @@ const createStyles = (isDarkMode: boolean) => {
       shadowRadius: 18,
     },
     dropBoxTitle: {
-      color: "#FF2A2A",
+      color: palette.accent,
       fontSize: 22,
       fontWeight: "700",
       marginBottom: 6,

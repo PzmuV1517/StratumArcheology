@@ -511,7 +511,7 @@ export default function WheelerDiagram({
           onPress={() => setViewMode("diagram")}
         >
           <Text style={[s.tabText, viewMode === "diagram" && s.tabTextActive]}>
-            📊 Diagram
+            Diagram
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -519,7 +519,7 @@ export default function WheelerDiagram({
           onPress={() => setViewMode("publication")}
         >
           <Text style={[s.tabText, viewMode === "publication" && s.tabTextActive]}>
-            📄 Publication
+            Publication
           </Text>
         </TouchableOpacity>
       </View>
@@ -544,7 +544,7 @@ export default function WheelerDiagram({
           {(dirty || (renderVersion !== null && renderVersion !== version)) && (
             <View style={{ backgroundColor: "#92400e", padding: 10 }}>
               <Text style={{ color: "#fff", fontSize: 12, textAlign: "center" }}>
-                ⚠ Unsaved changes — render may be outdated. Save to refresh.
+                Unsaved changes - render may be outdated. Save to refresh.
               </Text>
             </View>
           )}

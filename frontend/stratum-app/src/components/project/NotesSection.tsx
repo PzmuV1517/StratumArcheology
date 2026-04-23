@@ -306,7 +306,7 @@ export default function NotesSection({
           <View style={styles.noteHeader}>
             <Text style={styles.noteTitle} numberOfLines={1}>
               {item.title}
-              {isVoice ? " 🔊" : ""}
+              {isVoice ? " (Voice)" : ""}
             </Text>
             <Text style={styles.noteDate}>
               {new Date(item.updated_at).toLocaleDateString(undefined, {

@@ -91,8 +91,25 @@ export const OnboardingPrompt: React.FC<Props> = ({
           boxShadow: `0 12px 48px ${cardShadow}`,
         }}
       >
-        {/* Icon */}
-        <div style={{ fontSize: 48, marginBottom: 16 }}>👋</div>
+        {/* Intro marker */}
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            border: `1px solid ${cardBorder}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            color: "#FF2A2A",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 1.2,
+          }}
+        >
+          STR
+        </div>
 
         {/* Title */}
         <div

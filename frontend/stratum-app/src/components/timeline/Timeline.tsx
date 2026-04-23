@@ -254,7 +254,7 @@ export default function Timeline({
 
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📋</Text>
+        <Text style={styles.emptyIcon}>TL</Text>
         <Text style={styles.emptyText}>No activity yet</Text>
         <Text style={styles.emptySubtext}>
           Activity will appear here as you and your team work on this project
@@ -285,12 +285,12 @@ export default function Timeline({
   }
 
   const FILTER_OPTIONS: { key: ActivityFilter; label: string; icon: string }[] = [
-    { key: "all", label: "All", icon: "📋" },
-    { key: "files", label: "Files", icon: "📄" },
-    { key: "notes", label: "Notes", icon: "📝" },
-    { key: "members", label: "Members", icon: "👤" },
-    { key: "forms", label: "Forms", icon: "🏺" },
-    { key: "gps", label: "GPS", icon: "📍" },
+    { key: "all", label: "All", icon: "A" },
+    { key: "files", label: "Files", icon: "F" },
+    { key: "notes", label: "Notes", icon: "N" },
+    { key: "members", label: "Members", icon: "M" },
+    { key: "forms", label: "Forms", icon: "R" },
+    { key: "gps", label: "GPS", icon: "G" },
   ];
 
   return (
@@ -620,6 +620,8 @@ const createStyles = (isDarkMode: boolean) => {
     filterChipIcon: {
       fontSize: 12,
       marginRight: 4,
+      fontWeight: "700",
+      color: palette.textSecondary,
     },
     filterChipText: {
       fontSize: 12,

@@ -98,21 +98,21 @@ const DATA_TYPE_INFO: Record<
   string,
   { icon: string; label: string; color: string }
 > = {
-  harris_matrix: { icon: "🔗", label: "Harris Matrix", color: "#4A90D9" },
-  wheeler: { icon: "📊", label: "Wheeler Diagram", color: "#9C27B0" },
+  harris_matrix: { icon: "HM", label: "Harris Matrix", color: "#4A90D9" },
+  wheeler: { icon: "WD", label: "Wheeler Diagram", color: "#9C27B0" },
 };
 
 const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string }> =
   {
-    documents: { icon: "📄", label: "Documents", color: "#4A90D9" },
-    spreadsheets: { icon: "📊", label: "Spreadsheets", color: "#34A853" },
-    images: { icon: "🖼️", label: "Images", color: "#EA4335" },
-    videos: { icon: "🎬", label: "Videos", color: "#9C27B0" },
-    audio: { icon: "🎵", label: "Audio", color: "#FF9800" },
-    "3d_models": { icon: "🧊", label: "3D Models", color: "#00BCD4" },
-    archives: { icon: "📦", label: "Archives", color: "#795548" },
-    code: { icon: "💻", label: "Code", color: "#607D8B" },
-    other: { icon: "📁", label: "Other", color: "#9E9E9E" },
+    documents: { icon: "D", label: "Documents", color: "#4A90D9" },
+    spreadsheets: { icon: "S", label: "Spreadsheets", color: "#34A853" },
+    images: { icon: "I", label: "Images", color: "#EA4335" },
+    videos: { icon: "V", label: "Videos", color: "#9C27B0" },
+    audio: { icon: "A", label: "Audio", color: "#FF9800" },
+    "3d_models": { icon: "3D", label: "3D Models", color: "#00BCD4" },
+    archives: { icon: "Z", label: "Archives", color: "#795548" },
+    code: { icon: "C", label: "Code", color: "#607D8B" },
+    other: { icon: "F", label: "Other", color: "#9E9E9E" },
   };
 
 export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
@@ -398,7 +398,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                         style={styles.versionActionButton}
                         onPress={() => restoreDataVersion(dvr.data_type, v.version)}
                       >
-                        <Text style={styles.versionActionText}>↩️</Text>
+                        <Text style={styles.versionActionText}>RS</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -545,7 +545,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                           downloadVersion(file.id, version.version, file.name)
                         }
                       >
-                        <Text style={styles.versionActionText}>⬇️</Text>
+                        <Text style={styles.versionActionText}>DL</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.versionActionButton}
@@ -553,7 +553,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
                           restoreVersion(file.id, version.version, file.name)
                         }
                       >
-                        <Text style={styles.versionActionText}>↩️</Text>
+                        <Text style={styles.versionActionText}>RS</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -613,7 +613,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   if (!data) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>⏰</Text>
+        <Text style={styles.emptyIcon}>TM</Text>
         <Text style={styles.emptyTitle}>No version history</Text>
         <Text style={styles.emptySubtitle}>
           Upload and update files to start building version history
@@ -672,7 +672,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
       >
         {categories.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📁</Text>
+            <Text style={styles.emptyIcon}>F</Text>
             <Text style={styles.emptyTitle}>No files found</Text>
             <Text style={styles.emptySubtitle}>Upload files to see them here</Text>
           </View>
