@@ -101,6 +101,21 @@ type ExtraConfig = {
   googleAndroidClientId?: string;
 };
 
+type CapabilitiesResponse = {
+  deployment?: {
+    mode?: string;
+    self_hosted_bundle?: boolean;
+  };
+  auth?: {
+    auth_mode?: string;
+    firebase_enabled?: boolean;
+    firebase_ready?: boolean;
+    google_auth_available?: boolean;
+    local_auth_available?: boolean;
+  };
+  warnings?: string[];
+};
+
 const GOOGLE_LOGO = require("../../assets/images/google.png");
 
 export default function LoginScreen() {
@@ -262,6 +277,8 @@ export default function LoginScreen() {
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState("");
   const [savingApi, setSavingApi] = useState(false);
+  const [serverCapabilities, setServerCapabilities] =
+    useState<CapabilitiesResponse | null>(null);
 
   // Stable props for FaultyTerminal so typing doesn't restart its animation
   const terminalGridMul = useMemo(() => [2, 1] as [number, number], []);
@@ -293,14 +310,32 @@ export default function LoginScreen() {
     [terminalGridMul, terminalStyle],
   );
 
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const response = await api.get<CapabilitiesResponse>("/capabilities");
+      setServerCapabilities(response.data ?? null);
+      return response.data ?? null;
+    } catch {
+      setServerCapabilities(null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const override = await AsyncStorage.getItem("apiBaseUrlOverride");
       const current = override || config.apiBaseUrl;
       setApiInput(current);
       if (override) api.defaults.baseURL = override;
+      await loadCapabilities();
     })();
-  }, []);
+  }, [loadCapabilities]);
+
+  const googleAuthAvailable =
+    serverCapabilities?.auth?.google_auth_available !== false;
+  const authModeLabel = serverCapabilities?.auth?.auth_mode ?? "firebase";
+  const googleButtonDisabled =
+    googleLoading || !googleRequest || !googleAuthAvailable;
 
   const validateUrl = (url: string) => /^https?:\/\//i.test(url);
 
@@ -316,8 +351,16 @@ export default function LoginScreen() {
       setSavingApi(true);
       await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
       api.defaults.baseURL = apiInput;
+      const capabilities = await loadCapabilities();
       setShowDevModal(false);
-      showAlert("Applied", "Backend API base URL updated for this app.");
+      if (capabilities?.auth?.google_auth_available === false) {
+        showAlert(
+          "Server Updated",
+          "This server is using local/self-hosted auth. Google sign-in is disabled.",
+        );
+      } else {
+        showAlert("Applied", "Backend API base URL updated for this app.");
+      }
     } catch (_e) {
       showAlert("Error", "Failed to save API URL override");
     } finally {
@@ -331,6 +374,7 @@ export default function LoginScreen() {
       await AsyncStorage.removeItem("apiBaseUrlOverride");
       api.defaults.baseURL = config.apiBaseUrl;
       setApiInput(config.apiBaseUrl);
+      await loadCapabilities();
       setShowDevModal(false);
       showAlert("Reset", "Reverted to default backend API URL.");
     } catch (_e) {
@@ -387,6 +431,14 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async () => {
     if (googleLoading) {
+      return;
+    }
+
+    if (!googleAuthAvailable) {
+      showAlert(
+        "Google Sign-In Disabled",
+        "This server is running in local/self-hosted auth mode. Use email and password.",
+      );
       return;
     }
 
@@ -673,6 +725,22 @@ export default function LoginScreen() {
     </View>
   );
 
+  const renderAuthModeNotice = () => {
+    if (googleAuthAvailable) {
+      return null;
+    }
+
+    return (
+      <View style={styles.authModeNotice}>
+        <Text style={styles.authModeNoticeTitle}>Self-Hosted Auth Mode</Text>
+        <Text style={styles.authModeNoticeText}>
+          Google/Firebase sign-in is unavailable on this server ({authModeLabel}).
+          Continue with email and password.
+        </Text>
+      </View>
+    );
+  };
+
   const renderForm = () => (
     <View style={styles.form}>
       <View style={styles.inputGroup}>
@@ -743,13 +811,15 @@ export default function LoginScreen() {
         <View style={styles.oauthDividerLine} />
       </View>
 
+      {renderAuthModeNotice()}
+
       <TouchableOpacity
         style={[
           styles.googleButton,
-          (googleLoading || !googleRequest) && styles.googleButtonDisabled,
+          googleButtonDisabled && styles.googleButtonDisabled,
         ]}
         onPress={() => void handleGoogleSignIn()}
-        disabled={googleLoading || !googleRequest}
+        disabled={googleButtonDisabled}
       >
         {googleLoading ? (
           <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
@@ -771,7 +841,7 @@ export default function LoginScreen() {
         style={styles.devButton}
         onPress={() => setShowDevModal(true)}
       >
-        <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+        <Text style={styles.devButtonText}>Server & API URL</Text>
       </TouchableOpacity>
 
       {renderLegalNotice()}
@@ -906,13 +976,15 @@ export default function LoginScreen() {
         <View style={styles.oauthDividerLine} />
       </View>
 
+      {renderAuthModeNotice()}
+
       <TouchableOpacity
         style={[
           styles.googleButton,
-          (googleLoading || !googleRequest) && styles.googleButtonDisabled,
+          googleButtonDisabled && styles.googleButtonDisabled,
         ]}
         onPress={() => void handleGoogleSignIn()}
-        disabled={googleLoading || !googleRequest}
+        disabled={googleButtonDisabled}
       >
         {googleLoading ? (
           <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
@@ -1092,10 +1164,10 @@ export default function LoginScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Backend API Base URL</Text>
+            <Text style={styles.modalTitle}>Server API Base URL</Text>
             <Text style={styles.modalText}>
-              Enter the full API url including /api. Example:
-              http://192.168.1.100:8000/api
+              Switch between cloud and self-hosted servers. Enter the full API url
+              including /api. Example: http://192.168.1.100:8000/api
             </Text>
             <TextInput
               style={styles.input}
@@ -1106,6 +1178,12 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            <Text style={styles.serverModeHint}>
+              Auth mode: {authModeLabel}
+              {googleAuthAvailable
+                ? " (Google sign-in available)"
+                : " (Google sign-in disabled)"}
+            </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalButton}
@@ -1321,6 +1399,28 @@ const createStyles = (isDarkMode: boolean): any =>
       color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
       letterSpacing: 0.4,
     },
+    authModeNotice: {
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#6A3D00" : "#F2C37A",
+      backgroundColor: isDarkMode ? "#2F1E00" : "#FFF6E7",
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 10,
+      marginTop: 2,
+    },
+    authModeNoticeTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: isDarkMode ? "#FFD28C" : "#8A4900",
+      marginBottom: 4,
+      letterSpacing: 0.3,
+    },
+    authModeNoticeText: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: isDarkMode ? "#F6DEB4" : "#7A4E18",
+    },
     verifyCard: {
       borderWidth: 1,
       borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
@@ -1471,6 +1571,13 @@ const createStyles = (isDarkMode: boolean): any =>
       fontSize: 14,
       color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
       marginBottom: 12,
+    },
+    serverModeHint: {
+      marginTop: 8,
+      marginBottom: 12,
+      fontSize: 12,
+      color: isDarkMode ? "#B8B8B8" : "#555555",
+      lineHeight: 17,
     },
     modalActions: {
       flexDirection: "row",

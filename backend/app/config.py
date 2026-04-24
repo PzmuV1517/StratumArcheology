@@ -26,26 +26,33 @@ SOFTWARE.
 """
 
 import os
+from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """All configuration for the app, pulled from environment variables."""
 
+    # Auth + Deployment mode
+    AUTH_MODE: Literal["firebase", "local", "hybrid"] = "firebase"
+    DEPLOYMENT_MODE: Literal["cloud", "self_hosted"] = "cloud"
+    SELF_HOST_BUNDLE: bool = False
+
     # Firebase
-    FIREBASE_WEB_API_KEY: str
-    FIREBASE_PROJECT_ID: str
-    FIREBASE_PRIVATE_KEY_ID: str
-    FIREBASE_PRIVATE_KEY: str
-    FIREBASE_CLIENT_EMAIL: str
-    FIREBASE_CLIENT_ID: str
-    FIREBASE_AUTH_URI: str = "https://accounts.google.com/o/oauth2/auth"
-    FIREBASE_TOKEN_URI: str = "https://oauth2.googleapis.com/token"
+    FIREBASE_WEB_API_KEY: str | None = None
+    FIREBASE_PROJECT_ID: str | None = None
+    FIREBASE_PRIVATE_KEY_ID: str | None = None
+    FIREBASE_PRIVATE_KEY: str | None = None
+    FIREBASE_CLIENT_EMAIL: str | None = None
+    FIREBASE_CLIENT_ID: str | None = None
+    FIREBASE_AUTH_URI: str | None = "https://accounts.google.com/o/oauth2/auth"
+    FIREBASE_TOKEN_URI: str | None = "https://oauth2.googleapis.com/token"
     FIREBASE_AUTH_PROVIDER_CERT_URL: str = (
         "https://www.googleapis.com/oauth2/v1/certs"
     )
-    FIREBASE_CLIENT_CERT_URL: str
+    FIREBASE_CLIENT_CERT_URL: str | None = None
 
     # PostgreSQL
     POSTGRES_USER: str
@@ -94,6 +101,61 @@ class Settings(BaseSettings):
 
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "100 per minute"
+
+    @property
+    def auth_mode_normalized(self) -> str:
+        """Return auth mode as a normalized lower-case token."""
+        return self.AUTH_MODE.strip().lower()
+
+    @property
+    def firebase_auth_enabled(self) -> bool:
+        """Whether Firebase-backed authentication is enabled."""
+        return self.auth_mode_normalized in {"firebase", "hybrid"}
+
+    @property
+    def local_auth_enabled(self) -> bool:
+        """Whether local email/password authentication is enabled."""
+        return self.auth_mode_normalized in {"local", "hybrid"}
+
+    @property
+    def google_auth_enabled(self) -> bool:
+        """Google sign-in is available only when Firebase auth is enabled."""
+        return self.firebase_auth_enabled
+
+    @property
+    def deployment_mode_normalized(self) -> str:
+        """Return effective deployment mode considering bundle flag."""
+        if self.SELF_HOST_BUNDLE:
+            return "self_hosted"
+        return self.DEPLOYMENT_MODE.strip().lower()
+
+    @model_validator(mode="after")
+    def validate_firebase_requirements(self) -> "Settings":
+        """Require Firebase secrets only when Firebase auth is enabled."""
+        if not self.firebase_auth_enabled:
+            return self
+
+        required = [
+            "FIREBASE_WEB_API_KEY",
+            "FIREBASE_PROJECT_ID",
+            "FIREBASE_PRIVATE_KEY_ID",
+            "FIREBASE_PRIVATE_KEY",
+            "FIREBASE_CLIENT_EMAIL",
+            "FIREBASE_CLIENT_ID",
+            "FIREBASE_AUTH_URI",
+            "FIREBASE_TOKEN_URI",
+            "FIREBASE_AUTH_PROVIDER_CERT_URL",
+            "FIREBASE_CLIENT_CERT_URL",
+        ]
+        missing = [field for field in required if not getattr(self, field)]
+        if missing:
+            missing_csv = ", ".join(missing)
+            raise ValueError(
+                "Missing Firebase configuration for AUTH_MODE="
+                f"{self.auth_mode_normalized}: {missing_csv}"
+            )
+
+        return self
 
     @property
     def allowed_origins_list(self) -> list[str]:

@@ -1110,13 +1110,13 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ── Development Section ──────────────────────── */}
+        {/* ── Server Section ───────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Development</Text>
+          <Text style={styles.sectionTitle}>Server</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={openDevModal}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuItemText}>Backend API Base URL</Text>
+              <Text style={styles.menuItemText}>Server API Base URL</Text>
               <Text style={styles.menuItemSubtext} numberOfLines={1}>
                 {effectiveApi}
               </Text>
@@ -1591,7 +1591,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* ── Dev API modal ──────────────────────────────── */}
+      {/* ── Server API modal ───────────────────────────── */}
       <Modal
         visible={showDevModal}
         transparent
@@ -1600,7 +1600,7 @@ export default function SettingsScreen() {
       >
         <View style={styles.tzModalBackdrop}>
           <View style={styles.tzModalCard}>
-            <Text style={styles.tzModalTitle}>Backend API Base URL</Text>
+            <Text style={styles.tzModalTitle}>Server API Base URL</Text>
             <Text style={styles.devModalText}>
               Enter the full API url including /api.{"\n"}Example:
               http://192.168.1.100:8000/api

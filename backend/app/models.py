@@ -158,6 +158,7 @@ class User(Base):
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # eMonument Roles
     auth_provider = Column(String, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
     is_emonument_privileged = Column(Boolean, default=False, nullable=False)
     is_dashboard_admin = Column(Boolean, default=False, nullable=False)
     is_account_disabled = Column(Boolean, default=False, nullable=False)

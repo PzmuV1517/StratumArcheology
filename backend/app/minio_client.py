@@ -89,6 +89,19 @@ class MinIOClient:
             print(f"✗ MinIO bucket error: {e}")
             raise
 
+    def is_available(self) -> bool:
+        """Return True when MinIO client is initialized and reachable."""
+        if not self.client or not self.available:
+            return False
+
+        try:
+            self.client.bucket_exists(self.bucket_name)
+            self.available = True
+            return True
+        except Exception:
+            self.available = False
+            return False
+
     async def upload_file(
         self,
         file_data: bytes,
