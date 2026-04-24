@@ -175,6 +175,11 @@ macOS artifact note:
 - The macOS artifact is delivered as a zip file (stratum-bundle.app.zip) so the
   .app bundle is preserved correctly.
 - Unzip first, then use stratum-bundle.app.
+- Double-clicking stratum-bundle.app now opens Terminal and starts an interactive
+	launcher UI panel (install/up/status/logs/down/restart).
+
+Interactive terminal UI (all platforms):
+- python3 stratum_bundle.py ui
 
 Option B: GitHub CLI
 gh workflow run bundle-launcher-binaries.yml --ref <your-branch>
@@ -188,6 +193,11 @@ Local testing after download:
 - macOS: unzip stratum-bundle.app.zip, then run stratum-bundle.app (or CLI binary
 	inside app bundle) and test up/status/down
 - Linux: sudo dpkg -i stratum-bundle_<version>_amd64.deb, then stratum-bundle --help
+
+To open the interactive UI from packaged binaries:
+- Windows: stratum-bundle.exe ui
+- macOS: /Applications/stratum-bundle.app/Contents/MacOS/stratum-bundle ui
+- Linux: stratum-bundle ui
 
 ==================================================
 11) Quick copy/paste happy path

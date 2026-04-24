@@ -14,9 +14,11 @@ from __future__ import annotations
 import argparse
 import json
 import secrets
+import shlex
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -253,6 +255,118 @@ def cmd_logs(args: argparse.Namespace) -> None:
     _run(cmd, check=False)
 
 
+def _clear_screen() -> None:
+    print("\033[2J\033[H", end="")
+
+
+def _render_terminal_ui() -> None:
+    host_ip = _get_host_ip()
+    status_payload = _http_get_json(STATUS_URL, timeout=2.0)
+    capabilities = _http_get_json(CAPABILITIES_URL, timeout=2.0)
+
+    print("STRATUM Self-Host Launcher")
+    print("==========================")
+    print()
+    print("Endpoints")
+    print(f"- API base:   http://{host_ip}:8000/api")
+    print(f"- API health: http://{host_ip}:8000/api/health")
+    print(f"- Mobile web: http://{host_ip}:19006")
+    print(f"- Dashboard:  http://{host_ip}:5173")
+    print(f"- MinIO API:  http://{host_ip}:9000")
+    print(f"- MinIO UI:   http://{host_ip}:9001")
+    print()
+
+    if status_payload:
+        services = status_payload.get("services", {})
+        resources = status_payload.get("resources", {})
+
+        print("Runtime")
+        print(f"- Status:     {status_payload.get('status', 'unknown')}")
+        print(f"- Uptime(s):  {status_payload.get('uptime_seconds', 'n/a')}")
+        print(f"- Memory MB:  {resources.get('memory_rss_mb', 'n/a')}")
+        print(f"- Database:   {services.get('database', 'unknown')}")
+        print(f"- Storage:    {services.get('storage', 'unknown')}")
+        print(f"- Firebase:   {services.get('firebase', 'unknown')}")
+    else:
+        print("Runtime")
+        print("- Backend status endpoint not reachable")
+
+    if capabilities:
+        auth = capabilities.get("auth", {})
+        deployment = capabilities.get("deployment", {})
+        print()
+        print("Capabilities")
+        print(f"- Auth mode:  {auth.get('auth_mode', 'unknown')}")
+        print(
+            "- Google:     "
+            + ("enabled" if auth.get("google_auth_available") else "disabled")
+        )
+        print(f"- Deploy:     {deployment.get('mode', 'unknown')}")
+
+    print()
+    print("Actions")
+    print("[1] Install images")
+    print("[2] Start stack (up)")
+    print("[3] Show status")
+    print("[4] Follow backend logs")
+    print("[5] Stop stack (down)")
+    print("[6] Restart stack")
+    print("[r] Refresh panel")
+    print("[q] Quit")
+
+
+def _pause() -> None:
+    try:
+        input("\nPress Enter to continue...")
+    except EOFError:
+        return
+
+
+def cmd_ui(_args: argparse.Namespace) -> None:
+    """Open an interactive terminal control panel for launcher operations."""
+    while True:
+        _clear_screen()
+        _render_terminal_ui()
+
+        try:
+            choice = input("\nSelect action: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+
+        if choice in {"", "r"}:
+            continue
+
+        try:
+            if choice == "1":
+                cmd_install(argparse.Namespace())
+                _pause()
+            elif choice == "2":
+                cmd_up(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "3":
+                cmd_status(argparse.Namespace())
+                _pause()
+            elif choice == "4":
+                print("\nPress Ctrl+C to stop log follow and return to the panel.\n")
+                cmd_logs(argparse.Namespace(service="backend", follow=True))
+                _pause()
+            elif choice == "5":
+                cmd_down(argparse.Namespace())
+                _pause()
+            elif choice == "6":
+                cmd_restart(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "q":
+                return
+            else:
+                print("\nUnknown option.")
+                _pause()
+        except KeyboardInterrupt:
+            print("\nAction interrupted.")
+            _pause()
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="STRATUM self-host bundle launcher",
@@ -294,10 +408,63 @@ def _build_parser() -> argparse.ArgumentParser:
     logs_parser.add_argument("--follow", action="store_true", help="Follow log stream")
     logs_parser.set_defaults(func=cmd_logs)
 
+    ui_parser = sub.add_parser("ui", help="Open interactive terminal control panel")
+    ui_parser.set_defaults(func=cmd_ui)
+
     return parser
 
 
+def _opened_from_macos_app_bundle() -> bool:
+    executable_path = Path(sys.executable).as_posix()
+    return sys.platform == "darwin" and ".app/Contents/MacOS/" in executable_path
+
+
+def _stdout_is_tty() -> bool:
+    stream = getattr(sys, "stdout", None)
+    if stream is None:
+        return False
+    isatty = getattr(stream, "isatty", None)
+    if not callable(isatty):
+        return False
+    try:
+        return bool(isatty())
+    except Exception:
+        return False
+
+
+def _escape_applescript(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _maybe_open_terminal_for_macos_app_launch() -> bool:
+    """If launched by double-clicking the .app, open Terminal with interactive UI."""
+    if len(sys.argv) > 1:
+        return False
+    if not _opened_from_macos_app_bundle():
+        return False
+    if _stdout_is_tty():
+        return False
+
+    launcher_path = shlex.quote(str(Path(sys.executable)))
+    shell_command = f"{launcher_path} ui"
+
+    script_lines = [
+        'tell application "Terminal" to activate',
+        f'tell application "Terminal" to do script "{_escape_applescript(shell_command)}"',
+    ]
+
+    args: list[str] = ["osascript"]
+    for line in script_lines:
+        args.extend(["-e", line])
+
+    subprocess.run(args, check=False)
+    return True
+
+
 def main() -> None:
+    if _maybe_open_terminal_for_macos_app_launch():
+        return
+
     parser = _build_parser()
     args = parser.parse_args()
 
