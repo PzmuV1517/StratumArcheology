@@ -33,7 +33,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 RUNTIME_DIR = CONFIG_DIR / "runtime"
 RUNTIME_PROJECT_ROOT = RUNTIME_DIR / "project"
 RUNTIME_PAYLOAD_VERSION_FILE = RUNTIME_DIR / ".payload_version"
-BUNDLE_PAYLOAD_VERSION = "2026-04-24.2"
+BUNDLE_PAYLOAD_VERSION = "2026-04-24.3"
 
 _runtime_project_root_override: Path | None = None
 

@@ -97,6 +97,11 @@ Common issues:
 - Port conflict: free 5432/8000/9000/9001/19006/5173 or remap in env/compose
 - Docker not running: start Docker Desktop and retry
 - Slow pull/build: rerun initialize (or install/up) and wait longer timeout
+- If status stays unreachable and frontend containers keep restarting,
+	run "python3 stratum_bundle.py logs --follow dashboard" and
+	"python3 stratum_bundle.py logs --follow stratum-web" to inspect build errors.
+- The bundled compose now starts backend first and starts frontends only after
+	backend healthcheck passes.
 
 ==================================================
 7) Restart / stop flow
