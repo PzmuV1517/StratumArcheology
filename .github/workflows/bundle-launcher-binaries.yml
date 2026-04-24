@@ -6,11 +6,19 @@ on:
     branches: [main, develop]
     paths:
       - stratum_bundle.py
+      - selfhost-compose.yml
+      - backend/**
+      - frontend/stratum-app/**
+      - frontend/dashboard/**
       - .github/workflows/bundle-launcher-binaries.yml
   pull_request:
     branches: [main, develop]
     paths:
       - stratum_bundle.py
+      - selfhost-compose.yml
+      - backend/**
+      - frontend/stratum-app/**
+      - frontend/dashboard/**
       - .github/workflows/bundle-launcher-binaries.yml
 
 jobs:
@@ -33,7 +41,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build Windows executable
-        run: pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+        run: >
+          pyinstaller --noconfirm --onefile --name stratum-bundle
+          --add-data "selfhost-compose.yml;."
+          --add-data "backend;backend"
+          --add-data "frontend/stratum-app;frontend/stratum-app"
+          --add-data "frontend/dashboard;frontend/dashboard"
+          stratum_bundle.py
 
       - name: Smoke test executable
         run: .\dist\stratum-bundle.exe --help
@@ -65,7 +79,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build macOS application bundle
-        run: pyinstaller --noconfirm --onedir --windowed --name stratum-bundle stratum_bundle.py
+        run: >
+          pyinstaller --noconfirm --onefile --windowed --name stratum-bundle
+          --add-data "selfhost-compose.yml:."
+          --add-data "backend:backend"
+          --add-data "frontend/stratum-app:frontend/stratum-app"
+          --add-data "frontend/dashboard:frontend/dashboard"
+          stratum_bundle.py
 
       - name: Smoke test app bundle binary
         run: ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
@@ -100,7 +120,13 @@ jobs:
           pip install pyinstaller
 
       - name: Build Linux launcher binary
-        run: pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+        run: >
+          pyinstaller --noconfirm --onefile --name stratum-bundle
+          --add-data "selfhost-compose.yml:."
+          --add-data "backend:backend"
+          --add-data "frontend/stratum-app:frontend/stratum-app"
+          --add-data "frontend/dashboard:frontend/dashboard"
+          stratum_bundle.py
 
       - name: Smoke test launcher
         run: ./dist/stratum-bundle --help

@@ -119,16 +119,31 @@ make selfhost-down
 python3 -m pip install pyinstaller
 
 Windows (.exe):
-pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+pyinstaller --noconfirm --onefile --name stratum-bundle \
+	--add-data "selfhost-compose.yml;." \
+	--add-data "backend;backend" \
+	--add-data "frontend/stratum-app;frontend/stratum-app" \
+	--add-data "frontend/dashboard;frontend/dashboard" \
+	stratum_bundle.py
 Run: dist\\stratum-bundle.exe --help
 
 macOS (.app):
-pyinstaller --noconfirm --onedir --windowed --name stratum-bundle stratum_bundle.py
+pyinstaller --noconfirm --onefile --windowed --name stratum-bundle \
+	--add-data "selfhost-compose.yml:." \
+	--add-data "backend:backend" \
+	--add-data "frontend/stratum-app:frontend/stratum-app" \
+	--add-data "frontend/dashboard:frontend/dashboard" \
+	stratum_bundle.py
 Run bundle binary directly for CLI testing:
 ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
 
 Linux (.deb):
-pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+pyinstaller --noconfirm --onefile --name stratum-bundle \
+	--add-data "selfhost-compose.yml:." \
+	--add-data "backend:backend" \
+	--add-data "frontend/stratum-app:frontend/stratum-app" \
+	--add-data "frontend/dashboard:frontend/dashboard" \
+	stratum_bundle.py
 mkdir -p package-root/DEBIAN package-root/usr/local/bin
 install -m 0755 dist/stratum-bundle package-root/usr/local/bin/stratum-bundle
 cat > package-root/DEBIAN/control <<'EOF'
@@ -180,6 +195,22 @@ macOS artifact note:
 
 Interactive terminal UI (all platforms):
 - python3 stratum_bundle.py ui
+
+Packaged bundle behavior:
+- Packaged launchers now include the required project payload
+	(selfhost-compose.yml + backend + frontend apps).
+- On first launch, payload files are materialized to:
+	~/.stratum-bundle/runtime/project
+- This removes the requirement to run from your git checkout path.
+- Host runtime dependency remains Docker (and Docker Compose plugin).
+	Container images are pulled by install/up if not already present.
+
+Optional override/fallback:
+- UI method: open the terminal UI and choose action [7] Configure project root
+- CLI method: stratum-bundle set-root /path/to/custom/project/root
+
+This setting is persisted in:
+- ~/.stratum-bundle/config.json
 
 Option B: GitHub CLI
 gh workflow run bundle-launcher-binaries.yml --ref <your-branch>

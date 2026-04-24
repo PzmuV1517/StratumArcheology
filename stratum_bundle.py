@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
 import shlex
 import shutil
@@ -25,11 +26,16 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
-ROOT_DIR = Path(__file__).resolve().parent
-COMPOSE_FILE = ROOT_DIR / "selfhost-compose.yml"
-BACKEND_ENV_FILE = ROOT_DIR / "backend" / ".env"
 STATUS_URL = "http://127.0.0.1:8000/api/system/status"
 CAPABILITIES_URL = "http://127.0.0.1:8000/api/capabilities"
+CONFIG_DIR = Path.home() / ".stratum-bundle"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+RUNTIME_DIR = CONFIG_DIR / "runtime"
+RUNTIME_PROJECT_ROOT = RUNTIME_DIR / "project"
+RUNTIME_PAYLOAD_VERSION_FILE = RUNTIME_DIR / ".payload_version"
+BUNDLE_PAYLOAD_VERSION = "2026-04-24.2"
+
+_runtime_project_root_override: Path | None = None
 
 
 def _print(msg: str) -> None:
@@ -39,6 +45,221 @@ def _print(msg: str) -> None:
 def _fail(msg: str, code: int = 1) -> None:
     _print(f"ERROR: {msg}")
     raise SystemExit(code)
+
+
+def _load_saved_project_root() -> Path | None:
+    try:
+        if not CONFIG_FILE.exists():
+            return None
+        payload = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    path_value = payload.get("project_root")
+    if not isinstance(path_value, str) or not path_value.strip():
+        return None
+
+    candidate = Path(path_value).expanduser().resolve()
+    if _has_project_layout(candidate):
+        return candidate
+    return None
+
+
+def _save_project_root(project_root: Path) -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {"project_root": str(project_root)}
+    CONFIG_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _has_project_layout(root: Path) -> bool:
+    return (
+        (root / "selfhost-compose.yml").exists()
+        and (root / "backend").exists()
+        and (root / "frontend" / "stratum-app").exists()
+        and (root / "frontend" / "dashboard").exists()
+    )
+
+
+def _possible_embedded_roots() -> list[Path]:
+    roots: list[Path] = []
+    if not getattr(sys, "frozen", False):
+        return roots
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        roots.append(Path(meipass))
+
+    exe_path = Path(sys.executable).resolve()
+    roots.append(exe_path.parent)
+    roots.append(exe_path.parent.parent)
+    roots.append(exe_path.parent.parent.parent)
+
+    if ".app/Contents/MacOS/" in exe_path.as_posix():
+        contents_dir = exe_path.parent.parent
+        roots.append(contents_dir / "Resources")
+        roots.append(contents_dir / "Frameworks")
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        try:
+            resolved = root.resolve()
+        except Exception:
+            continue
+        resolved_str = str(resolved)
+        if resolved_str in seen:
+            continue
+        seen.add(resolved_str)
+        unique.append(resolved)
+
+    return unique
+
+
+def _resolve_embedded_project_root() -> Path | None:
+    for root in _possible_embedded_roots():
+        if _has_project_layout(root):
+            return root
+    return None
+
+
+def _materialize_embedded_project_root() -> Path | None:
+    embedded_root = _resolve_embedded_project_root()
+    if embedded_root is None:
+        return None
+
+    current_version = ""
+    if RUNTIME_PAYLOAD_VERSION_FILE.exists():
+        try:
+            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(encoding="utf-8").strip()
+        except Exception:
+            current_version = ""
+
+    if _has_project_layout(RUNTIME_PROJECT_ROOT) and current_version == BUNDLE_PAYLOAD_VERSION:
+        return RUNTIME_PROJECT_ROOT
+
+    runtime_parent = RUNTIME_PROJECT_ROOT.parent
+    runtime_parent.mkdir(parents=True, exist_ok=True)
+    if RUNTIME_PROJECT_ROOT.exists():
+        shutil.rmtree(RUNTIME_PROJECT_ROOT, ignore_errors=True)
+
+    RUNTIME_PROJECT_ROOT.mkdir(parents=True, exist_ok=True)
+    for relative in ["selfhost-compose.yml", "backend", "frontend"]:
+        source = embedded_root / relative
+        target = RUNTIME_PROJECT_ROOT / relative
+        if not source.exists():
+            continue
+        if source.is_dir():
+            shutil.copytree(source, target)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
+    if not _has_project_layout(RUNTIME_PROJECT_ROOT):
+        return None
+
+    RUNTIME_PAYLOAD_VERSION_FILE.write_text(BUNDLE_PAYLOAD_VERSION, encoding="utf-8")
+    _save_project_root(RUNTIME_PROJECT_ROOT)
+    return RUNTIME_PROJECT_ROOT
+
+
+def _iter_project_root_candidates() -> list[Path]:
+    candidates: list[Path] = []
+
+    env_root = os.environ.get("STRATUM_BUNDLE_ROOT", "").strip()
+    if env_root:
+        candidates.append(Path(env_root).expanduser())
+
+    if _runtime_project_root_override is not None:
+        candidates.append(_runtime_project_root_override)
+
+    saved_root = _load_saved_project_root()
+    if saved_root is not None:
+        candidates.append(saved_root)
+
+    materialized_root = _materialize_embedded_project_root()
+    if materialized_root is not None:
+        candidates.append(materialized_root)
+
+    embedded_root = _resolve_embedded_project_root()
+    if embedded_root is not None:
+        candidates.append(embedded_root)
+
+    cwd = Path.cwd()
+    candidates.append(cwd)
+    candidates.extend(cwd.parents)
+
+    if getattr(sys, "frozen", False):
+        exe_path = Path(sys.executable).resolve()
+        candidates.append(exe_path.parent)
+        candidates.append(exe_path.parent.parent)
+        candidates.append(exe_path.parent.parent.parent)
+
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass))
+
+        if ".app/Contents/MacOS/" in exe_path.as_posix():
+            contents_dir = exe_path.parent.parent
+            candidates.append(contents_dir / "Resources")
+            candidates.append(contents_dir / "Frameworks")
+    else:
+        candidates.append(Path(__file__).resolve().parent)
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        resolved_str = str(resolved)
+        if resolved_str in seen:
+            continue
+        seen.add(resolved_str)
+        unique.append(resolved)
+
+    return unique
+
+
+def _resolve_project_root(*, strict: bool) -> Path | None:
+    for candidate in _iter_project_root_candidates():
+        if _has_project_layout(candidate):
+            return candidate
+
+    if strict:
+        _fail(
+            "Could not locate selfhost-compose.yml. "
+            "Set STRATUM_BUNDLE_ROOT to your project root, use set-root, "
+            "or rebuild the packaged binary so embedded project files are included."
+        )
+    return None
+
+
+def _set_project_root(path: Path, *, persist: bool = True) -> Path:
+    global _runtime_project_root_override
+
+    resolved = path.expanduser().resolve()
+    compose_file = resolved / "selfhost-compose.yml"
+    if not compose_file.exists():
+        _fail(f"No selfhost-compose.yml found at: {compose_file}")
+
+    _runtime_project_root_override = resolved
+    if persist:
+        _save_project_root(resolved)
+
+    return resolved
+
+
+def _compose_file() -> Path:
+    project_root = _resolve_project_root(strict=True)
+    assert project_root is not None
+    return project_root / "selfhost-compose.yml"
+
+
+def _backend_env_file() -> Path:
+    project_root = _resolve_project_root(strict=True)
+    assert project_root is not None
+    return project_root / "backend" / ".env"
 
 
 def _find_compose_base_cmd() -> list[str]:
@@ -61,7 +282,7 @@ def _find_compose_base_cmd() -> list[str]:
 
 
 def _compose_cmd(*args: str) -> list[str]:
-    return [*_find_compose_base_cmd(), "-f", str(COMPOSE_FILE), *args]
+    return [*_find_compose_base_cmd(), "-f", str(_compose_file()), *args]
 
 
 def _run(
@@ -72,9 +293,10 @@ def _run(
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     _print("$ " + " ".join(cmd))
+    default_cwd = _resolve_project_root(strict=False) or Path.cwd()
     return subprocess.run(
         cmd,
-        cwd=cwd or ROOT_DIR,
+        cwd=cwd or default_cwd,
         text=True,
         capture_output=capture,
         check=check,
@@ -125,11 +347,16 @@ def _default_backend_env() -> str:
 
 
 def _ensure_backend_env() -> None:
-    if BACKEND_ENV_FILE.exists():
+    backend_env_file = _backend_env_file()
+    backend_dir = backend_env_file.parent
+    if not backend_dir.exists():
+        _fail(f"Backend directory not found: {backend_dir}")
+
+    if backend_env_file.exists():
         return
 
-    BACKEND_ENV_FILE.write_text(_default_backend_env(), encoding="utf-8")
-    _print(f"Created {BACKEND_ENV_FILE} with local self-host defaults")
+    backend_env_file.write_text(_default_backend_env(), encoding="utf-8")
+    _print(f"Created {backend_env_file} with local self-host defaults")
 
 
 def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
@@ -261,6 +488,7 @@ def _clear_screen() -> None:
 
 def _render_terminal_ui() -> None:
     host_ip = _get_host_ip()
+    project_root = _resolve_project_root(strict=False)
     status_payload = _http_get_json(STATUS_URL, timeout=2.0)
     capabilities = _http_get_json(CAPABILITIES_URL, timeout=2.0)
 
@@ -274,6 +502,10 @@ def _render_terminal_ui() -> None:
     print(f"- Dashboard:  http://{host_ip}:5173")
     print(f"- MinIO API:  http://{host_ip}:9000")
     print(f"- MinIO UI:   http://{host_ip}:9001")
+    if project_root is not None:
+        print(f"- Project:    {project_root}")
+    else:
+        print("- Project:    not configured (choose action 7)")
     print()
 
     if status_payload:
@@ -311,6 +543,7 @@ def _render_terminal_ui() -> None:
     print("[4] Follow backend logs")
     print("[5] Stop stack (down)")
     print("[6] Restart stack")
+    print("[7] Configure project root")
     print("[r] Refresh panel")
     print("[q] Quit")
 
@@ -320,6 +553,19 @@ def _pause() -> None:
         input("\nPress Enter to continue...")
     except EOFError:
         return
+
+
+def _configure_project_root_interactive() -> None:
+    print()
+    print("Enter the STRATUM project root (folder containing selfhost-compose.yml).")
+    print("Press Enter with no value to cancel.")
+    raw_value = input("Path: ").strip()
+    if not raw_value:
+        print("Cancelled.")
+        return
+
+    configured = _set_project_root(Path(raw_value), persist=True)
+    _print(f"Project root configured: {configured}")
 
 
 def cmd_ui(_args: argparse.Namespace) -> None:
@@ -356,6 +602,9 @@ def cmd_ui(_args: argparse.Namespace) -> None:
                 _pause()
             elif choice == "6":
                 cmd_restart(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "7":
+                _configure_project_root_interactive()
                 _pause()
             elif choice == "q":
                 return
@@ -410,6 +659,17 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ui_parser = sub.add_parser("ui", help="Open interactive terminal control panel")
     ui_parser.set_defaults(func=cmd_ui)
+
+    root_parser = sub.add_parser(
+        "set-root",
+        help="Set project root folder containing selfhost-compose.yml",
+    )
+    root_parser.add_argument("path", help="Absolute or relative path to project root")
+    root_parser.set_defaults(
+        func=lambda args: _print(
+            f"Project root configured: {_set_project_root(Path(args.path), persist=True)}"
+        )
+    )
 
     return parser
 
@@ -467,9 +727,6 @@ def main() -> None:
 
     parser = _build_parser()
     args = parser.parse_args()
-
-    if not COMPOSE_FILE.exists():
-        _fail(f"Compose file not found: {COMPOSE_FILE}")
 
     try:
         args.func(args)
