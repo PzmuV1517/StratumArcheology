@@ -49,7 +49,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-stratum_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stratum_secure_pass_2025}
       POSTGRES_DB: ${POSTGRES_DB:-stratum_db}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-stratum_user}:${POSTGRES_PASSWORD:-stratum_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-stratum_db}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-stratum_user}:${POSTGRES_PASSWORD:-stratum_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-stratum_db}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-stratum_minio_access}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-stratum_minio_secret_2026}
@@ -94,6 +94,7 @@ services:
       NODE_ENV: production
     command: >
       sh -c "
+      apk add --no-cache bash &&
       npm install --include=dev &&
       npm run build:web &&
       npx serve@14.2.4 dist -l 19006

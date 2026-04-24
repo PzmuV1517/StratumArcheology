@@ -325,7 +325,7 @@ def _default_backend_env() -> str:
             f"POSTGRES_DB={postgres_db}",
             "POSTGRES_HOST=postgres",
             "POSTGRES_PORT=5432",
-            f"DATABASE_URL=postgresql://{postgres_user}:{postgres_password}@postgres:5432/{postgres_db}",
+            f"DATABASE_URL=postgresql+psycopg://{postgres_user}:{postgres_password}@postgres:5432/{postgres_db}",
             "MINIO_ENDPOINT=minio:9000",
             f"MINIO_ACCESS_KEY={minio_access}",
             f"MINIO_SECRET_KEY={minio_secret}",
