@@ -142,12 +142,14 @@ pyinstaller --noconfirm --onefile --name stratum-bundle \
 Run: dist\\stratum-bundle.exe --help
 
 macOS (.app):
-pyinstaller --noconfirm --onefile --windowed --name stratum-bundle \
+pyinstaller --noconfirm --windowed --name stratum-bundle \
 	--add-data "selfhost-compose.yml:." \
 	--add-data "backend:backend" \
 	--add-data "frontend/stratum-app:frontend/stratum-app" \
 	--add-data "frontend/dashboard:frontend/dashboard" \
 	stratum_bundle.py
+codesign --force --deep --sign - dist/stratum-bundle.app
+codesign --verify --deep --strict --verbose=2 dist/stratum-bundle.app
 Run bundle binary directly for CLI testing:
 ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
 
@@ -204,6 +206,9 @@ macOS artifact note:
 - The macOS artifact is delivered as a zip file (stratum-bundle.app.zip) so the
   .app bundle is preserved correctly.
 - Unzip first, then use stratum-bundle.app.
+- If Finder shows "can't be opened" (including -47), run:
+	xattr -dr com.apple.quarantine stratum-bundle.app
+	Then right-click > Open once to allow the app.
 - Double-clicking stratum-bundle.app now opens Terminal and starts an interactive
 	launcher UI panel (install/up/status/logs/down/restart).
 

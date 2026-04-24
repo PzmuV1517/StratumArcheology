@@ -80,12 +80,17 @@ jobs:
 
       - name: Build macOS application bundle
         run: >
-          pyinstaller --noconfirm --onefile --windowed --name stratum-bundle
+          pyinstaller --noconfirm --windowed --name stratum-bundle
           --add-data "selfhost-compose.yml:."
           --add-data "backend:backend"
           --add-data "frontend/stratum-app:frontend/stratum-app"
           --add-data "frontend/dashboard:frontend/dashboard"
           stratum_bundle.py
+
+      - name: Ad-hoc sign macOS app bundle
+        run: |
+          codesign --force --deep --sign - dist/stratum-bundle.app
+          codesign --verify --deep --strict --verbose=2 dist/stratum-bundle.app
 
       - name: Smoke test app bundle binary
         run: ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
