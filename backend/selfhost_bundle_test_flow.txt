@@ -23,6 +23,7 @@ python3 stratum_bundle.py initialize
 What this does:
 - Pulls required images from selfhost-compose.yml
 - Auto-creates backend/.env on first run with local defaults
+- Installs backend runtime dependencies from backend/requirements-selfhost.txt
 - Boots the full stack and waits for backend readiness
 
 Optional longer wait timeout:
@@ -102,6 +103,9 @@ Common issues:
 	"python3 stratum_bundle.py logs --follow stratum-web" to inspect build errors.
 - The bundled compose now starts backend first and starts frontends only after
 	backend healthcheck passes.
+- Self-host startup intentionally skips optional heavy extras (Whisper + LAZ native tooling)
+	to keep first boot stable across platforms. Voice transcription and LAZ conversion can be
+	enabled later by installing optional dependencies in the backend container image.
 
 ==================================================
 7) Restart / stop flow

@@ -322,8 +322,11 @@ async def _start_backup_scheduler():
 
 @app.on_event("startup")
 async def _load_whisper():
-    loop = __import__("asyncio").get_event_loop()
-    await loop.run_in_executor(None, load_whisper_model)
+    try:
+        loop = __import__("asyncio").get_event_loop()
+        await loop.run_in_executor(None, load_whisper_model)
+    except Exception as exc:
+        logger.warning("Whisper startup skipped", reason=str(exc))
 
 
 @app.on_event("shutdown")

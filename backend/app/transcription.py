@@ -33,8 +33,12 @@ import logging
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
-import whisper
+try:
+    import whisper as whisper_module
+except Exception:  # pragma: no cover - optional dependency in self-host profile
+    whisper_module = None
 
 from app.config import settings
 from app.database import SessionLocal
@@ -45,7 +49,7 @@ from app.websocket import emit_content_update, log_activity
 logger = logging.getLogger(__name__)
 
 # Loaded once at startup; None until load_whisper_model() is called.
-_model: whisper.Whisper | None = None
+_model: Any | None = None
 _executor = ThreadPoolExecutor(max_workers=1)  # one transcription at a time
 
 
@@ -57,9 +61,15 @@ def load_whisper_model() -> None:
     the weights in ~/.cache/whisper/.
     """
     global _model
+    if whisper_module is None:
+        logger.warning(
+            "openai-whisper is not installed; voice transcription is disabled"
+        )
+        return
+
     model_name = settings.WHISPER_MODEL
     logger.info("Loading Whisper model '%s' …", model_name)
-    _model = whisper.load_model(model_name)
+    _model = whisper_module.load_model(model_name)
     logger.info("Whisper model '%s' ready.", model_name)
 
 

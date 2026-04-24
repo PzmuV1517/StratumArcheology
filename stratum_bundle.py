@@ -33,7 +33,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 RUNTIME_DIR = CONFIG_DIR / "runtime"
 RUNTIME_PROJECT_ROOT = RUNTIME_DIR / "project"
 RUNTIME_PAYLOAD_VERSION_FILE = RUNTIME_DIR / ".payload_version"
-BUNDLE_PAYLOAD_VERSION = "2026-04-24.3"
+BUNDLE_PAYLOAD_VERSION = "2026-04-24.4"
 
 _runtime_project_root_override: Path | None = None
 
@@ -172,6 +172,10 @@ def _iter_project_root_candidates() -> list[Path]:
     if _runtime_project_root_override is not None:
         candidates.append(_runtime_project_root_override)
 
+    cwd = Path.cwd()
+    candidates.append(cwd)
+    candidates.extend(cwd.parents)
+
     saved_root = _load_saved_project_root()
     if saved_root is not None:
         candidates.append(saved_root)
@@ -183,10 +187,6 @@ def _iter_project_root_candidates() -> list[Path]:
     embedded_root = _resolve_embedded_project_root()
     if embedded_root is not None:
         candidates.append(embedded_root)
-
-    cwd = Path.cwd()
-    candidates.append(cwd)
-    candidates.extend(cwd.parents)
 
     if getattr(sys, "frozen", False):
         exe_path = Path(sys.executable).resolve()
