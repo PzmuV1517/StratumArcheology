@@ -70,11 +70,14 @@ jobs:
       - name: Smoke test app bundle binary
         run: ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
 
+      - name: Archive macOS app bundle
+        run: ditto -c -k --sequesterRsrc --keepParent dist/stratum-bundle.app dist/stratum-bundle.app.zip
+
       - name: Upload macOS app artifact
         uses: actions/upload-artifact@v4
         with:
           name: stratum-bundle-macos-app
-          path: dist/stratum-bundle.app
+          path: dist/stratum-bundle.app.zip
           if-no-files-found: error
           retention-days: 14
 

@@ -171,6 +171,11 @@ Option A: GitHub UI
 	- stratum-bundle-macos-app
 	- stratum-bundle-linux-deb
 
+macOS artifact note:
+- The macOS artifact is delivered as a zip file (stratum-bundle.app.zip) so the
+  .app bundle is preserved correctly.
+- Unzip first, then use stratum-bundle.app.
+
 Option B: GitHub CLI
 gh workflow run bundle-launcher-binaries.yml --ref <your-branch>
 gh run watch
@@ -180,7 +185,8 @@ gh run download --name stratum-bundle-linux-deb --dir artifacts/linux
 
 Local testing after download:
 - Windows: run stratum-bundle.exe --help, then stratum-bundle.exe up
-- macOS: run stratum-bundle.app (or CLI binary inside app bundle) and test up/status/down
+- macOS: unzip stratum-bundle.app.zip, then run stratum-bundle.app (or CLI binary
+	inside app bundle) and test up/status/down
 - Linux: sudo dpkg -i stratum-bundle_<version>_amd64.deb, then stratum-bundle --help
 
 ==================================================
