@@ -1,0 +1,196 @@
+STRATUM Self-Host Bundle: Build + Test Flow
+
+Date: 2026-04-24
+Scope: Local self-hosted validation using stratum_bundle.py
+
+==================================================
+1) Prerequisites
+==================================================
+- Docker Desktop (or Docker Engine) installed and running
+- Docker Compose available (docker compose or docker-compose)
+- Python 3.10+ available in terminal
+- Run commands from repository root:
+
+Optional check:
+- python3 stratum_bundle.py --help
+
+==================================================
+2) First-time install (pull images + create backend/.env)
+==================================================
+cd /Users/andreibanu/QuantumBitsFLL2025-2026
+python3 stratum_bundle.py install
+
+What this does:
+- Pulls required images from selfhost-compose.yml
+- Auto-creates backend/.env on first run with local defaults
+
+If needed, edit backend/.env before startup:
+- AUTH_MODE=local (default for self-host flow)
+- ports/credentials/origins as desired
+
+==================================================
+3) Start full self-host stack
+==================================================
+python3 stratum_bundle.py up
+
+Optional longer wait timeout:
+python3 stratum_bundle.py up --wait-timeout 300
+
+Services started by compose:
+- postgres
+- minio
+- backend (FastAPI + Alembic upgrade)
+- stratum-web
+- dashboard
+
+==================================================
+4) Verify health and capabilities
+==================================================
+python3 stratum_bundle.py status
+python3 stratum_bundle.py ps
+
+API checks:
+curl http://127.0.0.1:8000/api/health
+curl http://127.0.0.1:8000/api/system/status
+curl http://127.0.0.1:8000/api/capabilities
+
+Expected for local/self-host mode:
+- auth.auth_mode = local (or configured mode)
+- auth.google_auth_available = false in local mode
+- deployment.mode = self_hosted
+
+==================================================
+5) Manual UI smoke test
+==================================================
+Open in browser:
+- Dashboard: http://localhost:5173
+- STRATUM web build: http://localhost:19006
+- API health: http://localhost:8000/api/health
+- MinIO console: http://localhost:9001
+
+Dashboard checks:
+- Login page shows server/API URL control
+- Capability/mode banner reflects deployment and auth mode
+
+Mobile/web auth checks:
+- In local mode, Google sign-in should be disabled
+- Email/password path should be usable
+
+==================================================
+6) Logs and troubleshooting
+==================================================
+Follow backend logs:
+python3 stratum_bundle.py logs --follow backend
+
+Follow all logs:
+python3 stratum_bundle.py logs --follow
+
+Inspect current containers:
+python3 stratum_bundle.py ps
+
+Common issues:
+- Port conflict: free 5432/8000/9000/9001/19006/5173 or remap in env/compose
+- Docker not running: start Docker Desktop and retry
+- Slow pull/build: rerun install/up and wait longer timeout
+
+==================================================
+7) Restart / stop flow
+==================================================
+Restart stack:
+python3 stratum_bundle.py restart
+
+Stop stack:
+python3 stratum_bundle.py down
+
+Data persistence note:
+- PostgreSQL and MinIO use named Docker volumes and should persist data across restarts.
+
+==================================================
+8) Makefile equivalents
+==================================================
+make selfhost-install
+make selfhost-up
+make selfhost-status
+make selfhost-down
+
+==================================================
+9) Optional: Build launcher packages locally (.exe / .app / .deb)
+==================================================
+python3 -m pip install pyinstaller
+
+Windows (.exe):
+pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+Run: dist\\stratum-bundle.exe --help
+
+macOS (.app):
+pyinstaller --noconfirm --onedir --windowed --name stratum-bundle stratum_bundle.py
+Run bundle binary directly for CLI testing:
+./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle --help
+
+Linux (.deb):
+pyinstaller --noconfirm --onefile --name stratum-bundle stratum_bundle.py
+mkdir -p package-root/DEBIAN package-root/usr/local/bin
+install -m 0755 dist/stratum-bundle package-root/usr/local/bin/stratum-bundle
+cat > package-root/DEBIAN/control <<'EOF'
+Package: stratum-bundle
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: QuantumBits Team <maintainer@localhost>
+Depends: docker.io | docker-ce | docker-engine, docker-compose-plugin | docker-compose
+Description: STRATUM self-host bundle launcher
+ Cross-platform CLI launcher for running the STRATUM self-host stack.
+EOF
+dpkg-deb --build package-root dist/stratum-bundle_1.0.0_amd64.deb
+
+Then test the packaged launcher:
+- Windows: dist\\stratum-bundle.exe up
+- macOS: ./dist/stratum-bundle.app/Contents/MacOS/stratum-bundle up
+- Linux: install .deb then run stratum-bundle up
+
+==================================================
+10) Build all 3 package types in one run (recommended)
+==================================================
+If you want all three deliverables together (.exe, .app, .deb), use the
+GitHub Actions workflow because each package must be built on its native OS runner.
+
+Workflow file:
+- .github/workflows/bundle-launcher-binaries.yml
+
+Option A: GitHub UI
+1. Push your branch to GitHub.
+2. Open Actions tab.
+3. Run workflow: "Bundle Launcher Packages" (workflow_dispatch).
+4. Wait for all 3 jobs to finish:
+	- Build Windows .exe
+	- Build macOS .app
+	- Build Linux .deb
+5. Download artifacts:
+	- stratum-bundle-windows-exe
+	- stratum-bundle-macos-app
+	- stratum-bundle-linux-deb
+
+Option B: GitHub CLI
+gh workflow run bundle-launcher-binaries.yml --ref <your-branch>
+gh run watch
+gh run download --name stratum-bundle-windows-exe --dir artifacts/windows
+gh run download --name stratum-bundle-macos-app --dir artifacts/macos
+gh run download --name stratum-bundle-linux-deb --dir artifacts/linux
+
+Local testing after download:
+- Windows: run stratum-bundle.exe --help, then stratum-bundle.exe up
+- macOS: run stratum-bundle.app (or CLI binary inside app bundle) and test up/status/down
+- Linux: sudo dpkg -i stratum-bundle_<version>_amd64.deb, then stratum-bundle --help
+
+==================================================
+11) Quick copy/paste happy path
+==================================================
+cd /Users/andreibanu/QuantumBitsFLL2025-2026
+python3 stratum_bundle.py install
+python3 stratum_bundle.py up
+python3 stratum_bundle.py status
+curl http://127.0.0.1:8000/api/system/status
+python3 stratum_bundle.py logs --follow backend
+# when done:
+python3 stratum_bundle.py down

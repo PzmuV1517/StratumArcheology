@@ -207,7 +207,7 @@ export default function ChatBubble({
                 setShowActions(false);
               }}
             >
-              <Text style={styles.actionBtn}>↩ Reply</Text>
+              <Text style={styles.actionBtn}>Reply</Text>
             </TouchableOpacity>
           )}
           {isOwnMessage && onEdit && (
@@ -217,7 +217,7 @@ export default function ChatBubble({
                 setShowActions(false);
               }}
             >
-              <Text style={styles.actionBtn}>✏️ Edit</Text>
+              <Text style={styles.actionBtn}>Edit</Text>
             </TouchableOpacity>
           )}
           {isOwnMessage && onDelete && (
@@ -227,7 +227,7 @@ export default function ChatBubble({
                 setShowActions(false);
               }}
             >
-              <Text style={[styles.actionBtn, { color: "#FF3B30" }]}>🗑 Delete</Text>
+              <Text style={[styles.actionBtn, { color: "#FF3B30" }]}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>

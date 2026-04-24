@@ -1,8 +1,10 @@
-# Documentation Build Instructions
+# STRATUM Documentation Guide
 
-## Building the Documentation
+This folder contains product, API, and engineering documentation for STRATUM.
 
-The STRATUM documentation is written in reStructuredText (RST) and built with Sphinx.
+## Build Documentation
+
+The docs are written primarily in reStructuredText and built with Sphinx.
 
 ### Prerequisites
 
@@ -11,33 +13,42 @@ cd docs
 pip install -r requirements.txt
 ```
 
-### Build HTML Documentation
+### Build HTML
 
 ```bash
 cd docs
 make html
 ```
 
-The built documentation will be in `_build/html/`. Open `_build/html/index.html` in your browser.
+Output is generated under `_build/html/`.
 
-### Build PDF Documentation
+### Build PDF
 
 ```bash
+cd docs
 make latexpdf
 ```
 
-### Clean Build Files
+### Clean
 
 ```bash
+cd docs
 make clean
 ```
 
-## Publishing
+## Documentation Map
 
-The documentation can be hosted on:
+- `index.rst`: main table of contents
+- `development.rst`: engineering standards and contribution workflow
+- `frontend-styleguide.rst`: frontend visual and interaction standards
+- `api/*.rst`: API reference
+- `features.rst`, `forms.rst`, `files-management.rst`: product guides
 
-- GitHub Pages
-- Read the Docs
-- Custom web server
+## Style And Design Documentation
 
-See `publish-wiki.sh` for automated deployment scripts.
+If you are making frontend changes, review these first:
+
+1. `development.rst`
+2. `frontend-styleguide.rst`
+
+Keep docs in sync with implementation changes in the same pull request.

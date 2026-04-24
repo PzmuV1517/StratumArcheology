@@ -41,6 +41,7 @@ import {
 } from "react-native";
 import { showAlert } from "../../utils/alert";
 import { useColorScheme } from "../../hooks/use-color-scheme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 // Types for expo-location (dynamically imported)
 type LocationSubscription = { remove: () => void };
@@ -356,7 +357,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   if (Platform.OS === "web") {
     return (
       <View style={styles.webContainer}>
-        <Text style={styles.webIcon}>📱</Text>
+        <View style={styles.webIcon}>
+          <IconSymbol
+            name="globe.americas.fill"
+            size={40}
+            color={isDarkMode ? "#FF5A5A" : "#FF2A2A"}
+          />
+        </View>
         <Text style={styles.webTitle}>Mobile Only Feature</Text>
         <Text style={styles.webSubtitle}>
           The Tools tab with compass and GPS is only available on mobile devices.
@@ -380,7 +387,13 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
   if (!locationPermission) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionIcon}>📍</Text>
+        <View style={styles.permissionIcon}>
+          <IconSymbol
+            name="map"
+            size={40}
+            color={isDarkMode ? "#FF5A5A" : "#FF2A2A"}
+          />
+        </View>
         <Text style={styles.permissionTitle}>Location Access Required</Text>
         <Text style={styles.permissionText}>
           Enable location services to use the compass and GPS coordinate locator.
@@ -456,7 +469,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
                 watchingLocation && styles.watchButtonTextActive,
               ]}
             >
-              {watchingLocation ? "⏸ Pause" : "▶ Live"}
+              {watchingLocation ? "Pause" : "Live"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -554,8 +567,8 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             >
               <Text style={styles.copyAllButtonText}>
                 {copyFeedback === "Coordinates"
-                  ? "✓ Copied!"
-                  : "📋 Copy Coordinates"}
+                    ? "Copied!"
+                    : "Copy Coordinates"}
               </Text>
             </TouchableOpacity>
 
@@ -585,7 +598,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
             disabled={acquiringGPS}
           >
             <Text style={styles.refreshButtonText}>
-              {acquiringGPS ? "📡 Acquiring..." : "🔄 Refresh Location"}
+              {acquiringGPS ? "Acquiring..." : "Refresh Location"}
             </Text>
           </TouchableOpacity>
         )}
@@ -623,8 +636,15 @@ const createStyles = (isDarkMode: boolean) =>
       padding: 32,
     },
     permissionIcon: {
-      fontSize: 64,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      backgroundColor: isDarkMode ? "#131313" : "#FFFFFF",
       marginBottom: 24,
+      alignItems: "center",
+      justifyContent: "center",
     },
     permissionTitle: {
       fontSize: 20,
@@ -659,8 +679,15 @@ const createStyles = (isDarkMode: boolean) =>
       padding: 32,
     },
     webIcon: {
-      fontSize: 64,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      backgroundColor: isDarkMode ? "#131313" : "#FFFFFF",
       marginBottom: 24,
+      alignItems: "center",
+      justifyContent: "center",
     },
     webTitle: {
       fontSize: 20,

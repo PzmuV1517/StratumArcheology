@@ -158,6 +158,7 @@ class User(Base):
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # eMonument Roles
     auth_provider = Column(String, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
     is_emonument_privileged = Column(Boolean, default=False, nullable=False)
     is_dashboard_admin = Column(Boolean, default=False, nullable=False)
     is_account_disabled = Column(Boolean, default=False, nullable=False)
@@ -257,6 +258,14 @@ class Note(Base):
         nullable=False,
     )
     shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
+
+    # Transcription fields (voice notes only)
+    transcription = Column(Text, nullable=True)
+    transcription_original = Column(Text, nullable=True)
+    transcription_modified = Column(Boolean, default=False, nullable=False)
+    transcription_status = Column(
+        String, nullable=True
+    )  # 'pending' | 'processing' | 'completed' | 'failed'
 
     # Relationships
     project = relationship("Project", back_populates="notes")

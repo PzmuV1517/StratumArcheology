@@ -3056,7 +3056,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
           }}
         >
           <div style={modalContentStyle}>
-            <h3 style={{ margin: "0 0 8px", color: "#FF2A2A" }}>⚠ Sync Conflict</h3>
+            <h3 style={{ margin: "0 0 8px", color: "#FF2A2A" }}>Sync Conflict</h3>
             <p style={{ margin: "0 0 12px", color: "#ccc", fontSize: 13 }}>
               You have unsaved local changes, but the server also has a newer
               version. You can choose what to do below. If you're unsure, it's

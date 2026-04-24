@@ -38,6 +38,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Audio } from "expo-av";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
@@ -90,6 +91,7 @@ export default function NotesSection({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const router = useRouter();
 
   const MiniAudio = ({
     url,
@@ -200,18 +202,19 @@ export default function NotesSection({
         const data = new Uint8Array(analyser.fftSize);
         const g = canvasRef.current.getContext("2d")!;
         const draw = () => {
-          if (!mounted) return;
+          if (!mounted || !canvasRef.current) return;
           rafRef.current = requestAnimationFrame(draw);
           analyser!.getByteTimeDomainData(data);
-          g.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+          const w = canvasRef.current.width;
+          const h = canvasRef.current.height;
+          g.clearRect(0, 0, w, h);
           g.strokeStyle = "#FF2A2A";
           g.lineWidth = 2;
           g.beginPath();
-          const slice = canvasRef.current!.width / data.length;
+          const slice = w / data.length;
           for (let i = 0; i < data.length; i++) {
             const v = data[i] / 128 - 1;
-            const y =
-              (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+            const y = (v * h) / 2 + h / 2;
             if (i === 0) g.moveTo(0, y);
             else g.lineTo(i * slice, y);
           }
@@ -300,13 +303,17 @@ export default function NotesSection({
     return (
       <View style={styles.noteCard}>
         <TouchableOpacity
-          onPress={() => !isVoice && onNotePress(item.id)}
-          activeOpacity={isVoice ? 1 : 0.7}
+          onPress={() =>
+            isVoice
+              ? router.push({ pathname: "/voice-note/[id]", params: { id: item.id } })
+              : onNotePress(item.id)
+          }
+          activeOpacity={0.7}
         >
           <View style={styles.noteHeader}>
             <Text style={styles.noteTitle} numberOfLines={1}>
               {item.title}
-              {isVoice ? " 🔊" : ""}
+              {isVoice ? " (Voice)" : ""}
             </Text>
             <Text style={styles.noteDate}>
               {new Date(item.updated_at).toLocaleDateString(undefined, {

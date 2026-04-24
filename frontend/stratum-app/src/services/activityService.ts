@@ -89,50 +89,50 @@ export const activityService = {
   getActivityIcon: (activityType: ActivityType | string): string => {
     const iconMap: Record<string, string> = {
       // Project
-      [ActivityType.PROJECT_CREATED]: "🎉",
-      [ActivityType.PROJECT_UPDATED]: "✏️",
-      [ActivityType.PROJECT_DELETED]: "🗑️",
+      [ActivityType.PROJECT_CREATED]: "P+",
+      [ActivityType.PROJECT_UPDATED]: "P~",
+      [ActivityType.PROJECT_DELETED]: "P-",
 
       // Members
-      [ActivityType.MEMBER_JOINED]: "👋",
-      [ActivityType.MEMBER_LEFT]: "👤",
-      [ActivityType.MEMBER_ROLE_CHANGED]: "🔄",
-      [ActivityType.OWNERSHIP_TRANSFERRED]: "👑",
+      [ActivityType.MEMBER_JOINED]: "M+",
+      [ActivityType.MEMBER_LEFT]: "M-",
+      [ActivityType.MEMBER_ROLE_CHANGED]: "MR",
+      [ActivityType.OWNERSHIP_TRANSFERRED]: "MT",
 
       // Files
-      [ActivityType.FILE_UPLOADED]: "📄",
-      [ActivityType.FILE_UPDATED]: "📄",
-      [ActivityType.FILE_DELETED]: "🗑️",
-      [ActivityType.FILE_MOVED]: "📁",
-      [ActivityType.FILE_RENAMED]: "✏️",
-      [ActivityType.FOLDER_CREATED]: "📁",
-      [ActivityType.FOLDER_DELETED]: "🗑️",
+      [ActivityType.FILE_UPLOADED]: "F+",
+      [ActivityType.FILE_UPDATED]: "F~",
+      [ActivityType.FILE_DELETED]: "F-",
+      [ActivityType.FILE_MOVED]: "FM",
+      [ActivityType.FILE_RENAMED]: "FR",
+      [ActivityType.FOLDER_CREATED]: "D+",
+      [ActivityType.FOLDER_DELETED]: "D-",
 
       // Notes
-      [ActivityType.NOTE_CREATED]: "📝",
-      [ActivityType.NOTE_UPDATED]: "✏️",
-      [ActivityType.NOTE_DELETED]: "🗑️",
-      [ActivityType.NOTE_ATTACHMENT_ADDED]: "📎",
-      [ActivityType.NOTE_ATTACHMENT_DELETED]: "📎",
+      [ActivityType.NOTE_CREATED]: "N+",
+      [ActivityType.NOTE_UPDATED]: "N~",
+      [ActivityType.NOTE_DELETED]: "N-",
+      [ActivityType.NOTE_ATTACHMENT_ADDED]: "A+",
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: "A-",
 
       // Forms
-      [ActivityType.CONTEXT_FEATURE_CREATED]: "🏛️",
-      [ActivityType.CONTEXT_FEATURE_ADDED]: "🏛️",
-      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "📊",
-      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "📊",
-      [ActivityType.ARTEFACT_CREATED]: "🏺",
-      [ActivityType.ARTEFACT_ADDED]: "🏺",
+      [ActivityType.CONTEXT_FEATURE_CREATED]: "C+",
+      [ActivityType.CONTEXT_FEATURE_ADDED]: "C+",
+      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "S+",
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "S+",
+      [ActivityType.ARTEFACT_CREATED]: "AR",
+      [ActivityType.ARTEFACT_ADDED]: "AR",
 
       // GPS
-      [ActivityType.GPS_ENABLED]: "📍",
-      [ActivityType.GPS_DISABLED]: "📍",
-      [ActivityType.GPS_UPDATED]: "📍",
+      [ActivityType.GPS_ENABLED]: "G",
+      [ActivityType.GPS_DISABLED]: "G",
+      [ActivityType.GPS_UPDATED]: "G",
 
       // Harris Matrix
-      [ActivityType.HARRIS_MATRIX_UPDATED]: "🔗",
+      [ActivityType.HARRIS_MATRIX_UPDATED]: "HM",
     };
 
-    return iconMap[activityType] || "📌";
+    return iconMap[activityType] || "ACT";
   },
 
   /**

@@ -117,6 +117,21 @@ type BackupScheduleResponse = {
   seconds_until_next_backup: number | null
 }
 
+type CapabilitiesResponse = {
+  deployment?: {
+    mode?: string
+    self_hosted_bundle?: boolean
+  }
+  auth?: {
+    auth_mode?: string
+    firebase_enabled?: boolean
+    firebase_ready?: boolean
+    google_auth_available?: boolean
+    local_auth_available?: boolean
+  }
+  warnings?: string[]
+}
+
 type UserMenuState = {
   userId: string
   top: number
@@ -133,7 +148,9 @@ const INSTANCE_META_FIELDS = [
   'rejection_reason',
 ] as const
 
-const resolveApiBaseUrl = () => {
+const DASHBOARD_API_OVERRIDE_KEY = 'dashboard_api_base_url_override'
+
+const resolveDefaultApiBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL?.trim()
   if (configuredApiUrl) return configuredApiUrl
 
@@ -144,6 +161,15 @@ const resolveApiBaseUrl = () => {
   return 'http://localhost:8000/api'
 }
 
+const resolveApiBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return resolveDefaultApiBaseUrl()
+  }
+
+  const override = window.localStorage.getItem(DASHBOARD_API_OVERRIDE_KEY)?.trim()
+  return override || resolveDefaultApiBaseUrl()
+}
+
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
 })
@@ -151,6 +177,13 @@ const api = axios.create({
 const isDev = Boolean(import.meta.env.DEV)
 
 function App() {
+  const [apiBaseUrl, setApiBaseUrl] = useState<string>(() => resolveApiBaseUrl())
+  const [apiBaseInput, setApiBaseInput] = useState<string>(() => resolveApiBaseUrl())
+  const [showServerModal, setShowServerModal] = useState(false)
+  const [savingServerConfig, setSavingServerConfig] = useState(false)
+  const [capabilities, setCapabilities] = useState<CapabilitiesResponse | null>(null)
+  const [capabilitiesLoading, setCapabilitiesLoading] = useState(false)
+
   const [token, setToken] = useState<string | null>(localStorage.getItem('dashboard_token'))
   const [me, setMe] = useState<User | null>(null)
   const [tab, setTab] = useState<'users' | 'instances' | 'downloads' | 'backups' | 'form-view'>('users')
@@ -212,6 +245,12 @@ function App() {
     () => Boolean(me?.is_maintainer),
     [me?.is_maintainer],
   )
+
+  const authModeLabel = capabilities?.auth?.auth_mode ?? 'unknown'
+  const deploymentModeLabel = capabilities?.deployment?.mode ?? 'unknown'
+  const googleAuthAvailable = capabilities?.auth?.google_auth_available !== false
+  const isSelfHostedServer =
+    deploymentModeLabel === 'self_hosted' || Boolean(capabilities?.deployment?.self_hosted_bundle)
 
   const openUserMenuUser = useMemo(
     () => (openUserMenu ? users.find((user) => user.id === openUserMenu.userId) ?? null : null),
@@ -1085,6 +1124,84 @@ function App() {
     setError(null)
   }
 
+  const clearSessionAfterServerSwitch = () => {
+    localStorage.removeItem('dashboard_token')
+    setToken(null)
+    setMe(null)
+    setUsers([])
+    setInstances([])
+    setBackups([])
+    setBackupDiffsById({})
+    setBackupSchedule(null)
+    setOpenUserMenu(null)
+    setTab('users')
+  }
+
+  const loadCapabilities = async () => {
+    setCapabilitiesLoading(true)
+    try {
+      const res = await api.get<CapabilitiesResponse>('/capabilities')
+      setCapabilities(res.data)
+      return res.data
+    } catch {
+      setCapabilities(null)
+      return null
+    } finally {
+      setCapabilitiesLoading(false)
+    }
+  }
+
+  const openServerModal = () => {
+    setApiBaseInput(apiBaseUrl)
+    setShowServerModal(true)
+  }
+
+  const isValidApiBaseUrl = (value: string) => /^https?:\/\//i.test(value.trim())
+
+  const saveServerApiBaseUrl = async () => {
+    const normalized = apiBaseInput.trim()
+    if (!isValidApiBaseUrl(normalized)) {
+      setError('Server API URL must start with http:// or https:// and include /api')
+      return
+    }
+
+    setSavingServerConfig(true)
+    try {
+      localStorage.setItem(DASHBOARD_API_OVERRIDE_KEY, normalized)
+      api.defaults.baseURL = normalized
+      setApiBaseUrl(normalized)
+      setApiBaseInput(normalized)
+      await loadCapabilities()
+      clearSessionAfterServerSwitch()
+      setShowServerModal(false)
+      setError('Server changed. Sign in again on the selected backend.')
+    } finally {
+      setSavingServerConfig(false)
+    }
+  }
+
+  const resetServerApiBaseUrl = async () => {
+    setSavingServerConfig(true)
+    try {
+      const fallback = resolveDefaultApiBaseUrl()
+      localStorage.removeItem(DASHBOARD_API_OVERRIDE_KEY)
+      api.defaults.baseURL = fallback
+      setApiBaseUrl(fallback)
+      setApiBaseInput(fallback)
+      await loadCapabilities()
+      clearSessionAfterServerSwitch()
+      setShowServerModal(false)
+      setError('Server reset to default. Sign in again.')
+    } finally {
+      setSavingServerConfig(false)
+    }
+  }
+
+  useEffect(() => {
+    api.defaults.baseURL = apiBaseUrl
+    void loadCapabilities()
+  }, [apiBaseUrl])
+
   const formatBytes = (bytes: number) => {
     if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
     const units = ['B', 'KB', 'MB', 'GB']
@@ -1572,56 +1689,137 @@ function App() {
     setMe(null)
   }
 
+  const renderServerModal = () => {
+    if (!showServerModal) return null
+
+    return createPortal(
+      <div className="server-modal-overlay" onClick={() => setShowServerModal(false)}>
+        <section className="server-modal-card" onClick={(event) => event.stopPropagation()}>
+          <h3>Server API Base URL</h3>
+          <p className="panel-subtle">
+            Switch between cloud and self-hosted backends. Include the full /api URL.
+          </p>
+
+          <label>
+            API Base URL
+            <input
+              type="text"
+              placeholder="http://host:8000/api"
+              value={apiBaseInput}
+              onChange={(event) => setApiBaseInput(event.target.value)}
+            />
+          </label>
+
+          <div className="server-modal-meta">
+            <span>
+              Current mode: <strong>{deploymentModeLabel}</strong>
+            </span>
+            <span>
+              Auth mode: <strong>{authModeLabel}</strong>
+            </span>
+            <span>
+              Google auth: <strong>{googleAuthAvailable ? 'available' : 'disabled'}</strong>
+            </span>
+          </div>
+
+          <div className="server-modal-actions">
+            <button className="ghost" onClick={() => setShowServerModal(false)} disabled={savingServerConfig}>
+              Cancel
+            </button>
+            <button className="ghost" onClick={() => void resetServerApiBaseUrl()} disabled={savingServerConfig}>
+              Reset Default
+            </button>
+            <button onClick={() => void saveServerApiBaseUrl()} disabled={savingServerConfig}>
+              {savingServerConfig ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </section>
+      </div>,
+      document.body,
+    )
+  }
+
   if (!token || !me) {
     return (
-      <main className="login-shell">
-        <section className="login-panel">
-          <h1>eMonument Dashboard</h1>
-          <p className="subtitle">Control Center for verification, approval and account governance</p>
-          <form onSubmit={handleLogin} className="stack">
-            <label>
-              Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </label>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-            {isDev ? (
-              <button type="button" className="small ghost" onClick={fillLoginDev}>
-                DEV Autofill
+      <>
+        <main className="login-shell">
+          <section className="login-panel">
+            <h1>eMonument Dashboard</h1>
+            <p className="subtitle">Control Center for verification, approval and account governance</p>
+            <p className="server-current">
+              API endpoint: <code>{apiBaseUrl}</code>
+            </p>
+            <form onSubmit={handleLogin} className="stack">
+              <label>
+                Email
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </label>
+              <button type="submit" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
               </button>
-            ) : null}
-          </form>
-          {error ? <p className="error-msg">{error}</p> : null}
-        </section>
-      </main>
+              <button type="button" className="small ghost" onClick={openServerModal}>
+                Server & API URL
+              </button>
+              {isDev ? (
+                <button type="button" className="small ghost" onClick={fillLoginDev}>
+                  DEV Autofill
+                </button>
+              ) : null}
+            </form>
+            {error ? <p className="error-msg">{error}</p> : null}
+          </section>
+        </main>
+        {renderServerModal()}
+      </>
     )
   }
 
   return (
-    <main className="dashboard-shell">
-      <header className="topbar">
-        <div>
-          <h2>eMonument Operations</h2>
-          <p>
-            Logged as <strong>{me.email}</strong>
-          </p>
-        </div>
-        <button className="ghost" onClick={logout}>
-          <LogOut size={16} /> Logout
-        </button>
-      </header>
+    <>
+      <main className="dashboard-shell">
+        <header className="topbar">
+          <div>
+            <h2>eMonument Operations</h2>
+            <p>
+              Logged as <strong>{me.email}</strong>
+            </p>
+            <p className="topbar-meta">
+              API endpoint: <code>{apiBaseUrl}</code>
+            </p>
+          </div>
+          <div className="topbar-actions">
+            <button className="ghost" onClick={openServerModal}>
+              Server
+            </button>
+            <button className="ghost" onClick={logout}>
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
+        </header>
 
-      <nav className="tabs">
+        <section className={`mode-banner ${isSelfHostedServer || !googleAuthAvailable ? 'warn' : ''}`}>
+          <span>
+            Deployment: <strong>{deploymentModeLabel}</strong>
+          </span>
+          <span>
+            Auth mode: <strong>{authModeLabel}</strong>
+          </span>
+          <span>
+            Google auth: <strong>{googleAuthAvailable ? 'available' : 'disabled'}</strong>
+          </span>
+          {capabilitiesLoading ? <span className="mode-banner-faint">Refreshing capabilities...</span> : null}
+        </section>
+
+        <nav className="tabs">
         <button className={tab === 'users' ? 'active' : ''} onClick={() => setTab('users')}>
           <Users size={16} /> Accounts
         </button>
@@ -2467,7 +2665,9 @@ function App() {
             document.body,
           )
         : null}
-    </main>
+      </main>
+      {renderServerModal()}
+    </>
   )
 }
 

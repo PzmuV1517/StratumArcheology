@@ -45,6 +45,8 @@ export interface NoteServiceMethods {
   uploadAudioBlob?: (noteId: string, blob: Blob, filename?: string) => Promise<any>;
   uploadPhoto: (noteId: string, photoData: any) => Promise<any>;
   uploadAttachment: (noteId: string, ...args: any[]) => Promise<any>;
+  updateTranscription: (noteId: string, text: string) => Promise<any>;
+  resetTranscription: (noteId: string) => Promise<any>;
 }
 
 /**

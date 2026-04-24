@@ -1164,10 +1164,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           );
           const isRedundant = redundantIndices.has(index);
           const status = conflict
-            ? "⚠️ Conflict"
+            ? "Conflict"
             : isRedundant
-              ? "ℹ️ Redundant"
-              : "✅ Valid";
+              ? "Redundant"
+              : "Valid";
           const style = conflict
             ? "background: #ffebee;"
             : isRedundant
