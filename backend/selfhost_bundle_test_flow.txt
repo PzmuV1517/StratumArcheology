@@ -15,22 +15,27 @@ Optional check:
 - python3 stratum_bundle.py --help
 
 ==================================================
-2) First-time install (pull images + create backend/.env)
+2) Initialize (recommended one-shot setup + start)
 ==================================================
 cd /Users/andreibanu/QuantumBitsFLL2025-2026
-python3 stratum_bundle.py install
+python3 stratum_bundle.py initialize
 
 What this does:
 - Pulls required images from selfhost-compose.yml
 - Auto-creates backend/.env on first run with local defaults
+- Boots the full stack and waits for backend readiness
+
+Optional longer wait timeout:
+python3 stratum_bundle.py initialize --wait-timeout 300
 
 If needed, edit backend/.env before startup:
 - AUTH_MODE=local (default for self-host flow)
 - ports/credentials/origins as desired
 
 ==================================================
-3) Start full self-host stack
+3) Advanced split flow (install, then up)
 ==================================================
+python3 stratum_bundle.py install
 python3 stratum_bundle.py up
 
 Optional longer wait timeout:
@@ -91,7 +96,7 @@ python3 stratum_bundle.py ps
 Common issues:
 - Port conflict: free 5432/8000/9000/9001/19006/5173 or remap in env/compose
 - Docker not running: start Docker Desktop and retry
-- Slow pull/build: rerun install/up and wait longer timeout
+- Slow pull/build: rerun initialize (or install/up) and wait longer timeout
 
 ==================================================
 7) Restart / stop flow
@@ -220,10 +225,11 @@ gh run download --name stratum-bundle-macos-app --dir artifacts/macos
 gh run download --name stratum-bundle-linux-deb --dir artifacts/linux
 
 Local testing after download:
-- Windows: run stratum-bundle.exe --help, then stratum-bundle.exe up
+- Windows: run stratum-bundle.exe --help, then stratum-bundle.exe initialize
 - macOS: unzip stratum-bundle.app.zip, then run stratum-bundle.app (or CLI binary
 	inside app bundle) and test up/status/down
 - Linux: sudo dpkg -i stratum-bundle_<version>_amd64.deb, then stratum-bundle --help
+  and stratum-bundle initialize
 
 To open the interactive UI from packaged binaries:
 - Windows: stratum-bundle.exe ui
@@ -234,8 +240,7 @@ To open the interactive UI from packaged binaries:
 11) Quick copy/paste happy path
 ==================================================
 cd /Users/andreibanu/QuantumBitsFLL2025-2026
-python3 stratum_bundle.py install
-python3 stratum_bundle.py up
+python3 stratum_bundle.py initialize
 python3 stratum_bundle.py status
 curl http://127.0.0.1:8000/api/system/status
 python3 stratum_bundle.py logs --follow backend

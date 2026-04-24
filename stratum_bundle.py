@@ -366,7 +366,7 @@ def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
                 return None
             raw = response.read().decode("utf-8")
             return json.loads(raw)
-    except (URLError, TimeoutError, ValueError):
+    except (URLError, TimeoutError, ValueError, OSError):
         return None
 
 
@@ -435,7 +435,13 @@ def _print_runtime_stats() -> None:
 def cmd_install(_args: argparse.Namespace) -> None:
     _ensure_backend_env()
     _run(_compose_cmd("pull"))
-    _print("Install step complete. Run 'python stratum_bundle.py up' to start.")
+    _print("Install step complete.")
+
+
+def cmd_initialize(args: argparse.Namespace) -> None:
+    """One-shot setup + start flow used by UI option 1."""
+    cmd_install(argparse.Namespace())
+    cmd_up(args)
 
 
 def cmd_up(args: argparse.Namespace) -> None:
@@ -537,7 +543,7 @@ def _render_terminal_ui() -> None:
 
     print()
     print("Actions")
-    print("[1] Install images")
+    print("[1] Initialize (setup + start)")
     print("[2] Start stack (up)")
     print("[3] Show status")
     print("[4] Follow backend logs")
@@ -585,7 +591,7 @@ def cmd_ui(_args: argparse.Namespace) -> None:
 
         try:
             if choice == "1":
-                cmd_install(argparse.Namespace())
+                cmd_initialize(argparse.Namespace(wait_timeout=180))
                 _pause()
             elif choice == "2":
                 cmd_up(argparse.Namespace(wait_timeout=180))
@@ -614,6 +620,9 @@ def cmd_ui(_args: argparse.Namespace) -> None:
         except KeyboardInterrupt:
             print("\nAction interrupted.")
             _pause()
+        except Exception as exc:
+            _print(f"ERROR: {exc}")
+            _pause()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -624,6 +633,18 @@ def _build_parser() -> argparse.ArgumentParser:
 
     install_parser = sub.add_parser("install", help="Pull required container images")
     install_parser.set_defaults(func=cmd_install)
+
+    initialize_parser = sub.add_parser(
+        "initialize",
+        help="Run full setup and then start the self-host stack",
+    )
+    initialize_parser.add_argument(
+        "--wait-timeout",
+        type=int,
+        default=180,
+        help="Seconds to wait for backend readiness",
+    )
+    initialize_parser.set_defaults(func=cmd_initialize)
 
     up_parser = sub.add_parser("up", help="Start the full self-host stack")
     up_parser.add_argument(
