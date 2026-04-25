@@ -1,0 +1,44 @@
+# Self-host runtime requirements
+# This profile excludes heavyweight optional/build-sensitive deps
+# (e.g. openai-whisper, laspy, lazrs, dev tooling) to keep first boot reliable.
+
+# Web Framework
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Database
+sqlalchemy>=2.0.23
+psycopg[binary]>=3.2.10
+alembic>=1.12.1
+
+# Authentication
+firebase-admin>=6.2.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Object Storage
+minio>=7.2.0
+
+# Environment & Configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+pydantic[email]
+
+# CORS & Security
+fastapi-cors>=0.0.6
+slowapi>=0.1.9
+
+# WebSocket
+python-socketio>=5.11.0
+python-engineio>=4.9.0
+
+# Utilities
+httpx>=0.25.2
+python-dateutil>=2.8.2
+pillow>=10.1.0
+aiohttp>=3.9.0
+
+# Logging
+structlog==25.5.0

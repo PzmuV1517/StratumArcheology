@@ -13,21 +13,29 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
+import shlex
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
 from urllib.error import URLError
 from urllib.request import urlopen
 
-ROOT_DIR = Path(__file__).resolve().parent
-COMPOSE_FILE = ROOT_DIR / "selfhost-compose.yml"
-BACKEND_ENV_FILE = ROOT_DIR / "backend" / ".env"
 STATUS_URL = "http://127.0.0.1:8000/api/system/status"
 CAPABILITIES_URL = "http://127.0.0.1:8000/api/capabilities"
+CONFIG_DIR = Path.home() / ".stratum-bundle"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+RUNTIME_DIR = CONFIG_DIR / "runtime"
+RUNTIME_PROJECT_ROOT = RUNTIME_DIR / "project"
+RUNTIME_PAYLOAD_VERSION_FILE = RUNTIME_DIR / ".payload_version"
+BUNDLE_PAYLOAD_VERSION = "2026-04-24.4"
+
+_runtime_project_root_override: Path | None = None
 
 
 def _print(msg: str) -> None:
@@ -37,6 +45,221 @@ def _print(msg: str) -> None:
 def _fail(msg: str, code: int = 1) -> None:
     _print(f"ERROR: {msg}")
     raise SystemExit(code)
+
+
+def _load_saved_project_root() -> Path | None:
+    try:
+        if not CONFIG_FILE.exists():
+            return None
+        payload = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    path_value = payload.get("project_root")
+    if not isinstance(path_value, str) or not path_value.strip():
+        return None
+
+    candidate = Path(path_value).expanduser().resolve()
+    if _has_project_layout(candidate):
+        return candidate
+    return None
+
+
+def _save_project_root(project_root: Path) -> None:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {"project_root": str(project_root)}
+    CONFIG_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _has_project_layout(root: Path) -> bool:
+    return (
+        (root / "selfhost-compose.yml").exists()
+        and (root / "backend").exists()
+        and (root / "frontend" / "stratum-app").exists()
+        and (root / "frontend" / "dashboard").exists()
+    )
+
+
+def _possible_embedded_roots() -> list[Path]:
+    roots: list[Path] = []
+    if not getattr(sys, "frozen", False):
+        return roots
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        roots.append(Path(meipass))
+
+    exe_path = Path(sys.executable).resolve()
+    roots.append(exe_path.parent)
+    roots.append(exe_path.parent.parent)
+    roots.append(exe_path.parent.parent.parent)
+
+    if ".app/Contents/MacOS/" in exe_path.as_posix():
+        contents_dir = exe_path.parent.parent
+        roots.append(contents_dir / "Resources")
+        roots.append(contents_dir / "Frameworks")
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        try:
+            resolved = root.resolve()
+        except Exception:
+            continue
+        resolved_str = str(resolved)
+        if resolved_str in seen:
+            continue
+        seen.add(resolved_str)
+        unique.append(resolved)
+
+    return unique
+
+
+def _resolve_embedded_project_root() -> Path | None:
+    for root in _possible_embedded_roots():
+        if _has_project_layout(root):
+            return root
+    return None
+
+
+def _materialize_embedded_project_root() -> Path | None:
+    embedded_root = _resolve_embedded_project_root()
+    if embedded_root is None:
+        return None
+
+    current_version = ""
+    if RUNTIME_PAYLOAD_VERSION_FILE.exists():
+        try:
+            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(encoding="utf-8").strip()
+        except Exception:
+            current_version = ""
+
+    if _has_project_layout(RUNTIME_PROJECT_ROOT) and current_version == BUNDLE_PAYLOAD_VERSION:
+        return RUNTIME_PROJECT_ROOT
+
+    runtime_parent = RUNTIME_PROJECT_ROOT.parent
+    runtime_parent.mkdir(parents=True, exist_ok=True)
+    if RUNTIME_PROJECT_ROOT.exists():
+        shutil.rmtree(RUNTIME_PROJECT_ROOT, ignore_errors=True)
+
+    RUNTIME_PROJECT_ROOT.mkdir(parents=True, exist_ok=True)
+    for relative in ["selfhost-compose.yml", "backend", "frontend"]:
+        source = embedded_root / relative
+        target = RUNTIME_PROJECT_ROOT / relative
+        if not source.exists():
+            continue
+        if source.is_dir():
+            shutil.copytree(source, target)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
+    if not _has_project_layout(RUNTIME_PROJECT_ROOT):
+        return None
+
+    RUNTIME_PAYLOAD_VERSION_FILE.write_text(BUNDLE_PAYLOAD_VERSION, encoding="utf-8")
+    _save_project_root(RUNTIME_PROJECT_ROOT)
+    return RUNTIME_PROJECT_ROOT
+
+
+def _iter_project_root_candidates() -> list[Path]:
+    candidates: list[Path] = []
+
+    env_root = os.environ.get("STRATUM_BUNDLE_ROOT", "").strip()
+    if env_root:
+        candidates.append(Path(env_root).expanduser())
+
+    if _runtime_project_root_override is not None:
+        candidates.append(_runtime_project_root_override)
+
+    cwd = Path.cwd()
+    candidates.append(cwd)
+    candidates.extend(cwd.parents)
+
+    saved_root = _load_saved_project_root()
+    if saved_root is not None:
+        candidates.append(saved_root)
+
+    materialized_root = _materialize_embedded_project_root()
+    if materialized_root is not None:
+        candidates.append(materialized_root)
+
+    embedded_root = _resolve_embedded_project_root()
+    if embedded_root is not None:
+        candidates.append(embedded_root)
+
+    if getattr(sys, "frozen", False):
+        exe_path = Path(sys.executable).resolve()
+        candidates.append(exe_path.parent)
+        candidates.append(exe_path.parent.parent)
+        candidates.append(exe_path.parent.parent.parent)
+
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidates.append(Path(meipass))
+
+        if ".app/Contents/MacOS/" in exe_path.as_posix():
+            contents_dir = exe_path.parent.parent
+            candidates.append(contents_dir / "Resources")
+            candidates.append(contents_dir / "Frameworks")
+    else:
+        candidates.append(Path(__file__).resolve().parent)
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        resolved_str = str(resolved)
+        if resolved_str in seen:
+            continue
+        seen.add(resolved_str)
+        unique.append(resolved)
+
+    return unique
+
+
+def _resolve_project_root(*, strict: bool) -> Path | None:
+    for candidate in _iter_project_root_candidates():
+        if _has_project_layout(candidate):
+            return candidate
+
+    if strict:
+        _fail(
+            "Could not locate selfhost-compose.yml. "
+            "Set STRATUM_BUNDLE_ROOT to your project root, use set-root, "
+            "or rebuild the packaged binary so embedded project files are included."
+        )
+    return None
+
+
+def _set_project_root(path: Path, *, persist: bool = True) -> Path:
+    global _runtime_project_root_override
+
+    resolved = path.expanduser().resolve()
+    compose_file = resolved / "selfhost-compose.yml"
+    if not compose_file.exists():
+        _fail(f"No selfhost-compose.yml found at: {compose_file}")
+
+    _runtime_project_root_override = resolved
+    if persist:
+        _save_project_root(resolved)
+
+    return resolved
+
+
+def _compose_file() -> Path:
+    project_root = _resolve_project_root(strict=True)
+    assert project_root is not None
+    return project_root / "selfhost-compose.yml"
+
+
+def _backend_env_file() -> Path:
+    project_root = _resolve_project_root(strict=True)
+    assert project_root is not None
+    return project_root / "backend" / ".env"
 
 
 def _find_compose_base_cmd() -> list[str]:
@@ -59,7 +282,7 @@ def _find_compose_base_cmd() -> list[str]:
 
 
 def _compose_cmd(*args: str) -> list[str]:
-    return [*_find_compose_base_cmd(), "-f", str(COMPOSE_FILE), *args]
+    return [*_find_compose_base_cmd(), "-f", str(_compose_file()), *args]
 
 
 def _run(
@@ -70,9 +293,10 @@ def _run(
     check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     _print("$ " + " ".join(cmd))
+    default_cwd = _resolve_project_root(strict=False) or Path.cwd()
     return subprocess.run(
         cmd,
-        cwd=cwd or ROOT_DIR,
+        cwd=cwd or default_cwd,
         text=True,
         capture_output=capture,
         check=check,
@@ -101,7 +325,7 @@ def _default_backend_env() -> str:
             f"POSTGRES_DB={postgres_db}",
             "POSTGRES_HOST=postgres",
             "POSTGRES_PORT=5432",
-            f"DATABASE_URL=postgresql://{postgres_user}:{postgres_password}@postgres:5432/{postgres_db}",
+            f"DATABASE_URL=postgresql+psycopg://{postgres_user}:{postgres_password}@postgres:5432/{postgres_db}",
             "MINIO_ENDPOINT=minio:9000",
             f"MINIO_ACCESS_KEY={minio_access}",
             f"MINIO_SECRET_KEY={minio_secret}",
@@ -123,11 +347,16 @@ def _default_backend_env() -> str:
 
 
 def _ensure_backend_env() -> None:
-    if BACKEND_ENV_FILE.exists():
+    backend_env_file = _backend_env_file()
+    backend_dir = backend_env_file.parent
+    if not backend_dir.exists():
+        _fail(f"Backend directory not found: {backend_dir}")
+
+    if backend_env_file.exists():
         return
 
-    BACKEND_ENV_FILE.write_text(_default_backend_env(), encoding="utf-8")
-    _print(f"Created {BACKEND_ENV_FILE} with local self-host defaults")
+    backend_env_file.write_text(_default_backend_env(), encoding="utf-8")
+    _print(f"Created {backend_env_file} with local self-host defaults")
 
 
 def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
@@ -137,7 +366,7 @@ def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
                 return None
             raw = response.read().decode("utf-8")
             return json.loads(raw)
-    except (URLError, TimeoutError, ValueError):
+    except (URLError, TimeoutError, ValueError, OSError):
         return None
 
 
@@ -206,7 +435,13 @@ def _print_runtime_stats() -> None:
 def cmd_install(_args: argparse.Namespace) -> None:
     _ensure_backend_env()
     _run(_compose_cmd("pull"))
-    _print("Install step complete. Run 'python stratum_bundle.py up' to start.")
+    _print("Install step complete.")
+
+
+def cmd_initialize(args: argparse.Namespace) -> None:
+    """One-shot setup + start flow used by UI option 1."""
+    cmd_install(argparse.Namespace())
+    cmd_up(args)
 
 
 def cmd_up(args: argparse.Namespace) -> None:
@@ -253,6 +488,143 @@ def cmd_logs(args: argparse.Namespace) -> None:
     _run(cmd, check=False)
 
 
+def _clear_screen() -> None:
+    print("\033[2J\033[H", end="")
+
+
+def _render_terminal_ui() -> None:
+    host_ip = _get_host_ip()
+    project_root = _resolve_project_root(strict=False)
+    status_payload = _http_get_json(STATUS_URL, timeout=2.0)
+    capabilities = _http_get_json(CAPABILITIES_URL, timeout=2.0)
+
+    print("STRATUM Self-Host Launcher")
+    print("==========================")
+    print()
+    print("Endpoints")
+    print(f"- API base:   http://{host_ip}:8000/api")
+    print(f"- API health: http://{host_ip}:8000/api/health")
+    print(f"- Mobile web: http://{host_ip}:19006")
+    print(f"- Dashboard:  http://{host_ip}:5173")
+    print(f"- MinIO API:  http://{host_ip}:9000")
+    print(f"- MinIO UI:   http://{host_ip}:9001")
+    if project_root is not None:
+        print(f"- Project:    {project_root}")
+    else:
+        print("- Project:    not configured (choose action 7)")
+    print()
+
+    if status_payload:
+        services = status_payload.get("services", {})
+        resources = status_payload.get("resources", {})
+
+        print("Runtime")
+        print(f"- Status:     {status_payload.get('status', 'unknown')}")
+        print(f"- Uptime(s):  {status_payload.get('uptime_seconds', 'n/a')}")
+        print(f"- Memory MB:  {resources.get('memory_rss_mb', 'n/a')}")
+        print(f"- Database:   {services.get('database', 'unknown')}")
+        print(f"- Storage:    {services.get('storage', 'unknown')}")
+        print(f"- Firebase:   {services.get('firebase', 'unknown')}")
+    else:
+        print("Runtime")
+        print("- Backend status endpoint not reachable")
+
+    if capabilities:
+        auth = capabilities.get("auth", {})
+        deployment = capabilities.get("deployment", {})
+        print()
+        print("Capabilities")
+        print(f"- Auth mode:  {auth.get('auth_mode', 'unknown')}")
+        print(
+            "- Google:     "
+            + ("enabled" if auth.get("google_auth_available") else "disabled")
+        )
+        print(f"- Deploy:     {deployment.get('mode', 'unknown')}")
+
+    print()
+    print("Actions")
+    print("[1] Initialize (setup + start)")
+    print("[2] Start stack (up)")
+    print("[3] Show status")
+    print("[4] Follow backend logs")
+    print("[5] Stop stack (down)")
+    print("[6] Restart stack")
+    print("[7] Configure project root")
+    print("[r] Refresh panel")
+    print("[q] Quit")
+
+
+def _pause() -> None:
+    try:
+        input("\nPress Enter to continue...")
+    except EOFError:
+        return
+
+
+def _configure_project_root_interactive() -> None:
+    print()
+    print("Enter the STRATUM project root (folder containing selfhost-compose.yml).")
+    print("Press Enter with no value to cancel.")
+    raw_value = input("Path: ").strip()
+    if not raw_value:
+        print("Cancelled.")
+        return
+
+    configured = _set_project_root(Path(raw_value), persist=True)
+    _print(f"Project root configured: {configured}")
+
+
+def cmd_ui(_args: argparse.Namespace) -> None:
+    """Open an interactive terminal control panel for launcher operations."""
+    while True:
+        _clear_screen()
+        _render_terminal_ui()
+
+        try:
+            choice = input("\nSelect action: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return
+
+        if choice in {"", "r"}:
+            continue
+
+        try:
+            if choice == "1":
+                cmd_initialize(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "2":
+                cmd_up(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "3":
+                cmd_status(argparse.Namespace())
+                _pause()
+            elif choice == "4":
+                print("\nPress Ctrl+C to stop log follow and return to the panel.\n")
+                cmd_logs(argparse.Namespace(service="backend", follow=True))
+                _pause()
+            elif choice == "5":
+                cmd_down(argparse.Namespace())
+                _pause()
+            elif choice == "6":
+                cmd_restart(argparse.Namespace(wait_timeout=180))
+                _pause()
+            elif choice == "7":
+                _configure_project_root_interactive()
+                _pause()
+            elif choice == "q":
+                return
+            else:
+                print("\nUnknown option.")
+                _pause()
+        except KeyboardInterrupt:
+            print("\nAction interrupted.")
+            _pause()
+        except Exception as exc:
+            _print(f"ERROR: {exc}")
+            _pause()
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="STRATUM self-host bundle launcher",
@@ -261,6 +633,18 @@ def _build_parser() -> argparse.ArgumentParser:
 
     install_parser = sub.add_parser("install", help="Pull required container images")
     install_parser.set_defaults(func=cmd_install)
+
+    initialize_parser = sub.add_parser(
+        "initialize",
+        help="Run full setup and then start the self-host stack",
+    )
+    initialize_parser.add_argument(
+        "--wait-timeout",
+        type=int,
+        default=180,
+        help="Seconds to wait for backend readiness",
+    )
+    initialize_parser.set_defaults(func=cmd_initialize)
 
     up_parser = sub.add_parser("up", help="Start the full self-host stack")
     up_parser.add_argument(
@@ -294,15 +678,76 @@ def _build_parser() -> argparse.ArgumentParser:
     logs_parser.add_argument("--follow", action="store_true", help="Follow log stream")
     logs_parser.set_defaults(func=cmd_logs)
 
+    ui_parser = sub.add_parser("ui", help="Open interactive terminal control panel")
+    ui_parser.set_defaults(func=cmd_ui)
+
+    root_parser = sub.add_parser(
+        "set-root",
+        help="Set project root folder containing selfhost-compose.yml",
+    )
+    root_parser.add_argument("path", help="Absolute or relative path to project root")
+    root_parser.set_defaults(
+        func=lambda args: _print(
+            f"Project root configured: {_set_project_root(Path(args.path), persist=True)}"
+        )
+    )
+
     return parser
 
 
+def _opened_from_macos_app_bundle() -> bool:
+    executable_path = Path(sys.executable).as_posix()
+    return sys.platform == "darwin" and ".app/Contents/MacOS/" in executable_path
+
+
+def _stdout_is_tty() -> bool:
+    stream = getattr(sys, "stdout", None)
+    if stream is None:
+        return False
+    isatty = getattr(stream, "isatty", None)
+    if not callable(isatty):
+        return False
+    try:
+        return bool(isatty())
+    except Exception:
+        return False
+
+
+def _escape_applescript(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _maybe_open_terminal_for_macos_app_launch() -> bool:
+    """If launched by double-clicking the .app, open Terminal with interactive UI."""
+    if len(sys.argv) > 1:
+        return False
+    if not _opened_from_macos_app_bundle():
+        return False
+    if _stdout_is_tty():
+        return False
+
+    launcher_path = shlex.quote(str(Path(sys.executable)))
+    shell_command = f"{launcher_path} ui"
+
+    script_lines = [
+        'tell application "Terminal" to activate',
+        f'tell application "Terminal" to do script "{_escape_applescript(shell_command)}"',
+    ]
+
+    args: list[str] = ["osascript"]
+    for line in script_lines:
+        args.extend(["-e", line])
+
+    subprocess.run(args, check=False)
+    return True
+
+
 def main() -> None:
+    if _maybe_open_terminal_for_macos_app_launch():
+        return
+
     parser = _build_parser()
     args = parser.parse_args()
-
-    if not COMPOSE_FILE.exists():
-        _fail(f"Compose file not found: {COMPOSE_FILE}")
 
     try:
         args.func(args)
