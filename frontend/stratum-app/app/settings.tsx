@@ -736,6 +736,26 @@ export default function SettingsScreen() {
     );
   };
 
+  const handlePairWatch = async () => {
+    try {
+      const { data } = await api.post<{ code: string; expires_at: string }>(
+        "/auth/watch-code",
+      );
+      const expiresIn = Math.max(
+        0,
+        Math.round((new Date(data.expires_at).getTime() - Date.now()) / 60000),
+      );
+      const formatted = data.code.replace(/(\d{3})(\d{3})/, "$1 $2");
+      showAlert(
+        "Pair Apple Watch",
+        `Enter this code on your watch:\n\n${formatted}\n\nThe code expires in ${expiresIn} minute${expiresIn === 1 ? "" : "s"} and can only be used once.`,
+        [{ text: "Done", style: "default" }],
+      );
+    } catch (error) {
+      showAlert("Pair Apple Watch", error);
+    }
+  };
+
   const openDevModal = async () => {
     try {
       const override = await AsyncStorage.getItem("apiBaseUrlOverride");
@@ -1028,6 +1048,13 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuItemText}>About</Text>
+            </View>
+            <Text style={styles.menuItemArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handlePairWatch}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemText}>Pair Apple Watch</Text>
             </View>
             <Text style={styles.menuItemArrow}>→</Text>
           </TouchableOpacity>

@@ -71,6 +71,15 @@ class AuthResponse(BaseModel):
     message: str | None = None
 
 
+class WatchCodeRedeemRequest(BaseModel):
+    code: str
+
+
+class WatchCodeIssueResponse(BaseModel):
+    code: str
+    expires_at: datetime
+
+
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
@@ -222,6 +231,7 @@ class NoteBase(BaseModel):
 
 class NoteCreate(NoteBase):
     project_id: str
+    is_voice: bool = False
 
 
 class NoteUpdate(BaseModel):

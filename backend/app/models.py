@@ -772,6 +772,25 @@ class DataVersion(Base):
 # =====================================================================
 
 
+class WatchPairingCode(Base):
+    """Short-lived single-use code that lets a watch app sign in without
+    typing email/password on the watch. Codes are issued from an already
+    authenticated session and redeemed by the watch for an API JWT."""
+
+    __tablename__ = "watch_pairing_codes"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    code = Column(String, unique=True, nullable=False, index=True)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
 class DeviceWhitelist(Base):
     """Devices authorized for eMonument offline collection."""
 

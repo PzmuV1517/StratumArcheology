@@ -27,13 +27,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
 import firebase_admin.auth as firebase_auth
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.auth_provider import (
@@ -47,7 +48,8 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import build_maintainer_user, get_current_user
 from app.middleware import get_logger
-from app.models import User
+from app.models import User, WatchPairingCode
+from app.rate_limiter import limiter
 from app.schemas import (
     AuthResponse,
     FirebaseTokenRequest,
@@ -55,6 +57,8 @@ from app.schemas import (
     ProfileUpdateRequest,
     RegisterRequest,
     UserResponse,
+    WatchCodeIssueResponse,
+    WatchCodeRedeemRequest,
 )
 
 logger = get_logger(__name__)
@@ -605,3 +609,107 @@ async def check_username(
         }
     existing = db.query(User).filter(User.username == username).first()
     return {"available": existing is None}
+
+
+# ─── Watch pairing codes ──────────────────────────────────────────────────────
+
+WATCH_CODE_LENGTH = 6
+WATCH_CODE_TTL_MINUTES = 10
+
+
+def _generate_watch_code() -> str:
+    """Generate a 6-digit numeric pairing code."""
+    return f"{secrets.randbelow(10**WATCH_CODE_LENGTH):0{WATCH_CODE_LENGTH}d}"
+
+
+@router.post("/watch-code", response_model=WatchCodeIssueResponse)
+async def issue_watch_code(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Issue a short-lived single-use code that lets the watch app sign in
+    without typing email/password. Caller must already be authenticated.
+    """
+    # Drop any unused codes the user previously generated so only the latest
+    # is valid — prevents code accumulation if the user keeps tapping "Pair".
+    db.query(WatchPairingCode).filter(
+        WatchPairingCode.user_id == current_user.id,
+        WatchPairingCode.used_at.is_(None),
+    ).delete(synchronize_session=False)
+
+    # Pick a code that doesn't collide with an existing live one.
+    for _ in range(8):
+        code = _generate_watch_code()
+        if not db.query(WatchPairingCode).filter(WatchPairingCode.code == code).first():
+            break
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not allocate a pairing code, try again",
+        )
+
+    expires_at = datetime.utcnow() + timedelta(minutes=WATCH_CODE_TTL_MINUTES)
+    pairing = WatchPairingCode(
+        id=str(uuid.uuid4()),
+        code=code,
+        user_id=current_user.id,
+        expires_at=expires_at,
+    )
+    db.add(pairing)
+    db.commit()
+
+    return WatchCodeIssueResponse(code=code, expires_at=expires_at)
+
+
+@router.post("/watch-code/redeem", response_model=AuthResponse)
+@limiter.limit("10/minute")
+async def redeem_watch_code(
+    request: Request,
+    body: WatchCodeRedeemRequest,
+    db: Session = Depends(get_db),
+):
+    """Redeem a pairing code for an API JWT. Public endpoint — rate limited
+    so codes can't be brute-forced. Codes are single-use."""
+    code = (body.code or "").strip()
+    if len(code) != WATCH_CODE_LENGTH or not code.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid code format",
+        )
+
+    pairing = (
+        db.query(WatchPairingCode).filter(WatchPairingCode.code == code).first()
+    )
+    if not pairing or pairing.used_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid or already-used code",
+        )
+    if pairing.expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Code has expired",
+        )
+
+    user = db.query(User).filter(User.id == pairing.user_id).first()
+    if not user or user.is_soft_deleted or user.is_account_disabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is unavailable",
+        )
+
+    pairing.used_at = datetime.utcnow()
+    user.last_login = datetime.utcnow()
+    db.commit()
+
+    jwt_payload = {
+        "user_id": user.id,
+        "firebase_uid": user.firebase_uid,
+        "email": user.email,
+        "exp": datetime.utcnow() + timedelta(hours=settings.JWT_EXPIRATION_HOURS),
+    }
+    jwt_token = jwt.encode(jwt_payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+
+    return AuthResponse(
+        access_token=jwt_token, user=UserResponse.model_validate(user)
+    )
