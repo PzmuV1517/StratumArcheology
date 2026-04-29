@@ -51,7 +51,7 @@ PROMPT_PROJECT_SUMMARY = (
     "project's current status. Focus on what work has been done, what the team has "
     "documented, and overall excavation progress. Do not reference specific user IDs "
     "or technical system details. Write as if briefing the project leader."
-    "DO NOT USE EM DASHES UNDER NO CIRCUMSTANCES. USE COMMAS INSTEAD."
+    "DO NOT USE EM DASHES UNDER ANY CIRCUMSTANCES. USE COMMAS INSTEAD."
     "DO NOT ADD USELSS INFORMATION OR BALBBER. PRIORATISE CLARITY AND CONCISENESS"
     "If needed use MD notatin because it is supported and will be rendered in the UI (e.g. for lists or emphasis)"
 )
