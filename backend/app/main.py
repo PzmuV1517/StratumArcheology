@@ -56,6 +56,7 @@ from app.minio_client import minio_client, set_request_base_url
 from app.rate_limiter import limiter
 from app.routes import (
     activities,
+    ai,
     auth,
     channels,
     chat,
@@ -142,6 +143,7 @@ async def _capture_base_url(request: Request, call_next):
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
+app.include_router(ai.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(notes.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
@@ -322,6 +324,9 @@ async def _start_backup_scheduler():
 
 @app.on_event("startup")
 async def _load_whisper():
+    if settings.DISABLE_WHISPER:
+        logger.info("Whisper disabled via DISABLE_WHISPER=true — skipping model load")
+        return
     try:
         loop = __import__("asyncio").get_event_loop()
         await loop.run_in_executor(None, load_whisper_model)

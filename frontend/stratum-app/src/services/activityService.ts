@@ -84,55 +84,55 @@ export const activityService = {
   },
 
   /**
-   * Get activity icon based on type
+   * Get Ionicons icon name for an activity type.
    */
   getActivityIcon: (activityType: ActivityType | string): string => {
     const iconMap: Record<string, string> = {
       // Project
-      [ActivityType.PROJECT_CREATED]: "P+",
-      [ActivityType.PROJECT_UPDATED]: "P~",
-      [ActivityType.PROJECT_DELETED]: "P-",
+      [ActivityType.PROJECT_CREATED]: "briefcase-outline",
+      [ActivityType.PROJECT_UPDATED]: "settings-outline",
+      [ActivityType.PROJECT_DELETED]: "trash-outline",
 
       // Members
-      [ActivityType.MEMBER_JOINED]: "M+",
-      [ActivityType.MEMBER_LEFT]: "M-",
-      [ActivityType.MEMBER_ROLE_CHANGED]: "MR",
-      [ActivityType.OWNERSHIP_TRANSFERRED]: "MT",
+      [ActivityType.MEMBER_JOINED]: "person-add-outline",
+      [ActivityType.MEMBER_LEFT]: "person-remove-outline",
+      [ActivityType.MEMBER_ROLE_CHANGED]: "shield-outline",
+      [ActivityType.OWNERSHIP_TRANSFERRED]: "key-outline",
 
       // Files
-      [ActivityType.FILE_UPLOADED]: "F+",
-      [ActivityType.FILE_UPDATED]: "F~",
-      [ActivityType.FILE_DELETED]: "F-",
-      [ActivityType.FILE_MOVED]: "FM",
-      [ActivityType.FILE_RENAMED]: "FR",
-      [ActivityType.FOLDER_CREATED]: "D+",
-      [ActivityType.FOLDER_DELETED]: "D-",
+      [ActivityType.FILE_UPLOADED]: "cloud-upload-outline",
+      [ActivityType.FILE_UPDATED]: "create-outline",
+      [ActivityType.FILE_DELETED]: "trash-outline",
+      [ActivityType.FILE_MOVED]: "arrow-redo-outline",
+      [ActivityType.FILE_RENAMED]: "pencil-outline",
+      [ActivityType.FOLDER_CREATED]: "folder-outline",
+      [ActivityType.FOLDER_DELETED]: "folder-open-outline",
 
       // Notes
-      [ActivityType.NOTE_CREATED]: "N+",
-      [ActivityType.NOTE_UPDATED]: "N~",
-      [ActivityType.NOTE_DELETED]: "N-",
-      [ActivityType.NOTE_ATTACHMENT_ADDED]: "A+",
-      [ActivityType.NOTE_ATTACHMENT_DELETED]: "A-",
+      [ActivityType.NOTE_CREATED]: "document-text-outline",
+      [ActivityType.NOTE_UPDATED]: "create-outline",
+      [ActivityType.NOTE_DELETED]: "trash-outline",
+      [ActivityType.NOTE_ATTACHMENT_ADDED]: "document-attach-outline",
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: "document-attach-outline",
 
       // Forms
-      [ActivityType.CONTEXT_FEATURE_CREATED]: "C+",
-      [ActivityType.CONTEXT_FEATURE_ADDED]: "C+",
-      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "S+",
-      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "S+",
-      [ActivityType.ARTEFACT_CREATED]: "AR",
-      [ActivityType.ARTEFACT_ADDED]: "AR",
+      [ActivityType.CONTEXT_FEATURE_CREATED]: "layers-outline",
+      [ActivityType.CONTEXT_FEATURE_ADDED]: "layers-outline",
+      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "layers-outline",
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "layers-outline",
+      [ActivityType.ARTEFACT_CREATED]: "diamond-outline",
+      [ActivityType.ARTEFACT_ADDED]: "diamond-outline",
 
       // GPS
-      [ActivityType.GPS_ENABLED]: "G",
-      [ActivityType.GPS_DISABLED]: "G",
-      [ActivityType.GPS_UPDATED]: "G",
+      [ActivityType.GPS_ENABLED]: "location-outline",
+      [ActivityType.GPS_DISABLED]: "location-outline",
+      [ActivityType.GPS_UPDATED]: "navigate-outline",
 
       // Harris Matrix
-      [ActivityType.HARRIS_MATRIX_UPDATED]: "HM",
+      [ActivityType.HARRIS_MATRIX_UPDATED]: "git-network-outline",
     };
 
-    return iconMap[activityType] || "ACT";
+    return iconMap[activityType] || "ellipse-outline";
   },
 
   /**

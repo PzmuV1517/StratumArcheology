@@ -55,6 +55,7 @@ from app.models import (
     NoteFileLink,
     User,
 )
+from app.config import settings
 from app.schemas import NoteCreate, NoteResponse, NoteUpdate
 from app.transcription import transcribe_note_audio
 from app.websocket import emit_content_update, log_activity
@@ -525,7 +526,7 @@ async def add_note_attachment(
 
     # Kick off transcription for audio attachments in the background
     is_audio = (attachment.file_type or "").startswith("audio/")
-    if is_audio:
+    if is_audio and not settings.DISABLE_WHISPER:
         note.transcription_status = "pending"
         db.commit()
         background_tasks.add_task(
