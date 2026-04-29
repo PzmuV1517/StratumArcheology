@@ -96,7 +96,11 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
 
+    # AI Summary
+    AI_SUMMARY_CHANGE_THRESHOLD: int = 15  # activities since last summary before refresh is offered
+
     # Transcription (local Whisper)
+    DISABLE_WHISPER: bool = False  # set True to skip model load and transcription entirely
     WHISPER_MODEL: str = "base"  # tiny | base | small | medium | large
 
     # Rate Limiting
@@ -167,6 +171,8 @@ class Settings(BaseSettings):
 
         env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
         case_sensitive = True
+        # Allow unknown env vars (e.g. STRATUMAI_APIKEY_N / STRATUMAI_PROVIDER_N)
+        extra = "ignore"
 
 
 settings = Settings()

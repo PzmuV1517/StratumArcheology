@@ -918,3 +918,24 @@ class FisaInstanceVersion(Base):
             "fisa_instance_id", "version", name="uq_fisa_instance_version"
         ),
     )
+
+
+class ProjectAISummary(Base):
+    """Persisted AI summary per (project, user) pair."""
+
+    __tablename__ = "project_ai_summaries"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    summary = Column(Text, nullable=False)
+    provider = Column(String, nullable=False)
+    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_user_ai_summary"),
+    )
