@@ -309,6 +309,11 @@ async def list_recycle_bin(
         .order_by(NodeSnapshot.created_at.desc())
         .all()
     )
+    rows = [
+        r
+        for r in rows
+        if not (r.payload or {}).get("action") == "empty_recycle_bin"
+    ]
     rows = _filter_visible(db, current_user, rows)
     actors = _hydrate_actor(db, rows)
 
@@ -639,6 +644,7 @@ def _restore_note_content(
         raise HTTPException(status_code=410, detail="Target note is gone")
 
     payload = snap.payload or {}
+    note_payload = payload.get("note") if isinstance(payload, dict) else None
     title = payload.get("title")
     content = payload.get("content")
 
@@ -813,6 +819,8 @@ async def _restore_delete(
             blob = db.get(Blob, snap.blob_sha256)
             if blob:
                 data = await minio_client.get_file(blob.storage_path)
+        if data is None and note_payload and note_payload.get("content") is not None:
+            data = (note_payload.get("content") or "").encode("utf-8")
         if data is not None:
             new_node.storage_path = (
                 f"files/{snap.project_id}/{new_node.id or 'restored'}"
@@ -821,7 +829,6 @@ async def _restore_delete(
     db.add(new_node)
     db.flush()
 
-    note_payload = payload.get("note") if isinstance(payload, dict) else None
     if note_payload:
         from app.models import Note, NoteFileLink
 
@@ -880,6 +887,8 @@ async def _restore_delete(
             blob = db.get(Blob, snap.blob_sha256)
             if blob:
                 data = await minio_client.get_file(blob.storage_path)
+        if data is None and note_payload and note_payload.get("content") is not None:
+            data = (note_payload.get("content") or "").encode("utf-8")
         if data is not None:
             await minio_client.upload_file(
                 data,
