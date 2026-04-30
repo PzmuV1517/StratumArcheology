@@ -32,606 +32,628 @@ const ACCENT_SOFT = "rgba(255, 42, 42, 0.18)";
 
 interface Member {
   id: string;
-  display_name: string;
-  email: string;
-  role: string;
-  photo_url?: string | null;
-}
+  /**
+   * @file
+   * Permissions modal for files and folders.
+   *
+   * Provides a per-node ACL editor backed by the /acl endpoints.
+   *
+   * MIT License
+   *
+   * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining a copy
+   * of this software and associated documentation files (the "Software"), to deal
+   * in the Software without restriction, including without limitation the rights
+   * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   * copies of the Software, and to permit persons to whom the Software is
+   * furnished to do so, subject to the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be included in all
+   * copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   * SOFTWARE.
+   */
+  import React, { useEffect, useMemo, useState } from "react";
+  import {
+    ActivityIndicator,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+  } from "react-native";
+  import { IconSymbol } from "@/components/ui/icon-symbol";
+  import { showAlert } from "../../utils/alert";
+  import { fileService } from "../../services/fileService";
 
-interface FilePermission {
-  user_id: string;
-  can_view: boolean;
-  can_edit: boolean;
-}
+  const ACCENT_COLOR = "#FF2A2A";
+  const ACCENT_SOFT = "rgba(255, 42, 42, 0.18)";
 
-interface FolderSettings {
-  default_can_view: boolean;
-  default_can_edit: boolean;
-  member_permissions: FilePermission[];
-}
+  interface Member {
+    id: string;
+    display_name: string;
+    email: string;
+    role: string;
+    photo_url?: string | null;
+  }
 
-interface MyFolderSettingsModalProps {
-  visible: boolean;
-  projectId: string;
-  members: Member[];
-  currentUserId: string;
-  onClose: () => void;
-  onSave: (settings: FolderSettings) => void;
-}
+  interface ACLPrincipalEntry {
+    user_id?: string | null;
+    group_id?: string | null;
+    can_read: boolean;
+    can_write: boolean;
+    display_name?: string | null;
+    photo_url?: string | null;
+    role?: string | null;
+  }
 
-export default function MyFolderSettingsModal({
-  visible,
-  projectId: _projectId,
-  members,
-  currentUserId,
-  onClose,
-  onSave,
-}: MyFolderSettingsModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [defaultCanView, setDefaultCanView] = useState(true);
-  const [defaultCanEdit, setDefaultCanEdit] = useState(false);
-  const [memberPermissions, setMemberPermissions] = useState<
-    Map<string, { canView: boolean; canEdit: boolean }>
-  >(new Map());
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  interface ACLState {
+    file_node_id: string;
+    is_acl_root: boolean;
+    inherits_from?: string | null;
+    entries: ACLPrincipalEntry[];
+  }
 
-  // Initialize member permissions
-  useEffect(() => {
-    const initialPermissions = new Map<
-      string,
-      { canView: boolean; canEdit: boolean }
-    >();
-    members.forEach((member) => {
-      if (member.id !== currentUserId) {
-        initialPermissions.set(member.id, {
-          canView: defaultCanView,
-          canEdit: defaultCanEdit,
+  interface PermissionsModalProps {
+    visible: boolean;
+    nodeId: string | null;
+    nodeName?: string;
+    members: Member[];
+    currentUserId?: string;
+    canManage?: boolean;
+    onClose: () => void;
+    onSaved?: () => void;
+  }
+
+  export default function PermissionsModal({
+    visible,
+    nodeId,
+    nodeName,
+    members,
+    currentUserId,
+    canManage = true,
+    onClose,
+    onSaved,
+  }: PermissionsModalProps) {
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [isAclRoot, setIsAclRoot] = useState(false);
+    const [inheritsFrom, setInheritsFrom] = useState<string | null>(null);
+    const [permissionsMap, setPermissionsMap] = useState<
+      Map<string, { canRead: boolean; canWrite: boolean }>
+    >(new Map());
+    const [inheritedEntries, setInheritedEntries] = useState<
+      ACLPrincipalEntry[]
+    >([]);
+
+    const otherMembers = useMemo(
+      () => members.filter((m) => m.id !== currentUserId),
+      [members, currentUserId],
+    );
+
+    useEffect(() => {
+      if (!visible || !nodeId) return;
+      setLoading(true);
+      fileService
+        .getAcl(nodeId)
+        .then((state: ACLState) => {
+          setIsAclRoot(state.is_acl_root);
+          setInheritsFrom(state.inherits_from || null);
+          setInheritedEntries(state.entries || []);
+          const next = new Map<string, { canRead: boolean; canWrite: boolean }>();
+          (state.entries || []).forEach((entry) => {
+            if (!entry.user_id) return;
+            next.set(entry.user_id, {
+              canRead: !!entry.can_read,
+              canWrite: !!entry.can_write,
+            });
+          });
+          otherMembers.forEach((m) => {
+            if (!next.has(m.id)) {
+              next.set(m.id, { canRead: false, canWrite: false });
+            }
+          });
+          setPermissionsMap(next);
+        })
+        .catch((error: any) => {
+          console.error("Failed to load ACL:", error);
+          showAlert(
+            "Error",
+            error.response?.data?.detail || "Failed to load permissions",
+          );
+        })
+        .finally(() => setLoading(false));
+    }, [visible, nodeId, otherMembers]);
+
+    const handleToggleRead = (memberId: string) => {
+      setPermissionsMap((prev) => {
+        const updated = new Map(prev);
+        const current = updated.get(memberId) || { canRead: false, canWrite: false };
+        const nextRead = !current.canRead;
+        updated.set(memberId, {
+          canRead: nextRead,
+          canWrite: nextRead ? current.canWrite : false,
         });
-      }
-    });
-    setMemberPermissions(initialPermissions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members, currentUserId]);
+        return updated;
+      });
+    };
 
-  const otherMembers = members.filter((m) => m.id !== currentUserId);
-
-  const handleToggleView = (memberId: string) => {
-    setMemberPermissions((prev) => {
-      const updated = new Map(prev);
-      const current = updated.get(memberId) || {
-        canView: defaultCanView,
-        canEdit: defaultCanEdit,
-      };
-      updated.set(memberId, { ...current, canView: !current.canView });
-      // If removing view, also remove edit
-      if (current.canView && !current.canEdit) {
-        updated.set(memberId, { canView: false, canEdit: false });
-      }
-      return updated;
-    });
-  };
-
-  const handleToggleEdit = (memberId: string) => {
-    setMemberPermissions((prev) => {
-      const updated = new Map(prev);
-      const current = updated.get(memberId) || {
-        canView: defaultCanView,
-        canEdit: defaultCanEdit,
-      };
-      // If enabling edit, also enable view
-      if (!current.canEdit) {
-        updated.set(memberId, { canView: true, canEdit: true });
-      } else {
-        updated.set(memberId, { ...current, canEdit: false });
-      }
-      return updated;
-    });
-  };
-
-  const handleApplyDefaultsToAll = () => {
-    setMemberPermissions((prev) => {
-      const updated = new Map(prev);
-      otherMembers.forEach((member) => {
-        updated.set(member.id, {
-          canView: defaultCanView,
-          canEdit: defaultCanEdit,
+    const handleToggleWrite = (memberId: string) => {
+      setPermissionsMap((prev) => {
+        const updated = new Map(prev);
+        const current = updated.get(memberId) || { canRead: false, canWrite: false };
+        const nextWrite = !current.canWrite;
+        updated.set(memberId, {
+          canRead: nextWrite ? true : current.canRead,
+          canWrite: nextWrite,
         });
+        return updated;
       });
-      return updated;
-    });
-    showAlert("Applied", "Default permissions applied to all members");
-  };
+    };
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const permissions: FilePermission[] = [];
-      memberPermissions.forEach((perm, userId) => {
-        permissions.push({
-          user_id: userId,
-          can_view: perm.canView,
-          can_edit: perm.canEdit,
+    const handleSave = async () => {
+      if (!nodeId) return;
+      setSaving(true);
+      try {
+        const entries = Array.from(permissionsMap.entries())
+          .filter(([, perm]) => perm.canRead || perm.canWrite)
+          .map(([userId, perm]) => ({
+            user_id: userId,
+            can_read: perm.canRead || perm.canWrite,
+            can_write: perm.canWrite,
+          }));
+        await fileService.putAcl(nodeId, {
+          is_acl_root: isAclRoot,
+          entries: isAclRoot ? entries : [],
         });
-      });
+        onSaved?.();
+        onClose();
+      } catch (error: any) {
+        console.error("Failed to save ACL:", error);
+        showAlert(
+          "Error",
+          error.response?.data?.detail || "Failed to save permissions",
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
-      await onSave({
-        default_can_view: defaultCanView,
-        default_can_edit: defaultCanEdit,
-        member_permissions: permissions,
-      });
+    const handleToggleInheritance = (value: boolean) => {
+      // value === true means custom ACL (is_acl_root)
+      setIsAclRoot(value);
+      if (value && permissionsMap.size === 0 && inheritedEntries.length > 0) {
+        const next = new Map<string, { canRead: boolean; canWrite: boolean }>();
+        inheritedEntries.forEach((entry) => {
+          if (!entry.user_id) return;
+          next.set(entry.user_id, {
+            canRead: !!entry.can_read,
+            canWrite: !!entry.can_write,
+          });
+        });
+        otherMembers.forEach((m) => {
+          if (!next.has(m.id)) {
+            next.set(m.id, { canRead: false, canWrite: false });
+          }
+        });
+        setPermissionsMap(next);
+      }
+    };
 
-      onClose();
-    } catch {
-      showAlert("Error", "Failed to save folder settings");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const getInitials = (name: string): string =>
+      name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
 
-  const getInitials = (name: string): string => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.backdrop}>
-        <View style={styles.modalContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>My Folder Settings</Text>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel="Close My Folder settings"
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Default Permissions */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Default Permissions</Text>
-              <Text style={styles.sectionDescription}>
-                These settings apply to new team members and files by default.
-              </Text>
-
-              <View style={styles.permissionRow}>
-                <View style={styles.permissionInfo}>
-                  <Text style={styles.permissionLabel}>Others can view</Text>
-                  <Text style={styles.permissionHint}>
-                    Team members can see your files
-                  </Text>
-                </View>
-                <Switch
-                  value={defaultCanView}
-                  onValueChange={(value) => {
-                    setDefaultCanView(value);
-                    if (!value) setDefaultCanEdit(false);
-                  }}
-                  trackColor={{ false: "#D9D9D9", true: ACCENT_COLOR }}
-                  thumbColor="#FFFFFF"
-                  accessibilityLabel="Allow team members to view my files"
-                />
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={onClose}
+      >
+        <View style={styles.backdrop}>
+          <View style={styles.modalContainer}>
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.title}>Permissions</Text>
+                {!!nodeName && <Text style={styles.subtitle}>{nodeName}</Text>}
               </View>
-
-              <View style={styles.permissionRow}>
-                <View style={styles.permissionInfo}>
-                  <Text style={styles.permissionLabel}>Others can edit</Text>
-                  <Text style={styles.permissionHint}>
-                    Team members can modify your files
-                  </Text>
-                </View>
-                <Switch
-                  value={defaultCanEdit}
-                  onValueChange={setDefaultCanEdit}
-                  disabled={!defaultCanView}
-                  trackColor={{ false: "#D9D9D9", true: ACCENT_COLOR }}
-                  thumbColor={defaultCanView ? "#FFFFFF" : "#B5B5B5"}
-                  accessibilityLabel="Allow team members to edit my files"
-                />
-              </View>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close permissions"
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Advanced: Per-Member Settings */}
-            <TouchableOpacity
-              style={styles.advancedToggle}
-              onPress={() => setShowAdvanced(!showAdvanced)}
-              accessibilityRole="button"
-              accessibilityLabel="Toggle per-member permissions"
-              accessibilityState={{ expanded: showAdvanced }}
-            >
-              <Text style={styles.advancedToggleText}>
-                Per-Member Permissions
-              </Text>
-              <Text style={styles.advancedToggleHint}>
-                Override defaults for specific members
-              </Text>
-            </TouchableOpacity>
-
-            {showAdvanced && (
-              <View style={styles.section}>
-                <TouchableOpacity
-                  style={styles.applyDefaultsButton}
-                  onPress={handleApplyDefaultsToAll}
-                  accessibilityRole="button"
-                  accessibilityLabel="Apply default permissions to all members"
-                >
-                  <Text style={styles.applyDefaultsText}>Apply Defaults to All</Text>
-                </TouchableOpacity>
-
-                {otherMembers.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>
-                      No other members in this project
-                    </Text>
-                  </View>
-                ) : (
-                  otherMembers.map((member) => {
-                    const perm = memberPermissions.get(member.id) || {
-                      canView: defaultCanView,
-                      canEdit: defaultCanEdit,
-                    };
-
-                    return (
-                      <View key={member.id} style={styles.memberRow}>
-                        {member.photo_url ? (
-                          <Image
-                            source={{ uri: member.photo_url }}
-                            style={styles.memberAvatarImage}
-                          />
-                        ) : (
-                          <View style={styles.memberAvatar}>
-                            <Text style={styles.memberAvatarText}>
-                              {getInitials(member.display_name)}
-                            </Text>
-                          </View>
-                        )}
-                        <View style={styles.memberInfo}>
-                          <Text style={styles.memberName}>
-                            {member.display_name}
-                          </Text>
-                          <Text style={styles.memberRole}>{member.role}</Text>
-                        </View>
-                        <View style={styles.memberPermissions}>
-                          <TouchableOpacity
-                            style={[
-                              styles.permBadge,
-                              perm.canView && styles.permBadgeActive,
-                            ]}
-                            onPress={() => handleToggleView(member.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Toggle view permission for ${member.display_name}`}
-                            accessibilityState={{ checked: perm.canView }}
-                          >
-                            <View style={styles.permBadgeContent}>
-                              <IconSymbol
-                                name="eye"
-                                size={13}
-                                color={perm.canView ? ACCENT_COLOR : "#666666"}
-                              />
-                              <Text
-                                style={[
-                                  styles.permBadgeText,
-                                  perm.canView && styles.permBadgeTextActive,
-                                ]}
-                              >
-                                View
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[
-                              styles.permBadge,
-                              perm.canEdit && styles.permBadgeActive,
-                            ]}
-                            onPress={() => handleToggleEdit(member.id)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Toggle edit permission for ${member.display_name}`}
-                            accessibilityState={{ checked: perm.canEdit }}
-                          >
-                            <View style={styles.permBadgeContent}>
-                              <IconSymbol
-                                name="pencil"
-                                size={13}
-                                color={perm.canEdit ? ACCENT_COLOR : "#666666"}
-                              />
-                              <Text
-                                style={[
-                                  styles.permBadgeText,
-                                  perm.canEdit && styles.permBadgeTextActive,
-                                ]}
-                              >
-                                Edit
-                              </Text>
-                            </View>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
+            {loading ? (
+              <View style={styles.loadingState}>
+                <ActivityIndicator color={ACCENT_COLOR} />
               </View>
-            )}
-          </ScrollView>
+            ) : (
+              <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Access model</Text>
+                  <Text style={styles.sectionDescription}>
+                    {isAclRoot
+                      ? "This item uses custom permissions."
+                      : "This item inherits permissions from its parent."}
+                  </Text>
+                  <View style={styles.permissionRow}>
+                    <View style={styles.permissionInfo}>
+                      <Text style={styles.permissionLabel}>Custom permissions</Text>
+                      <Text style={styles.permissionHint}>
+                        Toggle off to inherit from the parent folder.
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isAclRoot}
+                      onValueChange={handleToggleInheritance}
+                      disabled={!canManage}
+                      trackColor={{ false: "#D9D9D9", true: ACCENT_COLOR }}
+                      thumbColor="#FFFFFF"
+                      accessibilityLabel="Toggle custom permissions"
+                    />
+                  </View>
+                  {!canManage && (
+                    <Text style={styles.noticeText}>
+                      Only the project owner (or the owner of a personal folder)
+                      can change permissions.
+                    </Text>
+                  )}
+                  {!isAclRoot && inheritsFrom && (
+                    <Text style={styles.inheritText}>
+                      Inheriting from parent folder.
+                    </Text>
+                  )}
+                </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel folder settings changes"
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Save folder settings"
-              accessibilityState={{ disabled: loading }}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#F5F5F5" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              )}
-            </TouchableOpacity>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>People</Text>
+                  {otherMembers.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>
+                        No other members in this project
+                      </Text>
+                    </View>
+                  ) : (
+                    otherMembers.map((member) => {
+                      const perm = permissionsMap.get(member.id) || {
+                        canRead: false,
+                        canWrite: false,
+                      };
+                      return (
+                        <View key={member.id} style={styles.memberRow}>
+                          {member.photo_url ? (
+                            <Image
+                              source={{ uri: member.photo_url }}
+                              style={styles.memberAvatarImage}
+                            />
+                          ) : (
+                            <View style={styles.memberAvatar}>
+                              <Text style={styles.memberAvatarText}>
+                                {getInitials(member.display_name || member.email)}
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.memberInfo}>
+                            <Text style={styles.memberName}>
+                              {member.display_name || member.email}
+                            </Text>
+                            <Text style={styles.memberRole}>{member.role}</Text>
+                          </View>
+                          <View style={styles.memberPermissions}>
+                            <TouchableOpacity
+                              style={[
+                                styles.permBadge,
+                                perm.canRead && styles.permBadgeActive,
+                              ]}
+                              onPress={() => handleToggleRead(member.id)}
+                              disabled={!canManage || !isAclRoot}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Toggle read permission for ${member.display_name}`}
+                            >
+                              <View style={styles.permBadgeContent}>
+                                <IconSymbol
+                                  name="eye"
+                                  size={13}
+                                  color={perm.canRead ? ACCENT_COLOR : "#666666"}
+                                />
+                                <Text
+                                  style={[
+                                    styles.permBadgeText,
+                                    perm.canRead && styles.permBadgeTextActive,
+                                  ]}
+                                >
+                                  Read
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[
+                                styles.permBadge,
+                                perm.canWrite && styles.permBadgeActive,
+                              ]}
+                              onPress={() => handleToggleWrite(member.id)}
+                              disabled={!canManage || !isAclRoot}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Toggle write permission for ${member.display_name}`}
+                            >
+                              <View style={styles.permBadgeContent}>
+                                <IconSymbol
+                                  name="pencil"
+                                  size={13}
+                                  color={perm.canWrite ? ACCENT_COLOR : "#666666"}
+                                />
+                                <Text
+                                  style={[
+                                    styles.permBadgeText,
+                                    perm.canWrite && styles.permBadgeTextActive,
+                                  ]}
+                                >
+                                  Write
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              </ScrollView>
+            )}
+
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel permissions changes"
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveButton, (saving || !canManage) && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={saving || !canManage}
+                accessibilityRole="button"
+                accessibilityLabel="Save permissions"
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  );
-}
+      </Modal>
+    );
+  }
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.24)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "85%",
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: "#D9D9D9",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.14,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    letterSpacing: 0.5,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#EFEFEF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    color: "#666666",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 4,
-    letterSpacing: 0.3,
-  },
-  sectionDescription: {
-    fontSize: 13,
-    color: "#666666",
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  permissionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  permissionInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  permissionLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 2,
-  },
-  permissionHint: {
-    fontSize: 12,
-    color: "#666666",
-  },
-  advancedToggle: {
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
-    marginBottom: 16,
-  },
-  advancedToggleText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: ACCENT_COLOR,
-    marginBottom: 4,
-  },
-  advancedToggleHint: {
-    fontSize: 12,
-    color: "#666666",
-  },
-  applyDefaultsButton: {
-    backgroundColor: "#EFEFEF",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-    marginBottom: 16,
-  },
-  applyDefaultsText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  emptyState: {
-    padding: 24,
-    alignItems: "center",
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#666666",
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-  },
-  memberAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: ACCENT_COLOR,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  memberAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  memberAvatarText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1A1A1A",
-    marginBottom: 2,
-  },
-  memberRole: {
-    fontSize: 12,
-    color: "#666666",
-    textTransform: "capitalize",
-  },
-  memberPermissions: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  permBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: "#EFEFEF",
-    borderWidth: 1,
-    borderColor: "#D9D9D9",
-  },
-  permBadgeActive: {
-    backgroundColor: ACCENT_SOFT,
-    borderColor: ACCENT_COLOR,
-  },
-  permBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#666666",
-  },
-  permBadgeContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  permBadgeTextActive: {
-    color: ACCENT_COLOR,
-  },
-  footer: {
-    flexDirection: "row",
-    padding: 20,
-    paddingBottom: 36,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#EFEFEF",
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1A1A1A",
-  },
-  saveButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: ACCENT_COLOR,
-    alignItems: "center",
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#F5F5F5",
-  },
-});
+  const styles = StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContainer: {
+      backgroundColor: "#FFFFFF",
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      maxHeight: "85%",
+      paddingBottom: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F0F0F0",
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#1A1A1A",
+    },
+    subtitle: {
+      fontSize: 12,
+      color: "#777777",
+      marginTop: 4,
+    },
+    closeButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: "#F2F2F2",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    closeButtonText: {
+      fontSize: 18,
+      color: "#666666",
+    },
+    loadingState: {
+      paddingVertical: 32,
+      alignItems: "center",
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#1A1A1A",
+      marginBottom: 6,
+    },
+    sectionDescription: {
+      fontSize: 13,
+      color: "#666666",
+      marginBottom: 12,
+      lineHeight: 18,
+    },
+    permissionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 8,
+    },
+    permissionInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    permissionLabel: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#1A1A1A",
+    },
+    permissionHint: {
+      fontSize: 12,
+      color: "#777777",
+      marginTop: 2,
+    },
+    noticeText: {
+      fontSize: 12,
+      color: "#B05A00",
+      marginTop: 8,
+    },
+    inheritText: {
+      fontSize: 12,
+      color: "#888888",
+      marginTop: 4,
+    },
+    memberRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F0F0F0",
+    },
+    memberAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "#EAEAEA",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    memberAvatarImage: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 12,
+    },
+    memberAvatarText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#666666",
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#1A1A1A",
+    },
+    memberRole: {
+      fontSize: 11,
+      color: "#888888",
+      marginTop: 2,
+    },
+    memberPermissions: {
+      flexDirection: "row",
+      gap: 6,
+    },
+    permBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: "#F2F2F2",
+      borderWidth: 1,
+      borderColor: "#E0E0E0",
+    },
+    permBadgeActive: {
+      backgroundColor: ACCENT_SOFT,
+      borderColor: ACCENT_COLOR,
+    },
+    permBadgeContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    permBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: "#666666",
+    },
+    permBadgeTextActive: {
+      color: ACCENT_COLOR,
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingVertical: 20,
+    },
+    emptyStateText: {
+      fontSize: 13,
+      color: "#777777",
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: "#F0F0F0",
+    },
+    cancelButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      backgroundColor: "#F2F2F2",
+    },
+    cancelButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#666666",
+    },
+    saveButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 32,
+      borderRadius: 8,
+      backgroundColor: ACCENT_COLOR,
+    },
+    saveButtonDisabled: {
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+  });

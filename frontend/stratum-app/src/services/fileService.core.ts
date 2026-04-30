@@ -24,9 +24,43 @@ export interface FileNode {
   size?: string;
   mime_type?: string;
   is_locked?: boolean;
+  owner_id?: string | null;
+  is_acl_root?: boolean;
+  acl_root_id?: string | null;
+  effective_access?: EffectiveAccess | null;
   storage_path?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface EffectiveAccess {
+  can_read: boolean;
+  can_write: boolean;
+  is_acl_root: boolean;
+  acl_root_id?: string | null;
+  acl_root_name?: string | null;
+  is_owner_override?: boolean;
+  is_admin_override?: boolean;
+  is_project_default?: boolean;
+  is_acl_root_owner?: boolean;
+}
+
+export interface ACLPrincipalEntry {
+  user_id?: string | null;
+  group_id?: string | null;
+  can_read: boolean;
+  can_write: boolean;
+  inherited_from_node_id?: string | null;
+  display_name?: string | null;
+  photo_url?: string | null;
+  role?: string | null;
+}
+
+export interface ACLState {
+  file_node_id: string;
+  is_acl_root: boolean;
+  inherits_from?: string | null;
+  entries: ACLPrincipalEntry[];
 }
 
 /** Result of a file download operation. */
@@ -179,6 +213,19 @@ export const fileServiceCore = {
 
   getSharedByMe: async (projectId: string): Promise<FileNode[]> => {
     const res = await api.get(`/files/project/${projectId}/shared-by-me`);
+    return res.data;
+  },
+
+  getAcl: async (nodeId: string): Promise<ACLState> => {
+    const res = await api.get(`/acl/${nodeId}`);
+    return res.data;
+  },
+
+  putAcl: async (
+    nodeId: string,
+    payload: { is_acl_root: boolean; entries: ACLPrincipalEntry[] },
+  ): Promise<ACLState> => {
+    const res = await api.put(`/acl/${nodeId}`, payload);
     return res.data;
   },
 };
