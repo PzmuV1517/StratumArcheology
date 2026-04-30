@@ -191,37 +191,6 @@ export const fileServiceCore = {
     return res.data;
   },
 
-  getMyFolderPermissions: async (
-    projectId: string,
-  ): Promise<{
-    folder_id: string | null;
-    default_can_view: boolean;
-    default_can_edit: boolean;
-    member_permissions: { user_id: string; can_view: boolean; can_edit: boolean }[];
-  }> => {
-    const res = await api.get(`/files/project/${projectId}/my-folder/permissions`);
-    return res.data;
-  },
-
-  updateMyFolderPermissions: async (
-    projectId: string,
-    settings: {
-      default_can_view: boolean;
-      default_can_edit: boolean;
-      member_permissions: {
-        user_id: string;
-        can_view: boolean;
-        can_edit: boolean;
-      }[];
-    },
-  ): Promise<{ message: string; folder_id: string }> => {
-    const res = await api.put(
-      `/files/project/${projectId}/my-folder/permissions`,
-      settings,
-    );
-    return res.data;
-  },
-
   getSharedWithMe: async (projectId: string): Promise<FileNode[]> => {
     const res = await api.get(`/files/project/${projectId}/shared-with-me`);
     return res.data;

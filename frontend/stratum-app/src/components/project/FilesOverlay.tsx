@@ -77,7 +77,7 @@ interface FileNode {
 interface Props {
   visible: boolean;
   title?: string;
-  currentFolder: { id: string | null; name: string } | null;
+  currentFolder: { id: string | null; name: string; effective_access?: import("../../services/fileService.core").EffectiveAccess | null } | null;
   fileNodes: FileNode[];
   fileLoading: boolean;
   breadcrumbs?: { id: string | null; name: string }[];

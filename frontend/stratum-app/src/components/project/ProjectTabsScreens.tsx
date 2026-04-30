@@ -665,7 +665,7 @@ export function ProjectHistoryScreen({
   const panelBorder = isDarkMode ? "#2A2A2A" : "#D9D9D9";
   const panelBackground = isDarkMode ? "#0A0A0A" : "#FFFFFF";
 
-  const { project, iosHeaderPad, setCurrentTabName } = useProjectDetail();
+  const { project, iosHeaderPad, setCurrentTabName, isOwner } = useProjectDetail();
 
   useEffect(() => {
     setCurrentTabName("history");
@@ -690,7 +690,7 @@ export function ProjectHistoryScreen({
               margin: 16,
             }}
           >
-            <TimeMachineTab projectId={project?.id as string} />
+            <TimeMachineTab projectId={project?.id as string} isOwner={isOwner} />
           </View>
         </View>
       ) : (
@@ -715,7 +715,7 @@ export function ProjectHistoryScreen({
               marginBottom: 16,
             }}
           >
-            <TimeMachineTab projectId={project?.id as string} />
+            <TimeMachineTab projectId={project?.id as string} isOwner={isOwner} />
           </View>
         </View>
       )}
