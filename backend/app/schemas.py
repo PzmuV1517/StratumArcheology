@@ -39,11 +39,8 @@ class UserRole(str, Enum):
     GUEST = "guest"
 
 
-class PrivacyLevel(str, Enum):
-    PRIVATE = "private"  # Only owner can see
-    SHARED = "shared"  # Shared with specific users
-    PROJECT = "project"  # All project members can see (default)
-    PUBLIC = "public"  # Anyone with project access can see
+# PrivacyLevel was removed in migration 021. Access is now governed by
+# the ACL model defined below (ACLPrincipalEntry, ACLState).
 
 
 # Auth Schemas
@@ -249,23 +246,19 @@ class NoteResponse(NoteBase):
     updated_at: datetime
     last_synced: datetime | None = None
     version: int = 1
-    privacy: PrivacyLevel = PrivacyLevel.PROJECT
-    shared_with: list[str] | None = None
     attachments: list[NoteAttachmentResponse] = []
     transcription: str | None = None
     transcription_original: str | None = None
     transcription_modified: bool = False
     transcription_status: str | None = None
+    # Effective access summary on the linked FileNode mirror. Populated
+    # by the route handler so the client can render lock icons without
+    # a second round-trip.
+    file_node_id: str | None = None
+    effective_access: "EffectiveAccess | None" = None
 
     class Config:
         from_attributes = True
-
-
-class NoteUpdateWithPrivacy(BaseModel):
-    title: str | None = None
-    content: str | None = None
-    privacy: PrivacyLevel | None = None
-    shared_with: list[str] | None = None
 
 
 # Sync Schemas
