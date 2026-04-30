@@ -90,9 +90,6 @@ async def create_note(
     db.commit()
     db.refresh(note)
 
-    if file_node is not None:
-        setattr(note, "file_node_id", file_node.id)
-
     # Resolve the target folder. Notes default to the project "Notes" folder
     # unless the caller provided a parent_id (e.g. saving into My Folder).
     target_folder: FileNode | None = None
@@ -261,24 +258,6 @@ async def get_note(
 
     file_link = note.file_link
     file_node = file_link.file_node if file_link else None
-    if file_node is not None:
-        assert_perm(db, file_node, current_user, PermissionMode.READ)
-
-    file_link = note.file_link
-    file_node = file_link.file_node if file_link else None
-    if file_node is not None:
-        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
-    file_link = note.file_link
-    file_node = file_link.file_node if file_link else None
-    if file_node is not None:
-        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
-    file_link = note.file_link
-    file_node = file_link.file_node if file_link else None
-    if file_node is not None:
-        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
-
-    file_link = note.file_link
-    file_node = file_link.file_node if file_link else None
     perm = None
     if file_node is not None:
         perm = resolve_permission(db, file_node, current_user)
@@ -327,12 +306,6 @@ async def update_note(
 
     check_project_permission(note.project_id, current_user, db)
 
-    file_link = note.file_link
-    file_node = file_link.file_node if file_link else None
-    if file_node is not None:
-        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
-
-    # Get the linked file node
     file_link = note.file_link
     file_node = file_link.file_node if file_link else None
     if file_node is not None:

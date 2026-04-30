@@ -1,9 +1,10 @@
 /**
  * @file
- * Time Machine file versioning tab component.
+ * Time Machine tab - unified project history, revert, and recycle bin.
  *
- * Displays file version history grouped by category for
- * reviewing and restoring previous versions.
+ * Displays the node_snapshots timeline with kind/actor filters, supports
+ * one-click revert to any snapshot, and shows the 7-day recycle bin with
+ * restore and empty-bin actions.
  *
  * MIT License
  *
@@ -27,937 +28,718 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
-  RefreshControl,
+  FlatList,
+  Image,
   Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import api from "../../services/api";
 import { showAlert } from "../../utils/alert";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  historyService,
+  type DeletedNode,
+  type SnapshotEntry,
+} from "../../services/fileService.core";
 
-interface FileVersion {
-  id: string;
-  file_node_id: string;
-  version: number;
-  storage_path: string;
-  size: string | null;
-  checksum: string | null;
-  created_at: string;
-  created_by: string | null;
+const ACCENT = "#FF2A2A";
+const ACCENT_SOFT = "rgba(255,42,42,0.12)";
+const PAGE_SIZE = 30;
+
+const KIND_LABELS: Record<string, string> = {
+  file_content: "File edit",
+  note_content: "Note edit",
+  folder_metadata: "Folder change",
+  acl_change: "Permissions",
+  harris_matrix: "Harris Matrix",
+  wheeler: "Wheeler",
+  create: "Created",
+  delete: "Deleted",
+};
+
+const KIND_ICONS: Record<string, string> = {
+  file_content: "📄",
+  note_content: "📝",
+  folder_metadata: "📁",
+  acl_change: "🔒",
+  harris_matrix: "🔗",
+  wheeler: "🗺️",
+  create: "✨",
+  delete: "🗑️",
+};
+
+const ALL_KINDS = Object.keys(KIND_LABELS);
+
+function formatRelative(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
-interface FileWithVersions {
-  id: string;
-  name: string;
-  type: string;
-  mime_type: string | null;
-  size: string | null;
-  current_version: number;
-  created_at: string;
-  updated_at: string;
-  category: string;
-  versions: FileVersion[];
-}
-
-interface TimeMachineData {
-  project_id: string;
-  total_files: number;
-  total_versions: number;
-  categories: Record<string, FileWithVersions[]>;
+function formatExpiry(iso: string): string {
+  const diff = new Date(iso).getTime() - Date.now();
+  const h = Math.floor(diff / 3_600_000);
+  if (h <= 0) return "expired";
+  if (h < 24) return `${h}h left`;
+  return `${Math.floor(h / 24)}d left`;
 }
 
 interface TimeMachineTabProps {
   projectId: string;
+  isOwner?: boolean;
 }
 
-/* ─── Data version types (Harris Matrix / Wheeler) ─── */
+type Tab = "timeline" | "bin";
 
-interface DataVersionEntry {
-  id: string;
-  version: number;
-  created_at: string | null;
-  created_by: string | null;
-}
-
-interface DataVersionsResponse {
-  project_id: string;
-  data_type: string;
-  current_version: number;
-  versions: DataVersionEntry[];
-}
-
-const DATA_TYPE_INFO: Record<
-  string,
-  { icon: string; label: string; color: string }
-> = {
-  harris_matrix: { icon: "HM", label: "Harris Matrix", color: "#4A90D9" },
-  wheeler: { icon: "WD", label: "Wheeler Diagram", color: "#9C27B0" },
-};
-
-const CATEGORY_INFO: Record<string, { icon: string; label: string; color: string }> =
-  {
-    documents: { icon: "D", label: "Documents", color: "#4A90D9" },
-    spreadsheets: { icon: "S", label: "Spreadsheets", color: "#34A853" },
-    images: { icon: "I", label: "Images", color: "#EA4335" },
-    videos: { icon: "V", label: "Videos", color: "#9C27B0" },
-    audio: { icon: "A", label: "Audio", color: "#FF9800" },
-    "3d_models": { icon: "3D", label: "3D Models", color: "#00BCD4" },
-    archives: { icon: "Z", label: "Archives", color: "#795548" },
-    code: { icon: "C", label: "Code", color: "#607D8B" },
-    other: { icon: "F", label: "Other", color: "#9E9E9E" },
-  };
-
-export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
+export default function TimeMachineTab({
+  projectId,
+  isOwner = false,
+}: TimeMachineTabProps) {
   const insets = useSafeAreaInsets();
-  const isDarkMode = (useColorScheme() ?? "light") === "dark";
-  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
-  const [data, setData] = useState<TimeMachineData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [activeTab, setActiveTab] = useState<Tab>("timeline");
+  const [snapshots, setSnapshots] = useState<SnapshotEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [deleted, setDeleted] = useState<DeletedNode[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(),
-  );
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [binLoading, setBinLoading] = useState(false);
 
-  // Data version history state (Harris Matrix + Wheeler)
-  const [harrisVersions, setHarrisVersions] = useState<DataVersionsResponse | null>(
-    null,
-  );
-  const [wheelerVersions, setWheelerVersions] =
-    useState<DataVersionsResponse | null>(null);
-  const [expandedDataTypes, setExpandedDataTypes] = useState<Set<string>>(new Set());
+  const [kindFilter, setKindFilter] = useState<string | null>(null);
+  const [revertingId, setRevertingId] = useState<string | null>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const loadTimeMachineData = useCallback(async () => {
+  const offsetRef = useRef(0);
+  const hasMore = snapshots.length < total;
+
+  // ── Loaders ────────────────────────────────────────────────────────────────
+
+  const loadTimeline = useCallback(
+    async (reset = false) => {
+      const isReset = reset || offsetRef.current === 0;
+      if (isReset) {
+        setLoading(true);
+        offsetRef.current = 0;
+      } else {
+        setLoadingMore(true);
+      }
+      try {
+        const data = await historyService.getProjectTimeline(projectId, {
+          limit: PAGE_SIZE,
+          offset: offsetRef.current,
+          ...(kindFilter ? { kind: kindFilter } : {}),
+        });
+        if (isReset) {
+          setSnapshots(data.snapshots);
+        } else {
+          setSnapshots((prev) => [...prev, ...data.snapshots]);
+        }
+        setTotal(data.total);
+        offsetRef.current += data.snapshots.length;
+      } catch {
+        showAlert("Error", "Could not load history");
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [projectId, kindFilter],
+  );
+
+  const loadBin = useCallback(async () => {
+    setBinLoading(true);
     try {
-      const url = selectedCategory
-        ? `/files/project/${projectId}/time-machine?category=${selectedCategory}`
-        : `/files/project/${projectId}/time-machine`;
-
-      const [tmResponse, harrisRes, wheelerRes] = await Promise.all([
-        api.get(url),
-        api
-          .get(`/projects/${projectId}/data-versions/harris_matrix`)
-          .catch(() => null),
-        api.get(`/projects/${projectId}/data-versions/wheeler`).catch(() => null),
-      ]);
-
-      setData(tmResponse.data);
-      if (harrisRes) setHarrisVersions(harrisRes.data);
-      if (wheelerRes) setWheelerVersions(wheelerRes.data);
-    } catch (error) {
-      console.error("Error loading time machine data:", error);
-      showAlert("Error", "Failed to load version history");
+      const data = await historyService.getDeletedNodes(projectId);
+      setDeleted(data);
+    } catch {
+      showAlert("Error", "Could not load recycle bin");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setBinLoading(false);
     }
-  }, [projectId, selectedCategory]);
+  }, [projectId]);
 
   useEffect(() => {
-    loadTimeMachineData();
-  }, [loadTimeMachineData]);
+    offsetRef.current = 0;
+    loadTimeline(true);
+  }, [loadTimeline]);
 
-  const onRefresh = useCallback(() => {
+  useEffect(() => {
+    if (activeTab === "bin") loadBin();
+  }, [activeTab, loadBin]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadTimeMachineData();
-  }, [loadTimeMachineData]);
+    offsetRef.current = 0;
+    if (activeTab === "timeline") {
+      await loadTimeline(true);
+    } else {
+      await loadBin();
+    }
+    setRefreshing(false);
+  }, [activeTab, loadTimeline, loadBin]);
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(category)) {
-        next.delete(category);
-      } else {
-        next.add(category);
-      }
-      return next;
-    });
-  };
+  // ── Actions ────────────────────────────────────────────────────────────────
 
-  const toggleFile = (fileId: string) => {
-    setExpandedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(fileId)) {
-        next.delete(fileId);
-      } else {
-        next.add(fileId);
-      }
-      return next;
-    });
-  };
-
-  const formatFileSize = (size: string | null): string => {
-    if (!size) return "Unknown size";
-    const bytes = parseInt(size, 10);
-    if (isNaN(bytes)) return size;
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatTimeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDate(dateString);
-  };
-
-  const downloadVersion = async (
-    fileId: string,
-    version: number,
-    fileName: string,
-  ) => {
-    try {
-      const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-      const url = `${apiBaseUrl}/api/files/${fileId}/version/${version}/download?token=${token}`;
-
-      if (Platform.OS === "web") {
-        window.open(url, "_blank");
-      } else {
-        showAlert("Download Version", `Download ${fileName} version ${version}?`, [
+  const handleRevert = useCallback(
+    async (snap: SnapshotEntry) => {
+      if (!snap.is_revertible) return;
+      showAlert(
+        "Revert to this version?",
+        `This will restore "${snap.name_at_snapshot || "item"}" to version ${snap.version}. Current changes will be preserved as a new snapshot.`,
+        [
           { text: "Cancel", style: "cancel" },
           {
-            text: "Download",
-            onPress: () => {
-              // For native, we'd use Linking or file download library
-              import("expo-linking").then((Linking) => {
-                Linking.openURL(url);
-              });
+            text: "Revert",
+            style: "destructive",
+            onPress: async () => {
+              setRevertingId(snap.id);
+              try {
+                await historyService.restoreSnapshot(snap.id);
+                showAlert("Done", "Reverted successfully.");
+                await loadTimeline(true);
+              } catch (e: any) {
+                showAlert(
+                  "Error",
+                  e.response?.data?.detail || "Revert failed",
+                );
+              } finally {
+                setRevertingId(null);
+              }
             },
           },
-        ]);
-      }
-    } catch (error) {
-      console.error("Error downloading version:", error);
-      showAlert("Error", "Failed to download version");
-    }
-  };
+        ],
+      );
+    },
+    [loadTimeline],
+  );
 
-  const restoreVersion = async (
-    fileId: string,
-    version: number,
-    fileName: string,
-  ) => {
+  const handleRestoreDeleted = useCallback(
+    async (item: DeletedNode) => {
+      setRestoringId(item.snapshot_id);
+      try {
+        await historyService.restoreSnapshot(item.snapshot_id);
+        showAlert("Restored", `"${item.name}" has been restored.`);
+        await loadBin();
+      } catch (e: any) {
+        showAlert("Error", e.response?.data?.detail || "Restore failed");
+      } finally {
+        setRestoringId(null);
+      }
+    },
+    [loadBin],
+  );
+
+  const handleEmptyBin = useCallback(async () => {
     showAlert(
-      "Restore Version",
-      `Restore ${fileName} to version ${version}? This will create a new version with the old content.`,
+      "Empty recycle bin?",
+      "All deleted items will be permanently removed. This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Restore",
+          text: "Empty bin",
           style: "destructive",
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem("authToken");
-              const apiBaseUrl =
-                config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
-              const response = await fetch(
-                `${apiBaseUrl}/api/files/${fileId}/restore/${version}`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                },
-              );
-
-              if (!response.ok) {
-                throw new Error("Failed to restore version");
-              }
-
-              showAlert("Success", `Restored ${fileName} to version ${version}`);
-              loadTimeMachineData();
-            } catch (error) {
-              console.error("Error restoring version:", error);
-              showAlert("Error", "Failed to restore version");
+              const res = await historyService.emptyBin(projectId);
+              showAlert("Done", `Permanently deleted ${res.purged} item(s).`);
+              await loadBin();
+            } catch (e: any) {
+              showAlert("Error", e.response?.data?.detail || "Could not empty bin");
             }
           },
         },
       ],
     );
-  };
+  }, [projectId, loadBin]);
 
-  /* ── Data version helpers (Harris Matrix / Wheeler) ── */
+  // ── Render helpers ─────────────────────────────────────────────────────────
 
-  const toggleDataType = (dataType: string) => {
-    setExpandedDataTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(dataType)) {
-        next.delete(dataType);
-      } else {
-        next.add(dataType);
-      }
-      return next;
-    });
-  };
+  const renderSnapshotItem = useCallback(
+    ({ item }: { item: SnapshotEntry }) => {
+      const isReverting = revertingId === item.id;
+      const icon = KIND_ICONS[item.kind] ?? "🔄";
+      const label = KIND_LABELS[item.kind] ?? item.kind;
 
-  const restoreDataVersion = (dataType: string, version: number) => {
-    const info = DATA_TYPE_INFO[dataType] ?? DATA_TYPE_INFO.harris_matrix;
-    showAlert(
-      "Restore Version",
-      `Restore ${info.label} to version ${version}? The current data will be saved as a new version.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Restore",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.post(
-                `/projects/${projectId}/data-versions/${dataType}/restore/${version}`,
-              );
-              showAlert("Success", `${info.label} restored to version ${version}`);
-              loadTimeMachineData();
-            } catch (error) {
-              console.error("Error restoring data version:", error);
-              showAlert("Error", `Failed to restore ${info.label}`);
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const renderDataVersionSection = (dvr: DataVersionsResponse) => {
-    const info = DATA_TYPE_INFO[dvr.data_type] ?? DATA_TYPE_INFO.harris_matrix;
-    const isExpanded = expandedDataTypes.has(dvr.data_type);
-
-    return (
-      <View key={dvr.data_type} style={styles.categorySection}>
-        <TouchableOpacity
-          style={styles.categoryHeader}
-          onPress={() => toggleDataType(dvr.data_type)}
-        >
-          <View style={styles.categoryInfo}>
-            <Text style={styles.categoryIcon}>{info.icon}</Text>
-            <View>
-              <Text style={styles.categoryLabel}>{info.label}</Text>
-              <Text style={styles.categoryMeta}>
-                Current v{dvr.current_version} · {dvr.versions.length} snapshots
-              </Text>
-            </View>
+      return (
+        <View style={styles.snapshotRow}>
+          <View style={styles.snapshotIcon}>
+            <Text style={styles.snapshotEmoji}>{icon}</Text>
           </View>
-          <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.versionsContainer}>
-            {/* Current version */}
-            <View style={styles.versionItem}>
-              <View style={styles.versionDot} />
-              <View style={styles.versionInfo}>
-                <Text style={styles.versionLabel}>
-                  Version {dvr.current_version}
-                  <Text style={styles.currentVersionBadge}> (Current)</Text>
-                </Text>
-                <Text style={styles.versionMeta}>Latest saved state</Text>
-              </View>
-            </View>
-
-            {dvr.versions.map((v) => (
-              <View key={v.id} style={styles.versionItem}>
-                <View style={[styles.versionDot, styles.versionDotOld]} />
-                <View style={styles.versionInfo}>
-                  <View style={styles.versionHeader}>
-                    <Text style={styles.versionLabel}>Version {v.version}</Text>
-                    <View style={styles.versionActions}>
-                      <TouchableOpacity
-                        style={styles.versionActionButton}
-                        onPress={() => restoreDataVersion(dvr.data_type, v.version)}
-                      >
-                        <Text style={styles.versionActionText}>RS</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <Text style={styles.versionMeta}>
-                    {v.created_at ? formatDate(v.created_at) : "Unknown date"}
+          <View style={styles.snapshotBody}>
+            <Text style={styles.snapshotSummary} numberOfLines={2}>
+              {item.summary || label}
+            </Text>
+            <View style={styles.snapshotMeta}>
+              <Text style={styles.snapshotKind}>{label}</Text>
+              <Text style={styles.snapshotDot}> · </Text>
+              <Text style={styles.snapshotTime}>{formatRelative(item.created_at)}</Text>
+              {!!item.actor_display_name && (
+                <>
+                  <Text style={styles.snapshotDot}> · </Text>
+                  <Text style={styles.snapshotActor} numberOfLines={1}>
+                    {item.actor_display_name}
                   </Text>
-                </View>
-              </View>
-            ))}
-
-            {dvr.versions.length === 0 && (
-              <View style={{ padding: 12 }}>
-                <Text style={styles.versionMeta}>
-                  No previous versions yet. Edit the {info.label} to create
-                  snapshots.
-                </Text>
-              </View>
-            )}
+                </>
+              )}
+            </View>
           </View>
-        )}
-      </View>
-    );
-  };
+          {item.is_revertible && item.kind !== "delete" && (
+            <TouchableOpacity
+              style={styles.revertButton}
+              onPress={() => handleRevert(item)}
+              disabled={isReverting}
+              accessibilityRole="button"
+              accessibilityLabel={`Revert to version ${item.version}`}
+            >
+              {isReverting ? (
+                <ActivityIndicator size="small" color={ACCENT} />
+              ) : (
+                <Text style={styles.revertText}>Revert</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    },
+    [handleRevert, revertingId],
+  );
 
-  const renderCategoryFilter = () => {
-    const categories = Object.keys(CATEGORY_INFO);
+  const renderDeletedItem = useCallback(
+    ({ item }: { item: DeletedNode }) => {
+      const isRestoring = restoringId === item.snapshot_id;
+      return (
+        <View style={styles.snapshotRow}>
+          <View style={[styles.snapshotIcon, styles.binIcon]}>
+            <Text style={styles.snapshotEmoji}>🗑️</Text>
+          </View>
+          <View style={styles.snapshotBody}>
+            <Text style={styles.snapshotSummary} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.snapshotMeta}>
+              <Text style={styles.snapshotTime}>
+                {formatRelative(item.deleted_at)}
+              </Text>
+              {!!item.deleted_by_display_name && (
+                <Text style={styles.snapshotActor}>
+                  {" "}· {item.deleted_by_display_name}
+                </Text>
+              )}
+              {"  "}
+              <Text
+                style={[
+                  styles.expiryBadge,
+                  new Date(item.expires_at).getTime() - Date.now() < 86_400_000 &&
+                    styles.expiryBadgeUrgent,
+                ]}
+              >
+                {formatExpiry(item.expires_at)}
+              </Text>
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.restoreButton}
+            onPress={() => handleRestoreDeleted(item)}
+            disabled={isRestoring}
+            accessibilityRole="button"
+            accessibilityLabel={`Restore ${item.name}`}
+          >
+            {isRestoring ? (
+              <ActivityIndicator size="small" color={ACCENT} />
+            ) : (
+              <Text style={styles.restoreText}>Restore</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [handleRestoreDeleted, restoringId],
+  );
 
-    return (
+  // ── Kind filter chips ──────────────────────────────────────────────────────
+
+  const kindChips = useMemo(
+    () => (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
+        contentContainerStyle={styles.chipsContainer}
       >
         <TouchableOpacity
-          style={[styles.filterChip, !selectedCategory && styles.filterChipActive]}
-          onPress={() => setSelectedCategory(null)}
+          style={[styles.chip, kindFilter === null && styles.chipActive]}
+          onPress={() => setKindFilter(null)}
         >
           <Text
-            style={[
-              styles.filterChipText,
-              !selectedCategory && styles.filterChipTextActive,
-            ]}
+            style={[styles.chipText, kindFilter === null && styles.chipTextActive]}
           >
             All
           </Text>
         </TouchableOpacity>
-
-        {categories.map((cat) => {
-          const info = CATEGORY_INFO[cat];
-          const count = data?.categories[cat]?.length || 0;
-          if (count === 0 && selectedCategory !== cat) return null;
-
-          return (
-            <TouchableOpacity
-              key={cat}
+        {ALL_KINDS.map((k) => (
+          <TouchableOpacity
+            key={k}
+            style={[styles.chip, kindFilter === k && styles.chipActive]}
+            onPress={() => setKindFilter(kindFilter === k ? null : k)}
+          >
+            <Text
               style={[
-                styles.filterChip,
-                selectedCategory === cat && styles.filterChipActive,
+                styles.chipText,
+                kindFilter === k && styles.chipTextActive,
               ]}
-              onPress={() =>
-                setSelectedCategory(cat === selectedCategory ? null : cat)
-              }
             >
-              <Text style={styles.filterChipIcon}>{info.icon}</Text>
-              <Text
-                style={[
-                  styles.filterChipText,
-                  selectedCategory === cat && styles.filterChipTextActive,
-                ]}
-              >
-                {info.label} ({count})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              {KIND_ICONS[k]} {KIND_LABELS[k]}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
-    );
-  };
+    ),
+    [kindFilter],
+  );
 
-  const renderFileVersions = (file: FileWithVersions) => {
-    const isExpanded = expandedFiles.has(file.id);
-    const info = CATEGORY_INFO[file.category] || CATEGORY_INFO.other;
-
-    return (
-      <View key={file.id} style={styles.fileCard}>
-        <TouchableOpacity
-          style={styles.fileHeader}
-          onPress={() => toggleFile(file.id)}
-        >
-          <View style={styles.fileInfo}>
-            <Text style={styles.fileIcon}>{info.icon}</Text>
-            <View style={styles.fileDetails}>
-              <Text style={styles.fileName} numberOfLines={1}>
-                {file.name}
-              </Text>
-              <Text style={styles.fileMeta}>
-                v{file.current_version} • {formatFileSize(file.size)} •{" "}
-                {formatTimeAgo(file.updated_at)}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.fileActions}>
-            <View style={styles.versionBadge}>
-              <Text style={styles.versionBadgeText}>
-                {file.versions.length + 1} versions
-              </Text>
-            </View>
-            <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
-          </View>
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.versionsContainer}>
-            {/* Current version */}
-            <View style={styles.versionItem}>
-              <View style={styles.versionDot} />
-              <View style={styles.versionInfo}>
-                <View style={styles.versionHeader}>
-                  <Text style={styles.versionLabel}>
-                    Version {file.current_version}
-                    <Text style={styles.currentVersionBadge}> (Current)</Text>
-                  </Text>
-                </View>
-                <Text style={styles.versionMeta}>
-                  {formatDate(file.updated_at)} • {formatFileSize(file.size)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Previous versions */}
-            {file.versions.map((version) => (
-              <View key={version.id} style={styles.versionItem}>
-                <View style={[styles.versionDot, styles.versionDotOld]} />
-                <View style={styles.versionInfo}>
-                  <View style={styles.versionHeader}>
-                    <Text style={styles.versionLabel}>
-                      Version {version.version}
-                    </Text>
-                    <View style={styles.versionActions}>
-                      <TouchableOpacity
-                        style={styles.versionActionButton}
-                        onPress={() =>
-                          downloadVersion(file.id, version.version, file.name)
-                        }
-                      >
-                        <Text style={styles.versionActionText}>DL</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.versionActionButton}
-                        onPress={() =>
-                          restoreVersion(file.id, version.version, file.name)
-                        }
-                      >
-                        <Text style={styles.versionActionText}>RS</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <Text style={styles.versionMeta}>
-                    {formatDate(version.created_at)} • {formatFileSize(version.size)}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderCategory = (category: string, files: FileWithVersions[]) => {
-    if (files.length === 0) return null;
-
-    const info = CATEGORY_INFO[category] || CATEGORY_INFO.other;
-    const isExpanded = expandedCategories.has(category);
-    const totalVersions = files.reduce((sum, f) => sum + f.versions.length + 1, 0);
-
-    return (
-      <View key={category} style={styles.categorySection}>
-        <TouchableOpacity
-          style={styles.categoryHeader}
-          onPress={() => toggleCategory(category)}
-        >
-          <View style={styles.categoryInfo}>
-            <Text style={styles.categoryIcon}>{info.icon}</Text>
-            <View>
-              <Text style={styles.categoryLabel}>{info.label}</Text>
-              <Text style={styles.categoryMeta}>
-                {files.length} files • {totalVersions} total versions
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.expandIcon}>{isExpanded ? "▼" : "▶"}</Text>
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.categoryFiles}>{files.map(renderFileVersions)}</View>
-        )}
-      </View>
-    );
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF2A2A" />
-        <Text style={styles.loadingText}>Loading version history...</Text>
-      </View>
-    );
-  }
-
-  if (!data) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>TM</Text>
-        <Text style={styles.emptyTitle}>No version history</Text>
-        <Text style={styles.emptySubtitle}>
-          Upload and update files to start building version history
-        </Text>
-      </View>
-    );
-  }
-
-  const categories = Object.entries(data.categories);
-
-  // Project screen uses an absolute bottom tab bar on Android (height 84).
-  // Add enough padding so the last items don't end up behind it.
-  const bottomPadding =
-    (Platform.OS === "android" ? 84 : 0) + (insets.bottom || 0) + 16;
-
-  const dataSnapshotCount =
-    (harrisVersions?.versions.length ?? 0) + (wheelerVersions?.versions.length ?? 0);
+  // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
-      {/* Header Stats */}
-      <View style={styles.statsHeader}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{data.total_files}</Text>
-          <Text style={styles.statLabel}>Files</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{data.total_versions}</Text>
-          <Text style={styles.statLabel}>File Versions</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{dataSnapshotCount}</Text>
-          <Text style={styles.statLabel}>Data Snapshots</Text>
-        </View>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === "timeline" && styles.tabItemActive]}
+          onPress={() => setActiveTab("timeline")}
+        >
+          <Text
+            style={[
+              styles.tabLabel,
+              activeTab === "timeline" && styles.tabLabelActive,
+            ]}
+          >
+            History
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabItem, activeTab === "bin" && styles.tabItemActive]}
+          onPress={() => setActiveTab("bin")}
+        >
+          <Text
+            style={[
+              styles.tabLabel,
+              activeTab === "bin" && styles.tabLabelActive,
+            ]}
+          >
+            Recycle Bin {deleted.length > 0 ? `(${deleted.length})` : ""}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Category Filter */}
-      {renderCategoryFilter()}
-
-      {/* Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomPadding },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FF2A2A"
-          />
-        }
-      >
-        {categories.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>F</Text>
-            <Text style={styles.emptyTitle}>No files found</Text>
-            <Text style={styles.emptySubtitle}>Upload files to see them here</Text>
-          </View>
-        ) : (
-          categories.map(([category, files]) => renderCategory(category, files))
-        )}
-
-        {/* Data Version History (Harris Matrix & Wheeler) */}
-        {(harrisVersions || wheelerVersions) && (
-          <View style={{ marginTop: 16 }}>
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: "700",
-                color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
-                marginBottom: 12,
-                paddingHorizontal: 4,
+      {activeTab === "timeline" ? (
+        <>
+          {kindChips}
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color={ACCENT} />
+            </View>
+          ) : (
+            <FlatList
+              data={snapshots}
+              keyExtractor={(item) => item.id}
+              renderItem={renderSnapshotItem}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={ACCENT}
+                />
+              }
+              onEndReached={() => {
+                if (hasMore && !loadingMore) {
+                  loadTimeline(false);
+                }
               }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                loadingMore ? (
+                  <View style={styles.footerLoader}>
+                    <ActivityIndicator color={ACCENT} size="small" />
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No history yet</Text>
+                  <Text style={styles.emptyBody}>
+                    Changes to files and notes will appear here.
+                  </Text>
+                </View>
+              }
+              contentContainerStyle={
+                snapshots.length === 0 ? styles.emptyFlex : undefined
+              }
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {isOwner && deleted.length > 0 && (
+            <TouchableOpacity
+              style={styles.emptyBinButton}
+              onPress={handleEmptyBin}
             >
-              Data Version History
-            </Text>
-            {harrisVersions && renderDataVersionSection(harrisVersions)}
-            {wheelerVersions && renderDataVersionSection(wheelerVersions)}
-          </View>
-        )}
-      </ScrollView>
+              <Text style={styles.emptyBinText}>Empty bin</Text>
+            </TouchableOpacity>
+          )}
+          {binLoading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator color={ACCENT} />
+            </View>
+          ) : (
+            <FlatList
+              data={deleted}
+              keyExtractor={(item) => item.snapshot_id}
+              renderItem={renderDeletedItem}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={ACCENT}
+                />
+              }
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>Recycle bin is empty</Text>
+                  <Text style={styles.emptyBody}>
+                    Deleted items appear here for 7 days before being permanently
+                    removed.
+                  </Text>
+                </View>
+              }
+              contentContainerStyle={
+                deleted.length === 0 ? styles.emptyFlex : undefined
+              }
+            />
+          )}
+        </>
+      )}
     </View>
   );
 }
 
-const createStyles = (isDarkMode: boolean) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: isDarkMode ? "#0A0A0A" : "#F6F6F6",
-      padding: 20,
-    },
-    loadingText: {
-      marginTop: 16,
-      color: isDarkMode ? "#9A9A9A" : "#666666",
-      fontSize: 14,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 40,
-    },
-    emptyIcon: {
-      fontSize: 64,
-      marginBottom: 16,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: "600",
-      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      color: isDarkMode ? "#9A9A9A" : "#666666",
-      textAlign: "center",
-    },
-    statsHeader: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      alignItems: "center",
-      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
-    },
-    statItem: {
-      alignItems: "center",
-    },
-    statValue: {
-      fontSize: 24,
-      fontWeight: "700",
-      color: "#FF2A2A",
-    },
-    statLabel: {
-      fontSize: 12,
-      color: isDarkMode ? "#9A9A9A" : "#666666",
-      marginTop: 4,
-    },
-    statDivider: {
-      width: 1,
-      height: 32,
-      backgroundColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
-    },
-    filterContainer: {
-      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
-      borderBottomWidth: 1,
-      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
-      flexGrow: 0,
-      flexShrink: 0,
-      height: 56,
-    },
-    filterContent: {
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      gap: 10,
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    filterChip: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
-      paddingHorizontal: 14,
-      height: 36,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: isDarkMode ? "#3A3A3A" : "#D0D0D0",
-    },
-    filterChipActive: {
-      backgroundColor: "#FF2A2A",
-      borderColor: "#FF2A2A",
-    },
-    filterChipIcon: {
-      fontSize: 14,
-      marginRight: 6,
-    },
-    filterChipText: {
-      fontSize: 13,
-      color: isDarkMode ? "#9A9A9A" : "#666666",
-      fontWeight: "500",
-    },
-    filterChipTextActive: {
-      color: "#F5F5F5",
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: 16,
-      paddingBottom: 100,
-    },
-    categorySection: {
-      marginBottom: 16,
-      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
-      borderRadius: 12,
-      overflow: "hidden",
-      borderWidth: 1,
-      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
-    },
-    categoryHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 16,
-    },
-    categoryInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    categoryIcon: {
-      fontSize: 24,
-      marginRight: 12,
-    },
-    categoryLabel: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
-    },
-    categoryMeta: {
-      fontSize: 12,
-      color: isDarkMode ? "#666666" : "#7A7A7A",
-      marginTop: 2,
-    },
-    expandIcon: {
-      fontSize: 12,
-      color: isDarkMode ? "#666666" : "#7A7A7A",
-    },
-    categoryFiles: {
-      borderTopWidth: 1,
-      borderTopColor: isDarkMode ? "#2A2A2A" : "#E5E5E5",
-    },
-    fileCard: {
-      borderBottomWidth: 1,
-      borderBottomColor: isDarkMode ? "#2A2A2A" : "#E5E5E5",
-    },
-    fileHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: 12,
-      paddingLeft: 16,
-    },
-    fileInfo: {
-      flexDirection: "row",
-      alignItems: "center",
-      flex: 1,
-    },
-    fileIcon: {
-      fontSize: 20,
-      marginRight: 12,
-    },
-    fileDetails: {
-      flex: 1,
-    },
-    fileName: {
-      fontSize: 14,
-      fontWeight: "500",
-      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
-    },
-    fileMeta: {
-      fontSize: 11,
-      color: isDarkMode ? "#666666" : "#7A7A7A",
-      marginTop: 2,
-    },
-    fileActions: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    versionBadge: {
-      backgroundColor: isDarkMode ? "#2A2A2A" : "#EFEFEF",
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 10,
-      marginRight: 8,
-    },
-    versionBadgeText: {
-      fontSize: 10,
-      color: isDarkMode ? "#9A9A9A" : "#666666",
-    },
-    versionsContainer: {
-      backgroundColor: isDarkMode ? "#0E0E0E" : "#F8F8F8",
-      paddingVertical: 8,
-      paddingLeft: 32,
-      paddingRight: 12,
-    },
-    versionItem: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      paddingVertical: 8,
-    },
-    versionDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: "#FF2A2A",
-      marginTop: 6,
-      marginRight: 12,
-    },
-    versionDotOld: {
-      backgroundColor: isDarkMode ? "#666" : "#8A8A8A",
-    },
-    versionInfo: {
-      flex: 1,
-    },
-    versionHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    versionLabel: {
-      fontSize: 13,
-      fontWeight: "500",
-      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
-    },
-    currentVersionBadge: {
-      color: "#FF2A2A",
-      fontWeight: "600",
-    },
-    versionMeta: {
-      fontSize: 11,
-      color: isDarkMode ? "#666666" : "#7A7A7A",
-      marginTop: 2,
-    },
-    versionActions: {
-      flexDirection: "row",
-    },
-    versionActionButton: {
-      padding: 4,
-      marginLeft: 8,
-    },
-    versionActionText: {
-      fontSize: 16,
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEEEEE",
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  tabItemActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: ACCENT,
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#888888",
+  },
+  tabLabelActive: {
+    color: ACCENT,
+    fontWeight: "700",
+  },
+  chipsContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "#F0F0F0",
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  chipActive: {
+    backgroundColor: ACCENT_SOFT,
+    borderColor: ACCENT,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#555555",
+  },
+  chipTextActive: {
+    color: ACCENT,
+    fontWeight: "700",
+  },
+  snapshotRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#EEEEEE",
+  },
+  snapshotIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F5F5F5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    marginTop: 2,
+  },
+  binIcon: {
+    backgroundColor: "#FFF0F0",
+  },
+  snapshotEmoji: {
+    fontSize: 16,
+  },
+  snapshotBody: {
+    flex: 1,
+  },
+  snapshotSummary: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#1A1A1A",
+    marginBottom: 4,
+    lineHeight: 19,
+  },
+  snapshotMeta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  snapshotKind: {
+    fontSize: 11,
+    color: "#888888",
+  },
+  snapshotDot: {
+    fontSize: 11,
+    color: "#BBBBBB",
+  },
+  snapshotTime: {
+    fontSize: 11,
+    color: "#888888",
+  },
+  snapshotActor: {
+    fontSize: 11,
+    color: "#888888",
+    maxWidth: 120,
+  },
+  revertButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: ACCENT_SOFT,
+    borderWidth: 1,
+    borderColor: ACCENT,
+    minWidth: 64,
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  revertText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: ACCENT,
+  },
+  restoreButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "#E8F5E9",
+    borderWidth: 1,
+    borderColor: "#4CAF50",
+    minWidth: 72,
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  restoreText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#2E7D32",
+  },
+  expiryBadge: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#888888",
+  },
+  expiryBadgeUrgent: {
+    color: ACCENT,
+  },
+  emptyBinButton: {
+    margin: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#FFF0F0",
+    borderWidth: 1,
+    borderColor: ACCENT,
+    alignItems: "center",
+  },
+  emptyBinText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: ACCENT,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 64,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  emptyFlex: {
+    flex: 1,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#333333",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptyBody: {
+    fontSize: 13,
+    color: "#777777",
+    textAlign: "center",
+    lineHeight: 19,
+  },
+});

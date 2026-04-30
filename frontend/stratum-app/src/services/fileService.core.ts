@@ -245,3 +245,80 @@ export const fileServiceCore = {
     return res.data;
   },
 };
+
+// ── History / Time Machine ────────────────────────────────────────────────────
+
+export interface SnapshotEntry {
+  id: string;
+  project_id: string;
+  node_id: string | null;
+  kind: string;
+  version: number;
+  actor_id: string | null;
+  actor_display_name: string | null;
+  actor_photo_url: string | null;
+  reason: string;
+  summary: string | null;
+  created_at: string;
+  name_at_snapshot: string | null;
+  path_at_snapshot: string | null;
+  blob_sha256: string | null;
+  is_revertible: boolean;
+}
+
+export interface HistoryTimeline {
+  project_id: string;
+  total: number;
+  snapshots: SnapshotEntry[];
+}
+
+export interface DeletedNode {
+  snapshot_id: string;
+  node_id: string | null;
+  name: string;
+  type: string;
+  parent_id_at_snapshot: string | null;
+  path_at_snapshot: string | null;
+  deleted_at: string;
+  deleted_by_id: string | null;
+  deleted_by_display_name: string | null;
+  expires_at: string;
+}
+
+export const historyService = {
+  getProjectTimeline: async (
+    projectId: string,
+    params?: { limit?: number; offset?: number; kind?: string; actor_id?: string },
+  ): Promise<HistoryTimeline> => {
+    const res = await api.get(`/history/project/${projectId}`, { params });
+    return res.data;
+  },
+
+  getNodeTimeline: async (
+    nodeId: string,
+    params?: { limit?: number; offset?: number },
+  ): Promise<HistoryTimeline> => {
+    const res = await api.get(`/history/node/${nodeId}`, { params });
+    return res.data;
+  },
+
+  getDeletedNodes: async (projectId: string): Promise<DeletedNode[]> => {
+    const res = await api.get(`/history/project/${projectId}/deleted`);
+    return res.data;
+  },
+
+  restoreSnapshot: async (
+    snapshotId: string,
+    force = false,
+  ): Promise<{ restored: boolean; message?: string }> => {
+    const res = await api.post(`/history/restore/${snapshotId}`, { force });
+    return res.data;
+  },
+
+  emptyBin: async (
+    projectId: string,
+  ): Promise<{ purged: number }> => {
+    const res = await api.delete(`/history/project/${projectId}/bin`);
+    return res.data;
+  },
+};

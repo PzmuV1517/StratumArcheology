@@ -47,6 +47,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.requests import Request
 
+import asyncio
+
 from app.backup_service import backup_service
 from app.config import settings
 from app.database import is_database_available
@@ -319,6 +321,28 @@ async def health_check():
         "deployment_mode": settings.deployment_mode_normalized,
         "uptime_seconds": round(_get_uptime_seconds(), 2),
     }
+
+
+async def _recycle_bin_sweeper() -> None:
+    """Purge delete snapshots older than 7 days once per day."""
+    from app.database import SessionLocal
+    from app.history import purge_expired_delete_snapshots
+
+    while True:
+        await asyncio.sleep(86_400)  # 24 h
+        try:
+            with SessionLocal() as db:
+                n = purge_expired_delete_snapshots(db)
+                db.commit()
+                if n:
+                    logger.info("Recycle bin sweep complete", purged=n)
+        except Exception as exc:
+            logger.exception("Recycle bin sweep failed", error=str(exc))
+
+
+@app.on_event("startup")
+async def _start_recycle_bin_sweeper():
+    asyncio.create_task(_recycle_bin_sweeper())
 
 
 @app.on_event("startup")
