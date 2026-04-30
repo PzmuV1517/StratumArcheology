@@ -246,6 +246,11 @@ async def get_note(
     file_link = note.file_link
     file_node = file_link.file_node if file_link else None
     if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.READ)
+
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    if file_node is not None:
         assert_perm(db, file_node, current_user, PermissionMode.WRITE)
     file_link = note.file_link
     file_node = file_link.file_node if file_link else None

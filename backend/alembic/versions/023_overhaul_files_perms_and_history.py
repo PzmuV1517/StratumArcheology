@@ -361,20 +361,21 @@ def upgrade() -> None:
                 {"root": root, "id": n.id},
             )
 
-    # --- 5. Backfill FileNode placeholders for voice notes -----------------
+    # --- 5. Backfill FileNode mirrors for notes missing a link ------------
     #
-    # Voice notes never created a .txt mirror in the legacy code path. The
-    # new pipeline expects every note to have a FileNode so the ACL
-    # resolver, snapshot recorder, and listing endpoints can operate
-    # uniformly. Create a name-only placeholder under the project's "Notes"
-    # folder for each voice note that has no NoteFileLink yet.
+    # Some legacy notes (voice notes in particular) did not create a .txt
+    # mirror in the file tree. The new pipeline expects every note to have
+    # a FileNode so ACL + history can flow uniformly. Create a .txt file
+    # node under the project's "Notes" folder for each note without a
+    # NoteFileLink yet.
 
     voice_notes = bind.execute(
         sa.text(
-            "SELECT n.id, n.project_id, n.title, n.created_at "
+            "SELECT n.id, n.project_id, n.title, n.content, n.author_id, "
+            "       n.created_at, n.updated_at "
             "FROM notes n "
             "LEFT JOIN note_file_links l ON l.note_id = n.id "
-            "WHERE l.id IS NULL"
+            "WHERE l.note_id IS NULL"
         )
     ).fetchall()
 
@@ -421,9 +422,9 @@ def upgrade() -> None:
     for vn in voice_notes:
         notes_folder_id = ensure_notes_folder(vn.project_id)
 
-        # Pick a unique sibling name for the placeholder.
-        base = vn.title or "Voice note"
-        candidate = f"{base}.voice"
+        # Pick a unique sibling name for the mirror.
+        base = vn.title or "Note"
+        candidate = f"{base}.txt"
         suffix = 1
         while bind.execute(
             sa.text(
@@ -435,7 +436,7 @@ def upgrade() -> None:
             {"pid": vn.project_id, "parent": notes_folder_id, "name": candidate},
         ).fetchone():
             suffix += 1
-            candidate = f"{base} ({suffix}).voice"
+            candidate = f"{base} ({suffix}).txt"
 
         node_id = _new_id()
         bind.execute(
@@ -443,12 +444,12 @@ def upgrade() -> None:
                 "INSERT INTO file_nodes ("
                 "  id, project_id, parent_id, name, type, is_locked,"
                 "  privacy, version, is_acl_root, acl_root_id,"
-                "  storage_path, mime_type,"
+                "  storage_path, mime_type, size, owner_id,"
                 "  created_at, updated_at"
                 ") VALUES ("
-                "  :id, :pid, :parent, :name, 'note', FALSE,"
+                "  :id, :pid, :parent, :name, 'file', FALSE,"
                 "  'project', 1, FALSE, NULL,"
-                "  NULL, NULL,"
+                "  :storage, 'text/plain', :size, :owner,"
                 "  :now, :now"
                 ")"
             ),
@@ -457,7 +458,10 @@ def upgrade() -> None:
                 "pid": vn.project_id,
                 "parent": notes_folder_id,
                 "name": candidate,
-                "now": vn.created_at or datetime.utcnow(),
+                "storage": f"notes/{vn.project_id}/{vn.id}.txt",
+                "size": str(len((vn.content or "").encode("utf-8"))),
+                "owner": vn.author_id,
+                "now": vn.updated_at or vn.created_at or datetime.utcnow(),
             },
         )
         bind.execute(

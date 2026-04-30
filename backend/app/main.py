@@ -40,6 +40,7 @@ from app.minio_client import minio_client, set_request_base_url
 from app.rate_limiter import limiter
 from app.routes import (
     activities,
+    acl,
     ai,
     auth,
     channels,
@@ -51,6 +52,7 @@ from app.routes import (
     files,
     forms,
     gps,
+    history,
     invites,
     notes,
     projects,
@@ -131,6 +133,8 @@ app.include_router(ai.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(notes.router, prefix="/api")
 app.include_router(files.router, prefix="/api")
+app.include_router(acl.router, prefix="/api")
+app.include_router(history.router, prefix="/api")
 app.include_router(convert.router, prefix="/api")
 app.include_router(gps.router, prefix="/api")
 app.include_router(forms.router, prefix="/api")
