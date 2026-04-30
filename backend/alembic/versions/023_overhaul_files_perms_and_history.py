@@ -22,7 +22,7 @@ This migration:
    ``file_versions`` / ``data_versions`` tables.
 
 Revision ID: 4d1f8a2b6c7e
-Revises: b7c2d9f13a44
+Revises: d3e5a9f1c2b7
 Create Date: 2026-04-29 03:00:00.000000
 
 """
@@ -37,7 +37,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "4d1f8a2b6c7e"
-down_revision: str | Sequence[str] | None = "b7c2d9f13a44"
+down_revision: str | Sequence[str] | None = "d3e5a9f1c2b7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

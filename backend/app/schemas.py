@@ -274,6 +274,25 @@ class FileNodeType(str, Enum):
     note = "note"
 
 
+class EffectiveAccess(BaseModel):
+    """Compact summary of a node's resolved permissions for the calling user.
+
+    Sent on every file/note/folder response so the UI can render lock
+    icons, edit/share buttons, and "inherited from <folder>" badges
+    without a second round-trip.
+    """
+
+    can_read: bool
+    can_write: bool
+    is_acl_root: bool
+    acl_root_id: str | None = None
+    acl_root_name: str | None = None
+    is_owner_override: bool = False
+    is_admin_override: bool = False
+    is_project_default: bool = True
+    is_acl_root_owner: bool = False
+
+
 class FileNodeBase(BaseModel):
     id: str
     project_id: str
@@ -286,31 +305,15 @@ class FileNodeBase(BaseModel):
     version: int = 1
     checksum: str | None = None
     owner_id: str | None = None
-    privacy: PrivacyLevel = PrivacyLevel.PROJECT
-    shared_with: list[str] | None = None
+    is_acl_root: bool = False
+    acl_root_id: str | None = None
     created_at: datetime
     updated_at: datetime
+    # Populated by route handlers, not from the ORM directly.
+    effective_access: EffectiveAccess | None = None
 
     class Config:
         from_attributes = True
-
-
-class FileVersionResponse(BaseModel):
-    id: str
-    file_node_id: str
-    version: int
-    storage_path: str
-    size: str | None = None
-    checksum: str | None = None
-    created_at: datetime
-    created_by: str | None = None
-
-    class Config:
-        from_attributes = True
-
-
-class FileNodeWithVersions(FileNodeBase):
-    versions: list[FileVersionResponse] = []
 
 
 class FileNodeCreateFolder(BaseModel):
@@ -326,23 +329,119 @@ class FileNodeMoveRequest(BaseModel):
     new_parent_id: str | None = None
 
 
-class FilePrivacyUpdateRequest(BaseModel):
-    privacy: PrivacyLevel
-    shared_with: list[str] | None = None  # List of user IDs for SHARED privacy
+# ---- ACL request / response schemas ----------------------------------------
 
 
-class ShareWithUsersRequest(BaseModel):
-    user_ids: list[str]
+class ACLPrincipalEntry(BaseModel):
+    """One row in the ACL UI: a user or group with their effective rights.
+
+    Exactly one of ``user_id`` / ``group_id`` is set. ``can_write``
+    implies ``can_read`` (enforced both at the API layer and by a DB
+    CHECK constraint).
+    """
+
+    user_id: str | None = None
+    group_id: str | None = None
+    can_read: bool = True
+    can_write: bool = False
+    inherited_from_node_id: str | None = None
+    # Display fields (filled on read, ignored on write)
+    display_name: str | None = None
+    photo_url: str | None = None
+    role: str | None = None  # the project role for users (leader/researcher/guest)
 
 
-class SharedFilesResponse(BaseModel):
-    shared_with_me: list[FileNodeBase]
-    shared_by_me: list[FileNodeBase]
+class ACLState(BaseModel):
+    """Full ACL view for a single node.
+
+    ``is_acl_root`` distinguishes a node that defines its own ACL from
+    one that's inheriting. ``entries`` is empty when the node has no
+    explicit rules; in that case ``inherits_from`` points at whichever
+    ancestor (if any) currently governs access.
+    """
+
+    file_node_id: str
+    is_acl_root: bool
+    inherits_from: str | None = None
+    entries: list[ACLPrincipalEntry] = []
 
 
-class SharedNotesResponse(BaseModel):
-    shared_with_me: list["NoteResponse"]
-    shared_by_me: list["NoteResponse"]
+class ACLPutRequest(BaseModel):
+    """Replace the ACL for a node in one shot.
+
+    Setting ``is_acl_root=False`` clears any rules and re-inherits from
+    the parent. Setting ``is_acl_root=True`` with an empty list grants
+    nobody but the owner / project leader access (private folder).
+    """
+
+    is_acl_root: bool
+    entries: list[ACLPrincipalEntry] = []
+
+
+class ACLShareRequest(BaseModel):
+    """Convenience: add (or update) a single principal on a node."""
+
+    user_id: str | None = None
+    group_id: str | None = None
+    can_read: bool = True
+    can_write: bool = False
+
+
+# ---- Snapshot / History schemas --------------------------------------------
+
+
+class SnapshotResponse(BaseModel):
+    id: str
+    project_id: str
+    node_id: str | None = None
+    kind: str
+    version: int
+    actor_id: str | None = None
+    actor_display_name: str | None = None
+    actor_photo_url: str | None = None
+    reason: str
+    summary: str | None = None
+    created_at: datetime
+    name_at_snapshot: str | None = None
+    path_at_snapshot: str | None = None
+    blob_sha256: str | None = None
+    is_revertible: bool = True
+
+    class Config:
+        from_attributes = True
+
+
+class HistoryTimelineResponse(BaseModel):
+    project_id: str
+    total: int
+    snapshots: list[SnapshotResponse]
+
+
+class DeletedNodeResponse(BaseModel):
+    """A node sitting in the recycle bin, recoverable for 7 days."""
+
+    snapshot_id: str
+    node_id: str | None = None
+    name: str
+    type: str
+    parent_id_at_snapshot: str | None = None
+    path_at_snapshot: str | None = None
+    deleted_at: datetime
+    deleted_by_id: str | None = None
+    deleted_by_display_name: str | None = None
+    expires_at: datetime  # deleted_at + 7 days
+
+
+class RestoreRequest(BaseModel):
+    """Restore a single snapshot. For ``force=True``, the caller
+    acknowledges that newer changes by other users will be overwritten."""
+
+    force: bool = False
+
+
+class RestoreBatchRequest(BaseModel):
+    snapshot_ids: list[str]
+    force: bool = False
 
 
 # Invite Schemas
