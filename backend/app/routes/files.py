@@ -224,17 +224,6 @@ async def storage_proxy(bucket: str, path: str):
 # =============================================================================
 
 
-def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
-    """Backward-compatible read-perm check. Delegates to the new ACL
-    resolver in :mod:`app.permissions`.
-
-    Kept as a thin shim so all the existing call sites in this file
-    continue to work; new code should call ``permissions.can_read``
-    or ``permissions.assert_perm`` directly.
-    """
-    return can_read(db, file_node, user)
-
-
 def _build_effective_access(
     db: Session, node: FileNode, user: User
 ) -> EffectiveAccess:
