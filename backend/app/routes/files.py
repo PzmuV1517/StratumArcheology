@@ -37,23 +37,34 @@ from app.dependencies import (
     get_current_user,
     get_current_user_or_token,
 )
+from app.history import (
+    is_content_editable,
+    record_create,
+    record_delete,
+    record_file_content,
+    record_folder_metadata,
+)
 from app.minio_client import minio_client
 from app.models import (
     FileNode,
     FileNodeType,
-    FileVersion,
     NoteFileLink,
-    PrivacyLevel,
     Project,
+    SnapshotReason,
     User,
 )
+from app.permissions import (
+    PermissionMode,
+    assert_perm,
+    can_read,
+    resolve_permission,
+)
 from app.schemas import (
+    EffectiveAccess,
     FileNodeBase,
     FileNodeCreateFolder,
     FileNodeMoveRequest,
     FileNodeRenameRequest,
-    FilePrivacyUpdateRequest,
-    FileVersionResponse,
 )
 from app.websocket import emit_content_update, log_activity
 
@@ -223,32 +234,53 @@ def __compute_checksum(file: UploadFile) -> str:
 
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
-    """Check if a user can access a file based on privacy settings"""
-    # Project leader can always access all files
-    project = db.query(Project).filter(Project.id == file_node.project_id).first()
-    if project and project.owner_id == user.id:
-        return True
+    """Backward-compatible read-perm check. Delegates to the new ACL
+    resolver in :mod:`app.permissions`.
 
-    # Owner can always access their own files
-    if file_node.owner_id == user.id:
-        return True
+    Kept as a thin shim so all the existing call sites in this file
+    continue to work; new code should call ``permissions.can_read``
+    or ``permissions.assert_perm`` directly.
+    """
+    return can_read(db, file_node, user)
 
-    # Check privacy level
-    if file_node.privacy == PrivacyLevel.PROJECT:
-        # All project members can access
-        return True
-    elif file_node.privacy == PrivacyLevel.PRIVATE:
-        # Only owner can access (already checked above)
-        return False
-    elif file_node.privacy == PrivacyLevel.SHARED:
-        # Check if user is in shared_with list
-        if file_node.shared_with and user.id in file_node.shared_with:
-            return True
-        return False
-    elif file_node.privacy == PrivacyLevel.PUBLIC:
-        return True
 
-    return False
+def _build_effective_access(
+    db: Session, node: FileNode, user: User
+) -> EffectiveAccess:
+    """Build the lightweight permission summary that ships on every
+    file/folder/note response. Used by the UI for lock icons and the
+    'inherits from' badge."""
+    perm = resolve_permission(db, node, user)
+    acl_root_name: str | None = None
+    if perm.acl_root_id and perm.acl_root_id != node.id:
+        anchor = db.get(FileNode, perm.acl_root_id)
+        acl_root_name = anchor.name if anchor else None
+    elif perm.acl_root_id == node.id:
+        acl_root_name = node.name
+    return EffectiveAccess(
+        can_read=perm.can_read,
+        can_write=perm.can_write,
+        is_acl_root=node.is_acl_root,
+        acl_root_id=perm.acl_root_id,
+        acl_root_name=acl_root_name,
+        is_owner_override=perm.is_owner_override,
+        is_admin_override=perm.is_admin_override,
+        is_project_default=perm.is_project_default,
+        is_acl_root_owner=perm.is_acl_root_owner,
+    )
+
+
+def _decorate_node(
+    db: Session, node: FileNode, user: User
+) -> FileNode:
+    """Attach ``effective_access`` to a FileNode for response serialisation.
+
+    Pydantic's ``from_attributes`` will pick the field up off the ORM
+    object via attribute access, so we set it as a transient attribute
+    rather than a real column.
+    """
+    setattr(node, "effective_access", _build_effective_access(db, node, user))
+    return node
 
 
 # =============================================================================
