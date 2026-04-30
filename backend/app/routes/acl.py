@@ -62,16 +62,33 @@ def _ensure_can_manage_acl(db: Session, node: FileNode, user: User) -> Project:
     project = db.get(Project, node.project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    if (
-        project.owner_id == user.id
-        or node.owner_id == user.id
-        or getattr(user, "is_dashboard_admin", False)
-        or getattr(user, "is_maintainer", False)
-    ):
+    if project.owner_id == user.id or getattr(
+        user, "is_dashboard_admin", False
+    ) or getattr(user, "is_maintainer", False):
+        return project
+
+    def _personal_root_for_user() -> FileNode | None:
+        cur = node
+        safety = 0
+        while cur.parent_id is not None and safety < 128:
+            parent = db.get(FileNode, cur.parent_id)
+            if parent is None:
+                return None
+            if parent.parent_id is None and parent.name == "users":
+                return cur
+            cur = parent
+            safety += 1
+        return None
+
+    personal_root = _personal_root_for_user()
+    if personal_root is not None and personal_root.owner_id == user.id:
         return project
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Only the project owner or the node owner can change permissions.",
+        detail=(
+            "Only the project owner can change permissions outside personal folders. "
+            "Inside your own personal folder, you can manage access."
+        ),
     )
 
 

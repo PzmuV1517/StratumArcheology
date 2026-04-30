@@ -142,11 +142,12 @@ def recycle_bin_cutoff(now: datetime | None = None) -> datetime:
 
 
 def purge_expired_delete_snapshots(db: Session) -> int:
-    """Permanently remove expired ``delete``-kind snapshots and decrement
-    blob refcounts that they referenced.
+    """Synchronous purge that only updates metadata and refcounts.
 
-    Returns the number of snapshot rows removed. Safe to call from a
-    periodic background job; idempotent.
+    Prefer ``purge_expired_delete_snapshots_async`` when you can await it,
+    because it also deletes the underlying MinIO object referenced by
+    ``storage_path``. This sync variant is kept for scripts and offline
+    maintenance where MinIO is unreachable.
     """
     cutoff = recycle_bin_cutoff()
     rows = (
@@ -159,6 +160,32 @@ def purge_expired_delete_snapshots(db: Session) -> int:
     )
     purged = 0
     for snap in rows:
+        if snap.blob_sha256:
+            decrement_blob_refcount(db, snap.blob_sha256)
+        db.delete(snap)
+        purged += 1
+    if purged:
+        db.flush()
+    return purged
+
+
+async def purge_expired_delete_snapshots_async(db: Session) -> int:
+    """Async purge that deletes expired snapshot rows and their stored data."""
+    cutoff = recycle_bin_cutoff()
+    rows = (
+        db.query(NodeSnapshot)
+        .filter(
+            NodeSnapshot.kind == SnapshotKind.DELETE.value,
+            NodeSnapshot.created_at < cutoff,
+        )
+        .all()
+    )
+    purged = 0
+    for snap in rows:
+        payload = snap.payload or {}
+        storage_path = payload.get("storage_path")
+        if storage_path:
+            await minio_client.delete_file(storage_path)
         if snap.blob_sha256:
             decrement_blob_refcount(db, snap.blob_sha256)
         db.delete(snap)

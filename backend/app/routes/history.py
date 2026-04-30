@@ -30,7 +30,7 @@ from app.dependencies import check_project_permission, get_current_user
 from app.history import (
     RECYCLE_BIN_TTL,
     decrement_blob_refcount,
-    purge_expired_delete_snapshots,
+    purge_expired_delete_snapshots_async,
     recycle_bin_cutoff,
     record_snapshot,
 )
@@ -295,7 +295,7 @@ async def list_recycle_bin(
     check_project_permission(project_id, current_user, db)
 
     # Opportunistic GC: cheap and keeps the bin clean.
-    purge_expired_delete_snapshots(db)
+    await purge_expired_delete_snapshots_async(db)
     db.commit()
 
     cutoff = recycle_bin_cutoff()
@@ -490,6 +490,10 @@ async def empty_recycle_bin(
     )
     purged = 0
     for snap in rows:
+        payload = snap.payload or {}
+        storage_path = payload.get("storage_path")
+        if storage_path:
+            await minio_client.delete_file(storage_path)
         if snap.blob_sha256:
             decrement_blob_refcount(db, snap.blob_sha256)
         db.delete(snap)
@@ -816,6 +820,53 @@ async def _restore_delete(
 
     db.add(new_node)
     db.flush()
+
+    note_payload = payload.get("note") if isinstance(payload, dict) else None
+    if note_payload:
+        from app.models import Note, NoteFileLink
+
+        note_id = note_payload.get("id") or note_payload.get("note_id")
+        note = db.get(Note, note_id) if note_id else None
+        if note is None:
+            note = Note(
+                id=note_id,
+                title=note_payload.get("title") or name,
+                content=note_payload.get("content") or "",
+                project_id=snap.project_id,
+                author_id=note_payload.get("author_id") or actor.id,
+            )
+            note.created_at = note_payload.get("created_at") or datetime.utcnow()
+            note.updated_at = note_payload.get("updated_at") or datetime.utcnow()
+            note.version = int(note_payload.get("version") or 1)
+            note.transcription = note_payload.get("transcription")
+            note.transcription_original = note_payload.get("transcription_original")
+            note.transcription_modified = bool(
+                note_payload.get("transcription_modified") or False
+            )
+            note.transcription_status = note_payload.get("transcription_status")
+            db.add(note)
+        else:
+            note.title = note_payload.get("title") or note.title
+            note.content = note_payload.get("content") or note.content
+            note.updated_at = datetime.utcnow()
+            note.transcription = note_payload.get("transcription")
+            note.transcription_original = note_payload.get("transcription_original")
+            note.transcription_modified = bool(
+                note_payload.get("transcription_modified") or False
+            )
+            note.transcription_status = note_payload.get("transcription_status")
+
+        db.flush()
+
+        existing_link = (
+            db.query(NoteFileLink)
+            .filter(NoteFileLink.note_id == note.id)
+            .first()
+        )
+        if existing_link:
+            existing_link.file_node_id = new_node.id
+        else:
+            db.add(NoteFileLink(note_id=note.id, file_node_id=new_node.id))
 
     if payload.get("storage_path") and new_node.storage_path:
         data = await minio_client.get_file(payload["storage_path"])
