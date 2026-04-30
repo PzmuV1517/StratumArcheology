@@ -15,7 +15,7 @@ Use is permitted only for the owners above and parties explicitly licensed in wr
 import hashlib
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import (
     APIRouter,
@@ -26,7 +26,6 @@ from fastapi import (
     status,
 )
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -36,11 +35,14 @@ from app.dependencies import (
     get_current_user_or_token,
 )
 from app.history import (
+    ensure_blob,
+    increment_blob_refcount,
     is_content_editable,
     record_create,
     record_delete,
     record_file_content,
     record_folder_metadata,
+    record_snapshot,
 )
 from app.minio_client import minio_client
 from app.models import (
@@ -48,6 +50,7 @@ from app.models import (
     FileNodeType,
     NoteFileLink,
     Project,
+    SnapshotKind,
     SnapshotReason,
     User,
 )
@@ -219,16 +222,6 @@ async def storage_proxy(bucket: str, path: str):
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
-
-
-def __compute_checksum(file: UploadFile) -> str:
-    """Compute SHA256 checksum of an uploaded file"""
-    hash_sha256 = hashlib.sha256()
-    for chunk in iter(lambda: file.file.read(8192), b""):
-        hash_sha256.update(chunk)
-    # Reset file pointer to the beginning after reading
-    file.file.seek(0)
-    return hash_sha256.hexdigest()
 
 
 def can_access_file(file_node: FileNode, user: User, db: Session) -> bool:
@@ -527,7 +520,6 @@ async def get_my_folder(
     if not users_folder:
         return None  # No users folder means no personal folders exist yet
 
-    # Find the user's folder inside /users by owner_id
     my_folder = (
         db.query(FileNode)
         .filter(
@@ -539,7 +531,7 @@ async def get_my_folder(
         .first()
     )
 
-    return my_folder
+    return _decorate_node(db, my_folder, current_user) if my_folder else None
 
 
 @router.get("/project/{project_id}", response_model=list[FileNodeBase])
@@ -548,23 +540,17 @@ async def list_project_root(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List root-level file nodes for a project, filtering by privacy settings"""
+    """List root-level file nodes for a project, filtered through the ACL."""
     check_project_permission(project_id, current_user, db)
 
-    # Get all root nodes
     nodes = (
         db.query(FileNode)
-        .filter(FileNode.project_id == project_id, FileNode.parent_id == None)
+        .filter(FileNode.project_id == project_id, FileNode.parent_id == None)  # noqa: E711
         .order_by(FileNode.type.desc(), FileNode.name.asc())
         .all()
     )
-
-    # Filter based on privacy - use can_access_file to respect privacy settings
-    accessible_nodes = [
-        node for node in nodes if can_access_file(node, current_user, db)
-    ]
-
-    return accessible_nodes
+    accessible = [n for n in nodes if can_read(db, n, current_user)]
+    return [_decorate_node(db, n, current_user) for n in accessible]
 
 
 @router.get("/{node_id}/children", response_model=list[FileNodeBase])
@@ -573,7 +559,7 @@ async def list_children(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List child file nodes of a folder, filtered by privacy settings.
+    """List child file nodes of a folder, filtered through the ACL.
 
     Args:
         node_id: The parent folder's UUID.
@@ -590,10 +576,7 @@ async def list_children(
     if not node:
         raise HTTPException(status_code=404, detail="Folder not found")
     check_project_permission(node.project_id, current_user, db)
-
-    # Check if user can access the parent folder
-    if not can_access_file(node, current_user, db):
-        raise HTTPException(status_code=403, detail="Access denied to this folder")
+    assert_perm(db, node, current_user, PermissionMode.READ)
 
     children = (
         db.query(FileNode)
@@ -601,13 +584,8 @@ async def list_children(
         .order_by(FileNode.type.desc(), FileNode.name.asc())
         .all()
     )
-
-    # Filter children based on privacy
-    accessible_children = [
-        child for child in children if can_access_file(child, current_user, db)
-    ]
-
-    return accessible_children
+    accessible = [c for c in children if can_read(db, c, current_user)]
+    return [_decorate_node(db, c, current_user) for c in accessible]
 
 
 @router.post(
@@ -651,6 +629,8 @@ async def create_folder(
             raise HTTPException(status_code=404, detail="Parent folder not found")
         if parent.type != FileNodeType.FOLDER:
             raise HTTPException(status_code=400, detail="Parent must be a folder")
+        # You need write on the parent to add a child to it.
+        assert_perm(db, parent, current_user, PermissionMode.WRITE)
 
     # Handle duplicate folder names by appending (1), (2), etc.
     base_name = folder.name
@@ -690,12 +670,23 @@ async def create_folder(
         parent_id=folder.parent_id,
         name=final_name,
         type=FileNodeType.FOLDER,
+        owner_id=current_user.id,
     )
     db.add(node)
+    db.flush()
+    if parent is not None:
+        node.acl_root_id = parent.acl_root_id
+    db.flush()
+
+    record_create(
+        db,
+        node=node,
+        actor_id=current_user.id,
+        summary=f'Created folder "{node.name}"',
+    )
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -704,11 +695,9 @@ async def create_folder(
         user_id=current_user.id,
         metadata={"folder_id": node.id, "folder_name": node.name},
     )
-
-    # Notify all users in project that files have been updated (folder created)
     await emit_content_update(project_id, "files")
 
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 @router.put("/{node_id}/move", response_model=FileNodeBase)
@@ -739,6 +728,8 @@ async def move_node(
     check_project_permission(node.project_id, current_user, db)
     if node.is_locked:
         raise HTTPException(status_code=400, detail="This node cannot be moved")
+    # Need write on the node and on the new parent.
+    assert_perm(db, node, current_user, PermissionMode.WRITE)
 
     new_parent = None
     if move.new_parent_id:
@@ -756,13 +747,29 @@ async def move_node(
             raise HTTPException(
                 status_code=400, detail="New parent must be a folder"
             )
+        assert_perm(db, new_parent, current_user, PermissionMode.WRITE)
 
+    old_parent_id = node.parent_id
     node.parent_id = move.new_parent_id
     node.updated_at = datetime.utcnow()
+    # If we crossed an ACL root boundary, the cached acl_root_id is now wrong.
+    # Recompute for this subtree.
+    from app.permissions import recompute_acl_root_for_subtree
+
+    recompute_acl_root_for_subtree(db, node)
+
+    record_folder_metadata(
+        db,
+        node=node,
+        actor_id=current_user.id,
+        reason=SnapshotReason.MOVE,
+        summary=f'Moved "{node.name}"',
+        extra={"old_parent_id": old_parent_id, "new_parent_id": node.parent_id},
+    )
+
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
@@ -771,11 +778,9 @@ async def move_node(
         user_id=current_user.id,
         metadata={"node_id": node.id, "node_name": node.name},
     )
-
-    # Notify all users in project that files have been updated (file/folder moved)
     await emit_content_update(node.project_id, "files")
 
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 @router.put("/{node_id}/rename", response_model=FileNodeBase)
@@ -807,17 +812,19 @@ async def rename_node(
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     check_project_permission(node.project_id, current_user, db)
+    assert_perm(db, node, current_user, PermissionMode.WRITE)
     if node.is_locked:
         raise HTTPException(status_code=400, detail="This node cannot be renamed")
+
+    old_name = node.name
+
     # Preserve extension for file nodes; users can only change base name
     if node.type == FileNodeType.FILE and node.name:
-        # Split existing name
         if "." in node.name and not node.name.startswith("."):
-            *base_parts, ext = node.name.rsplit(".", 1)
+            *_base_parts, ext = node.name.rsplit(".", 1)
             old_ext = ext
         else:
             old_ext = None
-        # Extract new base (strip any extension user might have typed to avoid changing type)
         new_base = payload.name
         if "." in new_base and not new_base.startswith("."):
             new_base = new_base.rsplit(".", 1)[0]
@@ -829,38 +836,43 @@ async def rename_node(
     if node.parent_id:
         parent = db.query(FileNode).filter(FileNode.id == node.parent_id).first()
         if parent and parent.name == "Notes" and node.type == FileNodeType.FILE:
-            # This is a file in the Notes folder, check if it's linked to a note
             note_link = (
                 db.query(NoteFileLink)
                 .filter(NoteFileLink.file_node_id == node.id)
                 .first()
             )
             if note_link and note_link.note:
-                # Update the note title from the filename
                 if node.name.endswith(".txt"):
-                    note_link.note.title = node.name[:-4]  # Remove .txt extension
+                    note_link.note.title = node.name[:-4]
                 else:
                     note_link.note.title = node.name
                 note_link.note.updated_at = datetime.utcnow()
 
     node.updated_at = datetime.utcnow()
+
+    record_folder_metadata(
+        db,
+        node=node,
+        actor_id=current_user.id,
+        reason=SnapshotReason.RENAME,
+        summary=f'Renamed "{old_name}" -> "{node.name}"',
+        extra={"old_name": old_name, "new_name": node.name},
+    )
+
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
         activity_type="FILE_RENAMED",
         description=f'Renamed to "{node.name}"',
         user_id=current_user.id,
-        metadata={"node_id": node.id, "new_name": node.name},
+        metadata={"node_id": node.id, "new_name": node.name, "old_name": old_name},
     )
-
-    # Notify all users in project that files have been updated (file/folder renamed)
     await emit_content_update(node.project_id, "files")
 
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 @router.delete("/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -886,27 +898,80 @@ async def delete_node(
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     check_project_permission(node.project_id, current_user, db)
+    assert_perm(db, node, current_user, PermissionMode.WRITE)
     if node.is_locked:
         raise HTTPException(status_code=400, detail="This node cannot be deleted")
 
-    # Recursively delete subtree and storage objects
-    async def _delete_subtree(n: FileNode):
-        # delete children first
+    # Snapshot every node we're about to delete *before* removing it,
+    # so the recycle bin (7-day TTL) has enough info to recover. Each
+    # snapshot's ``node_id`` will become NULL once the node is dropped
+    # (ON DELETE SET NULL) but the saved ``parent_id_at_snapshot`` and
+    # ``payload`` are enough to recreate the structure.
+    async def _snapshot_subtree(n: FileNode) -> None:
         children = db.query(FileNode).filter(FileNode.parent_id == n.id).all()
         for c in children:
-            await _delete_subtree(c)
-        # delete storage if file
-        if n.type == FileNodeType.FILE and n.storage_path:
-            await minio_client.delete_file(n.storage_path)
+            await _snapshot_subtree(c)
+
+        # For editable files, capture the bytes too so the recovered
+        # node has its content. Static media just gets a metadata-only
+        # snapshot; restoring re-creates the FileNode with the same
+        # storage_path so MinIO doesn't need a copy of the bytes.
+        if (
+            n.type == FileNodeType.FILE
+            and n.storage_path
+            and is_content_editable(mime_type=n.mime_type, name=n.name)
+        ):
+            data = await minio_client.get_file(n.storage_path)
+            if data is not None:
+                blob = await ensure_blob(db, data, mime_type=n.mime_type)
+                increment_blob_refcount(db, blob.sha256)
+                record_snapshot(
+                    db,
+                    project_id=n.project_id,
+                    node=n,
+                    kind=SnapshotKind.DELETE,
+                    reason=SnapshotReason.DELETE,
+                    actor_id=current_user.id,
+                    blob_sha256=blob.sha256,
+                    payload={
+                        "name": n.name,
+                        "type": n.type.value,
+                        "parent_id": n.parent_id,
+                        "owner_id": n.owner_id,
+                        "mime_type": n.mime_type,
+                        "size": n.size,
+                        "storage_path": n.storage_path,
+                        "is_acl_root": n.is_acl_root,
+                    },
+                    summary=f'Deleted "{n.name}"',
+                )
+                return
+
+        record_delete(
+            db,
+            node=n,
+            actor_id=current_user.id,
+            summary=f'Deleted "{n.name}"',
+        )
+
+    async def _drop_subtree(n: FileNode) -> None:
+        children = db.query(FileNode).filter(FileNode.parent_id == n.id).all()
+        for c in children:
+            await _drop_subtree(c)
+        # We deliberately keep the MinIO objects in place: the recycle
+        # bin holds a reference to ``storage_path`` for 7 days. The
+        # nightly sweeper purges the actual blobs once their delete
+        # snapshot expires.
         db.delete(n)
 
-    project_id = node.project_id  # Store before deletion
-    node_name = node.name  # Store before deletion
-    node_type = node.type  # Store before deletion
-    await _delete_subtree(node)
+    project_id = node.project_id
+    node_name = node.name
+    node_type = node.type
+    await _snapshot_subtree(node)
+    db.flush()
+    await _drop_subtree(node)
     db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -917,8 +982,6 @@ async def delete_node(
         user_id=current_user.id,
         metadata={"node_name": node_name},
     )
-
-    # Notify all users in project that files have been updated (file/folder deleted)
     await emit_content_update(project_id, "files")
 
     return None
