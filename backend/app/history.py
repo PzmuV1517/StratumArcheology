@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -37,6 +38,134 @@ from app.models import (
     SnapshotKind,
     SnapshotReason,
 )
+
+
+# ---------------------------------------------------------------------------
+# Editability classification
+# ---------------------------------------------------------------------------
+#
+# Per product call: we only keep ``file_content`` history for files that
+# can actually be edited in-app. Photos, audio, video, 3D models, archives
+# are static once uploaded - keeping a copy of the previous bytes serves
+# no purpose and quickly burns MinIO. We *still* keep delete snapshots for
+# everything (recycle bin recovery), and we still keep folder/note/ACL
+# snapshots regardless of mime type.
+
+_EDITABLE_MIME_PREFIXES: tuple[str, ...] = (
+    "text/",
+    "application/json",
+    "application/xml",
+    "application/javascript",
+    "application/typescript",
+    "application/x-yaml",
+    "application/yaml",
+    "application/x-python",
+    "application/sql",
+)
+
+_EDITABLE_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        "txt",
+        "md",
+        "markdown",
+        "csv",
+        "tsv",
+        "json",
+        "yaml",
+        "yml",
+        "xml",
+        "html",
+        "htm",
+        "css",
+        "scss",
+        "js",
+        "jsx",
+        "ts",
+        "tsx",
+        "py",
+        "sh",
+        "rb",
+        "go",
+        "rs",
+        "java",
+        "kt",
+        "swift",
+        "c",
+        "h",
+        "cpp",
+        "hpp",
+        "sql",
+        "log",
+        "ini",
+        "cfg",
+        "conf",
+        "env",
+        "tex",
+        "bib",
+    }
+)
+
+
+def is_content_editable(*, mime_type: str | None, name: str | None) -> bool:
+    """Decide whether ``file_content`` snapshots should be written for a node.
+
+    We snapshot text-shaped documents (which the app actually lets you
+    edit), but skip binary uploads. Notes, folders, ACL changes, and
+    deletes are handled by other recorders and are not gated by this.
+    """
+    mt = (mime_type or "").lower().strip()
+    if mt:
+        if any(mt.startswith(prefix) for prefix in _EDITABLE_MIME_PREFIXES):
+            return True
+        # Anything image/, audio/, video/, model/, application/octet-stream,
+        # application/pdf, application/zip, etc. falls through to False.
+        return False
+
+    if not name:
+        return False
+    if "." not in name:
+        return False
+    ext = name.rsplit(".", 1)[-1].lower()
+    return ext in _EDITABLE_EXTENSIONS
+
+
+# ---------------------------------------------------------------------------
+# Recycle-bin retention
+# ---------------------------------------------------------------------------
+
+RECYCLE_BIN_TTL = timedelta(days=7)
+
+
+def recycle_bin_cutoff(now: datetime | None = None) -> datetime:
+    """Return the timestamp before which delete snapshots are expired."""
+    return (now or datetime.utcnow()) - RECYCLE_BIN_TTL
+
+
+def purge_expired_delete_snapshots(db: Session) -> int:
+    """Permanently remove expired ``delete``-kind snapshots and decrement
+    blob refcounts that they referenced.
+
+    Returns the number of snapshot rows removed. Safe to call from a
+    periodic background job; idempotent.
+    """
+    cutoff = recycle_bin_cutoff()
+    rows = (
+        db.query(NodeSnapshot)
+        .filter(
+            NodeSnapshot.kind == SnapshotKind.DELETE.value,
+            NodeSnapshot.created_at < cutoff,
+        )
+        .all()
+    )
+    purged = 0
+    for snap in rows:
+        if snap.blob_sha256:
+            decrement_blob_refcount(db, snap.blob_sha256)
+        db.delete(snap)
+        purged += 1
+    if purged:
+        db.flush()
+    return purged
 
 
 # ---------------------------------------------------------------------------
