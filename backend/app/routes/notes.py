@@ -46,6 +46,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.history import record_create, record_note_content, record_snapshot
 from app.minio_client import minio_client
 from app.models import (
     FileNode,
@@ -53,8 +54,11 @@ from app.models import (
     Note,
     NoteAttachment,
     NoteFileLink,
+    SnapshotKind,
+    SnapshotReason,
     User,
 )
+from app.permissions import PermissionMode, assert_perm, can_read, resolve_permission
 from app.config import settings
 from app.schemas import NoteCreate, NoteResponse, NoteUpdate
 from app.transcription import transcribe_note_audio
@@ -86,11 +90,26 @@ async def create_note(
     db.commit()
     db.refresh(note)
 
-    # Voice notes do NOT create a .txt file node; text notes do
-    is_voice = getattr(note_data, "is_voice", False)
-    if not is_voice:
-        # Ensure "Notes" folder exists
-        notes_folder = (
+    # Resolve the target folder. Notes default to the project "Notes" folder
+    # unless the caller provided a parent_id (e.g. saving into My Folder).
+    target_folder: FileNode | None = None
+    if getattr(note_data, "parent_id", None):
+        target_folder = (
+            db.query(FileNode)
+            .filter(
+                FileNode.id == note_data.parent_id,
+                FileNode.project_id == note.project_id,
+            )
+            .first()
+        )
+        if not target_folder:
+            raise HTTPException(status_code=404, detail="Parent folder not found")
+        if target_folder.type != FileNodeType.FOLDER:
+            raise HTTPException(status_code=400, detail="Parent must be a folder")
+        assert_perm(db, target_folder, current_user, PermissionMode.WRITE)
+    else:
+        # Ensure "Notes" folder exists at project root.
+        target_folder = (
             db.query(FileNode)
             .filter(
                 FileNode.project_id == note.project_id,
@@ -100,41 +119,76 @@ async def create_note(
             )
             .first()
         )
-        if not notes_folder:
-            notes_folder = FileNode(
+        if not target_folder:
+            target_folder = FileNode(
                 project_id=note.project_id,
                 parent_id=None,
                 name="Notes",
                 type=FileNodeType.FOLDER,
             )
-            db.add(notes_folder)
+            db.add(target_folder)
             db.commit()
-            db.refresh(notes_folder)
+            db.refresh(target_folder)
 
-        # Upload .txt content to object storage
-        filename = f"{note.title}.txt"
-        storage_path = f"notes/{note.project_id}/{note.id}.txt"
-        await minio_client.upload_file(
-            (note.content or "").encode("utf-8"), storage_path, "text/plain"
+    # Build a unique filename based on the note title.
+    base_name = f"{note.title}.txt"
+    candidate = base_name
+    counter = 1
+    while (
+        db.query(FileNode)
+        .filter(
+            FileNode.project_id == note.project_id,
+            FileNode.parent_id == target_folder.id,
+            FileNode.name == candidate,
         )
+        .first()
+    ):
+        candidate = f"{note.title} ({counter}).txt"
+        counter += 1
 
-        # Mirror as FileNode
-        note_node = FileNode(
-            project_id=note.project_id,
-            parent_id=notes_folder.id,
-            name=filename,
-            type=FileNodeType.FILE,
-            storage_path=storage_path,
-            mime_type="text/plain",
-        )
-        db.add(note_node)
-        db.commit()
-        db.refresh(note_node)
+    # Keep the note title aligned with the deduped filename.
+    if candidate != base_name and candidate.endswith(".txt"):
+        note.title = candidate[:-4]
 
-        # Link note to its txt FileNode for future sync/update
-        link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
-        db.add(link)
-        db.commit()
+    content_bytes = (note.content or "").encode("utf-8")
+    storage_path = f"notes/{note.project_id}/{note.id}.txt"
+    await minio_client.upload_file(content_bytes, storage_path, "text/plain")
+
+    note_node = FileNode(
+        project_id=note.project_id,
+        parent_id=target_folder.id,
+        name=candidate,
+        type=FileNodeType.FILE,
+        storage_path=storage_path,
+        mime_type="text/plain",
+        size=str(len(content_bytes)),
+        owner_id=current_user.id,
+    )
+    db.add(note_node)
+    db.flush()
+    note_node.acl_root_id = target_folder.acl_root_id
+    db.flush()
+
+    record_create(
+        db,
+        node=note_node,
+        actor_id=current_user.id,
+        summary=f'Created note "{note.title}"',
+    )
+    record_note_content(
+        db,
+        node=note_node,
+        title=note.title,
+        content=note.content or "",
+        actor_id=current_user.id,
+        reason=SnapshotReason.CREATE,
+        summary=f'Initial content of note "{note.title}"',
+    )
+
+    link = NoteFileLink(note_id=note.id, file_node_id=note_node.id)
+    db.add(link)
+    db.commit()
+    db.refresh(note_node)
 
     # Log activity
     await log_activity(
@@ -169,12 +223,20 @@ async def get_project_notes(
         .all()
     )
 
-    # Add presigned URLs to attachments
+    visible: list[Note] = []
     for note in notes:
+        file_link = note.file_link
+        file_node = file_link.file_node if file_link else None
+        if file_node is not None and not can_read(db, file_node, current_user):
+            continue
+        if file_node is not None:
+            setattr(note, "file_node_id", file_node.id)
+        # Add presigned URLs to attachments
         for attachment in note.attachments:
             attachment.url = minio_client.get_presigned_url(attachment.file_path)
+        visible.append(note)
 
-    return notes
+    return visible
 
 
 @router.get("/{note_id}", response_model=NoteResponse)
@@ -193,24 +255,30 @@ async def get_note(
 
     check_project_permission(note.project_id, current_user, db)
 
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    perm = None
+    if file_node is not None:
+        perm = resolve_permission(db, file_node, current_user)
+        if not perm.can_read:
+            raise HTTPException(status_code=403, detail="Access denied")
+        setattr(note, "file_node_id", file_node.id)
+
     # Try to sync content from txt file if it exists
-    file_link = (
-        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    )
-    if file_link and file_link.file_node and file_link.file_node.storage_path:
+    if file_node and file_node.storage_path:
         try:
-            # Get content from txt file
-            file_data = await minio_client.get_file(file_link.file_node.storage_path)
+            file_data = await minio_client.get_file(file_node.storage_path)
             file_content = file_data.decode("utf-8")
 
-            # Update note content if it differs (file was edited externally)
             if note.content != file_content:
-                note.content = file_content
-                note.updated_at = datetime.utcnow()
-                db.commit()
-                db.refresh(note)
+                if perm and perm.can_write:
+                    note.content = file_content
+                    note.updated_at = datetime.utcnow()
+                    db.commit()
+                    db.refresh(note)
+                else:
+                    note.content = file_content
         except Exception as e:
-            # If file doesn't exist or can't be read, keep database content
             print(f"Warning: Could not sync note {note_id} from file: {e}")
 
     # Add presigned URLs to attachments
@@ -238,21 +306,41 @@ async def update_note(
     check_project_permission(note.project_id, current_user, db)
 
     # Get the linked file node
-    file_link = (
-        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    )
+    file_link = note.file_link
     file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
 
+    note_changed = False
     # Update fields
     if note_data.title is not None:
         note.title = note_data.title
-        # Update filename in file node
+        note_changed = True
+        # Update filename in file node, keeping it unique within parent
         if file_node:
-            file_node.name = f"{note_data.title}.txt"
+            base_name = f"{note_data.title}.txt"
+            candidate = base_name
+            counter = 1
+            while (
+                db.query(FileNode)
+                .filter(
+                    FileNode.project_id == note.project_id,
+                    FileNode.parent_id == file_node.parent_id,
+                    FileNode.name == candidate,
+                    FileNode.id != file_node.id,
+                )
+                .first()
+            ):
+                candidate = f"{note_data.title} ({counter}).txt"
+                counter += 1
+            file_node.name = candidate
+            if candidate != base_name and candidate.endswith(".txt"):
+                note.title = candidate[:-4]
             file_node.updated_at = datetime.utcnow()
 
     if note_data.content is not None:
         note.content = note_data.content
+        note_changed = True
         # Update txt file content in MinIO
         if file_node and file_node.storage_path:
             content_bytes = (note_data.content or "").encode("utf-8")
@@ -261,8 +349,20 @@ async def update_note(
             )
             file_node.size = str(len(content_bytes))
             file_node.updated_at = datetime.utcnow()
+            file_node.version = (file_node.version or 0) + 1
 
     note.updated_at = datetime.utcnow()
+
+    if note_changed and file_node is not None:
+        record_note_content(
+            db,
+            node=file_node,
+            title=note.title,
+            content=note.content or "",
+            actor_id=current_user.id,
+            reason=SnapshotReason.EDIT,
+            summary=f'Updated note "{note.title}"',
+        )
 
     db.commit()
     db.refresh(note)

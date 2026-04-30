@@ -835,8 +835,14 @@ async def _restore_delete(
                 project_id=snap.project_id,
                 author_id=note_payload.get("author_id") or actor.id,
             )
-            note.created_at = note_payload.get("created_at") or datetime.utcnow()
-            note.updated_at = note_payload.get("updated_at") or datetime.utcnow()
+            created_at = note_payload.get("created_at")
+            updated_at = note_payload.get("updated_at")
+            note.created_at = (
+                created_at if isinstance(created_at, datetime) else datetime.utcnow()
+            )
+            note.updated_at = (
+                updated_at if isinstance(updated_at, datetime) else datetime.utcnow()
+            )
             note.version = int(note_payload.get("version") or 1)
             note.transcription = note_payload.get("transcription")
             note.transcription_original = note_payload.get("transcription_original")
