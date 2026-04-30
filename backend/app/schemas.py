@@ -195,10 +195,13 @@ class PublicProjectResponse(ProjectResponse):
 
 
 class PublicProjectDetailResponse(PublicProjectResponse):
-    """Full public project detail: includes members and GPS bounds."""
+    """Full public project detail: includes members, GPS bounds, and AI history review."""
 
     members: list[ProjectMemberResponse] = []
     gps: dict | None = None
+    public_history_review: str | None = None
+    public_history_provider: str | None = None
+    public_history_generated_at: datetime | None = None
 
 
 # Project Member Schemas

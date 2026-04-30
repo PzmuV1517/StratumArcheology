@@ -28,9 +28,11 @@ SOFTWARE.
 """
 
 import uuid
+from datetime import datetime
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -41,18 +43,23 @@ from fastapi import (
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.dependencies import check_project_permission, get_current_user
+from app.middleware import get_logger
 from app.minio_client import minio_client, resolve_storage_url
 from app.models import (
     DataVersion,
     FileNode,
     FileNodeType,
+    Note,
     Project,
+    ProjectActivity,
     User,
     UserRole,
     project_members,
 )
+
+_log = get_logger(__name__)
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -232,15 +239,102 @@ async def get_public_project_detail(
         "member_count": len(members_list),
         "members": members_list,
         "gps": gps_data,
+        "public_history_review": project.public_history_review,
+        "public_history_provider": project.public_history_provider,
+        "public_history_generated_at": project.public_history_generated_at,
     }
 
 
 # ─── Toggle project publicity ──────────────────────────────────────────────────
 
 
+async def _generate_history_background(project_id: str) -> None:
+    """Background task: generate a public history narrative via AI and persist it."""
+    from app.ai_prompts import PROMPT_SITE_HISTORY
+    from app.ai_service import CLAUDE_SONNET, generate_summary
+
+    db = SessionLocal()
+    try:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project or not project.is_public:
+            return
+
+        notes = (
+            db.query(Note)
+            .filter(Note.project_id == project_id)
+            .order_by(Note.created_at.desc())
+            .limit(50)
+            .all()
+        )
+        activities = (
+            db.query(ProjectActivity)
+            .filter(ProjectActivity.project_id == project_id)
+            .order_by(ProjectActivity.created_at.desc())
+            .limit(100)
+            .all()
+        )
+
+        notes_text = (
+            "\n".join(
+                f"- {n.title}" + (f": {n.content[:400]}" if n.content else "")
+                for n in notes
+            )
+            or "No field notes recorded yet."
+        )
+        activities_text = (
+            "\n".join(f"- {a.description}" for a in activities)
+            or "No activities recorded yet."
+        )
+
+        prompt = PROMPT_SITE_HISTORY.format(
+            project_name=project.name,
+            lmi_line=f"LMI Code: {project.ran_lmi_id}\n" if project.ran_lmi_id else "",
+            description=project.description or "No description provided.",
+            created_at=(
+                project.created_at.strftime("%B %d, %Y")
+                if project.created_at
+                else "Unknown"
+            ),
+            member_count=db.execute(
+                select(func.count()).where(project_members.c.project_id == project_id)
+            ).scalar() or 0,
+            note_count=len(notes),
+            notes_text=notes_text,
+            activity_count=len(activities),
+            activities_text=activities_text,
+        )
+
+        try:
+            history_text, provider = await generate_summary(
+                prompt, model=CLAUDE_SONNET, max_tokens=3000
+            )
+            history_text = history_text.replace("—", ", ")
+        except Exception as exc:
+            _log.error(
+                "History generation failed", project_id=project_id, error=str(exc)
+            )
+            return
+
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if project:
+            project.public_history_review = history_text
+            project.public_history_provider = provider
+            project.public_history_generated_at = datetime.utcnow()
+            project.history_needs_refresh = False
+            db.commit()
+            _log.info(
+                "History review generated",
+                project_id=project_id,
+                provider=provider,
+            )
+    finally:
+        db.close()
+
+
 @router.patch("/{project_id}/publicise", response_model=ProjectResponse)
 async def toggle_project_publicity(
     project_id: str,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -256,7 +350,18 @@ async def toggle_project_publicity(
             detail="Only the project owner can change publicity",
         )
 
-    project.is_public = not project.is_public
+    going_public = not project.is_public
+    project.is_public = going_public
+
+    if going_public:
+        if project.history_needs_refresh or project.public_history_review is None:
+            background_tasks.add_task(_generate_history_background, project_id)
+    else:
+        project.public_history_review = None
+        project.public_history_provider = None
+        project.public_history_generated_at = None
+        project.history_needs_refresh = True
+
     db.commit()
     db.refresh(project)
 

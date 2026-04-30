@@ -226,25 +226,45 @@ export default function ProjectTabsLayoutWeb() {
           break;
         case "publicise": {
           if (project?.id) {
-            const action = project.is_public ? "privatise" : "publicise";
-            const label = action.charAt(0).toUpperCase() + action.slice(1);
-            const desc = project.is_public
-              ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
-              : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image.";
-            showAlert(`${label} Project?`, desc, [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: label,
-                onPress: async () => {
-                  try {
-                    await projectService.togglePublicise(project.id);
-                    await refreshProject();
-                  } catch {
-                    showAlert("Error", "Failed to update project visibility.");
-                  }
-                },
-              },
-            ]);
+            const doToggle = async () => {
+              try {
+                await projectService.togglePublicise(project.id);
+                await refreshProject();
+              } catch {
+                showAlert("Error", "Failed to update project visibility.");
+              }
+            };
+
+            if (project.is_public) {
+              showAlert(
+                "Privatise Project?",
+                "This project will no longer be visible in Unearthed. Only members will be able to access it.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Privatise", onPress: doToggle },
+                ],
+              );
+            } else {
+              showAlert(
+                "AI Content Consent",
+                "Publishing this project will allow AI to read all notes and activities to generate a public History Review visible to everyone.\n\nDo you agree to this use of your project's content?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Agree & Continue",
+                    onPress: () =>
+                      showAlert(
+                        "Publicise Project?",
+                        "This project will be visible to everyone in Unearthed. A History Review will be generated automatically.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Publicise", onPress: doToggle },
+                        ],
+                      ),
+                  },
+                ],
+              );
+            }
           }
           break;
         }
