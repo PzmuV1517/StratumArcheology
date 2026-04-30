@@ -384,14 +384,15 @@ async def sync_note_from_file(
     check_project_permission(note.project_id, current_user, db)
 
     # Get the linked file node
-    file_link = (
-        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    )
-    if (
-        not file_link
-        or not file_link.file_node
-        or not file_link.file_node.storage_path
-    ):
+    file_link = note.file_link
+    if not file_link or not file_link.file_node:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No associated txt file found",
+        )
+    file_node = file_link.file_node
+    assert_perm(db, file_node, current_user, PermissionMode.WRITE)
+    if not file_node.storage_path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No associated txt file found",
@@ -408,6 +409,16 @@ async def sync_note_from_file(
         if filename.endswith(".txt"):
             note.title = filename[:-4]  # Remove .txt extension
         note.updated_at = datetime.utcnow()
+
+        record_note_content(
+            db,
+            node=file_node,
+            title=note.title,
+            content=note.content or "",
+            actor_id=current_user.id,
+            reason=SnapshotReason.EDIT,
+            summary=f'Synced note "{note.title}" from file',
+        )
 
         db.commit()
         db.refresh(note)
