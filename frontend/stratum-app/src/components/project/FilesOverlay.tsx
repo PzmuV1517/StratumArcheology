@@ -42,6 +42,20 @@ interface FileNode {
   note_id?: string;
   updated_at?: string; // For offline sync
   size?: number;
+  owner_id?: string | null;
+  is_acl_root?: boolean;
+  acl_root_id?: string | null;
+  effective_access?: {
+    can_read: boolean;
+    can_write: boolean;
+    is_acl_root: boolean;
+    acl_root_id?: string | null;
+    acl_root_name?: string | null;
+    is_owner_override?: boolean;
+    is_admin_override?: boolean;
+    is_project_default?: boolean;
+    is_acl_root_owner?: boolean;
+  } | null;
 }
 
 interface Props {
@@ -81,6 +95,8 @@ interface Props {
     role: string;
   }[]; // For My Folder settings
   currentUserId?: string; // For My Folder settings
+  currentUsername?: string;
+  isOwner?: boolean;
 }
 
 export default function FilesOverlay({
@@ -112,6 +128,8 @@ export default function FilesOverlay({
   autoOpenMyFolder = false,
   projectMembers = [],
   currentUserId,
+  currentUsername,
+  isOwner = false,
 }: Props) {
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
@@ -130,7 +148,9 @@ export default function FilesOverlay({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showMyFolderSettings, setShowMyFolderSettings] = useState(false);
+  const [showPermissions, setShowPermissions] = useState(false);
+  const [permissionsNode, setPermissionsNode] = useState<FileNode | null>(null);
+  const [canManagePermissions, setCanManagePermissions] = useState(false);
   const [multiSelect, setMultiSelect] = useState(false);
   const [showInfoTip, setShowInfoTip] = useState(false);
   const [isSavingOffline, setIsSavingOffline] = useState(false);
@@ -148,6 +168,8 @@ export default function FilesOverlay({
   const rootRef = useRef<any>(null);
   const warnedMissingProject = useRef(false);
 
+  const normalizedUsername = currentUsername?.toLowerCase();
+
   // Check if we're already inside the user's personal folder (or a subfolder of it)
   // This works both when using the My Folder button and when navigating manually
   const isInMyFolder = useMemo(() => {
@@ -157,23 +179,17 @@ export default function FilesOverlay({
       if (breadcrumbs?.some((b) => b.id === myFolderId)) return true;
     }
 
-    // Method 2: Check if we're in a folder named after the current user ID
-    // (for when navigating manually through /users/[userId])
-    if (currentUserId) {
-      // Check if current folder name is the user's ID
-      if (currentFolder?.name === currentUserId) {
-        // Also store the folder ID for future reference
+    if (normalizedUsername) {
+      if (currentFolder?.name?.toLowerCase() === normalizedUsername) {
         if (currentFolder?.id && !myFolderId) {
           setMyFolderId(currentFolder.id);
         }
         return true;
       }
-      // Check if any breadcrumb has a folder named after the user ID
       const userFolderBreadcrumb = breadcrumbs?.find(
-        (b) => b.name === currentUserId,
+        (b) => b.name?.toLowerCase() === normalizedUsername,
       );
       if (userFolderBreadcrumb) {
-        // Store the folder ID for future reference
         if (userFolderBreadcrumb.id && !myFolderId) {
           setMyFolderId(userFolderBreadcrumb.id);
         }
@@ -187,7 +203,7 @@ export default function FilesOverlay({
     currentFolder?.id,
     currentFolder?.name,
     breadcrumbs,
-    currentUserId,
+    normalizedUsername,
   ]);
 
   // Check if we're inside the /users folder (where personal folders are stored)
@@ -198,38 +214,17 @@ export default function FilesOverlay({
     return breadcrumbs?.some((b) => b.name?.toLowerCase() === "users") ?? false;
   }, [currentFolder?.name, breadcrumbs]);
 
-  // Helper to get username from user ID
-  const getUsernameForId = useCallback(
-    (userId: string): string | null => {
-      const member = projectMembers.find((m) => m.id === userId);
-      return member?.display_name || null;
-    },
-    [projectMembers],
-  );
-
   // Get display name for a node (handles user ID -> username transformation for /users subfolders)
   const getDisplayName = useCallback(
     (node: FileNode): string => {
-      // If we're inside the /users folder and this is a folder, check if the name is a user ID
-      if (isInsideUsersFolder && node.type === "folder") {
-        // Check if this folder name looks like a user ID (UUID format or Firebase ID)
-        const isLikelyUserId =
-          /^[a-f0-9-]{36}$/i.test(node.name) || // UUID
-          /^[a-zA-Z0-9]{20,}$/.test(node.name); // Firebase UID
-
-        if (isLikelyUserId) {
-          // If this is the current user's folder, show "My Folder"
-          if (currentUserId && node.name === currentUserId) {
-            return "My Folder";
-          }
-          // Otherwise show other user's display name
-          const username = getUsernameForId(node.name);
-          if (username) return username;
+      if (isInsideUsersFolder && node.type === "folder" && normalizedUsername) {
+        if (node.name.toLowerCase() === normalizedUsername) {
+          return "My Folder";
         }
       }
       return node.name;
     },
-    [isInsideUsersFolder, getUsernameForId, currentUserId],
+    [isInsideUsersFolder, normalizedUsername],
   );
 
   // Get display name for a breadcrumb (handles user ID -> username transformation)
@@ -240,24 +235,14 @@ export default function FilesOverlay({
         (b, i) => i < crumbIndex && b.name?.toLowerCase() === "users",
       );
 
-      if (hasUsersInPath) {
-        const isLikelyUserId =
-          /^[a-f0-9-]{36}$/i.test(crumbName) || // UUID
-          /^[a-zA-Z0-9]{20,}$/.test(crumbName); // Firebase UID
-
-        if (isLikelyUserId) {
-          // If this is the current user's folder, show "My Folder"
-          if (currentUserId && crumbName === currentUserId) {
-            return "My Folder";
-          }
-          // Otherwise show other user's display name
-          const username = getUsernameForId(crumbName);
-          if (username) return username;
+      if (hasUsersInPath && normalizedUsername) {
+        if (crumbName.toLowerCase() === normalizedUsername) {
+          return "My Folder";
         }
       }
       return crumbName;
     },
-    [breadcrumbs, getUsernameForId, currentUserId],
+    [breadcrumbs, normalizedUsername],
   );
 
   // Navigate to user's personal folder (creates if doesn't exist)
@@ -344,27 +329,30 @@ export default function FilesOverlay({
     }
   }, [projectId, onOpenFolder, isInMyFolder]);
 
-  // Handle saving My Folder privacy settings
-  const handleSaveMyFolderSettings = useCallback(
-    async (settings: {
-      default_can_view: boolean;
-      default_can_edit: boolean;
-      member_permissions: {
-        user_id: string;
-        can_view: boolean;
-        can_edit: boolean;
-      }[];
-    }) => {
-      if (!projectId) return;
-      try {
-        await fileService.updateMyFolderPermissions(projectId, settings);
-        showAlert("Success", "Privacy settings updated");
-      } catch (error: any) {
-        console.error("Failed to update My Folder settings:", error);
-        throw error; // Let the modal handle the error display
+  const canManageNodePermissions = useCallback(
+    (node: FileNode): boolean => {
+      if (isOwner) return true;
+      if (!normalizedUsername) return false;
+      if (isInMyFolder) return true;
+      if (
+        isInsideUsersFolder &&
+        node.type === "folder" &&
+        node.name.toLowerCase() === normalizedUsername
+      ) {
+        return true;
       }
+      return false;
     },
-    [projectId],
+    [isOwner, normalizedUsername, isInMyFolder, isInsideUsersFolder],
+  );
+
+  const handleOpenPermissions = useCallback(
+    (node: FileNode) => {
+      setPermissionsNode(node);
+      setCanManagePermissions(canManageNodePermissions(node));
+      setShowPermissions(true);
+    },
+    [canManageNodePermissions],
   );
 
   // Handle file selected from upload menu (supports both single file and array)
@@ -689,11 +677,17 @@ export default function FilesOverlay({
   }, [fileNodes, extensionFilters, searchQuery, exactOnly]);
 
   // Compute selectable (non-locked) ids for select-all behavior respecting filtered list
-  const selectableIds = filteredNodes.filter((n) => !n.is_locked).map((n) => n.id);
+  const selectableIds = filteredNodes
+    .filter(
+      (n) => !n.is_locked && (n.effective_access?.can_write ?? canEdit),
+    )
+    .map((n) => n.id);
   const allSelected =
     selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
   const hasActiveFilters =
     searchQuery.trim().length > 0 || extensionFilters.length > 0 || exactOnly;
+  const canWriteInCurrent =
+    currentFolder?.effective_access?.can_write ?? canEdit;
 
   // Early return AFTER all hooks (React requires hooks to be called unconditionally)
   if (!visible) return null;
@@ -955,15 +949,22 @@ export default function FilesOverlay({
           onFileSelected={handleFileSelected}
         />
       )}
-      {/* My Folder Settings Modal */}
-      {projectId && currentUserId && (
-        <MyFolderSettingsModal
-          visible={showMyFolderSettings}
-          projectId={projectId}
+      {/* Permissions Modal */}
+      {projectId && (
+        <PermissionsModal
+          visible={showPermissions}
+          nodeId={permissionsNode?.id ?? null}
+          nodeName={permissionsNode ? getDisplayName(permissionsNode) : undefined}
           members={projectMembers}
           currentUserId={currentUserId}
-          onClose={() => setShowMyFolderSettings(false)}
-          onSave={handleSaveMyFolderSettings}
+          canManage={canManagePermissions}
+          onClose={() => {
+            setShowPermissions(false);
+            setPermissionsNode(null);
+          }}
+          onSaved={() => {
+            onRefreshAfterUpload?.();
+          }}
         />
       )}
       <ScrollView style={styles.contentScroll}>
@@ -993,19 +994,8 @@ export default function FilesOverlay({
                   </Text>
                 </View>
               </TouchableOpacity>
-              {/* Settings gear - only show when My Folder exists */}
-              {(myFolderId || isInMyFolder) && currentUserId && (
-                <TouchableOpacity
-                  style={styles.myFolderSettingsBtn}
-                  onPress={() => setShowMyFolderSettings(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open My Folder sharing settings"
-                >
-                  <IconSymbol name="gearshape.fill" size={16} color={accentColor} />
-                </TouchableOpacity>
-              )}
             </View>
-            {canEdit && (
+            {canEdit && canWriteInCurrent && (
               <>
                 <TouchableOpacity
                   style={styles.actionButton}
@@ -1251,108 +1241,127 @@ export default function FilesOverlay({
                     )}
                   </View>
                 )}
-                {filteredNodes.map((node) => (
-                  <View
-                    key={node.id}
-                    style={[
-                      styles.fileRow,
-                      selectedIds.has(node.id) && styles.fileRowSelected,
-                    ]}
-                  >
-                    {multiSelect ? (
-                      node.is_locked ? (
-                        <View style={styles.checkboxSpacer} />
-                      ) : (
-                        <TouchableOpacity
-                          onPress={() => {
-                            const next = new Set(selectedIds);
-                            if (next.has(node.id)) next.delete(node.id);
-                            else next.add(node.id);
-                            setSelectedIds(next);
-                          }}
-                          accessibilityRole="checkbox"
-                          accessibilityLabel={`Select ${getDisplayName(node)}`}
-                          accessibilityState={{ checked: selectedIds.has(node.id) }}
-                        >
-                          <View
-                            style={[
-                              styles.checkbox,
-                              selectedIds.has(node.id) && styles.checkboxChecked,
-                            ]}
-                          >
-                              {selectedIds.has(node.id) && <View style={styles.checkboxDot} />}
-                          </View>
-                        </TouchableOpacity>
-                      )
-                    ) : (
-                      <View style={styles.checkboxSpacer} />
-                    )}
-                    <View style={styles.fileIconContainer}>
-                      <IconSymbol
-                        name={node.type === "folder" ? "folder.fill" : "note.text"}
-                        size={16}
-                        color={node.type === "folder" ? accentColor : textSecondary}
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={styles.fileNamePressable}
-                      onPress={() =>
-                        node.type === "folder"
-                          ? onOpenFolder(node)
-                          : onOpenFile(node)
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${node.type} ${getDisplayName(node)}`}
+                {filteredNodes.map((node) => {
+                  const canWriteNode =
+                    canEdit && (node.effective_access?.can_write ?? true);
+                  const readOnly = !canWriteNode && !node.is_locked;
+                  return (
+                    <View
+                      key={node.id}
+                      style={[
+                        styles.fileRow,
+                        selectedIds.has(node.id) && styles.fileRowSelected,
+                      ]}
                     >
-                      {renderNameWithExtension(
-                        getDisplayName(node),
-                        searchQuery,
-                        exactOnly,
-                        styles,
+                      {multiSelect ? (
+                        node.is_locked || !canWriteNode ? (
+                          <View style={styles.checkboxSpacer} />
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => {
+                              const next = new Set(selectedIds);
+                              if (next.has(node.id)) next.delete(node.id);
+                              else next.add(node.id);
+                              setSelectedIds(next);
+                            }}
+                            accessibilityRole="checkbox"
+                            accessibilityLabel={`Select ${getDisplayName(node)}`}
+                            accessibilityState={{ checked: selectedIds.has(node.id) }}
+                          >
+                            <View
+                              style={[
+                                styles.checkbox,
+                                selectedIds.has(node.id) && styles.checkboxChecked,
+                              ]}
+                            >
+                              {selectedIds.has(node.id) && (
+                                <View style={styles.checkboxDot} />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <View style={styles.checkboxSpacer} />
                       )}
-                    </TouchableOpacity>
-                    {node.is_locked && <Text style={styles.lockBadge}>LOCKED</Text>}
-                    {offlineFileIds.has(node.id) && (
-                      <Text style={styles.offlineBadge}>Downloaded</Text>
-                    )}
-                    <View style={styles.rowActions}>
-                      {node.type === "file" && (
+                      <View style={styles.fileIconContainer}>
+                        <IconSymbol
+                          name={node.type === "folder" ? "folder.fill" : "note.text"}
+                          size={16}
+                          color={node.type === "folder" ? accentColor : textSecondary}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={styles.fileNamePressable}
+                        onPress={() =>
+                          node.type === "folder"
+                            ? onOpenFolder(node)
+                            : onOpenFile(node)
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${node.type} ${getDisplayName(node)}`}
+                      >
+                        {renderNameWithExtension(
+                          getDisplayName(node),
+                          searchQuery,
+                          exactOnly,
+                          styles,
+                        )}
+                      </TouchableOpacity>
+                      {node.is_locked && (
+                        <Text style={styles.lockBadge}>LOCKED</Text>
+                      )}
+                      {readOnly && (
+                        <Text style={styles.readOnlyBadge}>Read only</Text>
+                      )}
+                      {offlineFileIds.has(node.id) && (
+                        <Text style={styles.offlineBadge}>Downloaded</Text>
+                      )}
+                      <View style={styles.rowActions}>
+                        {node.type === "file" && (
+                          <TouchableOpacity
+                            onPress={() => onDownload(node)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Download ${getDisplayName(node)}`}
+                          >
+                            <Text style={styles.rowActionText}>Download</Text>
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity
-                          onPress={() => onDownload(node)}
+                          onPress={() => handleOpenPermissions(node)}
                           accessibilityRole="button"
-                          accessibilityLabel={`Download ${getDisplayName(node)}`}
+                          accessibilityLabel={`Permissions for ${getDisplayName(node)}`}
                         >
-                          <Text style={styles.rowActionText}>Download</Text>
+                          <Text style={styles.rowActionText}>Permissions</Text>
                         </TouchableOpacity>
-                      )}
-                      {!node.is_locked && canEdit && (
-                        <>
-                          <TouchableOpacity
-                            onPress={() => onRename(node)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Rename ${getDisplayName(node)}`}
-                          >
-                            <Text style={styles.rowActionText}>Rename</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => onMove(node)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Move ${getDisplayName(node)}`}
-                          >
-                            <Text style={styles.rowActionText}>Move</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => onDelete(node)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Delete ${getDisplayName(node)}`}
-                          >
-                            <Text style={styles.rowDeleteText}>Delete</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
+                        {!node.is_locked && canWriteNode && (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => onRename(node)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Rename ${getDisplayName(node)}`}
+                            >
+                              <Text style={styles.rowActionText}>Rename</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => onMove(node)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Move ${getDisplayName(node)}`}
+                            >
+                              <Text style={styles.rowActionText}>Move</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => onDelete(node)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Delete ${getDisplayName(node)}`}
+                            >
+                              <Text style={styles.rowDeleteText}>Delete</Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             ) : (
               <View style={styles.emptyState}>
