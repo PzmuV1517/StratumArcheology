@@ -30,7 +30,6 @@ SOFTWARE.
 
 import hashlib
 import uuid
-from collections import defaultdict
 from datetime import datetime
 from typing import Any, Optional
 
@@ -38,14 +37,13 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Query,
     Request,
     UploadFile,
     status,
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import (
@@ -302,42 +300,11 @@ def _decorate_node(
 # =============================================================================
 # RESPONSE MODELS
 # =============================================================================
-
-
-# Response model for Time Machine
-class FileWithVersionsResponse(BaseModel):
-    """File with all its versions for Time Machine view"""
-
-    id: str
-    name: str
-    type: str
-    mime_type: str | None
-    size: str | None
-    deleted: bool = False
-    current_version: int
-    created_at: datetime
-    updated_at: datetime
-    category: str  # computed from mime_type
-    versions: list[FileVersionResponse]
-
-    class Config:
-        from_attributes = True
-
-
-class TimeMachineResponse(BaseModel):
-    """Project files grouped by category with versions.
-
-    Attributes:
-        project_id: The project UUID.
-        total_files: Count of files in the project (or filtered subset).
-        total_versions: Aggregate count of all file versions.
-        categories: Files grouped by their detected category.
-    """
-
-    project_id: str
-    total_files: int
-    total_versions: int
-    categories: dict[str, list[FileWithVersionsResponse]]
+#
+# The legacy ``FileWithVersionsResponse`` and ``TimeMachineResponse`` were
+# removed when the Time Machine was rebuilt. Per-node and per-project
+# history now lives in :mod:`app.routes.history` and reads from the
+# unified ``node_snapshots`` table.
 
 
 def get_file_category(mime_type: str | None, name: str) -> str:
@@ -409,81 +376,8 @@ def get_file_category(mime_type: str | None, name: str) -> str:
     return "other"
 
 
-@router.get("/project/{project_id}/time-machine", response_model=TimeMachineResponse)
-async def get_project_time_machine(
-    project_id: str,
-    category: str | None = Query(default=None, description="Filter by category"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Get all files in a project with their version history, grouped by category.
-    This is the Time Machine view for versioning and merge conflict management.
-
-    Categories: documents, spreadsheets, images, videos, audio, 3d_models, archives, code, other
-    """
-    check_project_permission(project_id, current_user, db)
-
-    # Get all files (not folders) in the project with their versions
-    query = (
-        db.query(FileNode)
-        .filter(
-            FileNode.project_id == project_id, FileNode.type == FileNodeType.FILE
-        )
-        .options(joinedload(FileNode.versions))
-    )
-
-    files = query.all()
-
-    # Group files by category
-    categories: dict[str, list[Any]] = defaultdict(list)
-    total_versions = 0
-
-    for file in files:
-        file_category = get_file_category(file.mime_type, file.name)
-
-        # Filter by category if specified
-        if category and file_category != category:
-            continue
-
-        # Sort versions by version number descending
-        versions = sorted(file.versions, key=lambda v: v.version, reverse=True)
-        total_versions += len(versions) + 1  # +1 for current version
-
-        file_data = FileWithVersionsResponse(
-            id=file.id,
-            name=file.name,
-            type=file.type.value,
-            mime_type=file.mime_type,
-            size=file.size,
-            current_version=file.version,
-            created_at=file.created_at,
-            updated_at=file.updated_at,
-            category=file_category,
-            versions=[
-                FileVersionResponse(
-                    id=v.id,
-                    file_node_id=v.file_node_id,
-                    version=v.version,
-                    storage_path=v.storage_path,
-                    size=v.size,
-                    checksum=v.checksum,
-                    created_at=v.created_at,
-                    created_by=v.created_by,
-                )
-                for v in versions
-            ],
-        )
-        categories[file_category].append(file_data)
-
-    return TimeMachineResponse(
-        project_id=project_id,
-        total_files=len(files)
-        if not category
-        else sum(len(cats) for cats in categories.values()),
-        total_versions=total_versions,
-        categories=dict(categories),
-    )
+# Time Machine endpoint moved to /history/project/{project_id} in
+# app/routes/history.py - see that module for the unified timeline.
 
 
 @router.post(
@@ -496,29 +390,27 @@ async def create_my_folder(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Create a personal "My Folder" for the current user in a project.
+    """Create a personal folder for the current user in a project.
 
-    - Only researchers and project leaders can create their own personal folder
-    - The folder is automatically set to PRIVATE privacy
-    - Only one "My Folder" can exist per user per project
-    - The folder is owned by the creating user
+    The folder lives at ``users/<username>`` (or ``users/<email-prefix>``
+    if the user has no username yet) and is marked ``is_acl_root=True``
+    with no ACL rows, which means only the owner and the project leader
+    have access by default. The owner manages further permissions
+    through the standard ``/acl/{node_id}`` endpoints.
+
+    Guests cannot create personal folders.
     """
     from app.models import UserRole, project_members
 
     check_project_permission(project_id, current_user, db)
 
-    # Get project to check permissions
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check if user is researcher or owner (not a guest)
     is_owner = project.owner_id == current_user.id
     member_role = None
-
     if not is_owner:
-        # Check member role
         from sqlalchemy import select
 
         stmt = select(project_members).where(
@@ -532,13 +424,15 @@ async def create_my_folder(
     if not is_owner and member_role == UserRole.GUEST:
         raise HTTPException(
             status_code=403,
-            detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder.",
+            detail=(
+                "Guests cannot create personal folders. Only researchers "
+                "and project leaders have a My Folder."
+            ),
         )
 
-    # Ensure the /users folder exists
     users_folder = await ensure_users_folder(project_id, db)
 
-    # Check if user already has a folder in /users (by owner_id)
+    # One personal folder per user, found by owner_id.
     existing = (
         db.query(FileNode)
         .filter(
@@ -549,29 +443,56 @@ async def create_my_folder(
         )
         .first()
     )
-
     if existing:
         raise HTTPException(
             status_code=400,
             detail="You already have a personal folder in this project",
         )
 
-    # Create the personal folder inside /users
-    # Use user ID as folder name (prevents issues with username changes)
-    # Frontend will display as username
-    folder_name = current_user.id
+    # Folder name comes from the user's username so it's both unique and
+    # human-friendly. Falls back to the email local-part for users who
+    # haven't claimed a username yet, then to the user id as a last
+    # resort. We dedupe against existing siblings by appending (1), (2)...
+    raw_name = current_user.username or (
+        current_user.email.split("@", 1)[0] if current_user.email else None
+    )
+    base_name = (raw_name or current_user.id).strip().lower() or current_user.id
+
+    candidate = base_name
+    counter = 1
+    while (
+        db.query(FileNode)
+        .filter(
+            FileNode.project_id == project_id,
+            FileNode.parent_id == users_folder.id,
+            FileNode.name == candidate,
+        )
+        .first()
+    ):
+        counter += 1
+        candidate = f"{base_name} ({counter})"
 
     my_folder = FileNode(
         project_id=project_id,
-        parent_id=users_folder.id,  # Inside /users folder
-        name=folder_name,
+        parent_id=users_folder.id,
+        name=candidate,
         type=FileNodeType.FOLDER,
         owner_id=current_user.id,
-        privacy=PrivacyLevel.PRIVATE,  # Private by default
-        is_locked=False,  # Can be renamed/deleted by owner
+        is_acl_root=True,
+        is_locked=False,
     )
-
     db.add(my_folder)
+    db.flush()
+    # Self-reference for the denormalised root pointer.
+    my_folder.acl_root_id = my_folder.id
+    db.flush()
+
+    record_create(
+        db,
+        node=my_folder,
+        actor_id=current_user.id,
+        summary=f'Created personal folder "{candidate}"',
+    )
     db.commit()
     db.refresh(my_folder)
 
@@ -579,177 +500,23 @@ async def create_my_folder(
         db=db,
         project_id=project_id,
         activity_type="FOLDER_CREATED",
-        description=f'Created personal folder "{folder_name}"',
+        description=f'Created personal folder "{candidate}"',
         user_id=current_user.id,
         metadata={
             "folder_id": my_folder.id,
-            "folder_name": folder_name,
+            "folder_name": candidate,
             "is_personal": True,
         },
     )
-
     await emit_content_update(project_id, "files")
 
-    return my_folder
+    return _decorate_node(db, my_folder, current_user)
 
 
-# Request model for folder permission settings
-class FolderPermissionSettings(BaseModel):
-    """Request body for updating personal folder permission settings.
-
-    Attributes:
-        default_can_view: Whether all project members can view the folder by default.
-        default_can_edit: Whether all project members can edit the folder by default.
-        member_permissions: Per-member permission overrides with user_id, can_view, and can_edit.
-    """
-
-    default_can_view: bool = True
-    default_can_edit: bool = False
-    member_permissions: list[dict[str, Any]] = []  # [{user_id, can_view, can_edit}]
-
-
-@router.put("/project/{project_id}/my-folder/permissions")
-async def update_my_folder_permissions(
-    project_id: str,
-    settings: FolderPermissionSettings,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Update permissions for the user's personal folder"""
-    check_project_permission(project_id, current_user, db)
-
-    # Get the /users folder first
-    users_folder = (
-        db.query(FileNode)
-        .filter(
-            FileNode.project_id == project_id,
-            FileNode.parent_id == None,
-            FileNode.name == "users",
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .first()
-    )
-
-    if not users_folder:
-        raise HTTPException(status_code=404, detail="Personal folder not found")
-
-    # Find the user's personal folder inside /users
-    my_folder = (
-        db.query(FileNode)
-        .filter(
-            FileNode.project_id == project_id,
-            FileNode.owner_id == current_user.id,
-            FileNode.parent_id == users_folder.id,
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .first()
-    )
-
-    if not my_folder:
-        raise HTTPException(status_code=404, detail="Personal folder not found")
-
-    # Build the shared_with list based on permissions
-    shared_with = []
-    for perm in settings.member_permissions:
-        if perm.get("can_view", False):
-            shared_with.append(perm["user_id"])
-
-    # Update the folder's privacy and shared_with
-    if not settings.default_can_view and len(shared_with) == 0:
-        my_folder.privacy = PrivacyLevel.PRIVATE
-    elif settings.default_can_view:
-        # If default is view-enabled, set to PROJECT level (all can view)
-        my_folder.privacy = PrivacyLevel.PROJECT
-    else:
-        # Some specific users have access
-        my_folder.privacy = PrivacyLevel.SHARED
-
-    my_folder.shared_with = shared_with if shared_with else None
-
-    # Store extended permissions as metadata in the folder
-    # This includes edit permissions which we need to check separately
-    my_folder.metadata = {
-        "folder_permissions": {
-            "default_can_view": settings.default_can_view,
-            "default_can_edit": settings.default_can_edit,
-            "member_permissions": settings.member_permissions,
-        }
-    }
-
-    db.commit()
-    db.refresh(my_folder)
-
-    await emit_content_update(project_id, "files")
-
-    return {"message": "Folder permissions updated", "folder_id": my_folder.id}
-
-
-@router.get("/project/{project_id}/my-folder/permissions")
-async def get_my_folder_permissions(
-    project_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get current permission settings for the user's personal folder"""
-    check_project_permission(project_id, current_user, db)
-
-    # Get the /users folder first
-    users_folder = (
-        db.query(FileNode)
-        .filter(
-            FileNode.project_id == project_id,
-            FileNode.parent_id == None,
-            FileNode.name == "users",
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .first()
-    )
-
-    if not users_folder:
-        # Return default settings - no users folder means no personal folders
-        return {
-            "folder_id": None,
-            "default_can_view": True,
-            "default_can_edit": False,
-            "member_permissions": [],
-        }
-
-    # Find the user's personal folder inside /users
-    my_folder = (
-        db.query(FileNode)
-        .filter(
-            FileNode.project_id == project_id,
-            FileNode.owner_id == current_user.id,
-            FileNode.parent_id == users_folder.id,
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .first()
-    )
-
-    if not my_folder:
-        # Return default settings
-        return {
-            "folder_id": None,
-            "default_can_view": True,
-            "default_can_edit": False,
-            "member_permissions": [],
-        }
-
-    # Get stored permissions from metadata
-    if my_folder.metadata and "folder_permissions" in my_folder.metadata:
-        perms = my_folder.metadata["folder_permissions"]
-        return {"folder_id": my_folder.id, **perms}
-
-    # Return defaults based on privacy level
-    return {
-        "folder_id": my_folder.id,
-        "default_can_view": my_folder.privacy != PrivacyLevel.PRIVATE,
-        "default_can_edit": False,
-        "member_permissions": [
-            {"user_id": uid, "can_view": True, "can_edit": False}
-            for uid in (my_folder.shared_with or [])
-        ],
-    }
+# The legacy ``/my-folder/permissions`` endpoints were removed when the
+# generic ACL system landed. Permissions on a personal folder (or any
+# other folder) are now managed through ``/acl/{node_id}`` in
+# ``app/routes/acl.py``.
 
 
 @router.get("/project/{project_id}/my-folder", response_model=Optional[FileNodeBase])
@@ -1292,6 +1059,10 @@ async def upload_file(
                 break
             counter += 1
 
+    # Verify the caller can write to the parent before creating the node.
+    if parent is not None:
+        assert_perm(db, parent, current_user, PermissionMode.WRITE)
+
     node = FileNode(
         project_id=project_id,
         parent_id=parent_id,
@@ -1303,13 +1074,37 @@ async def upload_file(
         version=1,
         checksum=file_checksum,
         owner_id=current_user.id,
-        privacy=PrivacyLevel.PROJECT,  # Default to project visibility
     )
     db.add(node)
+    db.flush()
+    # Inherit acl_root_id from parent so reads stay cheap.
+    if parent is not None:
+        node.acl_root_id = parent.acl_root_id
+    db.flush()
+
+    record_create(
+        db,
+        node=node,
+        actor_id=current_user.id,
+        summary=f'Uploaded "{node.name}"',
+    )
+    # Only snapshot the bytes themselves for editable text-shaped files.
+    # Photos, audio, videos, archives etc. have no in-app edit path so
+    # there's no point keeping prior copies around.
+    if is_content_editable(mime_type=node.mime_type, name=node.name):
+        await record_file_content(
+            db,
+            node=node,
+            data=data,
+            actor_id=current_user.id,
+            reason=SnapshotReason.CREATE,
+            summary=f'Initial content of "{node.name}"',
+            mime_type=node.mime_type,
+        )
+
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1323,10 +1118,9 @@ async def upload_file(
         },
     )
 
-    # Notify all users in project that files have been updated (file uploaded)
     await emit_content_update(project_id, "files")
 
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 @router.get("/{node_id}/download")
@@ -1460,6 +1254,7 @@ async def replace_file_content(
             status_code=400, detail="Only file nodes can be replaced"
         )
     check_project_permission(node.project_id, current_user, db)
+    assert_perm(db, node, current_user, PermissionMode.WRITE)
     if node.is_locked:
         raise HTTPException(status_code=400, detail="This node cannot be modified")
 
@@ -1472,41 +1267,58 @@ async def replace_file_content(
     if not new_file:
         raise HTTPException(status_code=422, detail="No file provided")
 
-    # Read new content
     data = await new_file.read()
 
-    # Save current version to history before overwriting
-    if node.storage_path and node.version >= 1:
-        old_version = FileVersion(
-            file_node_id=node.id,
-            version=node.version,
-            storage_path=node.storage_path,
-            size=node.size,
-            checksum=node.checksum,
-            created_by=current_user.id,
-        )
-        db.add(old_version)
+    # Snapshot the *previous* bytes before overwriting them, so the
+    # restore-this-version button works. We only do this for content
+    # types we'd actually let someone edit; static media (photos, audio,
+    # video, archives, etc.) are excluded so we don't accumulate dead
+    # copies in object storage.
+    if (
+        node.storage_path
+        and node.version >= 1
+        and is_content_editable(mime_type=node.mime_type, name=node.name)
+    ):
+        prior = await minio_client.get_file(node.storage_path)
+        if prior is not None:
+            await record_file_content(
+                db,
+                node=node,
+                data=prior,
+                actor_id=current_user.id,
+                reason=SnapshotReason.EDIT,
+                summary=f'Captured pre-edit content of "{node.name}"',
+                mime_type=node.mime_type,
+            )
 
-    # Generate new storage path to keep old version intact
     new_storage_path = f"files/{node.project_id}/{uuid.uuid4()}"
-
-    # Upload new content
     await minio_client.upload_file(
         data,
         new_storage_path,
         new_file.content_type or node.mime_type or "application/octet-stream",
     )
 
-    # Calculate new checksum
     new_checksum = hashlib.md5(data).hexdigest()
 
-    # Update metadata
     node.storage_path = new_storage_path
     node.mime_type = new_file.content_type or node.mime_type
     node.size = str(len(data))
     node.checksum = new_checksum
     node.version = node.version + 1
     node.updated_at = datetime.utcnow()
+
+    # Snapshot the *new* bytes too, but only for editable types. The
+    # snapshot links the version number to the live blob.
+    if is_content_editable(mime_type=node.mime_type, name=node.name):
+        await record_file_content(
+            db,
+            node=node,
+            data=data,
+            actor_id=current_user.id,
+            reason=SnapshotReason.EDIT,
+            summary=f'Edited "{node.name}" (v{node.version})',
+            mime_type=node.mime_type,
+        )
 
     # If this is a note file, sync the note content
     if node.parent_id:
@@ -1542,199 +1354,15 @@ async def replace_file_content(
 
 
 # =============================================================================
-# PRIVACY & SHARING ENDPOINTS
+# Legacy privacy / version / restore endpoints removed.
+#
+# * ``PUT /{node_id}/privacy``                  -> ``PUT /acl/{node_id}``
+# * ``GET /{node_id}/versions``                 -> ``GET /history/node/{node_id}``
+# * ``GET /{node_id}/version/{v}/download``     -> per-snapshot stream (TBD UI)
+# * ``POST /{node_id}/restore/{v}``             -> ``POST /history/snapshots/{snapshot_id}/restore``
+#
+# See app/routes/acl.py and app/routes/history.py.
 # =============================================================================
-
-
-@router.put("/{node_id}/privacy", response_model=FileNodeBase)
-async def update_file_privacy(
-    node_id: str,
-    privacy_update: FilePrivacyUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Update privacy settings for a file or folder"""
-    node = db.query(FileNode).filter(FileNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    check_project_permission(node.project_id, current_user, db)
-
-    # Only owner or project leader can change privacy
-    project = db.query(Project).filter(Project.id == node.project_id).first()
-    if node.owner_id != current_user.id and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Only file owner or project leader can change privacy",
-        )
-
-    node.privacy = PrivacyLevel(privacy_update.privacy.value)
-    node.shared_with = privacy_update.shared_with
-    node.updated_at = datetime.utcnow()
-
-    db.commit()
-    db.refresh(node)
-
-    await log_activity(
-        db=db,
-        project_id=node.project_id,
-        activity_type="FILE_UPDATED",
-        description=f'Updated privacy for "{node.name}" to {privacy_update.privacy.value}',
-        user_id=current_user.id,
-        metadata={"node_id": node.id, "privacy": privacy_update.privacy.value},
-    )
-
-    return node
-
-
-@router.get("/{node_id}/versions", response_model=list[FileVersionResponse])
-async def get_file_versions(
-    node_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get version history for a file"""
-    node = db.query(FileNode).filter(FileNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    check_project_permission(node.project_id, current_user, db)
-
-    if not can_access_file(node, current_user, db):
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    versions = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id)
-        .order_by(FileVersion.version.desc())
-        .all()
-    )
-    return versions
-
-
-@router.get("/{node_id}/version/{version}/download")
-async def download_file_version(
-    node_id: str,
-    version: int,
-    current_user: User = Depends(get_current_user_or_token),
-    db: Session = Depends(get_db),
-):
-    """Download a specific version of a file.
-
-    Accepts authentication via Authorization header OR token query parameter.
-    """
-    node = db.query(FileNode).filter(FileNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    check_project_permission(node.project_id, current_user, db)
-
-    if not can_access_file(node, current_user, db):
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    file_version = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id, FileVersion.version == version)
-        .first()
-    )
-
-    if not file_version:
-        raise HTTPException(status_code=404, detail="Version not found")
-
-    try:
-        stat = minio_client.client.stat_object(
-            minio_client.bucket_name, file_version.storage_path
-        )
-        obj = minio_client.client.get_object(
-            minio_client.bucket_name, file_version.storage_path
-        )
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to retrieve version")
-
-    def iterfile():
-        try:
-            for data in obj.stream(32 * 1024):
-                yield data
-        finally:
-            obj.close()
-            obj.release_conn()
-
-    filename = f"{node.name}.v{version}"
-    media_type = node.mime_type or "application/octet-stream"
-    headers = {
-        "Content-Disposition": f'attachment; filename="{filename}"',
-        "Content-Length": str(getattr(stat, "size", "") or ""),
-    }
-    return StreamingResponse(iterfile(), media_type=media_type, headers=headers)
-
-
-@router.post("/{node_id}/restore/{version}", response_model=FileNodeBase)
-async def restore_file_version(
-    node_id: str,
-    version: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Restore a file to a previous version"""
-    node = db.query(FileNode).filter(FileNode.id == node_id).first()
-    if not node:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    check_project_permission(node.project_id, current_user, db)
-
-    if node.is_locked:
-        raise HTTPException(status_code=400, detail="This file cannot be modified")
-
-    if node.owner_id != current_user.id:
-        project = db.query(Project).filter(Project.id == node.project_id).first()
-        if project.owner_id != current_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Only file owner or project leader can restore versions",
-            )
-
-    file_version = (
-        db.query(FileVersion)
-        .filter(FileVersion.file_node_id == node_id, FileVersion.version == version)
-        .first()
-    )
-
-    if not file_version:
-        raise HTTPException(status_code=404, detail="Version not found")
-
-    # Create a new version from current state before restoring
-    current_version = FileVersion(
-        file_node_id=node.id,
-        version=node.version,
-        storage_path=node.storage_path,
-        size=node.size,
-        checksum=node.checksum,
-        created_by=current_user.id,
-    )
-    db.add(current_version)
-
-    # Update node to point to old version's content
-    node.storage_path = file_version.storage_path
-    node.size = file_version.size
-    node.checksum = file_version.checksum
-    node.version = node.version + 1
-    node.updated_at = datetime.utcnow()
-
-    db.commit()
-    db.refresh(node)
-
-    await log_activity(
-        db=db,
-        project_id=node.project_id,
-        activity_type="FILE_UPDATED",
-        description=f'Restored "{node.name}" to version {version}',
-        user_id=current_user.id,
-        metadata={"node_id": node.id, "restored_version": version},
-    )
-
-    await emit_content_update(node.project_id, "files")
-
-    return node
 
 
 # =============================================================================
@@ -1743,12 +1371,17 @@ async def restore_file_version(
 
 
 async def ensure_users_folder(project_id: str, db: Session) -> FileNode:
-    """Ensure the 'users' folder exists in project root, create if not"""
+    """Ensure the 'users' folder exists in project root, create if not.
+
+    The folder itself is project-visible (anyone can navigate into the
+    ``users/`` directory). The personal folders inside are each their
+    own ACL root and govern their own access.
+    """
     users_folder = (
         db.query(FileNode)
         .filter(
             FileNode.project_id == project_id,
-            FileNode.parent_id == None,
+            FileNode.parent_id == None,  # noqa: E711
             FileNode.name == "users",
             FileNode.type == FileNodeType.FOLDER,
         )
@@ -1762,7 +1395,6 @@ async def ensure_users_folder(project_id: str, db: Session) -> FileNode:
             name="users",
             type=FileNodeType.FOLDER,
             is_locked=True,
-            privacy=PrivacyLevel.PROJECT,
         )
         db.add(users_folder)
         db.commit()
@@ -1784,24 +1416,39 @@ async def get_files_shared_with_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get all files shared with the current user"""
+    """List ACL-rooted nodes that grant the current user explicit access.
+
+    Used by the "Shared with me" tab. Walks every ACL row whose
+    ``user_id`` matches the caller (or whose ``group_id`` they belong to)
+    and returns the corresponding nodes scoped to this project.
+    """
+    from app.models import FileNodeACL, UserGroupMember
+
     check_project_permission(project_id, current_user, db)
 
-    # Get files where user is in shared_with list and privacy is SHARED
-    # PostgreSQL JSON containment operator
+    group_ids_q = db.query(UserGroupMember.group_id).filter(
+        UserGroupMember.user_id == current_user.id
+    )
+    group_ids = {r[0] for r in group_ids_q.all() if r[0] is not None}
 
-    files = (
+    acl_q = db.query(FileNodeACL.file_node_id).filter(
+        (FileNodeACL.user_id == current_user.id)
+        | (FileNodeACL.group_id.in_(group_ids) if group_ids else False)
+    )
+    target_node_ids = {r[0] for r in acl_q.all()}
+    if not target_node_ids:
+        return []
+
+    nodes = (
         db.query(FileNode)
         .filter(
             FileNode.project_id == project_id,
-            FileNode.privacy == PrivacyLevel.SHARED,
+            FileNode.id.in_(target_node_ids),
             FileNode.owner_id != current_user.id,
-            FileNode.shared_with.contains([current_user.id]),
         )
         .all()
     )
-
-    return files
+    return [_decorate_node(db, n, current_user) for n in nodes]
 
 
 @router.get("/project/{project_id}/shared-by-me", response_model=list[FileNodeBase])
@@ -1810,20 +1457,41 @@ async def get_files_shared_by_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get all files the current user has shared with others"""
+    """List ACL-rooted nodes the current user owns AND has explicitly
+    shared with someone else."""
+    from app.models import FileNodeACL
+
     check_project_permission(project_id, current_user, db)
 
-    files = (
-        db.query(FileNode)
+    owned_acl_root_ids = {
+        n.id
+        for n in db.query(FileNode)
         .filter(
             FileNode.project_id == project_id,
             FileNode.owner_id == current_user.id,
-            FileNode.privacy == PrivacyLevel.SHARED,
+            FileNode.is_acl_root == True,  # noqa: E712
         )
         .all()
-    )
+    }
+    if not owned_acl_root_ids:
+        return []
 
-    return files
+    acl_with_others = (
+        db.query(FileNodeACL.file_node_id)
+        .filter(FileNodeACL.file_node_id.in_(owned_acl_root_ids))
+        .filter(
+            (FileNodeACL.user_id != None)  # noqa: E711
+            | (FileNodeACL.group_id != None)  # noqa: E711
+        )
+        .distinct()
+        .all()
+    )
+    target_ids = {r[0] for r in acl_with_others}
+    if not target_ids:
+        return []
+
+    nodes = db.query(FileNode).filter(FileNode.id.in_(target_ids)).all()
+    return [_decorate_node(db, n, current_user) for n in nodes]
 
 
 @router.get("/project/{project_id}/users-folder", response_model=list[FileNodeBase])
@@ -1832,13 +1500,16 @@ async def list_users_folder(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List contents of users folder with privacy filtering"""
+    """List the contents of ``/users`` (every member's personal folder).
+
+    Permission filtering goes through the standard ACL resolver: the
+    project owner sees every personal folder, individual members see
+    their own folder plus any other members' folders that have shared
+    access with them.
+    """
     check_project_permission(project_id, current_user, db)
-    project = db.query(Project).filter(Project.id == project_id).first()
 
     users_folder = await ensure_users_folder(project_id, db)
-
-    # Get all user folders
     user_folders = (
         db.query(FileNode)
         .filter(
@@ -1847,14 +1518,8 @@ async def list_users_folder(
         )
         .all()
     )
-
-    # Project leader can see all folders
-    if project.owner_id == current_user.id:
-        return user_folders
-
-    # Regular users can only see their own folder
-    visible_folders = [f for f in user_folders if f.owner_id == current_user.id]
-    return visible_folders
+    visible = [f for f in user_folders if can_read(db, f, current_user)]
+    return [_decorate_node(db, n, current_user) for n in visible]
 
 
 @router.get("/info/{node_id}", response_model=FileNodeBase)
