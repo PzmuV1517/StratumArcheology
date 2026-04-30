@@ -1208,6 +1208,7 @@ async def download_file(
             status_code=400, detail="Only file nodes can be downloaded"
         )
     check_project_permission(node.project_id, current_user, db)
+    assert_perm(db, node, current_user, PermissionMode.READ)
     if not node.storage_path:
         raise HTTPException(status_code=404, detail="Stored object missing")
 
@@ -1413,7 +1414,7 @@ async def replace_file_content(
     # Notify all users in project that files have been updated (file content replaced)
     await emit_content_update(node.project_id, "files")
 
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 # =============================================================================
@@ -1597,11 +1598,9 @@ async def get_file_info(
         raise HTTPException(status_code=404, detail="Node not found")
 
     check_project_permission(node.project_id, current_user, db)
+    assert_perm(db, node, current_user, PermissionMode.READ)
 
-    if not can_access_file(node, current_user, db):
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    return node
+    return _decorate_node(db, node, current_user)
 
 
 @router.get("/project/{project_id}/files-info", response_model=list[FileNodeBase])
@@ -1625,6 +1624,6 @@ async def get_files_info_batch(
     )
 
     # Filter by access
-    accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
+    accessible_nodes = [n for n in nodes if can_read(db, n, current_user)]
 
-    return accessible_nodes
+    return [_decorate_node(db, n, current_user) for n in accessible_nodes]
