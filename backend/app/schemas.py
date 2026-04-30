@@ -206,6 +206,8 @@ class NoteBase(BaseModel):
 
 class NoteCreate(NoteBase):
     project_id: str
+    parent_id: str | None = None
+    is_voice: bool | None = None
 
 
 class NoteUpdate(BaseModel):
