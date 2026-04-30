@@ -103,23 +103,25 @@ def _next() -> _KeyConfig | None:
 
 
 async def generate_summary(
-    prompt: str, model: str | None = None
+    prompt: str, model: str | None = None, max_tokens: int = 1024
 ) -> tuple[str, str]:
     """
     Call the next configured AI provider in round-robin order.
 
     Args:
-        prompt: The full prompt text to send.
-        model:  Explicit model name (e.g. CLAUDE_HAIKU). Uses the provider
-                default when None.
+        prompt:     The full prompt text to send.
+        model:      Explicit model name (e.g. CLAUDE_HAIKU). Uses the provider
+                    default when None.
+        max_tokens: Maximum tokens in the response (default 1024; use 3000+ for
+                    long-form history narratives).
 
     Returns:
         (response_text, display_provider_name).
 
     Raises:
-        ValueError              — misconfiguration (no keys, unsupported provider).
+        ValueError               — misconfiguration (no keys, unsupported provider).
         anthropic.APIStatusError — Anthropic HTTP / API errors.
-        httpx.HTTPStatusError   — Gemini HTTP errors.
+        httpx.HTTPStatusError    — Gemini HTTP errors.
     """
     cfg = _next()
     if cfg is None:
@@ -132,13 +134,13 @@ async def generate_summary(
 
     if cfg.provider == "ANTHROPIC":
         resolved_model = resolved_model or CLAUDE_HAIKU
-        text = await _call_anthropic(cfg.api_key, prompt, resolved_model)
-        tier = resolved_model.split("-")[1].capitalize()  # haiku → Haiku
+        text = await _call_anthropic(cfg.api_key, prompt, resolved_model, max_tokens)
+        tier = resolved_model.split("-")[1].capitalize()  # haiku -> Haiku, sonnet -> Sonnet
         return text, f"Claude {tier}"
 
     if cfg.provider == "GEMINI":
         resolved_model = resolved_model or GEMINI_FLASH_LITE
-        text = await _call_gemini(cfg.api_key, prompt, resolved_model)
+        text = await _call_gemini(cfg.api_key, prompt, resolved_model, max_tokens)
         return text, f"Gemini ({resolved_model})"
 
     raise ValueError(
@@ -147,23 +149,26 @@ async def generate_summary(
     )
 
 
-async def _call_anthropic(api_key: str, prompt: str, model: str) -> str:
+async def _call_anthropic(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
     client = anthropic.AsyncAnthropic(api_key=api_key)
     message = await client.messages.create(
         model=model,
-        max_tokens=1024,
+        max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
     return message.content[0].text
 
 
-async def _call_gemini(api_key: str, prompt: str, model: str) -> str:
+async def _call_gemini(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
     url = _GEMINI_BASE_URL.format(model=model)
     headers = {
         "Content-Type": "application/json",
         "X-goog-api-key": api_key,
     }
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"maxOutputTokens": max_tokens},
+    }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(url, json=payload, headers=headers)

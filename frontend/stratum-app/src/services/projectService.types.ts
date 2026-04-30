@@ -119,4 +119,7 @@ export interface GpsState {
 /** Full public project detail returned by GET /projects/public/{id}. */
 export interface PublicProjectDetail extends Project {
   gps?: GpsState | null;
+  public_history_review?: string | null;
+  public_history_provider?: string | null;
+  public_history_generated_at?: string | null;
 }

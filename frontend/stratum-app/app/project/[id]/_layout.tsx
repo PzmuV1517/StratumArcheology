@@ -220,29 +220,45 @@ function ProjectStack() {
           break;
         case "publicise":
           if (project?.id) {
-            const action = project.is_public ? "privatise" : "publicise";
-            const desc = project.is_public
-              ? "This project will no longer be visible in Unearthed. Only members will be able to access it."
-              : "This project will be visible to everyone in Unearthed. Anyone will be able to see its name, description and cover image.";
-            Alert.alert(
-              `${action.charAt(0).toUpperCase() + action.slice(1)} Project?`,
-              desc,
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: action.charAt(0).toUpperCase() + action.slice(1),
-                  style: project.is_public ? "default" : "default",
-                  onPress: async () => {
-                    try {
-                      await projectService.togglePublicise(project.id);
-                      await refreshProject();
-                    } catch {
-                      Alert.alert("Error", "Failed to change project visibility.");
-                    }
+            const doToggle = async () => {
+              try {
+                await projectService.togglePublicise(project.id);
+                await refreshProject();
+              } catch {
+                Alert.alert("Error", "Failed to change project visibility.");
+              }
+            };
+
+            if (project.is_public) {
+              Alert.alert(
+                "Privatise Project?",
+                "This project will no longer be visible in Unearthed. Only members will be able to access it.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Privatise", onPress: doToggle },
+                ],
+              );
+            } else {
+              Alert.alert(
+                "AI Content Consent",
+                "Publishing this project will allow AI to read all notes and activities to generate a public History Review visible to everyone.\n\nDo you agree to this use of your project's content?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Agree & Continue",
+                    onPress: () =>
+                      Alert.alert(
+                        "Publicise Project?",
+                        "This project will be visible to everyone in Unearthed. A History Review will be generated automatically.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Publicise", onPress: doToggle },
+                        ],
+                      ),
                   },
-                },
-              ],
-            );
+                ],
+              );
+            }
           }
           break;
         case "gallery":

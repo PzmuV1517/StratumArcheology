@@ -217,6 +217,13 @@ class Project(Base):
     # E2EE encryption key for chat (base64-encoded, shared among members)
     e2ee_key = Column(Text, nullable=True)
 
+    # Public History Review (AI-generated narrative for the published project page)
+    public_history_review = Column(Text, nullable=True)
+    public_history_provider = Column(String, nullable=True)
+    public_history_generated_at = Column(DateTime, nullable=True)
+    # True = regenerate on next publish (set when project is unpublished)
+    history_needs_refresh = Column(Boolean, default=True, nullable=False)
+
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
     members = relationship(
