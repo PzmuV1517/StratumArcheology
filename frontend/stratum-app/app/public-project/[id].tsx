@@ -21,6 +21,190 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+/* Lazy-load react-markdown on web only */
+/* eslint-disable @typescript-eslint/no-require-imports */
+const _ReactMarkdown =
+  Platform.OS === "web"
+    ? (() => { try { return require("react-markdown").default; } catch { return null; } })()
+    : null;
+const _remarkGfm =
+  Platform.OS === "web"
+    ? (() => { try { return require("remark-gfm").default; } catch { return null; } })()
+    : null;
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+const HISTORY_FONT =
+  "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+function HistoryMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
+  const bodyColor = isDark ? "#CFCFCF" : "#2E2E2E";
+  const boldColor = isDark ? "#F5F5F5" : "#1A1A1A";
+  const borderColor = isDark ? "#333333" : "#E0E0E0";
+  const quoteRowBg = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)";
+
+  if (Platform.OS === "web" && _ReactMarkdown && _remarkGfm) {
+    return React.createElement(
+      "div",
+      { style: { fontFamily: HISTORY_FONT, color: bodyColor, fontSize: "15px", lineHeight: "24px" } },
+      React.createElement(_ReactMarkdown, {
+        remarkPlugins: [_remarkGfm],
+        components: {
+          p:          ({ children }: any) => React.createElement("p",          { style: { margin: "0 0 10px 0", fontFamily: HISTORY_FONT, color: "inherit" } }, children),
+          strong:     ({ children }: any) => React.createElement("strong",     { style: { fontWeight: "700", color: boldColor, fontFamily: HISTORY_FONT } }, children),
+          em:         ({ children }: any) => React.createElement("em",         { style: { fontStyle: "italic", fontFamily: HISTORY_FONT, color: "inherit" } }, children),
+          h1:         ({ children }: any) => React.createElement("h1",         { style: { margin: "0 0 8px 0", fontSize: "20px", fontWeight: "700", color: boldColor, fontFamily: HISTORY_FONT } }, children),
+          h2:         ({ children }: any) => React.createElement("h2",         { style: { margin: "16px 0 8px 0", fontSize: "17px", fontWeight: "700", color: boldColor, fontFamily: HISTORY_FONT } }, children),
+          h3:         ({ children }: any) => React.createElement("h3",         { style: { margin: "10px 0 4px 0", fontSize: "15px", fontWeight: "700", color: boldColor, fontFamily: HISTORY_FONT } }, children),
+          ul:         ({ children }: any) => React.createElement("ul",         { style: { paddingLeft: "20px", margin: "0 0 10px 0" } }, children),
+          ol:         ({ children }: any) => React.createElement("ol",         { style: { paddingLeft: "20px", margin: "0 0 10px 0" } }, children),
+          li:         ({ children }: any) => React.createElement("li",         { style: { fontFamily: HISTORY_FONT, color: "inherit", marginBottom: "4px" } }, children),
+          blockquote: ({ children }: any) => React.createElement("blockquote", {
+            style: {
+              borderLeft: "3px solid #FF2A2A",
+              margin: "16px 0",
+              padding: "10px 16px",
+              backgroundColor: quoteRowBg,
+              borderRadius: "0 6px 6px 0",
+              fontStyle: "italic",
+              fontSize: "15px",
+              color: isDark ? "#DDDDDD" : "#3A3A3A",
+              lineHeight: "24px",
+            },
+          }, children),
+          hr:   () => React.createElement("hr", {
+            style: { border: "none", borderTop: `1px solid ${borderColor}`, margin: "18px 0" },
+          }),
+          table: ({ children }: any) => React.createElement(
+            "div", { style: { overflowX: "auto", marginBottom: "14px" } },
+            React.createElement("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: "14px" } }, children),
+          ),
+          thead: ({ children }: any) => React.createElement("thead", { style: { borderBottom: `2px solid ${borderColor}` } }, children),
+          tbody: ({ children }: any) => React.createElement("tbody", {}, children),
+          tr:    ({ children }: any) => React.createElement("tr", {}, children),
+          th:    ({ children }: any) => React.createElement("th", {
+            style: {
+              textAlign: "left",
+              padding: "7px 12px",
+              fontWeight: "700",
+              color: isDark ? "#AAAAAA" : "#666666",
+              fontSize: "11px",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              fontFamily: HISTORY_FONT,
+            },
+          }, children),
+          td:    ({ children }: any) => React.createElement("td", {
+            style: {
+              padding: "7px 12px",
+              borderBottom: `1px solid ${borderColor}`,
+              color: isDark ? "#DDDDDD" : "#2E2E2E",
+              fontFamily: HISTORY_FONT,
+              verticalAlign: "top",
+            },
+          }, children),
+        },
+      }, text),
+    );
+  }
+
+  // Native: paragraph / blockquote / table renderer
+  const lines = text.split("\n");
+  return (
+    <View>
+      {lines.map((line, i) => {
+        if (line === "") return <View key={i} style={{ height: 8 }} />;
+
+        // Horizontal rule
+        if (/^---+$/.test(line.trim())) {
+          return <View key={i} style={{ height: 1, backgroundColor: isDark ? "#333333" : "#E0E0E0", marginVertical: 10 }} />;
+        }
+
+        // Table rows
+        if (line.trimStart().startsWith("|")) {
+          // Skip separator rows like |---|---|
+          if (/^\|[\s\-|:]+\|$/.test(line.trim())) return null;
+          const nextLine = lines[i + 1] ?? "";
+          const isHeader = /^\|[\s\-|:]+\|$/.test(nextLine.trim());
+          const cells = line.split("|").map(c => c.trim()).filter(c => c.length > 0);
+          return (
+            <View
+              key={i}
+              style={{
+                flexDirection: "row",
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: isDark ? "#2A2A2A" : "#EEEEEE",
+                paddingVertical: 6,
+                backgroundColor: isHeader ? (isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)") : "transparent",
+              }}
+            >
+              {cells.map((cell, j) => {
+                const boldParts = cell.split(/(\*\*[^*]+\*\*)/g);
+                return (
+                  <Text key={j} style={{ flex: 1, fontSize: 13, color: bodyColor, paddingHorizontal: 4, fontWeight: isHeader ? "700" : "400" }}>
+                    {boldParts.map((p, k) =>
+                      p.startsWith("**") && p.endsWith("**")
+                        ? <Text key={k} style={{ fontWeight: "700", color: boldColor }}>{p.slice(2, -2)}</Text>
+                        : <Text key={k}>{p}</Text>
+                    )}
+                  </Text>
+                );
+              })}
+            </View>
+          );
+        }
+
+        // Blockquote
+        if (line.startsWith("> ")) {
+          return (
+            <View
+              key={i}
+              style={{
+                borderLeftWidth: 3,
+                borderLeftColor: "#FF2A2A",
+                paddingLeft: 12,
+                paddingVertical: 6,
+                marginVertical: 6,
+                backgroundColor: quoteRowBg,
+              }}
+            >
+              <Text style={{ fontSize: 15, color: isDark ? "#DDDDDD" : "#3A3A3A", fontStyle: "italic", lineHeight: 22 }}>
+                {line.slice(2)}
+              </Text>
+            </View>
+          );
+        }
+
+        // Heading / bullet / paragraph
+        const heading = /^#{1,3}\s/.test(line);
+        const bullet = line.startsWith("- ") || line.startsWith("* ");
+        const content = heading ? line.replace(/^#+\s/, "") : bullet ? line.slice(2) : line;
+        const parts = content.split(/(\*\*[^*]+\*\*)/g);
+        return (
+          <Text
+            key={i}
+            style={{
+              marginBottom: 4,
+              fontSize: heading ? 16 : 15,
+              fontWeight: heading ? "700" : "400",
+              color: bodyColor,
+              lineHeight: 24,
+            }}
+          >
+            {bullet && <Text style={{ color: bodyColor }}>{"• "}</Text>}
+            {parts.map((p, j) =>
+              p.startsWith("**") && p.endsWith("**") ? (
+                <Text key={j} style={{ fontWeight: "700", color: boldColor }}>{p.slice(2, -2)}</Text>
+              ) : (
+                <Text key={j}>{p}</Text>
+              ),
+            )}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -80,6 +264,25 @@ export default function PublicProjectDetailScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Poll every 5 s while the history review is still being generated
+  useEffect(() => {
+    if (!id || !project) return;
+    if (!("public_history_review" in project) || project.public_history_review != null) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const updated = await projectService.getPublicProject(id);
+        if (updated.public_history_review != null) {
+          setProject(updated);
+        }
+      } catch {
+        // ignore transient errors during polling
+      }
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [id, project, project?.public_history_review]);
 
   // ─── Loading / Error states ──────────────────────────────────────────
 
@@ -193,6 +396,27 @@ export default function PublicProjectDetailScreen() {
               <Text style={styles.cardBody}>{project.description}</Text>
             </View>
           ) : null}
+
+          {/* History Review — shown once the field is present in the response */}
+          {"public_history_review" in project && (
+            <View style={styles.card}>
+              <View style={styles.historyCardHeader}>
+                <Text style={[styles.cardLabel, { marginBottom: 0 }]}>History Review</Text>
+                {!!project.public_history_provider && (
+                  <Text style={styles.aiWarningText}>
+                    {project.public_history_provider} · may contain mistakes
+                  </Text>
+                )}
+              </View>
+              {project.public_history_review ? (
+                <HistoryMarkdown text={project.public_history_review} isDark={isDarkMode} />
+              ) : (
+                <Text style={styles.historyPending}>
+                  History review is being prepared, please check back soon.
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Details row */}
           <View style={styles.card}>
@@ -551,5 +775,27 @@ const createStyles = (isDarkMode: boolean) =>
       borderRadius: 10,
       overflow: "hidden",
       height: 480,
+    },
+
+    /* ── History Review ────── */
+    historyCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    aiWarningText: {
+      fontSize: 11,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      letterSpacing: 0.3,
+      fontStyle: "italic",
+    },
+    historyPending: {
+      fontSize: 14,
+      color: isDarkMode ? "#888888" : "#888888",
+      fontStyle: "italic",
+      lineHeight: 20,
     },
   });

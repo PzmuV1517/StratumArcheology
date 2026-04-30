@@ -38,6 +38,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useActivity } from "../../hooks";
 import { activityService, ProjectActivity, authService } from "../../services";
@@ -179,7 +180,11 @@ export default function Timeline({
           <View
             style={[styles.iconContainer, { borderColor: color, borderWidth: 2 }]}
           >
-            <Text style={styles.icon}>{icon}</Text>
+            <Ionicons
+              name={icon as keyof typeof Ionicons.glyphMap}
+              size={16}
+              color={color}
+            />
           </View>
           {!isLast && (
             <View style={[styles.line, { backgroundColor: color + "40" }]} />
@@ -495,7 +500,7 @@ const createStyles = (isDarkMode: boolean) => {
       zIndex: 1,
     },
     icon: {
-      fontSize: 16,
+      // kept for layout reference; size is passed directly to Ionicons
     },
     line: {
       position: "absolute",

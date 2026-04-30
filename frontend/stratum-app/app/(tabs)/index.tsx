@@ -36,6 +36,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useDelayedLoading } from "@/hooks/useDelayedLoading";
 import { OverviewSkeleton, Skeleton } from "@/components/common/Skeleton";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -220,9 +221,12 @@ export default function OverviewScreen() {
                     { backgroundColor: surfaceBackground },
                   ]}
                 >
-                  <Text style={styles.timelineIcon}>
-                    {getActivityIcon(activity.activity_type)}
-                  </Text>
+                  <Ionicons
+                    name={getActivityIcon(activity.activity_type) as keyof typeof Ionicons.glyphMap}
+                    size={16}
+                    color={activityService.getActivityColor(activity.activity_type)}
+                    style={styles.timelineIcon}
+                  />
                   <Text
                     style={[styles.timelineText, { color: timelineTextColor }]}
                     numberOfLines={2}
@@ -452,7 +456,6 @@ const createStyles = (isDarkMode: boolean) =>
       borderColor: isDarkMode ? "#2A2A2A" : "#E4E4E4",
     },
     timelineIcon: {
-      fontSize: 16,
       marginBottom: 6,
     },
     timelineText: {
