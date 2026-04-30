@@ -90,6 +90,9 @@ async def create_note(
     db.commit()
     db.refresh(note)
 
+    if file_node is not None:
+        setattr(note, "file_node_id", file_node.id)
+
     # Resolve the target folder. Notes default to the project "Notes" folder
     # unless the caller provided a parent_id (e.g. saving into My Folder).
     target_folder: FileNode | None = None
@@ -204,6 +207,7 @@ async def create_note(
     await emit_content_update(note.project_id, "notes")
 
     # Return full ORM object so response_model includes all fields (author_id, timestamps, attachments)
+    setattr(note, "file_node_id", note_node.id)
     return note
 
 
@@ -257,6 +261,19 @@ async def get_note(
 
     file_link = note.file_link
     file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
+
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
     perm = None
     if file_node is not None:
         perm = resolve_permission(db, file_node, current_user)
@@ -304,6 +321,11 @@ async def update_note(
         )
 
     check_project_permission(note.project_id, current_user, db)
+
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
 
     # Get the linked file node
     file_link = note.file_link
@@ -439,6 +461,8 @@ async def sync_note_from_file(
         db.commit()
         db.refresh(note)
 
+        setattr(note, "file_node_id", file_node.id)
+
         return note
 
     except Exception as e:
@@ -463,27 +487,84 @@ async def delete_note(
         )
 
     check_project_permission(note.project_id, current_user, db)
-
-    # Only author or project leader can delete
-    if note.author_id != current_user.id:
-        check_project_permission(
-            note.project_id, current_user, db, required_role="leader"
+    file_link = note.file_link
+    file_node = file_link.file_node if file_link else None
+    if file_node is not None:
+        assert_perm(db, file_node, current_user, PermissionMode.WRITE)
+        record_snapshot(
+            db,
+            project_id=note.project_id,
+            node=file_node,
+            kind=SnapshotKind.DELETE,
+            reason=SnapshotReason.DELETE,
+            actor_id=current_user.id,
+            payload={
+                "name": file_node.name,
+                "type": file_node.type.value,
+                "parent_id": file_node.parent_id,
+                "owner_id": file_node.owner_id,
+                "mime_type": file_node.mime_type,
+                "size": file_node.size,
+                "storage_path": file_node.storage_path,
+                "is_acl_root": file_node.is_acl_root,
+                "note": {
+                    "id": note.id,
+                    "title": note.title,
+                    "content": note.content,
+                    "author_id": note.author_id,
+                    "created_at": note.created_at,
+                    "updated_at": note.updated_at,
+                    "version": note.version,
+                    "transcription": note.transcription,
+                    "transcription_original": note.transcription_original,
+                    "transcription_modified": note.transcription_modified,
+                    "transcription_status": note.transcription_status,
+                },
+            },
+            summary=f'Deleted note "{note.title}"',
         )
+        db.delete(file_node)
+    else:
+        # Fallback for legacy notes without a file mirror
+        if note.author_id != current_user.id:
+            check_project_permission(
+                note.project_id, current_user, db, required_role="leader"
+            )
 
-    # Delete txt file from MinIO
-    file_link = (
-        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    )
-    if file_link and file_link.file_node and file_link.file_node.storage_path:
-        await minio_client.delete_file(file_link.file_node.storage_path)
-        db.delete(file_link.file_node)
-
-    # Delete attachments from MinIO
+    # Delete attachments and their mirrored FileNodes (keep storage for 7 days)
     for attachment in note.attachments:
-        await minio_client.delete_file(attachment.file_path)
+        mirrored_node = (
+            db.query(FileNode)
+            .filter(
+                FileNode.project_id == note.project_id,
+                FileNode.storage_path == attachment.file_path,
+            )
+            .first()
+        )
+        if mirrored_node:
+            record_snapshot(
+                db,
+                project_id=note.project_id,
+                node=mirrored_node,
+                kind=SnapshotKind.DELETE,
+                reason=SnapshotReason.DELETE,
+                actor_id=current_user.id,
+                payload={
+                    "name": mirrored_node.name,
+                    "type": mirrored_node.type.value,
+                    "parent_id": mirrored_node.parent_id,
+                    "owner_id": mirrored_node.owner_id,
+                    "mime_type": mirrored_node.mime_type,
+                    "size": mirrored_node.size,
+                    "storage_path": mirrored_node.storage_path,
+                    "is_acl_root": mirrored_node.is_acl_root,
+                },
+                summary=f'Deleted attachment "{attachment.filename}"',
+            )
+            db.delete(mirrored_node)
 
-    project_id = note.project_id  # Store before deletion
-    note_title = note.title  # Store before deletion
+    project_id = note.project_id
+    note_title = note.title
     db.delete(note)
     db.commit()
 
@@ -616,8 +697,19 @@ async def add_note_attachment(
         mime_type=attachment.file_type,
         size=attachment.file_size,
         storage_path=attachment.file_path,
+        owner_id=current_user.id,
     )
     db.add(mirrored_node)
+    db.flush()
+    mirrored_node.acl_root_id = notes_folder.acl_root_id
+    db.flush()
+
+    record_create(
+        db,
+        node=mirrored_node,
+        actor_id=current_user.id,
+        summary=f'Uploaded attachment "{candidate}"',
+    )
 
     db.commit()
     db.refresh(attachment)
@@ -692,13 +784,41 @@ async def delete_note_attachment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
         )
 
-    # Delete from MinIO
-    await minio_client.delete_file(attachment.file_path)
-
     # Store info before deletion
     attachment_filename = attachment.filename
     note_title = note.title
     project_id = note.project_id
+
+    # Snapshot and delete the mirrored FileNode (keep storage for 7 days)
+    mirrored_node = (
+        db.query(FileNode)
+        .filter(
+            FileNode.project_id == note.project_id,
+            FileNode.storage_path == attachment.file_path,
+        )
+        .first()
+    )
+    if mirrored_node:
+        record_snapshot(
+            db,
+            project_id=note.project_id,
+            node=mirrored_node,
+            kind=SnapshotKind.DELETE,
+            reason=SnapshotReason.DELETE,
+            actor_id=current_user.id,
+            payload={
+                "name": mirrored_node.name,
+                "type": mirrored_node.type.value,
+                "parent_id": mirrored_node.parent_id,
+                "owner_id": mirrored_node.owner_id,
+                "mime_type": mirrored_node.mime_type,
+                "size": mirrored_node.size,
+                "storage_path": mirrored_node.storage_path,
+                "is_acl_root": mirrored_node.is_acl_root,
+            },
+            summary=f'Deleted attachment "{attachment.filename}"',
+        )
+        db.delete(mirrored_node)
 
     # Delete from database
     db.delete(attachment)
