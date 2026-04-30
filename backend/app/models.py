@@ -49,13 +49,37 @@ class UserRole(str, enum.Enum):
     GUEST = "guest"
 
 
-class PrivacyLevel(str, enum.Enum):
-    """Privacy level for files and notes"""
+class SnapshotKind(str, enum.Enum):
+    """Discriminator for entries in node_snapshots.
 
-    PRIVATE = "private"  # Only owner can see
-    SHARED = "shared"  # Shared with specific users
-    PROJECT = "project"  # All project members can see (default)
-    PUBLIC = "public"  # Anyone with project access can see
+    Stored as a plain VARCHAR rather than a PostgreSQL enum type so future
+    additions don't require ALTER TYPE migrations.
+    """
+
+    FILE_CONTENT = "file_content"
+    NOTE_CONTENT = "note_content"
+    FOLDER_METADATA = "folder_metadata"
+    HARRIS_MATRIX = "harris_matrix"
+    WHEELER = "wheeler"
+    ACL_CHANGE = "acl_change"
+    DELETE = "delete"
+    CREATE = "create"
+
+
+class SnapshotReason(str, enum.Enum):
+    """Why a snapshot was recorded. Drives the History UI labels and the
+    "what does revert mean for this" decision tree."""
+
+    EDIT = "edit"
+    CREATE = "create"
+    RESTORE = "restore"
+    RENAME = "rename"
+    MOVE = "move"
+    DELETE = "delete"
+    ACL_GRANT = "acl_grant"
+    ACL_REVOKE = "acl_revoke"
+    ACL_CLEAR = "acl_clear"
+    SYSTEM_MIGRATE = "system_migrate"
 
 
 class ActivityType(str, enum.Enum):
@@ -242,13 +266,7 @@ class Note(Base):
     # Versioning fields
     version = Column(Integer, default=1, nullable=False)
 
-    # Privacy fields
-    privacy = Column(
-        SQLEnum(PrivacyLevel, values_callable=lambda x: [e.value for e in x]),
-        default=PrivacyLevel.PROJECT,
-        nullable=False,
-    )
-    shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
+    # Permissions live on the linked FileNode (via NoteFileLink), not here.
 
     # Transcription fields (voice notes only)
     transcription = Column(Text, nullable=True)
@@ -311,21 +329,28 @@ class FileNode(Base):
         String, nullable=True
     )  # MD5/SHA256 hash for integrity checking
 
-    # Privacy/Ownership fields
+    # Ownership
     owner_id = Column(
         String,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-    )  # File owner
-    privacy = Column(
-        SQLEnum(PrivacyLevel, values_callable=lambda x: [e.value for e in x]),
-        default=PrivacyLevel.PROJECT,
-        nullable=False,
     )
-    shared_with = Column(
-        JSON, nullable=True
-    )  # List of user IDs for SHARED privacy: ["user_id_1", "user_id_2"]
+
+    # ACL fields. ``is_acl_root`` is the source of truth: when true, this
+    # node defines its own ACL and resolution stops here. ``acl_root_id``
+    # is a denormalised pointer to the nearest ancestor (possibly self)
+    # that has ``is_acl_root=True``; NULL means "no ACL scope on the
+    # ancestor chain, project-default access applies". Recompute
+    # ``acl_root_id`` for the subtree whenever a node toggles
+    # ``is_acl_root`` or moves.
+    is_acl_root = Column(Boolean, default=False, nullable=False)
+    acl_root_id = Column(
+        String,
+        ForeignKey("file_nodes.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -335,11 +360,20 @@ class FileNode(Base):
     parent = relationship(
         "FileNode",
         remote_side="FileNode.id",
+        foreign_keys=[parent_id],
         backref=backref("children", cascade="all, delete-orphan"),
     )
     owner = relationship("User", foreign_keys=[owner_id])
-    versions = relationship(
-        "FileVersion", back_populates="file_node", cascade="all, delete-orphan"
+    acl_entries = relationship(
+        "FileNodeACL",
+        back_populates="file_node",
+        cascade="all, delete-orphan",
+        foreign_keys="FileNodeACL.file_node_id",
+    )
+    snapshots = relationship(
+        "NodeSnapshot",
+        back_populates="node",
+        foreign_keys="NodeSnapshot.node_id",
     )
 
     __table_args__ = (
@@ -351,34 +385,161 @@ class FileNode(Base):
     )
 
 
-class FileVersion(Base):
-    """Stores version history for files - keeps previous versions when files are updated"""
+class FileNodeACL(Base):
+    """Per-node, per-principal access control entry.
 
-    __tablename__ = "file_versions"
+    Exactly one of ``user_id`` / ``group_id`` is non-null (DB CHECK).
+    A row implies "this principal has ``can_read``/``can_write`` rights
+    on the node referenced by ``file_node_id`` whenever resolution lands
+    at that node". Resolution lands at a node when the node is the
+    ``acl_root_id`` of the file you're trying to access.
+
+    ``inherited_from_node_id`` is purely for UI explanation: it stores
+    the node that originally generated this row when an ACL is
+    automatically copied to a descendant.
+    """
+
+    __tablename__ = "file_node_acl"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     file_node_id = Column(
         String,
         ForeignKey("file_nodes.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
-    version = Column(Integer, nullable=False)
-    storage_path = Column(String, nullable=False)  # MinIO path for this version
-    size = Column(String, nullable=True)
-    checksum = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    group_id = Column(
+        String,
+        ForeignKey("user_groups.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    can_read = Column(Boolean, default=True, nullable=False)
+    can_write = Column(Boolean, default=False, nullable=False)
+    inherited_from_node_id = Column(
+        String,
+        ForeignKey("file_nodes.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_by = Column(
-        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
-    # Relationships
-    file_node = relationship("FileNode", back_populates="versions")
-    user = relationship("User", foreign_keys=[created_by])
+    file_node = relationship(
+        "FileNode", back_populates="acl_entries", foreign_keys=[file_node_id]
+    )
+    user = relationship("User", foreign_keys=[user_id])
+    group = relationship("UserGroup", foreign_keys=[group_id])
+
+
+class Blob(Base):
+    """Content-addressed binary store. Every unique chunk of bytes gets
+    one row keyed by SHA-256, regardless of how many file nodes or
+    snapshots reference it.
+
+    ``ref_count`` is incremented when a FileNode or NodeSnapshot starts
+    pointing at the blob and decremented when one stops. A background
+    sweeper deletes blobs that drop to zero (with a grace window).
+    """
+
+    __tablename__ = "blobs"
+
+    sha256 = Column(String(64), primary_key=True)
+    size = Column(Integer, nullable=False)
+    storage_path = Column(String, nullable=False)
+    mime_type = Column(String, nullable=True)
+    ref_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class NodeSnapshot(Base):
+    """Unified history row.
+
+    Replaces both ``file_versions`` (per-file binary history) and
+    ``data_versions`` (project-level Harris/Wheeler history). One row
+    per mutation, regardless of what was mutated. Use ``kind`` to know
+    what kind of mutation it was and where to look for the payload:
+
+    ============ ================================================
+    kind         payload location
+    ============ ================================================
+    file_content ``blob_sha256`` references the binary
+    note_content ``payload`` ``{"title": ..., "content": ...}``
+    folder_metadata ``payload`` ``{"name": ...}`` for renames/moves
+    harris_matrix ``payload`` ``{...full data...}``
+    wheeler      ``payload`` ``{...full data...}``
+    acl_change   ``acl_state_at_snapshot`` is the full ACL after
+    delete       ``payload`` last known state pre-delete
+    create       ``payload`` initial state
+    ============ ================================================
+
+    ``project_id`` is always set so deleted-node recovery works even
+    after ``node_id`` is nulled out by the ON DELETE.
+    """
+
+    __tablename__ = "node_snapshots"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    node_id = Column(
+        String,
+        ForeignKey("file_nodes.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    kind = Column(String(32), nullable=False)
+    version = Column(Integer, nullable=False)
+    blob_sha256 = Column(
+        String(64),
+        ForeignKey("blobs.sha256", ondelete="SET NULL"),
+        nullable=True,
+    )
+    payload = Column(JSON, nullable=True)
+    path_at_snapshot = Column(String, nullable=True)
+    name_at_snapshot = Column(String, nullable=True)
+    parent_id_at_snapshot = Column(String, nullable=True)
+    acl_state_at_snapshot = Column(JSON, nullable=True)
+    actor_id = Column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    reason = Column(String(32), nullable=False)
+    summary = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    project = relationship("Project")
+    node = relationship("FileNode", back_populates="snapshots", foreign_keys=[node_id])
+    actor = relationship("User", foreign_keys=[actor_id])
+    blob = relationship("Blob", foreign_keys=[blob_sha256])
 
     __table_args__ = (
-        UniqueConstraint("file_node_id", "version", name="uq_file_version"),
-        Index("ix_file_versions_file_node", "file_node_id"),
+        Index(
+            "ix_node_snapshots_project_created",
+            "project_id",
+            "created_at",
+        ),
+        Index(
+            "ix_node_snapshots_node_kind_version",
+            "node_id",
+            "kind",
+            "version",
+        ),
+        Index(
+            "ix_node_snapshots_actor_project",
+            "actor_id",
+            "project_id",
+            "created_at",
+        ),
     )
 
 
@@ -720,43 +881,9 @@ class ChatMessage(Base):
     )
 
 
-class DataVersion(Base):
-    """Versioned snapshot of project JSON data (Harris Matrix, Wheeler diagram).
-
-    Each time the harris_matrix_data or wheeler_data JSON column is updated,
-    the previous value is stored here, enabling the Time Machine to browse
-    and restore earlier revisions.
-    """
-
-    __tablename__ = "data_versions"
-
-    id = Column(String, primary_key=True, default=generate_uuid)
-    project_id = Column(
-        String,
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    data_type = Column(String, nullable=False)  # "harris_matrix" or "wheeler"
-    version = Column(Integer, nullable=False)
-    data = Column(JSON, nullable=True)  # The snapshot payload
-    created_at = Column(DateTime, default=datetime.utcnow)
-    created_by = Column(
-        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
-
-    # Relationships
-    project = relationship(
-        "Project", backref=backref("data_versions", cascade="all, delete-orphan")
-    )
-    user = relationship("User", foreign_keys=[created_by])
-
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id", "data_type", "version", name="uq_data_version"
-        ),
-        Index("ix_data_versions_project_type", "project_id", "data_type"),
-    )
+# DataVersion was removed in migration 021. Project-level history for
+# Harris Matrix and Wheeler diagrams now lives in NodeSnapshot rows where
+# kind == HARRIS_MATRIX or kind == WHEELER and node_id is NULL.
 
 
 # =====================================================================
