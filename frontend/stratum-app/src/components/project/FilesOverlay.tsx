@@ -47,7 +47,7 @@ import { showAlert } from "../../utils/alert";
 import { offlineFilesStorage } from "../../services/offlineService";
 import { useWebSocket } from "../../contexts/WebSocketContext";
 import FileUploadMenu, { SelectedFile } from "../files/FileUploadMenu";
-import MyFolderSettingsModal from "./MyFolderSettingsModal";
+import PermissionsModal from "./MyFolderSettingsModal";
 
 interface FileNode {
   id: string;
