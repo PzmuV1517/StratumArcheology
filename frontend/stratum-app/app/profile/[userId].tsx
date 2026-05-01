@@ -6,7 +6,11 @@
  * description, social links, timezone/local time, projects).
  * Accessible by clicking on a user's name or avatar in chat.
  *
- * Copyright (c) 2026 Andrei Banu & Levin Mircea
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useState, useMemo } from "react";
 import {

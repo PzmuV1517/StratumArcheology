@@ -4,27 +4,11 @@
  *
  * Plays audio files using the HTML5 audio element.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -45,13 +29,22 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
     let ctx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let raf = 0;
+    const el = audioRef.current;
+
     try {
       ctx = new AudioContext();
-      const source = ctx.createMediaElementSource(audioRef.current);
+      const source = ctx.createMediaElementSource(el);
       analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
       analyser.connect(ctx.destination);
+
+      // Browser autoplay policy suspends AudioContext until a user gesture.
+      // createMediaElementSource routes all audio through the context, so
+      // without resuming it on play, the audio element produces no sound.
+      const resume = () => ctx?.resume();
+      el.addEventListener("play", resume);
+
       const buffer = new Uint8Array(analyser.frequencyBinCount);
       const canvas = canvasRef.current;
       const g = canvas.getContext("2d")!;
@@ -68,15 +61,15 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
         }
       };
       draw();
+
+      return () => {
+        el.removeEventListener("play", resume);
+        if (raf) cancelAnimationFrame(raf);
+        try { ctx?.close(); } catch {}
+      };
     } catch (_e: any) {
       setError("Audio visualizer error");
     }
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      try {
-        ctx?.close();
-      } catch {}
-    };
   }, [audioUrl]);
 
   return (

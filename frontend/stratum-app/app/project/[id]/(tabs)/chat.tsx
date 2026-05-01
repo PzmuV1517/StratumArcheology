@@ -9,7 +9,11 @@
  * Rebuilt from scratch — zero useCallback, refs for closures, primitive
  * effect deps only. Immune to React Compiler memoisation issues.
  *
- * Copyright (c) 2026 Andrei Banu & Levin Mircea
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {

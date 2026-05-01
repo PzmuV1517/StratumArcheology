@@ -5,27 +5,11 @@ The model is loaded once at startup (downloading it from the internet if it
 isn't already cached in ~/.cache/whisper/). After that, every transcription
 runs in a thread-pool executor so the async event loop is never blocked.
 
-MIT License
-
-Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+STRATUM - Proprietary and Confidential
+Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+All rights reserved.
+No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
 import asyncio
@@ -97,6 +81,14 @@ async def transcribe_note_audio(
     """
     if _model is None:
         logger.warning("Whisper model not loaded — transcription skipped for %s", note_id)
+        db = SessionLocal()
+        try:
+            note = db.query(Note).filter(Note.id == note_id).first()
+            if note:
+                note.transcription_status = "failed"
+                db.commit()
+        finally:
+            db.close()
         return
 
     db = SessionLocal()
@@ -121,7 +113,7 @@ async def transcribe_note_audio(
             tmp_path = tmp.name
 
         # Run synchronous Whisper in the executor so we don't block the loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         text = await loop.run_in_executor(_executor, _run_transcription, tmp_path)
 
         note.transcription = text

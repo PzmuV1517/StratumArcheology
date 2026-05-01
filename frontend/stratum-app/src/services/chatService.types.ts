@@ -5,7 +5,11 @@
  * Defines interfaces for chat messages, conversation previews,
  * channels, user groups, and paginated message responses.
  *
- * Copyright (c) 2026 Andrei Banu & Levin Mircea
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 
 /** A single chat message (channel, project room, or DM). */
@@ -89,4 +93,3 @@ export interface Mentionable {
   users: { id: number; display_name: string; username: string | null }[];
   groups: { id: number; name: string }[];
 }
-

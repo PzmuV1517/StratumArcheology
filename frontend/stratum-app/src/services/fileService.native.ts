@@ -5,27 +5,11 @@
  * Extends core file functionality with native file system access
  * and sharing capabilities.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 // Native-specific file operations using Expo APIs
 import api from "./api";
@@ -84,6 +68,7 @@ export const fileService = {
         const res = await api.post(
           `/files/project/${projectId}/upload`,
           fileUriOrFormData,
+          { timeout: 0, maxBodyLength: Infinity, maxContentLength: Infinity },
         );
         return res.data;
       }
@@ -99,7 +84,11 @@ export const fileService = {
         formData.append("parent_id", parentId);
       }
       // Don't set Content-Type header - let RN set it with the correct boundary
-      const res = await api.post(`/files/project/${projectId}/upload`, formData);
+      const res = await api.post(`/files/project/${projectId}/upload`, formData, {
+        timeout: 0,
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+      });
       return res.data;
     } catch (error: any) {
       // If offline or network error, queue the upload
@@ -149,7 +138,11 @@ export const fileService = {
     formData: FormData,
   ): Promise<FileNode> => {
     // Don't set Content-Type header - let RN set it with the correct boundary
-    const res = await api.post(`/files/project/${projectId}/upload`, formData);
+    const res = await api.post(`/files/project/${projectId}/upload`, formData, {
+      timeout: 0,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
     return res.data;
   },
 
