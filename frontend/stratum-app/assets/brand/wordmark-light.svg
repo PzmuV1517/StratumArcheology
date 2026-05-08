@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" width="1600" height="320" role="img" aria-label="STRATUM wordmark">
+  <title>STRATUM</title>
+  <rect width="1600" height="320" fill="#FFFFFF"/>
+  <text
+    x="800" y="172"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="'Space Grotesk', 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif"
+    font-weight="700"
+    font-size="140"
+    letter-spacing="42"
+    fill="#000000"
+  >STRATUM</text>
+  <!-- Rule shifted left by 21 (half the trailing letter-spacing) so it
+       aligns with the wordmark's visible centre, not the geometric one. -->
+  <rect x="679" y="256" width="200" height="10" fill="#FF2A2A"/>
+</svg>
