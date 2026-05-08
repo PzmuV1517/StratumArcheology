@@ -106,7 +106,7 @@ export default function BrandIdentityScreen() {
         {/* HERO — primary wordmark */}
         <View style={styles.hero}>
           <Text style={styles.heroEyebrow}>The wordmark</Text>
-          <Text style={styles.heroLogo}>STRATUM</Text>
+          <StratumWordmark style={styles.heroLogo} />
           <View style={styles.heroRule} />
           <Text style={styles.heroTagline}>Dig deeper. Document smarter.</Text>
         </View>
@@ -127,23 +127,23 @@ export default function BrandIdentityScreen() {
           <View style={styles.variantGrid}>
             {/* Primary — red on black */}
             <View style={[styles.variantCell, { backgroundColor: "#000000" }]}>
-              <Text style={[styles.variantWordmark, { color: RED }]}>STRATUM</Text>
+              <StratumWordmark style={[styles.variantWordmark, { color: RED }]} />
               <Text style={styles.variantCaption}>Primary · Red on Black</Text>
             </View>
 
             {/* Inverted — white on black */}
             <View style={[styles.variantCell, { backgroundColor: "#000000" }]}>
-              <Text style={[styles.variantWordmark, { color: "#FFFFFF" }]}>
-                STRATUM
-              </Text>
+              <StratumWordmark
+                style={[styles.variantWordmark, { color: "#FFFFFF" }]}
+              />
               <Text style={styles.variantCaption}>Mono · White on Black</Text>
             </View>
 
             {/* Black on white */}
             <View style={[styles.variantCell, { backgroundColor: "#FFFFFF" }]}>
-              <Text style={[styles.variantWordmark, { color: "#000000" }]}>
-                STRATUM
-              </Text>
+              <StratumWordmark
+                style={[styles.variantWordmark, { color: "#000000" }]}
+              />
               <Text style={[styles.variantCaption, { color: "#666" }]}>
                 Mono · Black on Light
               </Text>
@@ -151,9 +151,9 @@ export default function BrandIdentityScreen() {
 
             {/* Black on red */}
             <View style={[styles.variantCell, { backgroundColor: RED }]}>
-              <Text style={[styles.variantWordmark, { color: "#000000" }]}>
-                STRATUM
-              </Text>
+              <StratumWordmark
+                style={[styles.variantWordmark, { color: "#000000" }]}
+              />
               <Text style={[styles.variantCaption, { color: "#1A0000" }]}>
                 Inverse · Black on Red
               </Text>
@@ -161,9 +161,9 @@ export default function BrandIdentityScreen() {
 
             {/* Stacked lockup with tagline */}
             <View style={[styles.variantCell, { backgroundColor: "#000000" }]}>
-              <Text style={[styles.variantWordmark, { color: "#FFFFFF" }]}>
-                STRATUM
-              </Text>
+              <StratumWordmark
+                style={[styles.variantWordmark, { color: "#FFFFFF" }]}
+              />
               <View style={styles.lockupRule} />
               <Text style={styles.lockupTagline}>archaeological field platform</Text>
               <Text style={styles.variantCaption}>Lockup · with descriptor</Text>
@@ -194,7 +194,7 @@ export default function BrandIdentityScreen() {
         >
           <View style={styles.constructionRow}>
             <View style={styles.constructionStage}>
-              <Text style={styles.constructionWord}>STRATUM</Text>
+              <StratumWordmark style={styles.constructionWord} />
               <View style={styles.constructionLine} />
               <View style={styles.constructionTicks}>
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -487,7 +487,7 @@ export default function BrandIdentityScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerLogo}>STRATUM</Text>
+          <StratumWordmark style={styles.footerLogo} />
           <Text style={styles.footerNote}>
             Brand system maintained by Ferritworks S.R.L. · Internal reference, not
             for distribution.
@@ -607,6 +607,26 @@ function ScaleRow({
   );
 }
 
+function StratumWordmark({ style }: { style: any }) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignSelf: "stretch",
+        alignItems: "center",
+      }}
+    >
+      <View style={{ flex: 1, alignItems: "flex-end" }}>
+        <Text style={style}>STR</Text>
+      </View>
+      <Text style={style}>A</Text>
+      <View style={{ flex: 1, alignItems: "flex-start" }}>
+        <Text style={style}>TUM</Text>
+      </View>
+    </View>
+  );
+}
+
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const createStyles = (isDarkMode: boolean) => {
@@ -673,8 +693,6 @@ const createStyles = (isDarkMode: boolean) => {
       fontSize: 96,
       fontWeight: "700",
       letterSpacing: 30,
-      // optical correction since trailing letterspacing creates phantom width
-      marginLeft: 30,
       lineHeight: 100,
     } as any,
     heroRule: {
@@ -790,7 +808,6 @@ const createStyles = (isDarkMode: boolean) => {
       fontSize: 28,
       fontWeight: "700",
       letterSpacing: 9,
-      marginLeft: 9,
     } as any,
     variantCaption: {
       position: "absolute",
@@ -863,7 +880,6 @@ const createStyles = (isDarkMode: boolean) => {
       fontSize: 44,
       fontWeight: "700",
       letterSpacing: 14,
-      marginLeft: 14,
     } as any,
     constructionLine: {
       width: "100%",
@@ -1141,7 +1157,6 @@ const createStyles = (isDarkMode: boolean) => {
       fontSize: 18,
       fontWeight: "700",
       letterSpacing: 6,
-      marginLeft: 6,
     } as any,
     footerNote: {
       color: textDim,
