@@ -112,6 +112,7 @@ Documentation Contents
    :caption: Developer Guide
 
    development
+   frontend-styleguide
    database-schema
    websockets-realtime
    deployment

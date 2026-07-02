@@ -5,27 +5,11 @@
  * Allows users to configure privacy and sharing settings
  * for their personal project folder.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useState, useEffect } from "react";
 import {
@@ -41,6 +25,10 @@ import {
   Image,
 } from "react-native";
 import { showAlert } from "../../utils/alert";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+
+const ACCENT_COLOR = "#FF2A2A";
+const ACCENT_SOFT = "rgba(255, 42, 42, 0.18)";
 
 interface Member {
   id: string;
@@ -201,7 +189,12 @@ export default function MyFolderSettingsModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>My Folder Settings</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close My Folder settings"
+            >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -227,8 +220,9 @@ export default function MyFolderSettingsModal({
                     setDefaultCanView(value);
                     if (!value) setDefaultCanEdit(false);
                   }}
-                  trackColor={{ false: "#D9D9D9", true: "#FF2A2A" }}
+                  trackColor={{ false: "#D9D9D9", true: ACCENT_COLOR }}
                   thumbColor="#FFFFFF"
+                  accessibilityLabel="Allow team members to view my files"
                 />
               </View>
 
@@ -243,8 +237,9 @@ export default function MyFolderSettingsModal({
                   value={defaultCanEdit}
                   onValueChange={setDefaultCanEdit}
                   disabled={!defaultCanView}
-                  trackColor={{ false: "#D9D9D9", true: "#FF2A2A" }}
+                  trackColor={{ false: "#D9D9D9", true: ACCENT_COLOR }}
                   thumbColor={defaultCanView ? "#FFFFFF" : "#B5B5B5"}
+                  accessibilityLabel="Allow team members to edit my files"
                 />
               </View>
             </View>
@@ -253,9 +248,12 @@ export default function MyFolderSettingsModal({
             <TouchableOpacity
               style={styles.advancedToggle}
               onPress={() => setShowAdvanced(!showAdvanced)}
+              accessibilityRole="button"
+              accessibilityLabel="Toggle per-member permissions"
+              accessibilityState={{ expanded: showAdvanced }}
             >
               <Text style={styles.advancedToggleText}>
-                {showAdvanced ? "▼" : "▶"} Per-Member Permissions
+                Per-Member Permissions
               </Text>
               <Text style={styles.advancedToggleHint}>
                 Override defaults for specific members
@@ -267,6 +265,8 @@ export default function MyFolderSettingsModal({
                 <TouchableOpacity
                   style={styles.applyDefaultsButton}
                   onPress={handleApplyDefaultsToAll}
+                  accessibilityRole="button"
+                  accessibilityLabel="Apply default permissions to all members"
                 >
                   <Text style={styles.applyDefaultsText}>Apply Defaults to All</Text>
                 </TouchableOpacity>
@@ -311,15 +311,25 @@ export default function MyFolderSettingsModal({
                               perm.canView && styles.permBadgeActive,
                             ]}
                             onPress={() => handleToggleView(member.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Toggle view permission for ${member.display_name}`}
+                            accessibilityState={{ checked: perm.canView }}
                           >
-                            <Text
-                              style={[
-                                styles.permBadgeText,
-                                perm.canView && styles.permBadgeTextActive,
-                              ]}
-                            >
-                              👁 View
-                            </Text>
+                            <View style={styles.permBadgeContent}>
+                              <IconSymbol
+                                name="eye"
+                                size={13}
+                                color={perm.canView ? ACCENT_COLOR : "#666666"}
+                              />
+                              <Text
+                                style={[
+                                  styles.permBadgeText,
+                                  perm.canView && styles.permBadgeTextActive,
+                                ]}
+                              >
+                                View
+                              </Text>
+                            </View>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[
@@ -327,15 +337,25 @@ export default function MyFolderSettingsModal({
                               perm.canEdit && styles.permBadgeActive,
                             ]}
                             onPress={() => handleToggleEdit(member.id)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Toggle edit permission for ${member.display_name}`}
+                            accessibilityState={{ checked: perm.canEdit }}
                           >
-                            <Text
-                              style={[
-                                styles.permBadgeText,
-                                perm.canEdit && styles.permBadgeTextActive,
-                              ]}
-                            >
-                              ✏️ Edit
-                            </Text>
+                            <View style={styles.permBadgeContent}>
+                              <IconSymbol
+                                name="pencil"
+                                size={13}
+                                color={perm.canEdit ? ACCENT_COLOR : "#666666"}
+                              />
+                              <Text
+                                style={[
+                                  styles.permBadgeText,
+                                  perm.canEdit && styles.permBadgeTextActive,
+                                ]}
+                              >
+                                Edit
+                              </Text>
+                            </View>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -348,13 +368,21 @@ export default function MyFolderSettingsModal({
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel folder settings changes"
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveButton, loading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel="Save folder settings"
+              accessibilityState={{ disabled: loading }}
             >
               {loading ? (
                 <ActivityIndicator size="small" color="#F5F5F5" />
@@ -473,7 +501,7 @@ const styles = StyleSheet.create({
   advancedToggleText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#FF2A2A",
+    color: ACCENT_COLOR,
     marginBottom: 4,
   },
   advancedToggleHint: {
@@ -512,7 +540,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#FF2A2A",
+    backgroundColor: ACCENT_COLOR,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -555,16 +583,21 @@ const styles = StyleSheet.create({
     borderColor: "#D9D9D9",
   },
   permBadgeActive: {
-    backgroundColor: "rgba(255, 42, 42, 0.2)",
-    borderColor: "#FF2A2A",
+    backgroundColor: ACCENT_SOFT,
+    borderColor: ACCENT_COLOR,
   },
   permBadgeText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#666666",
   },
+  permBadgeContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   permBadgeTextActive: {
-    color: "#FF2A2A",
+    color: ACCENT_COLOR,
   },
   footer: {
     flexDirection: "row",
@@ -590,7 +623,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: "#FF2A2A",
+    backgroundColor: ACCENT_COLOR,
     alignItems: "center",
   },
   saveButtonDisabled: {

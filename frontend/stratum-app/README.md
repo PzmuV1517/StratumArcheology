@@ -1,50 +1,73 @@
-# Welcome to your Expo app 👋
+# STRATUM Mobile And Web App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Cross-platform frontend for field archaeology workflows.
 
-## Get started
+## Overview
 
-1. Install dependencies
+The STRATUM app supports:
 
-   ```bash
-   npm install
-   ```
+- project and team collaboration
+- offline-first notes and forms
+- media upload and file organization
+- GPS mapping and contextual documentation
+- synchronization with the STRATUM backend
 
-2. Start the app
+Tech stack:
 
-   ```bash
-   npx expo start
-   ```
+- Expo + React Native + Expo Router
+- TypeScript
+- Axios for API calls
+- SQLite and offline queue services
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Quick Start
 
 ```bash
-npm run reset-project
+npm install
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Useful scripts:
 
-## Learn more
+- `npm run web`
+- `npm run ios`
+- `npm run android`
+- `npm run lint`
+- `npm run test`
 
-To learn more about developing your project with Expo, look at the following resources:
+For full environment and device setup, see `GUIDE.md`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project Structure
 
-## Join the community
+Detailed folder and architecture notes live in `STRUCTURE.md`.
 
-Join our community of developers creating universal apps.
+## Design And UI Standards
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+All UI work in this package must follow:
+
+1. `docs/development.rst`
+2. `docs/frontend-styleguide.rst`
+
+Token ownership:
+
+- colors and font families: `src/config/theme.ts`
+- reusable themed wrappers: `src/components/ui/themed-text.tsx`, `src/components/ui/themed-view.tsx`
+
+Minimum quality expectations:
+
+- no hard-coded visual values when a token exists
+- focus and keyboard accessibility on web surfaces
+- touch targets large enough for field use
+- responsive layouts that preserve functionality
+
+## API Configuration
+
+Set `EXPO_PUBLIC_API_URL` to override backend endpoint selection.
+
+If unset, the app uses platform-aware defaults defined in config.
+
+## Contribution Checklist
+
+1. Run lint and tests for changed areas.
+2. Validate at least one mobile and one web path.
+3. Keep docs synchronized with behavior/UI updates.
+4. Add screenshots for major visual changes.

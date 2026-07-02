@@ -2,27 +2,11 @@
 MinIO (S3-compatible) storage client. Wraps uploads, downloads,
 deletes, and presigned URL generation for the STRATUM file storage.
 
-MIT License
-
-Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+STRATUM - Proprietary and Confidential
+Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+All rights reserved.
+No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
 from contextvars import ContextVar
@@ -88,6 +72,19 @@ class MinIOClient:
         except S3Error as e:
             print(f"✗ MinIO bucket error: {e}")
             raise
+
+    def is_available(self) -> bool:
+        """Return True when MinIO client is initialized and reachable."""
+        if not self.client or not self.available:
+            return False
+
+        try:
+            self.client.bucket_exists(self.bucket_name)
+            self.available = True
+            return True
+        except Exception:
+            self.available = False
+            return False
 
     async def upload_file(
         self,

@@ -2,27 +2,11 @@
 SQLAlchemy ORM models for the STRATUM database. Defines all the tables:
 users, projects, notes, files, GPS data, invites, activities, QR codes, etc.
 
-MIT License
-
-Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+STRATUM - Proprietary and Confidential
+Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+All rights reserved.
+No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
 import enum
@@ -157,8 +141,13 @@ class User(Base):
     link_website = Column(String, nullable=True)  # Personal website
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
     # eMonument Roles
+    auth_provider = Column(String, nullable=True, index=True)
+    password_hash = Column(String, nullable=True)
     is_emonument_privileged = Column(Boolean, default=False, nullable=False)
     is_dashboard_admin = Column(Boolean, default=False, nullable=False)
+    is_account_disabled = Column(Boolean, default=False, nullable=False)
+    is_soft_deleted = Column(Boolean, default=False, nullable=False)
+    soft_deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
@@ -212,6 +201,13 @@ class Project(Base):
     # E2EE encryption key for chat (base64-encoded, shared among members)
     e2ee_key = Column(Text, nullable=True)
 
+    # Public History Review (AI-generated narrative for the published project page)
+    public_history_review = Column(Text, nullable=True)
+    public_history_provider = Column(String, nullable=True)
+    public_history_generated_at = Column(DateTime, nullable=True)
+    # True = regenerate on next publish (set when project is unpublished)
+    history_needs_refresh = Column(Boolean, default=True, nullable=False)
+
     # Relationships
     owner = relationship("User", back_populates="owned_projects")
     members = relationship(
@@ -253,6 +249,14 @@ class Note(Base):
         nullable=False,
     )
     shared_with = Column(JSON, nullable=True)  # List of user IDs for SHARED privacy
+
+    # Transcription fields (voice notes only)
+    transcription = Column(Text, nullable=True)
+    transcription_original = Column(Text, nullable=True)
+    transcription_modified = Column(Boolean, default=False, nullable=False)
+    transcription_status = Column(
+        String, nullable=True
+    )  # 'pending' | 'processing' | 'completed' | 'failed'
 
     # Relationships
     project = relationship("Project", back_populates="notes")
@@ -759,51 +763,65 @@ class DataVersion(Base):
 # eMonument Models
 # =====================================================================
 
+
 class DeviceWhitelist(Base):
     """Devices authorized for eMonument offline collection."""
+
     __tablename__ = "device_whitelist"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     device_id = Column(String, unique=True, nullable=False, index=True)
     model_name = Column(String, nullable=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     is_approved = Column(Boolean, default=True)
     last_sync = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
-    user = relationship("User", backref=backref("devices", cascade="all, delete-orphan"))
+    user = relationship(
+        "User", backref=backref("devices", cascade="all, delete-orphan")
+    )
 
 
 class Monument(Base):
     """Monumente Istorice (LMI / ZP)"""
+
     __tablename__ = "monuments"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     lmi_code = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
-    county = Column(String, nullable=True) # Județ
-    locality = Column(String, nullable=True) # UAT/Localitate
+    county = Column(String, nullable=True)  # Județ
+    locality = Column(String, nullable=True)  # UAT/Localitate
     address = Column(String, nullable=True)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)
     status = Column(String, nullable=True)
-    
+
     # Relationships
     instances = relationship("FisaInstance", back_populates="monument")
 
 
 class MonumentAllocation(Base):
     """Join table allocating monuments to users for field work"""
+
     __tablename__ = "monument_allocations"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    monument_id = Column(String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    monument_id = Column(
+        String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False
+    )
     allocated_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint("user_id", "monument_id", name="uq_user_monument_allocation"),
+        UniqueConstraint(
+            "user_id", "monument_id", name="uq_user_monument_allocation"
+        ),
     )
 
 
@@ -819,23 +837,36 @@ class FisaInstanceStatus(str, enum.Enum):
 
 class FisaInstance(Base):
     """O instanta de fisa (un formular completat pentru un monument)"""
+
     __tablename__ = "fisa_instances"
 
     id = Column(String, primary_key=True, default=generate_uuid)
-    monument_id = Column(String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True) # whoever collected it
-    device_id = Column(String, ForeignKey("device_whitelist.device_id", ondelete="SET NULL"), nullable=True)
-    
-    status = Column(SQLEnum(FisaInstanceStatus), default=FisaInstanceStatus.DRAFT, nullable=False)
-    
-    data = Column(JSON, nullable=False, default={}) # all the sections and fields
+    monument_id = Column(
+        String, ForeignKey("monuments.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )  # whoever collected it
+    device_id = Column(
+        String,
+        ForeignKey("device_whitelist.device_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    status = Column(
+        SQLEnum(FisaInstanceStatus), default=FisaInstanceStatus.DRAFT, nullable=False
+    )
+
+    data = Column(JSON, nullable=False, default={})  # all the sections and fields
     version = Column(Integer, default=1, nullable=False)
-    
-    rejection_reason = Column(Text, nullable=True) # motiv reintoarcere if status == REINTORS
+
+    rejection_reason = Column(
+        Text, nullable=True
+    )  # motiv reintoarcere if status == REINTORS
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     monument = relationship("Monument", back_populates="instances")
     user = relationship("User", foreign_keys=[user_id])
@@ -879,3 +910,23 @@ class FisaInstanceVersion(Base):
         ),
     )
 
+
+class ProjectAISummary(Base):
+    """Persisted AI summary per (project, user) pair."""
+
+    __tablename__ = "project_ai_summaries"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    project_id = Column(
+        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    summary = Column(Text, nullable=False)
+    provider = Column(String, nullable=False)
+    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_user_ai_summary"),
+    )

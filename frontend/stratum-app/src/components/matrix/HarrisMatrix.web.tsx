@@ -5,27 +5,11 @@
  * Renders the Harris Matrix visualization directly in
  * the DOM using an iframe.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -34,6 +18,7 @@ import { MdOutlineViewInAr } from "react-icons/md";
 import { FaArrowRotateRight } from "react-icons/fa6";
 import { HiDotsHorizontal } from "react-icons/hi";
 import "./HarrisMatrix.css";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { formsService } from "../../services/formsService";
 import {
   ContextFeatureRecord,
@@ -119,6 +104,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   projectId,
   canEdit = true,
 }) => {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const svgRef = useRef<SVGSVGElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -443,7 +429,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       let g = svg.select("g.main-group");
       if (g.empty()) g = svg.append("g").attr("class", "main-group");
       const GRID_CELL_SIZE = 60;
-      const GRID_COLOR = "#E3E3E3";
+      const GRID_COLOR = isDarkMode ? "#2F3440" : "#D5DAE1";
       const zoom = d3
         .zoom()
         .scaleExtent([0.1, 5])
@@ -1162,10 +1148,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           );
           const isRedundant = redundantIndices.has(index);
           const status = conflict
-            ? "⚠️ Conflict"
+            ? "Conflict"
             : isRedundant
-              ? "ℹ️ Redundant"
-              : "✅ Valid";
+              ? "Redundant"
+              : "Valid";
           const style = conflict
             ? "background: #ffebee;"
             : isRedundant
@@ -3246,7 +3232,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       openGroupModalRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, isDarkMode]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -3274,7 +3260,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   return (
     <div
       ref={rootRef}
-      className="harris-matrix"
+      className={`harris-matrix ${isDarkMode ? "theme-dark" : "theme-light"}`}
       style={{ width: "100%", height: "100%" }}
     >
       <div className="container">

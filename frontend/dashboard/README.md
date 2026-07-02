@@ -1,73 +1,70 @@
-# React + TypeScript + Vite
+# STRATUM Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Web dashboard for STRATUM administrators and maintainers.
 
-Currently, two official plugins are available:
+## Purpose
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The dashboard is the operations surface for:
 
-## React Compiler
+- user lifecycle administration
+- instance moderation and data review
+- export and backup management
+- form-level inspection and quality control
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+- React 19 + TypeScript
+- Vite
+- Axios
+- Lucide icons
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Commands
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Configuration
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Use `VITE_API_URL` to point the dashboard to a backend API:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+VITE_API_URL=http://localhost:8000/api npm run dev
 ```
+
+If not provided, the app uses:
+
+- development: `http://localhost:8000/api`
+- production: `https://stratumarcheology.com/api`
+
+## File Layout
+
+- `src/App.tsx`: main application state and views
+- `src/index.css`: shared tokens and component styles
+- `src/main.tsx`: app bootstrap
+
+## Design And Style Rules
+
+The dashboard must follow the project style documentation:
+
+1. `docs/development.rst`
+2. `docs/frontend-styleguide.rst`
+
+Implementation rules for this package:
+
+- Prefer tokenized styles in `src/index.css`
+- Avoid introducing one-off color values in components
+- Keep interaction states keyboard-accessible
+- Avoid layout-shifting animations on dense data views
+
+## Quality Checklist Before PR
+
+1. `npm run lint` passes.
+2. Critical workflows work with keyboard-only navigation.
+3. Dashboard layout remains functional on narrow widths.
+4. New UI text is concise and avoids duplicate labels.
+5. Any visual system changes are reflected in docs.

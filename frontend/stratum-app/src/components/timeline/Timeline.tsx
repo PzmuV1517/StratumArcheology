@@ -5,27 +5,11 @@
  * Displays a chronological list of project activities
  * with user attribution and activity type icons.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -38,6 +22,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useActivity } from "../../hooks";
 import { activityService, ProjectActivity, authService } from "../../services";
@@ -179,7 +164,11 @@ export default function Timeline({
           <View
             style={[styles.iconContainer, { borderColor: color, borderWidth: 2 }]}
           >
-            <Text style={styles.icon}>{icon}</Text>
+            <Ionicons
+              name={icon as keyof typeof Ionicons.glyphMap}
+              size={16}
+              color={color}
+            />
           </View>
           {!isLast && (
             <View style={[styles.line, { backgroundColor: color + "40" }]} />
@@ -254,7 +243,7 @@ export default function Timeline({
 
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📋</Text>
+        <Text style={styles.emptyIcon}>TL</Text>
         <Text style={styles.emptyText}>No activity yet</Text>
         <Text style={styles.emptySubtext}>
           Activity will appear here as you and your team work on this project
@@ -285,12 +274,12 @@ export default function Timeline({
   }
 
   const FILTER_OPTIONS: { key: ActivityFilter; label: string; icon: string }[] = [
-    { key: "all", label: "All", icon: "📋" },
-    { key: "files", label: "Files", icon: "📄" },
-    { key: "notes", label: "Notes", icon: "📝" },
-    { key: "members", label: "Members", icon: "👤" },
-    { key: "forms", label: "Forms", icon: "🏺" },
-    { key: "gps", label: "GPS", icon: "📍" },
+    { key: "all", label: "All", icon: "A" },
+    { key: "files", label: "Files", icon: "F" },
+    { key: "notes", label: "Notes", icon: "N" },
+    { key: "members", label: "Members", icon: "M" },
+    { key: "forms", label: "Forms", icon: "R" },
+    { key: "gps", label: "GPS", icon: "G" },
   ];
 
   return (
@@ -495,7 +484,7 @@ const createStyles = (isDarkMode: boolean) => {
       zIndex: 1,
     },
     icon: {
-      fontSize: 16,
+      // kept for layout reference; size is passed directly to Ionicons
     },
     line: {
       position: "absolute",
@@ -620,6 +609,8 @@ const createStyles = (isDarkMode: boolean) => {
     filterChipIcon: {
       fontSize: 12,
       marginRight: 4,
+      fontWeight: "700",
+      color: palette.textSecondary,
     },
     filterChipText: {
       fontSize: 12,

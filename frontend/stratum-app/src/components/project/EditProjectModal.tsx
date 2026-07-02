@@ -25,6 +25,7 @@ import { projectService } from "@/services/projectService";
 import { showAlert } from "@/utils/alert";
 import { useProjectDetail } from "@/contexts/ProjectDetailContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 interface Props {
   visible: boolean;
@@ -244,7 +245,9 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                       <ActivityIndicator color="#FF2A2A" />
                     ) : (
                       <>
-                        <Text style={s.coverPlaceholderIcon}>🖼️</Text>
+                        <View style={s.coverPlaceholderIcon}>
+                          <IconSymbol name="photo.on.rectangle" size={22} color="#FF2A2A" />
+                        </View>
                         <Text style={s.coverPlaceholderText}>Add Cover Photo</Text>
                       </>
                     )}
@@ -450,7 +453,12 @@ const createStyles = (isDarkMode: boolean) =>
       justifyContent: "center",
       gap: 8,
     },
-    coverPlaceholderIcon: { fontSize: 24 },
+    coverPlaceholderIcon: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     coverPlaceholderText: {
       fontSize: 14,
       color: isDarkMode ? "#9A9A9A" : "#666666",

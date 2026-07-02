@@ -5,27 +5,11 @@
  * Provides user preferences, theme settings, and
  * account management options.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -1110,13 +1094,13 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* ── Development Section ──────────────────────── */}
+        {/* ── Server Section ───────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Development</Text>
+          <Text style={styles.sectionTitle}>Server</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={openDevModal}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.menuItemText}>Backend API Base URL</Text>
+              <Text style={styles.menuItemText}>Server API Base URL</Text>
               <Text style={styles.menuItemSubtext} numberOfLines={1}>
                 {effectiveApi}
               </Text>
@@ -1591,7 +1575,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
 
-      {/* ── Dev API modal ──────────────────────────────── */}
+      {/* ── Server API modal ───────────────────────────── */}
       <Modal
         visible={showDevModal}
         transparent
@@ -1600,7 +1584,7 @@ export default function SettingsScreen() {
       >
         <View style={styles.tzModalBackdrop}>
           <View style={styles.tzModalCard}>
-            <Text style={styles.tzModalTitle}>Backend API Base URL</Text>
+            <Text style={styles.tzModalTitle}>Server API Base URL</Text>
             <Text style={styles.devModalText}>
               Enter the full API url including /api.{"\n"}Example:
               http://192.168.1.100:8000/api

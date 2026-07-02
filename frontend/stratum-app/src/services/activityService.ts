@@ -5,27 +5,11 @@
  * Provides functions for fetching project timeline activities
  * and personal activity feeds from the backend API.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import api from "./api";
 import { ProjectActivity, ActivityType } from "./activityService.types";
@@ -84,55 +68,55 @@ export const activityService = {
   },
 
   /**
-   * Get activity icon based on type
+   * Get Ionicons icon name for an activity type.
    */
   getActivityIcon: (activityType: ActivityType | string): string => {
     const iconMap: Record<string, string> = {
       // Project
-      [ActivityType.PROJECT_CREATED]: "🎉",
-      [ActivityType.PROJECT_UPDATED]: "✏️",
-      [ActivityType.PROJECT_DELETED]: "🗑️",
+      [ActivityType.PROJECT_CREATED]: "briefcase-outline",
+      [ActivityType.PROJECT_UPDATED]: "settings-outline",
+      [ActivityType.PROJECT_DELETED]: "trash-outline",
 
       // Members
-      [ActivityType.MEMBER_JOINED]: "👋",
-      [ActivityType.MEMBER_LEFT]: "👤",
-      [ActivityType.MEMBER_ROLE_CHANGED]: "🔄",
-      [ActivityType.OWNERSHIP_TRANSFERRED]: "👑",
+      [ActivityType.MEMBER_JOINED]: "person-add-outline",
+      [ActivityType.MEMBER_LEFT]: "person-remove-outline",
+      [ActivityType.MEMBER_ROLE_CHANGED]: "shield-outline",
+      [ActivityType.OWNERSHIP_TRANSFERRED]: "key-outline",
 
       // Files
-      [ActivityType.FILE_UPLOADED]: "📄",
-      [ActivityType.FILE_UPDATED]: "📄",
-      [ActivityType.FILE_DELETED]: "🗑️",
-      [ActivityType.FILE_MOVED]: "📁",
-      [ActivityType.FILE_RENAMED]: "✏️",
-      [ActivityType.FOLDER_CREATED]: "📁",
-      [ActivityType.FOLDER_DELETED]: "🗑️",
+      [ActivityType.FILE_UPLOADED]: "cloud-upload-outline",
+      [ActivityType.FILE_UPDATED]: "create-outline",
+      [ActivityType.FILE_DELETED]: "trash-outline",
+      [ActivityType.FILE_MOVED]: "arrow-redo-outline",
+      [ActivityType.FILE_RENAMED]: "pencil-outline",
+      [ActivityType.FOLDER_CREATED]: "folder-outline",
+      [ActivityType.FOLDER_DELETED]: "folder-open-outline",
 
       // Notes
-      [ActivityType.NOTE_CREATED]: "📝",
-      [ActivityType.NOTE_UPDATED]: "✏️",
-      [ActivityType.NOTE_DELETED]: "🗑️",
-      [ActivityType.NOTE_ATTACHMENT_ADDED]: "📎",
-      [ActivityType.NOTE_ATTACHMENT_DELETED]: "📎",
+      [ActivityType.NOTE_CREATED]: "document-text-outline",
+      [ActivityType.NOTE_UPDATED]: "create-outline",
+      [ActivityType.NOTE_DELETED]: "trash-outline",
+      [ActivityType.NOTE_ATTACHMENT_ADDED]: "document-attach-outline",
+      [ActivityType.NOTE_ATTACHMENT_DELETED]: "document-attach-outline",
 
       // Forms
-      [ActivityType.CONTEXT_FEATURE_CREATED]: "🏛️",
-      [ActivityType.CONTEXT_FEATURE_ADDED]: "🏛️",
-      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "📊",
-      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "📊",
-      [ActivityType.ARTEFACT_CREATED]: "🏺",
-      [ActivityType.ARTEFACT_ADDED]: "🏺",
+      [ActivityType.CONTEXT_FEATURE_CREATED]: "layers-outline",
+      [ActivityType.CONTEXT_FEATURE_ADDED]: "layers-outline",
+      [ActivityType.STRATIGRAPHIC_UNIT_CREATED]: "layers-outline",
+      [ActivityType.STRATIGRAPHIC_UNIT_ADDED]: "layers-outline",
+      [ActivityType.ARTEFACT_CREATED]: "diamond-outline",
+      [ActivityType.ARTEFACT_ADDED]: "diamond-outline",
 
       // GPS
-      [ActivityType.GPS_ENABLED]: "📍",
-      [ActivityType.GPS_DISABLED]: "📍",
-      [ActivityType.GPS_UPDATED]: "📍",
+      [ActivityType.GPS_ENABLED]: "location-outline",
+      [ActivityType.GPS_DISABLED]: "location-outline",
+      [ActivityType.GPS_UPDATED]: "navigate-outline",
 
       // Harris Matrix
-      [ActivityType.HARRIS_MATRIX_UPDATED]: "🔗",
+      [ActivityType.HARRIS_MATRIX_UPDATED]: "git-network-outline",
     };
 
-    return iconMap[activityType] || "📌";
+    return iconMap[activityType] || "ellipse-outline";
   },
 
   /**

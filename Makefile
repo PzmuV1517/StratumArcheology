@@ -1,7 +1,7 @@
 # STRATUM Development Commands
 # macOS / Linux
 
-.PHONY: help backend frontend dev install lint format fix clean db-migrate db-upgrade
+.PHONY: help backend frontend dev install lint format fix clean db-migrate db-upgrade selfhost-install selfhost-up selfhost-down selfhost-status
 
 # Default target - show help
 help:
@@ -21,6 +21,11 @@ help:
 	@echo ""
 	@echo "  make db-migrate   - Create new database migration"
 	@echo "  make db-upgrade   - Apply database migrations"
+	@echo ""
+	@echo "  make selfhost-install - Pull self-host bundle images"
+	@echo "  make selfhost-up      - Boot full self-host stack"
+	@echo "  make selfhost-down    - Stop self-host stack"
+	@echo "  make selfhost-status  - Show self-host runtime status"
 	@echo ""
 	@echo "  make clean        - Clean build artifacts and caches"
 
@@ -90,6 +95,18 @@ test-frontend:
 	cd frontend/stratum-app && npm test
 
 test: test-backend test-frontend
+
+selfhost-install:
+	python stratum_bundle.py install
+
+selfhost-up:
+	python stratum_bundle.py up
+
+selfhost-down:
+	python stratum_bundle.py down
+
+selfhost-status:
+	python stratum_bundle.py status
 
 # get en0 address
 ip:

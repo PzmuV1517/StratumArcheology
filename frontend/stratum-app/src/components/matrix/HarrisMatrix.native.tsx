@@ -5,27 +5,11 @@
  * Renders the Harris Matrix visualization in a WebView
  * on native platforms.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
@@ -53,6 +37,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { showAlert } from "../../utils/alert";
 import api from "../../services/api";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 /* ───────────────────────── Types ───────────────────────── */
 
@@ -223,6 +208,12 @@ export default function HarrisMatrix({
   projectId,
   canEdit = true,
 }: HarrisMatrixProps) {
+  const isDarkMode = (useColorScheme() ?? "light") === "dark";
+  const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const neutralEdgeColor = isDarkMode ? "#8E96A3" : "#495057";
+  const cutEdgeColor = "#dc3545";
+  const placeholderTextColor = isDarkMode ? "#777777" : "#8A8A8A";
+
   /* ── data state ── */
   const [contexts, setContexts] = useState<Map<string, ArchContext>>(new Map());
   const [relationships, setRelationships] = useState<Relationship[]>([]);
@@ -230,6 +221,7 @@ export default function HarrisMatrix({
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasPending, setHasPending] = useState(false);
+  const statusDotColor = isOnline ? "#4CAF50" : "#FF4444";
 
   /* ── modal state ── */
   const [showCtxModal, setShowCtxModal] = useState(false);
@@ -688,12 +680,7 @@ export default function HarrisMatrix({
       {/* ── Status bar ── */}
       <View style={styles.statusBar}>
         <View style={styles.statusLeft}>
-          <View
-            style={[
-              styles.dot,
-              { backgroundColor: isOnline ? "#4CAF50" : "#FF4444" },
-            ]}
-          />
+          <View style={[styles.dot, { backgroundColor: statusDotColor }]} />
           <Text style={styles.statusText}>{isOnline ? "Online" : "Offline"}</Text>
           {hasPending && (
             <View style={styles.pendingBadge}>
@@ -723,15 +710,19 @@ export default function HarrisMatrix({
             style={[styles.toolBtn, styles.toolBtnAccent]}
             onPress={openNewCtx}
           >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Add Context</Text>
+            <Text style={[styles.toolBtnText, styles.toolBtnTextOnAccent]}>
+              Add Context
+            </Text>
           </Pressable>
         )}
         {canEdit && (
           <Pressable
-            style={[styles.toolBtn, { backgroundColor: "#dc3545" }]}
+            style={[styles.toolBtn, styles.toolBtnDanger]}
             onPress={clearAll}
           >
-            <Text style={[styles.toolBtnText, { color: "#FFF" }]}>Clear</Text>
+            <Text style={[styles.toolBtnText, styles.toolBtnTextOnAccent]}>
+              Clear
+            </Text>
           </Pressable>
         )}
       </View>
@@ -773,7 +764,7 @@ export default function HarrisMatrix({
                     markerHeight="5"
                     orient="auto"
                   >
-                    <Path d="M0,-5L10,0L0,5" fill="#495057" />
+                    <Path d="M0,-5L10,0L0,5" fill={neutralEdgeColor} />
                   </Marker>
                   <Marker
                     id="arrowCut"
@@ -784,7 +775,7 @@ export default function HarrisMatrix({
                     markerHeight="5"
                     orient="auto"
                   >
-                    <Path d="M0,-5L10,0L0,5" fill="#dc3545" />
+                    <Path d="M0,-5L10,0L0,5" fill={cutEdgeColor} />
                   </Marker>
                 </Defs>
 
@@ -794,9 +785,7 @@ export default function HarrisMatrix({
                     key={`edge-${i}`}
                     d={e.path}
                     fill="none"
-                    stroke={
-                      e.isContemporary ? "#495057" : e.isCut ? "#dc3545" : "#495057"
-                    }
+                    stroke={e.isCut ? cutEdgeColor : neutralEdgeColor}
                     strokeWidth={e.isCut ? 2.5 : e.isContemporary ? 1.5 : 2}
                     strokeDasharray={
                       e.isCut ? [6, 4] : e.isContemporary ? [4, 4] : undefined
@@ -907,7 +896,7 @@ export default function HarrisMatrix({
               value={newCtxId}
               onChangeText={setNewCtxId}
               placeholder="e.g., 1001"
-              placeholderTextColor="#8A8A8A"
+              placeholderTextColor={placeholderTextColor}
               autoCapitalize="characters"
             />
 
@@ -943,7 +932,7 @@ export default function HarrisMatrix({
               value={newCtxDesc}
               onChangeText={setNewCtxDesc}
               placeholder="Brief description"
-              placeholderTextColor="#8A8A8A"
+              placeholderTextColor={placeholderTextColor}
               multiline
             />
 
@@ -1089,7 +1078,7 @@ export default function HarrisMatrix({
               value={editDesc}
               onChangeText={setEditDesc}
               placeholder="Description"
-              placeholderTextColor="#8A8A8A"
+              placeholderTextColor={placeholderTextColor}
               multiline
               editable={canEdit}
             />
@@ -1135,7 +1124,7 @@ export default function HarrisMatrix({
               )}
               {canEdit && (
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: "#dc3545" }]}
+                  style={[styles.actionBtn, styles.actionBtnDanger]}
                   onPress={deleteNode}
                 >
                   <Text style={styles.actionBtnText}>Delete</Text>
@@ -1159,230 +1148,265 @@ export default function HarrisMatrix({
 
 /* ─────────────────────── Styles ─────────────────────── */
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F6F6F6" },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F6F6F6",
-  },
-  loadingText: { color: "#666666", marginTop: 12, fontSize: 16 },
+const createStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: isDarkMode ? "#111111" : "#F6F6F6" },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDarkMode ? "#111111" : "#F6F6F6",
+    },
+    loadingText: {
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 12,
+      fontSize: 16,
+    },
 
-  /* status bar */
-  statusBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#D9D9D9",
-  },
-  statusLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, color: "#1A1A1A", fontWeight: "500" },
-  pendingBadge: {
-    backgroundColor: "rgba(255,193,7,0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  pendingText: { fontSize: 11, color: "#ffc107", fontWeight: "600" },
-  syncBtn: {
-    backgroundColor: ACCENT,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  syncBtnText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
+    /* status bar */
+    statusBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    statusLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    statusText: {
+      fontSize: 13,
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontWeight: "500",
+    },
+    pendingBadge: {
+      backgroundColor: "rgba(255,193,7,0.2)",
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    pendingText: { fontSize: 11, color: "#ffc107", fontWeight: "600" },
+    syncBtn: {
+      backgroundColor: ACCENT,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    syncBtnText: { color: "#FFF", fontSize: 12, fontWeight: "700" },
 
-  /* canvas */
-  canvas: {
-    flex: 1,
-    overflow: "hidden",
-    backgroundColor: "#F6F6F6",
-  },
-  gestureLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  canvasInner: {
-    position: "relative",
-    ...Platform.select({
-      ios: {
-        // Explicit layout for iOS SVG rendering
-        position: "relative",
-      },
-    }),
-  },
+    /* canvas */
+    canvas: {
+      flex: 1,
+      overflow: "hidden",
+      backgroundColor: isDarkMode ? "#101010" : "#F6F6F6",
+    },
+    gestureLayer: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    canvasInner: {
+      position: "relative",
+      ...Platform.select({
+        ios: {
+          // Explicit layout for iOS SVG rendering
+          position: "relative",
+        },
+      }),
+    },
 
-  node: {
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-  },
-  nodeText: {
-    color: "#1A1A1A",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+    node: {
+      position: "absolute",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+    },
+    nodeText: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
 
-  /* empty */
-  emptyOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: "#666666",
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
+    /* empty */
+    emptyOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 8,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      textAlign: "center",
+      paddingHorizontal: 40,
+    },
 
-  /* toolbar */
-  toolbar: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#D9D9D9",
-  },
-  toolBtn: {
-    flex: 1,
-    minWidth: 70,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: "#EFEFEF",
-    alignItems: "center",
-  },
-  toolBtnAccent: { backgroundColor: ACCENT },
-  toolBtnText: { color: "#1A1A1A", fontSize: 13, fontWeight: "600" },
+    /* toolbar */
+    toolbar: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderBottomWidth: 1,
+      borderBottomColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    toolBtn: {
+      flex: 1,
+      minWidth: 70,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: isDarkMode ? "#232323" : "#EFEFEF",
+      alignItems: "center",
+    },
+    toolBtnAccent: { backgroundColor: ACCENT },
+    toolBtnDanger: { backgroundColor: "#dc3545" },
+    toolBtnText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    toolBtnTextOnAccent: { color: "#FFF" },
 
-  /* modal */
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.24)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-    maxWidth: 420,
-    maxHeight: "85%",
-    borderWidth: 1,
-    borderColor: "#D9D9D9",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#666666",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  input: {
-    backgroundColor: "#FFFFFF",
-    color: "#1A1A1A",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D9D9D9",
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  chipBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#EFEFEF",
-    marginRight: 8,
-  },
-  chipBtnActive: { backgroundColor: ACCENT },
-  chipText: { color: "#1A1A1A", fontSize: 13, fontWeight: "600" },
-  chipTextActive: { color: "#FFF" },
+    /* modal */
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.24)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    modalCard: {
+      backgroundColor: isDarkMode ? "#1A1A1A" : "#FFFFFF",
+      borderRadius: 16,
+      padding: 20,
+      width: "100%",
+      maxWidth: 420,
+      maxHeight: "85%",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      marginBottom: 16,
+    },
+    inputLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginBottom: 6,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    input: {
+      backgroundColor: isDarkMode ? "#141414" : "#FFFFFF",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#333333" : "#D9D9D9",
+      fontSize: 16,
+      marginBottom: 12,
+    },
+    chipBtn: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: isDarkMode ? "#232323" : "#EFEFEF",
+      marginRight: 8,
+    },
+    chipBtnActive: { backgroundColor: ACCENT },
+    chipText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    chipTextActive: { color: "#FFF" },
 
-  relRow: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: "#EFEFEF",
-    marginBottom: 6,
-  },
-  relRowActive: { backgroundColor: ACCENT },
-  relRowText: { color: "#1A1A1A", fontSize: 14 },
-  relRowTextActive: { color: "#FFF", fontWeight: "600" },
+    relRow: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      backgroundColor: isDarkMode ? "#232323" : "#EFEFEF",
+      marginBottom: 6,
+    },
+    relRowActive: { backgroundColor: ACCENT },
+    relRowText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 14,
+    },
+    relRowTextActive: { color: "#FFF", fontWeight: "600" },
 
-  relInfoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: "#F5F5F5",
-    borderRadius: 8,
-    marginBottom: 4,
-  },
-  relInfoText: { color: "#1A1A1A", fontSize: 13, flex: 1 },
-  deleteRelText: {
-    color: "#dc3545",
-    fontSize: 16,
-    fontWeight: "700",
-    paddingLeft: 12,
-  },
+    relInfoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      backgroundColor: isDarkMode ? "#242424" : "#F5F5F5",
+      borderRadius: 8,
+      marginBottom: 4,
+    },
+    relInfoText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 13,
+      flex: 1,
+    },
+    deleteRelText: {
+      color: "#dc3545",
+      fontSize: 16,
+      fontWeight: "700",
+      paddingLeft: 12,
+    },
 
-  modalActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 16,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  actionBtnAccent: { backgroundColor: ACCENT },
-  actionBtnCancel: { backgroundColor: "#8A8A8A" },
-  actionBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
+    modalActions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 16,
+    },
+    actionBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    actionBtnAccent: { backgroundColor: ACCENT },
+    actionBtnDanger: { backgroundColor: "#dc3545" },
+    actionBtnCancel: { backgroundColor: isDarkMode ? "#555555" : "#8A8A8A" },
+    actionBtnText: { color: "#FFF", fontSize: 15, fontWeight: "600" },
 
-  /* stats */
-  statsRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  statBox: {
-    flex: 1,
-    backgroundColor: "#EFEFEF",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-  },
-  statValue: { fontSize: 28, fontWeight: "800", color: ACCENT },
-  statLabel: { fontSize: 12, color: "#666666", marginTop: 4 },
-  closeModalBtn: {
-    backgroundColor: "#EFEFEF",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  closeModalBtnText: { color: "#1A1A1A", fontSize: 15, fontWeight: "600" },
-});
+    /* stats */
+    statsRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
+    statBox: {
+      flex: 1,
+      backgroundColor: isDarkMode ? "#232323" : "#EFEFEF",
+      borderRadius: 12,
+      padding: 16,
+      alignItems: "center",
+    },
+    statValue: { fontSize: 28, fontWeight: "800", color: ACCENT },
+    statLabel: {
+      fontSize: 12,
+      color: isDarkMode ? "#9A9A9A" : "#666666",
+      marginTop: 4,
+    },
+    closeModalBtn: {
+      backgroundColor: isDarkMode ? "#232323" : "#EFEFEF",
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    closeModalBtnText: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 15,
+      fontWeight: "600",
+    },
+  });

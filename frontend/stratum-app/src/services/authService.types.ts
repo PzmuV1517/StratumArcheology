@@ -5,27 +5,11 @@
  * Defines interfaces for auth requests, responses, user data,
  * and token payloads.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 // Shared types and interfaces for auth service
 
@@ -47,8 +31,12 @@ export interface User {
   link_bsky?: string;
   link_linkedin?: string;
   link_website?: string;
+  auth_provider?: string | null;
   is_emonument_privileged?: boolean;
   is_dashboard_admin?: boolean;
+  is_account_disabled?: boolean;
+  is_soft_deleted?: boolean;
+  soft_deleted_at?: string | null;
   created_at?: string;
 }
 
@@ -58,6 +46,8 @@ export interface AuthResult {
   token?: string;
   user?: User;
   error?: string;
+  verificationRequired?: boolean;
+  message?: string;
 }
 
 /** Credentials payload for user login. */

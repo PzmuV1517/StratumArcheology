@@ -5,27 +5,11 @@
  * Displays project files in a grid or list layout with
  * thumbnails and metadata.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -39,6 +23,7 @@ import {
 } from "react-native";
 import { fileService } from "../../services/fileService";
 import { useColorScheme } from "../../hooks/use-color-scheme";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 type Mode = "day" | "week" | "month";
 
@@ -78,10 +63,6 @@ export default function FileGallery({
     color?: string;
     size?: number;
   }> | null>(null);
-  const [FaRegFileIcon, setFaRegFileIcon] = useState<React.ComponentType<{
-    color?: string;
-    size?: number;
-  }> | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -108,7 +89,6 @@ export default function FileGallery({
     import("react-icons/fa")
       .then((mod) => {
         setFaListIcon(() => mod.FaList);
-        setFaRegFileIcon(() => mod.FaRegFile);
       })
       .catch(() => {});
     import("react-icons/io5")
@@ -208,13 +188,11 @@ export default function FileGallery({
                     onPress={() => onOpenItem(node)}
                   >
                     <View style={styles.thumb}>
-                      {Platform.OS === "web" && FaRegFileIcon ? (
-                        <FaRegFileIcon color={tileIconColor} size={iconSize} />
-                      ) : (
-                        <Text style={[styles.icon, { fontSize: iconSize }]}>
-                          {iconFor(node)}
-                        </Text>
-                      )}
+                      <IconSymbol
+                        name={symbolFor(node) as any}
+                        size={iconSize}
+                        color={tileIconColor}
+                      />
                     </View>
                     <Text
                       style={[styles.name, { fontSize: nameFontSize }]}
@@ -233,7 +211,13 @@ export default function FileGallery({
                     style={styles.listRow}
                     onPress={() => onOpenItem(node)}
                   >
-                    <Text style={styles.listIcon}>{iconFor(node)}</Text>
+                    <View style={styles.listIcon}>
+                      <IconSymbol
+                        name={symbolFor(node) as any}
+                        size={18}
+                        color={tileIconColor}
+                      />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.listName} numberOfLines={1}>
                         {node.name}
@@ -337,23 +321,24 @@ function groupFiles(files: FileNode[], mode: Mode) {
   return out;
 }
 
-function iconFor(node: FileNode) {
+function symbolFor(node: FileNode) {
   const lower = (node.name || "").toLowerCase();
   if (
     (node.mime_type && node.mime_type.startsWith("image/")) ||
     /(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.heic)$/i.test(lower)
   )
-    return "📷";
-  if (node.type === "note") return "📝";
-  if (lower.endsWith(".csv")) return "📊";
-  if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) return "📈";
-  if (lower.endsWith(".md") || lower.endsWith(".txt")) return "📄";
-  if (lower.match(/\.(mp4|webm|ogg|mov)$/)) return "🎬";
-  if (lower.endsWith(".pdf")) return "📑";
-  if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower)) return "🌫️"; // point clouds
-  if (/\.(glb|gltf)$/i.test(lower)) return "🧩"; // 3D meshes
-  if (/\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower)) return "🎵"; // audio files
-  return "📁";
+    return "photo.on.rectangle";
+  if (node.type === "note") return "note.text";
+  if (lower.endsWith(".csv")) return "chart.bar.fill";
+  if (lower.endsWith(".xlsx") || lower.endsWith(".xls"))
+    return "chart.bar.doc.horizontal";
+  if (lower.endsWith(".md") || lower.endsWith(".txt") || lower.endsWith(".pdf"))
+    return "note.text";
+  if (lower.match(/\.(mp4|webm|ogg|mov)$/)) return "photo.on.rectangle";
+  if (/\.(las|laz|ply|e57|pcd|rwi|rwp)$/i.test(lower)) return "cube.fill"; // point clouds
+  if (/\.(glb|gltf)$/i.test(lower)) return "cube.fill"; // 3D meshes
+  if (/\.(mp3|wav|webm|m4a|aac|ogg)$/i.test(lower)) return "chart.bar.xaxis"; // audio files
+  return "folder.fill";
 }
 
 function formatWhen(node: FileNode) {
@@ -430,7 +415,6 @@ const createStyles = (isDarkMode: boolean) =>
       alignItems: "center",
       marginBottom: 6,
     },
-    icon: { fontSize: 24, color: isDarkMode ? "#F5F5F5" : "#1A1A1A" },
     name: { color: isDarkMode ? "#CFCFCF" : "#4D4D4D", fontSize: 12 },
     listRow: {
       flexDirection: "row",
@@ -443,8 +427,8 @@ const createStyles = (isDarkMode: boolean) =>
       marginBottom: 8,
     },
     listIcon: {
-      fontSize: 20,
-      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      width: 24,
+      alignItems: "center",
       marginRight: 10,
     },
     listName: {

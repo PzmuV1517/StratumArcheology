@@ -288,10 +288,10 @@ Convert
      - Description
    * - ``GET``
      - ``/api/convert/pointcloud``
-     - List point clouds
+     - Remote URL conversion disabled (security policy; authenticated requests receive policy error)
    * - ``POST``
      - ``/api/convert/pointcloud``
-     - Process point cloud
+     - Process uploaded point cloud (authentication required)
 
 Response Formats
 ================

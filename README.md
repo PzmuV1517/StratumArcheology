@@ -8,8 +8,6 @@
 
 **STRATUM** (Latin for "layer") is a comprehensive digital platform for archaeologists to plan excavations, document findings, collaborate in real-time, and export standardized data.
 
-Built for the **FLL 2025-2026 UNEARTHED** Innovation Project by the **QuantumBits Team**.
-
 ---
 
 ## 📖 Documentation
@@ -61,6 +59,47 @@ npx expo start
 ```
 
 See the [Installation Guide](https://stratumapp.readthedocs.io/en/latest/installation.html) for complete setup instructions.
+
+## Self-Hosted Bundle (Early Implementation)
+
+This repository now includes an initial self-host launcher that boots:
+
+- PostgreSQL (persistent Docker volume)
+- MinIO (persistent Docker volume)
+- FastAPI backend
+- STRATUM web frontend build
+- Dashboard web build
+
+### Requirements
+
+- Docker + Docker Compose
+- Python 3.10+
+
+### Start
+
+```bash
+python stratum_bundle.py install
+python stratum_bundle.py up
+```
+
+### Runtime controls
+
+```bash
+python stratum_bundle.py status
+python stratum_bundle.py logs --follow backend
+python stratum_bundle.py down
+```
+
+Equivalent Make targets are available:
+
+```bash
+make selfhost-install
+make selfhost-up
+make selfhost-status
+make selfhost-down
+```
+
+On first run, the launcher auto-creates `backend/.env` with local self-host defaults (`AUTH_MODE=local`, Firebase disabled). You can edit this file to customize credentials and ports.
 
 ---
 

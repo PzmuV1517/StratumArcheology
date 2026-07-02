@@ -5,27 +5,11 @@
  * Provides authentication state (user, token, loading) and actions
  * (login, register, logout) to all child components via React Context.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, {
   createContext,
@@ -44,6 +28,7 @@ interface User {
   email: string;
   username?: string;
   display_name: string;
+  auth_provider?: string | null;
   photo_url?: string;
   banner_url?: string;
   bio?: string;
@@ -68,13 +53,17 @@ interface AuthContextType {
   login: (
     email: string,
     password: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
+  loginWithGoogle: (
+    googleIdToken?: string,
+    googleAccessToken?: string,
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   register: (
     email: string,
     password: string,
     displayName: string,
     username: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearSessionExpired: () => void;
@@ -85,6 +74,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   sessionExpired: false,
   login: async () => ({ success: false }),
+  loginWithGoogle: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -152,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             email: response.data.email,
             username: response.data.username,
             display_name: response.data.display_name,
+            auth_provider: response.data.auth_provider,
             photo_url: response.data.photo_url,
             banner_url: response.data.banner_url,
             bio: response.data.bio,
@@ -192,6 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (result.success) {
         console.log("[AuthContext] Setting user:", result.user);
         setUser(result.user || null);
+        clearSessionExpired();
         return { success: true };
       } else {
         console.log("[AuthContext] Login failed:", result.error);
@@ -200,6 +192,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("[AuthContext] Login exception:", error);
       return { success: false, error: error.message || "Login failed" };
+    }
+  };
+
+  const loginWithGoogle = async (
+    googleIdToken?: string,
+    googleAccessToken?: string,
+  ) => {
+    try {
+      const result = await authService.loginWithGoogleIdToken(
+        googleIdToken,
+        googleAccessToken,
+      );
+      if (result.success) {
+        setUser(result.user || null);
+        clearSessionExpired();
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || "Google authentication failed",
+      };
     }
   };
 
@@ -217,7 +232,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         username,
       );
       if (result.success) {
+        if (result.verificationRequired) {
+          setUser(null);
+          return {
+            success: true,
+            message:
+              result.message ||
+              "Verification email sent. Confirm your email before logging in.",
+          };
+        }
         setUser(result.user || null);
+        clearSessionExpired();
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -245,6 +270,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: response.data.email,
           username: response.data.username,
           display_name: response.data.display_name,
+          auth_provider: response.data.auth_provider,
           photo_url: response.data.photo_url,
           banner_url: response.data.banner_url,
           bio: response.data.bio,
@@ -276,6 +302,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         sessionExpired,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshUser,

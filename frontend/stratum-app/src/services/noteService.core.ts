@@ -5,27 +5,11 @@
  * Provides shared functions for creating, reading, updating, and deleting
  * project notes via the backend API.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 // Shared note service types and API calls
 import api from "./api";
@@ -41,6 +25,10 @@ export interface Note {
   created_at: string;
   updated_at: string;
   attachments?: Attachment[];
+  transcription?: string | null;
+  transcription_original?: string | null;
+  transcription_modified?: boolean;
+  transcription_status?: "pending" | "processing" | "completed" | "failed" | null;
 }
 
 /** A file attachment belonging to a note. */
@@ -169,5 +157,20 @@ export const noteServiceCore = {
 
   deleteAttachment: async (noteId: string, attachmentId: string): Promise<void> => {
     await api.delete(`/notes/${noteId}/attachments/${attachmentId}`);
+  },
+
+  updateTranscription: async (
+    noteId: string,
+    text: string,
+  ): Promise<{ transcription: string; transcription_modified: boolean }> => {
+    const response = await api.patch(`/notes/${noteId}/transcription`, { text });
+    return response.data;
+  },
+
+  resetTranscription: async (
+    noteId: string,
+  ): Promise<{ transcription: string; transcription_modified: boolean }> => {
+    const response = await api.post(`/notes/${noteId}/transcription/reset`);
+    return response.data;
   },
 };

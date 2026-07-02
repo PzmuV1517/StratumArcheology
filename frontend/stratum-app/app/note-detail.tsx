@@ -5,27 +5,11 @@
  * Displays full note content with attachments and
  * provides edit and delete actions.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -489,17 +473,19 @@ const AudioAttachmentPlayer = ({
       const data = new Uint8Array(analyser.fftSize);
       const g = canvasRef.current.getContext("2d")!;
       const draw = () => {
+        if (!canvasRef.current) return;
         rafRef.current = requestAnimationFrame(draw);
         analyser.getByteTimeDomainData(data);
-        g.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+        const w = canvasRef.current.width;
+        const h = canvasRef.current.height;
+        g.clearRect(0, 0, w, h);
         g.strokeStyle = "#FF2A2A";
         g.lineWidth = 2;
         g.beginPath();
-        const slice = canvasRef.current!.width / data.length;
+        const slice = w / data.length;
         for (let i = 0; i < data.length; i++) {
           const v = data[i] / 128.0 - 1.0;
-          const y =
-            (v * canvasRef.current!.height) / 2 + canvasRef.current!.height / 2;
+          const y = (v * h) / 2 + h / 2;
           if (i === 0) g.moveTo(0, y);
           else g.lineTo(i * slice, y);
         }

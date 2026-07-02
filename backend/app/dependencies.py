@@ -2,27 +2,11 @@
 FastAPI dependency functions for auth and permissions. Handles JWT
 token verification and project-level access control.
 
-MIT License
-
-Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+STRATUM - Proprietary and Confidential
+Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+All rights reserved.
+No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
 from datetime import datetime
@@ -68,8 +52,12 @@ def build_maintainer_user() -> User:
         link_bsky=None,
         link_linkedin=None,
         link_website=None,
+        auth_provider="maintainer",
         is_emonument_privileged=True,
         is_dashboard_admin=True,
+        is_account_disabled=False,
+        is_soft_deleted=False,
+        soft_deleted_at=None,
         has_completed_onboarding=True,
         created_at=datetime.utcnow(),
         last_login=datetime.utcnow(),
@@ -121,6 +109,18 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user.is_soft_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account has been deleted",
+            )
+
+        if user.is_account_disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
             )
 
         return user
@@ -198,6 +198,18 @@ async def get_current_user_or_token(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if user.is_soft_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account has been deleted",
+            )
+
+        if user.is_account_disabled:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is disabled",
             )
 
         return user

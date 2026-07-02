@@ -4,33 +4,18 @@
  *
  * Renders point cloud data using Three.js.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React from "react";
 import * as THREE from "three";
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
 import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { config } from "../../config/config";
 import { parseLAS } from "./las";
 
@@ -347,8 +332,14 @@ export default function PointCloudPanel({ src, name }: Props) {
             const form = new FormData();
             form.append("file", blob, name || `upload.${ext}`);
             if (name) form.append("name", name);
+            const token = await AsyncStorage.getItem("authToken");
+            const headers: Record<string, string> = {};
+            if (token) {
+              headers.Authorization = `Bearer ${token}`;
+            }
             const resp = await fetch(`${config.apiBaseUrl}/convert/pointcloud`, {
               method: "POST",
+              headers,
               body: form,
             });
             if (!resp.ok) {
@@ -367,29 +358,9 @@ export default function PointCloudPanel({ src, name }: Props) {
             const data = await resp.json();
             convertedUrl = data?.url;
           } else {
-            setLoadingText("Requesting conversion…");
-            setProgress((prev) => (prev < 0.05 ? 0.05 : prev));
-            const qs = new URLSearchParams();
-            if (src) qs.set("src", src);
-            if (name) qs.set("name", name);
-            const resp = await fetch(
-              `${config.apiBaseUrl}/convert/pointcloud?${qs.toString()}`,
+            throw new Error(
+              "Remote URL conversion is disabled. Please upload the point cloud file from your device.",
             );
-            if (!resp.ok) {
-              let msg = `Convert HTTP ${resp.status}`;
-              try {
-                const j = await resp.json();
-                if (j?.detail) msg += `: ${j.detail}`;
-                else if (j?.message) msg += `: ${j.message}`;
-              } catch {
-                try {
-                  msg += `: ${await resp.text()}`;
-                } catch {}
-              }
-              throw new Error(msg);
-            }
-            const data = await resp.json();
-            convertedUrl = data?.url;
           }
 
           if (!convertedUrl) throw new Error("No URL returned from converter");

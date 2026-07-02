@@ -5,27 +5,11 @@
  * Renders SF Symbols on iOS and Material Icons on other
  * platforms.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 // Fallback for using MaterialIcons on Android and web.
 
@@ -48,23 +32,33 @@ const MAPPING: Record<string, MaterialIconName> = {
   "globe.americas.fill": "public",
   "message.fill": "message",
   "gearshape.fill": "settings",
+  gearshape: "settings",
+  "rectangle.portrait.and.arrow.right": "logout",
+  pencil: "edit",
+  "person.2": "groups",
   "chevron.backward": "arrow-back",
   "chevron.left": "chevron-left",
   "paperplane.fill": "send",
   "note.text": "description",
   "bubble.left.and.bubble.right.fill": "forum",
   "photo.on.rectangle": "photo-library",
-  "map": "map",
+  map: "map",
   "clock.arrow.circlepath": "history",
   "chart.bar.fill": "bar-chart",
   "chart.bar.doc.horizontal": "assessment",
   "cube.fill": "inventory-2",
-  "dice": "casino",
+  dice: "casino",
   "ellipsis.circle": "more-horiz",
   "exclamationmark.triangle.fill": "warning",
   "mountain.2.fill": "terrain",
   "person.2.fill": "groups",
-  "plus": "add",
+  plus: "add",
+  eye: "visibility",
+  "eye.slash": "visibility-off",
+  "square.and.arrow.up": "ios-share",
+  trash: "delete",
+  "wrench.and.screwdriver": "build",
+  "chart.bar.xaxis": "bar-chart",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "line.3.horizontal": "menu",
@@ -124,5 +118,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={resolveMaterialName(name)} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={resolveMaterialName(name)}
+      style={style}
+    />
+  );
 }

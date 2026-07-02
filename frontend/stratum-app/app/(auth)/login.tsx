@@ -5,32 +5,17 @@
  * User authentication form with email/password fields
  * and sign-in action.
  *
- * MIT License
- *
- * Copyright (c) 2025 Banu Andrei & Mircea Levin-Constantin
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * STRATUM - Proprietary and Confidential
+ * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
+ * All rights reserved.
+ * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
+ * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -43,7 +28,10 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import Constants from "expo-constants";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "@/services/api";
@@ -59,6 +47,8 @@ import RAnimated, {
 } from "react-native-reanimated";
 
 import NativeTerminalBg from "@/components/effects/NativeTerminalBg";
+
+WebBrowser.maybeCompleteAuthSession();
 
 // Web-only: lazy-load react-icons and FaultyTerminal (they use DOM/SVG/WebGL)
 let FaEyeSlash: any = null;
@@ -84,11 +74,40 @@ if (Platform.OS === "web") {
   } catch {}
 }
 
+type PendingVerification = {
+  email: string;
+  password: string;
+};
+
+type ExtraConfig = {
+  googleWebClientId?: string;
+  googleIosClientId?: string;
+  googleAndroidClientId?: string;
+};
+
+type CapabilitiesResponse = {
+  deployment?: {
+    mode?: string;
+    self_hosted_bundle?: boolean;
+  };
+  auth?: {
+    auth_mode?: string;
+    firebase_enabled?: boolean;
+    firebase_ready?: boolean;
+    google_auth_available?: boolean;
+    local_auth_available?: boolean;
+  };
+  warnings?: string[];
+};
+
+const GOOGLE_LOGO = require("../../assets/images/google.png");
+
 export default function LoginScreen() {
   const isDarkMode = (useColorScheme() ?? "light") === "dark";
   const placeholderTextColor = isDarkMode ? "#4A4A4A" : "#7A7A7A";
   const modalPlaceholderTextColor = isDarkMode ? "#777777" : "#888888";
   const styles = useMemo(() => createStyles(isDarkMode), [isDarkMode]);
+  const router = useRouter();
 
   const params = useLocalSearchParams<{ fadeDelay?: string }>();
   const fadeDelayMs = useMemo(() => {
@@ -111,7 +130,15 @@ export default function LoginScreen() {
     return () => clearTimeout(t);
   }, [fade, fadeDelayMs]);
 
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
+
+  const runtimeExtra =
+    ((Constants.expoConfig?.extra ??
+      Constants.manifest2?.extra ??
+      (Constants as any).manifest?.extra) as ExtraConfig | undefined) ?? {};
+  const isExpoGoClient =
+    Constants.executionEnvironment === "storeClient" ||
+    (Constants as any).appOwnership === "expo";
 
   // Card swap animation: 0 = login in front, 1 = register in front
   const SWAP_DURATION = 500;
@@ -198,6 +225,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest({
+    webClientId: config.googleOAuth.webClientId || runtimeExtra.googleWebClientId,
+    iosClientId: config.googleOAuth.iosClientId || runtimeExtra.googleIosClientId,
+    androidClientId:
+      config.googleOAuth.androidClientId || runtimeExtra.googleAndroidClientId,
+    scopes: ["openid", "profile", "email"],
+  });
 
   // Refs for iOS AutoFill focus chaining
   const loginPasswordRef = useRef<TextInput>(null);
@@ -215,10 +251,18 @@ export default function LoginScreen() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] =
+    useState<PendingVerification | null>(null);
+  const [verificationCheckLoading, setVerificationCheckLoading] = useState(false);
+  const [verificationStatusText, setVerificationStatusText] = useState<
+    string | null
+  >(null);
 
   const [showDevModal, setShowDevModal] = useState(false);
   const [apiInput, setApiInput] = useState("");
   const [savingApi, setSavingApi] = useState(false);
+  const [serverCapabilities, setServerCapabilities] =
+    useState<CapabilitiesResponse | null>(null);
 
   // Stable props for FaultyTerminal so typing doesn't restart its animation
   const terminalGridMul = useMemo(() => [2, 1] as [number, number], []);
@@ -250,14 +294,32 @@ export default function LoginScreen() {
     [terminalGridMul, terminalStyle],
   );
 
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const response = await api.get<CapabilitiesResponse>("/capabilities");
+      setServerCapabilities(response.data ?? null);
+      return response.data ?? null;
+    } catch {
+      setServerCapabilities(null);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const override = await AsyncStorage.getItem("apiBaseUrlOverride");
       const current = override || config.apiBaseUrl;
       setApiInput(current);
       if (override) api.defaults.baseURL = override;
+      await loadCapabilities();
     })();
-  }, []);
+  }, [loadCapabilities]);
+
+  const googleAuthAvailable =
+    serverCapabilities?.auth?.google_auth_available !== false;
+  const authModeLabel = serverCapabilities?.auth?.auth_mode ?? "firebase";
+  const googleButtonDisabled =
+    googleLoading || !googleRequest || !googleAuthAvailable;
 
   const validateUrl = (url: string) => /^https?:\/\//i.test(url);
 
@@ -273,8 +335,16 @@ export default function LoginScreen() {
       setSavingApi(true);
       await AsyncStorage.setItem("apiBaseUrlOverride", apiInput);
       api.defaults.baseURL = apiInput;
+      const capabilities = await loadCapabilities();
       setShowDevModal(false);
-      showAlert("Applied", "Backend API base URL updated for this app.");
+      if (capabilities?.auth?.google_auth_available === false) {
+        showAlert(
+          "Server Updated",
+          "This server is using local/self-hosted auth. Google sign-in is disabled.",
+        );
+      } else {
+        showAlert("Applied", "Backend API base URL updated for this app.");
+      }
     } catch (_e) {
       showAlert("Error", "Failed to save API URL override");
     } finally {
@@ -288,6 +358,7 @@ export default function LoginScreen() {
       await AsyncStorage.removeItem("apiBaseUrlOverride");
       api.defaults.baseURL = config.apiBaseUrl;
       setApiInput(config.apiBaseUrl);
+      await loadCapabilities();
       setShowDevModal(false);
       showAlert("Reset", "Reverted to default backend API URL.");
     } catch (_e) {
@@ -323,6 +394,135 @@ export default function LoginScreen() {
     setLoading(false);
     if (!result.success) {
       showAlert("Login Failed", result.error || "Unknown error");
+    }
+  };
+
+  const getGoogleClientIdForCurrentPlatform = () => {
+    if (Platform.OS === "ios") {
+      return (
+        config.googleOAuth.iosClientId || runtimeExtra.googleIosClientId
+      )?.trim();
+    }
+    if (Platform.OS === "android") {
+      return (
+        config.googleOAuth.androidClientId || runtimeExtra.googleAndroidClientId
+      )?.trim();
+    }
+    return (
+      config.googleOAuth.webClientId || runtimeExtra.googleWebClientId
+    )?.trim();
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (googleLoading) {
+      return;
+    }
+
+    if (!googleAuthAvailable) {
+      showAlert(
+        "Google Sign-In Disabled",
+        "This server is running in local/self-hosted auth mode. Use email and password.",
+      );
+      return;
+    }
+
+    if (Platform.OS !== "web" && isExpoGoClient) {
+      showAlert(
+        "Google Sign-In Requires Dev Build",
+        "Google OAuth on native cannot complete in Expo Go for this flow. Use a development build (npx expo run:ios / npx expo run:android) and then start with npx expo start --dev-client.",
+      );
+      return;
+    }
+
+    const platformClientId = getGoogleClientIdForCurrentPlatform();
+    if (!platformClientId) {
+      showAlert(
+        "Google Sign-In Unavailable",
+        "Google OAuth client ID is missing for this platform. Configure it in app.json extra settings.",
+      );
+      return;
+    }
+
+    if (!googleRequest) {
+      showAlert(
+        "Google Sign-In Unavailable",
+        "Google authentication is still initializing. Please try again.",
+      );
+      return;
+    }
+
+    console.log("[GoogleAuth] runtime", {
+      platform: Platform.OS,
+      executionEnvironment: (Constants as any).executionEnvironment,
+      appOwnership: (Constants as any).appOwnership,
+      redirectUri: googleRequest.redirectUri,
+      hasPlatformClientId: Boolean(platformClientId),
+    });
+
+    setGoogleLoading(true);
+    try {
+      const promptResult = await promptGoogleAsync();
+      if (promptResult.type !== "success") {
+        if (promptResult.type === "error") {
+          const mismatchError =
+            (promptResult as any)?.params?.error === "redirect_uri_mismatch" ||
+            String((promptResult as any)?.params?.error_description || "")
+              .toLowerCase()
+              .includes("redirect_uri_mismatch");
+
+          if (mismatchError) {
+            showAlert(
+              "Google Redirect URI Mismatch",
+              `Allowed redirect URI is missing in Google Cloud OAuth config. Add this URI to your Web client authorized redirect URIs: ${googleRequest.redirectUri}`,
+            );
+            return;
+          }
+
+          showAlert(
+            "Google Sign-In Failed",
+            "Could not complete Google authentication.",
+          );
+        }
+        return;
+      }
+
+      const idTokenFromAuthentication = promptResult.authentication?.idToken ?? null;
+      const idTokenFromParams =
+        typeof (promptResult as any)?.params?.id_token === "string"
+          ? (promptResult as any).params.id_token
+          : null;
+      const accessTokenFromAuthentication =
+        promptResult.authentication?.accessToken ?? null;
+      const accessTokenFromParams =
+        typeof (promptResult as any)?.params?.access_token === "string"
+          ? (promptResult as any).params.access_token
+          : null;
+      const googleIdToken = idTokenFromAuthentication || idTokenFromParams;
+      const googleAccessToken =
+        accessTokenFromAuthentication || accessTokenFromParams;
+
+      if (!googleIdToken && !googleAccessToken) {
+        showAlert(
+          "Google Sign-In Failed",
+          "Google did not return an identity or access token.",
+        );
+        return;
+      }
+
+      const result = await loginWithGoogle(
+        googleIdToken || undefined,
+        googleAccessToken || undefined,
+      );
+      if (!result.success) {
+        showAlert("Google Sign-In Failed", result.error || "Unknown error");
+      }
+    } catch (error: any) {
+      showAlert(
+        "Google Sign-In Failed",
+        error?.message || "Could not complete Google authentication.",
+      );
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -366,10 +566,91 @@ export default function LoginScreen() {
       trimmedUsername,
     );
     setRegLoading(false);
+    if (result.success) {
+      if (result.message) {
+        setPendingVerification({
+          email: regEmail.trim().toLowerCase(),
+          password: regPassword,
+        });
+        setVerificationStatusText(
+          `${result.message} Check inbox and spam for the verification link.`,
+        );
+        setRegPassword("");
+        setRegConfirmPassword("");
+        setShowRegPassword(false);
+        setShowRegConfirmPassword(false);
+      }
+      return;
+    }
+
     if (!result.success) {
       showAlert("Registration Failed", result.error);
     }
   };
+
+  const checkVerificationStatus = useCallback(
+    async (silent = false) => {
+      if (!pendingVerification || verificationCheckLoading) {
+        return;
+      }
+
+      setVerificationCheckLoading(true);
+      if (!silent) {
+        setVerificationStatusText("Checking verification status...");
+      }
+
+      try {
+        await api.post("/auth/login", {
+          email: pendingVerification.email,
+          password: pendingVerification.password,
+        });
+
+        setPendingVerification(null);
+        setVerificationStatusText(null);
+        setEmail(pendingVerification.email);
+        setPassword("");
+        switchToLogin();
+      } catch (error: any) {
+        const detail = error?.response?.data?.detail;
+        const detailText =
+          typeof detail === "string"
+            ? detail
+            : "Could not check verification status right now.";
+        const normalized = detailText.toLowerCase();
+        const isNotVerified =
+          normalized.includes("not verified") || normalized.includes("verification");
+
+        if (!silent || !isNotVerified) {
+          setVerificationStatusText(
+            isNotVerified
+              ? "Not verified yet. Check inbox and spam, then try again."
+              : detailText,
+          );
+        }
+      } finally {
+        setVerificationCheckLoading(false);
+      }
+    },
+    [
+      pendingVerification,
+      verificationCheckLoading,
+      switchToLogin,
+      setEmail,
+      setPassword,
+    ],
+  );
+
+  useEffect(() => {
+    if (activeCard !== "register" || !pendingVerification) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void checkVerificationStatus(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeCard, pendingVerification, checkVerificationStatus]);
 
   const EyeToggle = ({
     visible,
@@ -398,6 +679,51 @@ export default function LoginScreen() {
       )}
     </TouchableOpacity>
   );
+
+  const renderLegalNotice = () => (
+    <View style={styles.legalNotice}>
+      <Text style={styles.legalWarningTitle}>Privacy Notice</Text>
+      <Text style={styles.legalWarningText}>
+        STRATUM uses required cookies for sign-in, secure sessions, and account
+        protection. These cookies are mandatory, and the app cannot be used without
+        them. By using STRATUM, you acknowledge and accept the Terms of Service and
+        Privacy Policy.
+      </Text>
+      <View style={styles.legalLinksRow}>
+        <TouchableOpacity
+          onPress={() => router.push("/privacy-policy")}
+          accessibilityRole="button"
+          accessibilityLabel="Open Privacy Policy"
+        >
+          <Text style={styles.legalLink}>Privacy Policy</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalDot}>•</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/terms-of-service")}
+          accessibilityRole="button"
+          accessibilityLabel="Open Terms of Service"
+        >
+          <Text style={styles.legalLink}>Terms of Service</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderAuthModeNotice = () => {
+    if (googleAuthAvailable) {
+      return null;
+    }
+
+    return (
+      <View style={styles.authModeNotice}>
+        <Text style={styles.authModeNoticeTitle}>Self-Hosted Auth Mode</Text>
+        <Text style={styles.authModeNoticeText}>
+          Google/Firebase sign-in is unavailable on this server ({authModeLabel}).
+          Continue with email and password.
+        </Text>
+      </View>
+    );
+  };
 
   const renderForm = () => (
     <View style={styles.form}>
@@ -463,12 +789,46 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
+      <View style={styles.oauthDivider}>
+        <View style={styles.oauthDividerLine} />
+        <Text style={styles.oauthDividerText}>OR</Text>
+        <View style={styles.oauthDividerLine} />
+      </View>
+
+      {renderAuthModeNotice()}
+
+      <TouchableOpacity
+        style={[
+          styles.googleButton,
+          googleButtonDisabled && styles.googleButtonDisabled,
+        ]}
+        onPress={() => void handleGoogleSignIn()}
+        disabled={googleButtonDisabled}
+      >
+        {googleLoading ? (
+          <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
+        ) : (
+          <>
+            <View style={styles.googleIconBadge}>
+              <Image
+                source={GOOGLE_LOGO}
+                style={styles.googleIconImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.googleButtonText}>CONTINUE WITH GOOGLE</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.devButton}
         onPress={() => setShowDevModal(true)}
       >
-        <Text style={styles.devButtonText}>Dev: API Base URL</Text>
+        <Text style={styles.devButtonText}>Server & API URL</Text>
       </TouchableOpacity>
+
+      {renderLegalNotice()}
     </View>
   );
 
@@ -593,6 +953,83 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
         )}
       </TouchableOpacity>
+
+      <View style={styles.oauthDivider}>
+        <View style={styles.oauthDividerLine} />
+        <Text style={styles.oauthDividerText}>OR</Text>
+        <View style={styles.oauthDividerLine} />
+      </View>
+
+      {renderAuthModeNotice()}
+
+      <TouchableOpacity
+        style={[
+          styles.googleButton,
+          googleButtonDisabled && styles.googleButtonDisabled,
+        ]}
+        onPress={() => void handleGoogleSignIn()}
+        disabled={googleButtonDisabled}
+      >
+        {googleLoading ? (
+          <ActivityIndicator color={isDarkMode ? "#F5F5F5" : "#1A1A1A"} />
+        ) : (
+          <>
+            <View style={styles.googleIconBadge}>
+              <Image
+                source={GOOGLE_LOGO}
+                style={styles.googleIconImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.googleButtonText}>CONTINUE WITH GOOGLE</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      {renderLegalNotice()}
+    </View>
+  );
+
+  const renderVerificationCard = () => (
+    <View style={styles.form}>
+      <View style={styles.verifyCard}>
+        <Text style={styles.verifyTitle}>Check Your Email</Text>
+        <Text style={styles.verifyText}>
+          We sent a verification email to
+          {"\n"}
+          <Text style={styles.verifyEmail}>{pendingVerification?.email}</Text>
+        </Text>
+        <Text style={styles.verifyText}>
+          Check your inbox. If you don't see the email, please check your spam
+          folder. Once verified, this card moves you to login.
+        </Text>
+        {verificationStatusText ? (
+          <Text style={styles.verifyStatusText}>{verificationStatusText}</Text>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => void checkVerificationStatus(false)}
+          disabled={verificationCheckLoading}
+        >
+          {verificationCheckLoading ? (
+            <ActivityIndicator color="#F5F5F5" />
+          ) : (
+            <Text style={styles.buttonText}>I VERIFIED, CHECK NOW</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryActionButton}
+          onPress={() => {
+            setPendingVerification(null);
+            setVerificationStatusText(null);
+          }}
+          disabled={verificationCheckLoading}
+        >
+          <Text style={styles.secondaryActionButtonText}>Use a Different Email</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -680,7 +1117,9 @@ export default function LoginScreen() {
                 <Text style={styles.logo}>STRATUM</Text>
               </View>
               {activeCard === "register"
-                ? wrapForm(renderRegisterForm(), handleRegister, regLoading)
+                ? pendingVerification
+                  ? renderVerificationCard()
+                  : wrapForm(renderRegisterForm(), handleRegister, regLoading)
                 : null}
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account?</Text>
@@ -709,10 +1148,10 @@ export default function LoginScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Backend API Base URL</Text>
+            <Text style={styles.modalTitle}>Server API Base URL</Text>
             <Text style={styles.modalText}>
-              Enter the full API url including /api. Example:
-              http://192.168.1.100:8000/api
+              Switch between cloud and self-hosted servers. Enter the full API url
+              including /api. Example: http://192.168.1.100:8000/api
             </Text>
             <TextInput
               style={styles.input}
@@ -723,6 +1162,12 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            <Text style={styles.serverModeHint}>
+              Auth mode: {authModeLabel}
+              {googleAuthAvailable
+                ? " (Google sign-in available)"
+                : " (Google sign-in disabled)"}
+            </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalButton}
@@ -886,6 +1331,123 @@ const createStyles = (isDarkMode: boolean): any =>
       fontWeight: "600",
       letterSpacing: 0.5,
     },
+    oauthDivider: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: 14,
+      marginBottom: 10,
+      gap: 10,
+    },
+    oauthDividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+    },
+    oauthDividerText: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 1,
+      color: isDarkMode ? "#8A8A8A" : "#7A7A7A",
+    },
+    googleButton: {
+      marginTop: 2,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#CFCFCF",
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: isDarkMode ? "#101010" : "#FFFFFF",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    },
+    googleButtonDisabled: {
+      opacity: 0.6,
+    },
+    googleIconBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: isDarkMode ? "#FFFFFF" : "#F5F5F5",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    googleIconImage: {
+      width: 16,
+      height: 16,
+    },
+    googleButtonText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      letterSpacing: 0.4,
+    },
+    authModeNotice: {
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#6A3D00" : "#F2C37A",
+      backgroundColor: isDarkMode ? "#2F1E00" : "#FFF6E7",
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 10,
+      marginTop: 2,
+    },
+    authModeNoticeTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: isDarkMode ? "#FFD28C" : "#8A4900",
+      marginBottom: 4,
+      letterSpacing: 0.3,
+    },
+    authModeNoticeText: {
+      fontSize: 12,
+      lineHeight: 18,
+      color: isDarkMode ? "#F6DEB4" : "#7A4E18",
+    },
+    verifyCard: {
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      borderRadius: 16,
+      padding: 16,
+      backgroundColor: isDarkMode ? "#111111" : "#FAFAFA",
+      gap: 12,
+    },
+    verifyTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+    },
+    verifyText: {
+      fontSize: 14,
+      lineHeight: 21,
+      color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
+    },
+    verifyEmail: {
+      color: isDarkMode ? "#FFFFFF" : "#1A1A1A",
+      fontWeight: "700",
+    },
+    verifyStatusText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: "#FF2A2A",
+      fontWeight: "600",
+    },
+    secondaryActionButton: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#3A3A3A" : "#D0D0D0",
+      backgroundColor: "transparent",
+    },
+    secondaryActionButtonText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: isDarkMode ? "#DDDDDD" : "#333333",
+      letterSpacing: 0.3,
+    },
     footer: {
       flexDirection: "row",
       justifyContent: "center",
@@ -905,6 +1467,44 @@ const createStyles = (isDarkMode: boolean): any =>
       color: "#FF2A2A",
       fontWeight: "600",
       letterSpacing: 0.5,
+    },
+    legalNotice: {
+      marginTop: 16,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDarkMode ? "#2A2A2A" : "#D9D9D9",
+      backgroundColor: isDarkMode ? "#111111" : "#FAFAFA",
+    },
+    legalWarningTitle: {
+      color: isDarkMode ? "#F5F5F5" : "#1A1A1A",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+      marginBottom: 6,
+    },
+    legalWarningText: {
+      color: isDarkMode ? "#C9C9C9" : "#555555",
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    legalLinksRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    legalLink: {
+      color: "#FF2A2A",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    legalDot: {
+      color: isDarkMode ? "#888888" : "#777777",
+      fontSize: 12,
+      fontWeight: "600",
     },
     devButton: {
       marginTop: 12,
@@ -955,6 +1555,13 @@ const createStyles = (isDarkMode: boolean): any =>
       fontSize: 14,
       color: isDarkMode ? "#CCCCCC" : "#4D4D4D",
       marginBottom: 12,
+    },
+    serverModeHint: {
+      marginTop: 8,
+      marginBottom: 12,
+      fontSize: 12,
+      color: isDarkMode ? "#B8B8B8" : "#555555",
+      lineHeight: 17,
     },
     modalActions: {
       flexDirection: "row",
