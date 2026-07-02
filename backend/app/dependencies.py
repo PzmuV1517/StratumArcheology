@@ -74,7 +74,7 @@ def build_maintainer_user() -> User:
         created_at=datetime.utcnow(),
         last_login=datetime.utcnow(),
     )
-    setattr(maintainer_user, "is_maintainer", True)
+    maintainer_user.is_maintainer = True
     return maintainer_user
 
 

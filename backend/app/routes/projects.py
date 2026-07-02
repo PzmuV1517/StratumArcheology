@@ -1118,8 +1118,8 @@ async def get_wheeler_render(
 ):
     """Proxy the publication SVG from MinIO so mobile clients don't need direct
     MinIO access (their 'localhost' resolves to the device, not the server)."""
-    from fastapi.responses import Response
     import httpx
+    from fastapi.responses import Response
 
     check_project_permission(project_id, current_user, db)
 

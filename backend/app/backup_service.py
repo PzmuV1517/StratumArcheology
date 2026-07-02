@@ -573,7 +573,7 @@ class BackupService:
                     await asyncio.wait_for(self._wake_event.wait(), timeout=wait_seconds)
                     self._wake_event.clear()
                     continue
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
 
             try:

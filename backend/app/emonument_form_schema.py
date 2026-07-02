@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 FieldType = str
 
 
@@ -28,7 +27,7 @@ class FormSection:
     label: str
     required: bool = False
     fields: tuple[FormField, ...] = ()
-    subsections: tuple["FormSection", ...] = ()
+    subsections: tuple[FormSection, ...] = ()
 
 
 EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (

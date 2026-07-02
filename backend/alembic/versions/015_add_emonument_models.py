@@ -6,17 +6,19 @@ Create Date: 2026-03-18 20:53:22.699111
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "4bbfeda351c1"
-down_revision: Union[str, Sequence[str], None] = "c2332d99d8d6"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c2332d99d8d6"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 FISA_INSTANCE_STATUS_ENUM = postgresql.ENUM(
