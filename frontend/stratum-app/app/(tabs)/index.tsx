@@ -205,7 +205,11 @@ export default function OverviewScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={getActivityIcon(activity.activity_type) as keyof typeof Ionicons.glyphMap}
+                    name={
+                      getActivityIcon(
+                        activity.activity_type,
+                      ) as keyof typeof Ionicons.glyphMap
+                    }
                     size={16}
                     color={activityService.getActivityColor(activity.activity_type)}
                     style={styles.timelineIcon}

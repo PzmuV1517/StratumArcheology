@@ -65,7 +65,9 @@ export default function AudioPanel({ audioUrl }: AudioPanelProps) {
       return () => {
         el.removeEventListener("play", resume);
         if (raf) cancelAnimationFrame(raf);
-        try { ctx?.close(); } catch {}
+        try {
+          ctx?.close();
+        } catch {}
       };
     } catch (_e: any) {
       setError("Audio visualizer error");

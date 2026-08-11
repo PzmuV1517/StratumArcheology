@@ -33,22 +33,22 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.heading}>2. Mandatory Cookies</Text>
         <Text style={styles.paragraph}>
           STRATUM uses essential cookies and similar storage mechanisms for
-          authentication, session integrity, and security controls. These cookies
-          are mandatory. If cookies are disabled, sign-in and core features will
-          not function.
+          authentication, session integrity, and security controls. These cookies are
+          mandatory. If cookies are disabled, sign-in and core features will not
+          function.
         </Text>
 
         <Text style={styles.heading}>3. Data We Process</Text>
         <Text style={styles.paragraph}>
           We process data required to provide the service, including account
-          identity, project content you submit, and operational telemetry needed
-          for security and reliability.
+          identity, project content you submit, and operational telemetry needed for
+          security and reliability.
         </Text>
 
         <Text style={styles.heading}>4. Data Retention</Text>
         <Text style={styles.paragraph}>
-          Data is retained for operational, legal, and security purposes and may
-          be removed or anonymized according to project policies.
+          Data is retained for operational, legal, and security purposes and may be
+          removed or anonymized according to project policies.
         </Text>
 
         <Text style={styles.heading}>5. Your Responsibilities</Text>
@@ -59,8 +59,8 @@ export default function PrivacyPolicyScreen() {
 
         <Text style={styles.heading}>6. Policy Changes</Text>
         <Text style={styles.paragraph}>
-          We may update this policy over time. Continued use of STRATUM after
-          updates means you acknowledge the revised policy.
+          We may update this policy over time. Continued use of STRATUM after updates
+          means you acknowledge the revised policy.
         </Text>
       </View>
     </ScrollView>

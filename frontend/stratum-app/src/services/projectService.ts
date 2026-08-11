@@ -204,7 +204,8 @@ export const projectService = {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const FileSystem = require("expo-file-system/legacy");
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+        const AsyncStorage =
+          require("@react-native-async-storage/async-storage").default;
         const [token, baseUrl] = await Promise.all([
           AsyncStorage.getItem("authToken") as Promise<string | null>,
           resolveBaseUrl(),
@@ -237,7 +238,10 @@ export const projectService = {
       });
       const formData = new FormData();
       formData.append("file", file);
-      const response = await api.post(`/projects/${projectId}/cover-image`, formData);
+      const response = await api.post(
+        `/projects/${projectId}/cover-image`,
+        formData,
+      );
       return response.data;
     } catch (error: any) {
       throw error?.response?.data ?? error;
@@ -341,7 +345,13 @@ export const projectService = {
   searchUsers: async (
     query: string,
   ): Promise<
-    { id: string; email: string; display_name: string | null; username: string | null; photo_url: string | null }[]
+    {
+      id: string;
+      email: string;
+      display_name: string | null;
+      username: string | null;
+      photo_url: string | null;
+    }[]
   > => {
     const res = await api.get("/auth/users/search", { params: { query } });
     return res.data;

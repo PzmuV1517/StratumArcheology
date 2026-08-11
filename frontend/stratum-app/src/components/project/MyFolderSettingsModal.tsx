@@ -250,9 +250,7 @@ export default function MyFolderSettingsModal({
               accessibilityLabel="Toggle per-member permissions"
               accessibilityState={{ expanded: showAdvanced }}
             >
-              <Text style={styles.advancedToggleText}>
-                Per-Member Permissions
-              </Text>
+              <Text style={styles.advancedToggleText}>Per-Member Permissions</Text>
               <Text style={styles.advancedToggleHint}>
                 Override defaults for specific members
               </Text>

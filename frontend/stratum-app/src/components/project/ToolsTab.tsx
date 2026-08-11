@@ -546,9 +546,7 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               }}
             >
               <Text style={styles.copyAllButtonText}>
-                {copyFeedback === "Coordinates"
-                    ? "Copied!"
-                    : "Copy Coordinates"}
+                {copyFeedback === "Coordinates" ? "Copied!" : "Copy Coordinates"}
               </Text>
             </TouchableOpacity>
 

@@ -245,7 +245,11 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                     ) : (
                       <>
                         <View style={s.coverPlaceholderIcon}>
-                          <IconSymbol name="photo.on.rectangle" size={22} color="#FF2A2A" />
+                          <IconSymbol
+                            name="photo.on.rectangle"
+                            size={22}
+                            color="#FF2A2A"
+                          />
                         </View>
                         <Text style={s.coverPlaceholderText}>Add Cover Photo</Text>
                       </>

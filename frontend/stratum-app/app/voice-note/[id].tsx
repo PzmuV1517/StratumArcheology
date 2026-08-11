@@ -52,7 +52,8 @@ export default function VoiceNoteScreen() {
 
   // Transcription state
   const [transcription, setTranscription] = useState<string>("");
-  const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus>(null);
+  const [transcriptionStatus, setTranscriptionStatus] =
+    useState<TranscriptionStatus>(null);
   const [transcriptionModified, setTranscriptionModified] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
@@ -154,11 +155,20 @@ export default function VoiceNoteScreen() {
 
     if (transcriptionStatus === "pending" || transcriptionStatus === "processing") {
       return (
-        <View style={[styles.transcriptionCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>Transcription</Text>
+        <View
+          style={[
+            styles.transcriptionCard,
+            { backgroundColor: cardBackground, borderColor },
+          ]}
+        >
+          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>
+            Transcription
+          </Text>
           <View style={styles.transcriptionLoading}>
             <ActivityIndicator size="small" color="#FF2A2A" />
-            <Text style={[styles.transcriptionLoadingText, { color: textSecondary }]}>
+            <Text
+              style={[styles.transcriptionLoadingText, { color: textSecondary }]}
+            >
               Transcribing audio…
             </Text>
           </View>
@@ -168,10 +178,18 @@ export default function VoiceNoteScreen() {
 
     if (transcriptionStatus === "failed") {
       return (
-        <View style={[styles.transcriptionCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>Transcription</Text>
+        <View
+          style={[
+            styles.transcriptionCard,
+            { backgroundColor: cardBackground, borderColor },
+          ]}
+        >
+          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>
+            Transcription
+          </Text>
           <Text style={[styles.transcriptionFailed, { color: "#FF2A2A" }]}>
-            Transcription failed. The audio may be too short or the server encountered an error.
+            Transcription failed. The audio may be too short or the server
+            encountered an error.
           </Text>
         </View>
       );
@@ -180,9 +198,16 @@ export default function VoiceNoteScreen() {
     if (!transcription && transcriptionStatus !== "completed") return null;
 
     return (
-      <View style={[styles.transcriptionCard, { backgroundColor: cardBackground, borderColor }]}>
+      <View
+        style={[
+          styles.transcriptionCard,
+          { backgroundColor: cardBackground, borderColor },
+        ]}
+      >
         <View style={styles.transcriptionHeader}>
-          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>Transcription</Text>
+          <Text style={[styles.transcriptionLabel, { color: textSecondary }]}>
+            Transcription
+          </Text>
           {transcriptionModified && (
             <View style={styles.modifiedBadge}>
               <Text style={styles.modifiedBadgeText}>Edited</Text>
@@ -199,7 +224,11 @@ export default function VoiceNoteScreen() {
             <TextInput
               style={[
                 styles.transcriptionInput,
-                { backgroundColor: inputBackground, color: textPrimary, borderColor },
+                {
+                  backgroundColor: inputBackground,
+                  color: textPrimary,
+                  borderColor,
+                },
               ]}
               value={editValue}
               onChangeText={setEditValue}
@@ -213,7 +242,9 @@ export default function VoiceNoteScreen() {
                 onPress={handleCancelEdit}
                 disabled={saving}
               >
-                <Text style={[styles.actionBtnText, { color: textSecondary }]}>Cancel</Text>
+                <Text style={[styles.actionBtnText, { color: textSecondary }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, styles.saveBtn]}
@@ -234,7 +265,15 @@ export default function VoiceNoteScreen() {
               {transcription || "No transcription available."}
             </Text>
             {confirmingReset ? (
-              <View style={[styles.confirmBox, { borderColor, backgroundColor: isDarkMode ? "#2A1A1A" : "#FFF0F0" }]}>
+              <View
+                style={[
+                  styles.confirmBox,
+                  {
+                    borderColor,
+                    backgroundColor: isDarkMode ? "#2A1A1A" : "#FFF0F0",
+                  },
+                ]}
+              >
                 <Text style={[styles.confirmText, { color: textPrimary }]}>
                   Restore original AI transcription? Your edits will be lost.
                 </Text>
@@ -243,7 +282,9 @@ export default function VoiceNoteScreen() {
                     style={[styles.actionBtn, styles.cancelBtn, { borderColor }]}
                     onPress={() => setConfirmingReset(false)}
                   >
-                    <Text style={[styles.actionBtnText, { color: textSecondary }]}>Cancel</Text>
+                    <Text style={[styles.actionBtnText, { color: textSecondary }]}>
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: "#FF2A2A" }]}
@@ -253,7 +294,9 @@ export default function VoiceNoteScreen() {
                     {resetting ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Text style={[styles.actionBtnText, { color: "#fff" }]}>Restore</Text>
+                      <Text style={[styles.actionBtnText, { color: "#fff" }]}>
+                        Restore
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -265,7 +308,9 @@ export default function VoiceNoteScreen() {
                     style={[styles.actionBtn, styles.resetBtn, { borderColor }]}
                     onPress={() => setConfirmingReset(true)}
                   >
-                    <Text style={[styles.actionBtnText, { color: "#FF2A2A" }]}>Reset</Text>
+                    <Text style={[styles.actionBtnText, { color: "#FF2A2A" }]}>
+                      Reset
+                    </Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -288,7 +333,11 @@ export default function VoiceNoteScreen() {
 
       {/* Manual top bar */}
       <View style={[styles.topBar, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          hitSlop={12}
+        >
           <Text style={styles.backArrow}>‹</Text>
           <Text style={[styles.backText, { color: "#FF2A2A" }]}>Back</Text>
         </TouchableOpacity>
@@ -301,7 +350,9 @@ export default function VoiceNoteScreen() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color="#FF2A2A" />
-          <Text style={[styles.loadingText, { color: textSecondary }]}>Loading…</Text>
+          <Text style={[styles.loadingText, { color: textSecondary }]}>
+            Loading…
+          </Text>
         </View>
       ) : (
         <ScrollView

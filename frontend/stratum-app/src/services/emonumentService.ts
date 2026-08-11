@@ -111,7 +111,9 @@ const readCachedInstances = async (): Promise<EMonumentInstance[]> => {
   }
 };
 
-const writeCachedInstances = async (instances: EMonumentInstance[]): Promise<void> => {
+const writeCachedInstances = async (
+  instances: EMonumentInstance[],
+): Promise<void> => {
   await AsyncStorage.setItem(INSTANCES_CACHE_KEY, JSON.stringify(instances));
 };
 
@@ -278,7 +280,13 @@ export const emonumentService = {
     const nextStatus = status || "draft";
 
     if (isMobilePlatform && instanceId.startsWith("local-")) {
-      const draft = await upsertOfflineDraft(instanceId, data, nextStatus, false, true);
+      const draft = await upsertOfflineDraft(
+        instanceId,
+        data,
+        nextStatus,
+        false,
+        true,
+      );
       return toOfflineInstance(draft);
     }
 
@@ -290,7 +298,13 @@ export const emonumentService = {
       return res.data;
     } catch (error: any) {
       if (isMobilePlatform && isOfflineError(error)) {
-        const draft = await upsertOfflineDraft(instanceId, data, nextStatus, false, true);
+        const draft = await upsertOfflineDraft(
+          instanceId,
+          data,
+          nextStatus,
+          false,
+          true,
+        );
         return toOfflineInstance(draft);
       }
       throw error;
@@ -372,7 +386,9 @@ export const emonumentService = {
 
       try {
         if (current.id.startsWith("local-")) {
-          const createdRes = await api.post("/emonument/instances", { data: current.data });
+          const createdRes = await api.post("/emonument/instances", {
+            data: current.data,
+          });
           current.id = createdRes.data.id;
         }
 

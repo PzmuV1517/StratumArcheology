@@ -1147,11 +1147,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               (c.context1 === rel.to && c.context2 === rel.from),
           );
           const isRedundant = redundantIndices.has(index);
-          const status = conflict
-            ? "Conflict"
-            : isRedundant
-              ? "Redundant"
-              : "Valid";
+          const status = conflict ? "Conflict" : isRedundant ? "Redundant" : "Valid";
           const style = conflict
             ? "background: #ffebee;"
             : isRedundant

@@ -20,7 +20,8 @@ function parsePinValue(value: unknown): Coordinates | null {
   const latitude = Number(parts[0]);
   const longitude = Number(parts[1]);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)
+    return null;
 
   return { latitude, longitude };
 }
@@ -115,9 +116,12 @@ export default function MonumentPinPicker({
 
     if (pinCoordinate) {
       if (!markerRef.current) {
-        markerRef.current = L.marker([pinCoordinate.latitude, pinCoordinate.longitude], {
-          draggable: editableRef.current,
-        }).addTo(map);
+        markerRef.current = L.marker(
+          [pinCoordinate.latitude, pinCoordinate.longitude],
+          {
+            draggable: editableRef.current,
+          },
+        ).addTo(map);
 
         markerRef.current.on("dragend", (event: any) => {
           if (!editableRef.current) return;
@@ -125,7 +129,10 @@ export default function MonumentPinPicker({
           onChangeRef.current(formatPinValue(ll.lat, ll.lng));
         });
       } else {
-        markerRef.current.setLatLng([pinCoordinate.latitude, pinCoordinate.longitude]);
+        markerRef.current.setLatLng([
+          pinCoordinate.latitude,
+          pinCoordinate.longitude,
+        ]);
         markerRef.current.dragging?.[editableRef.current ? "enable" : "disable"]?.();
       }
     } else if (markerRef.current) {
@@ -147,7 +154,8 @@ export default function MonumentPinPicker({
     <View style={styles.pinInputGroup}>
       <div ref={mapContainerRef} style={styles.pinMap as any} />
       <Text style={styles.pinHelperText}>
-        Click pe harta pentru a seta PIN-ul exact. Marker-ul poate fi tras pentru ajustare fina.
+        Click pe harta pentru a seta PIN-ul exact. Marker-ul poate fi tras pentru
+        ajustare fina.
       </Text>
       <Text style={styles.pinValueText}>
         {pinCoordinate

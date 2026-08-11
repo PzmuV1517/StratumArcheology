@@ -27,45 +27,160 @@ import {
 /* eslint-disable @typescript-eslint/no-require-imports */
 const _ReactMarkdown =
   Platform.OS === "web"
-    ? (() => { try { return require("react-markdown").default; } catch { return null; } })()
+    ? (() => {
+        try {
+          return require("react-markdown").default;
+        } catch {
+          return null;
+        }
+      })()
     : null;
 const _remarkGfm =
   Platform.OS === "web"
-    ? (() => { try { return require("remark-gfm").default; } catch { return null; } })()
+    ? (() => {
+        try {
+          return require("remark-gfm").default;
+        } catch {
+          return null;
+        }
+      })()
     : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 function _parseBold(text: string, color: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**")
-      ? <Text key={i} style={{ fontWeight: "700", color }}>{p.slice(2, -2)}</Text>
-      : <Text key={i} style={{ color }}>{p}</Text>,
+    p.startsWith("**") && p.endsWith("**") ? (
+      <Text key={i} style={{ fontWeight: "700", color }}>
+        {p.slice(2, -2)}
+      </Text>
+    ) : (
+      <Text key={i} style={{ color }}>
+        {p}
+      </Text>
+    ),
   );
 }
 
 function AiSummaryMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
   const c = isDark ? "#CFCFCF" : "#444444";
   const cBold = isDark ? "#F5F5F5" : "#1A1A1A";
-  const SYSTEM_FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-  const webBase = { fontFamily: SYSTEM_FONT, color: c, fontSize: "14px", lineHeight: "22px", letterSpacing: "0.2px" };
+  const SYSTEM_FONT =
+    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  const webBase = {
+    fontFamily: SYSTEM_FONT,
+    color: c,
+    fontSize: "14px",
+    lineHeight: "22px",
+    letterSpacing: "0.2px",
+  };
 
   if (Platform.OS === "web" && _ReactMarkdown && _remarkGfm) {
     return React.createElement(
       "div",
       { style: webBase },
-      React.createElement(_ReactMarkdown, {
-        remarkPlugins: [_remarkGfm],
-        components: {
-          p:      ({ children }: any) => React.createElement("p",      { style: { margin: "0 0 6px 0", fontFamily: SYSTEM_FONT, fontSize: "inherit", lineHeight: "inherit", color: "inherit" } }, children),
-          strong: ({ children }: any) => React.createElement("strong", { style: { fontWeight: "700", color: cBold, fontFamily: SYSTEM_FONT } }, children),
-          em:     ({ children }: any) => React.createElement("em",     { style: { fontStyle: "italic", fontFamily: SYSTEM_FONT, color: "inherit" } }, children),
-          h1:     ({ children }: any) => React.createElement("h1",     { style: { margin: "0 0 6px 0", fontSize: "17px", fontWeight: "700", color: cBold, fontFamily: SYSTEM_FONT } }, children),
-          h2:     ({ children }: any) => React.createElement("h2",     { style: { margin: "0 0 6px 0", fontSize: "16px", fontWeight: "700", color: cBold, fontFamily: SYSTEM_FONT } }, children),
-          h3:     ({ children }: any) => React.createElement("h3",     { style: { margin: "0 0 4px 0", fontSize: "15px", fontWeight: "700", color: cBold, fontFamily: SYSTEM_FONT } }, children),
-          li:     ({ children }: any) => React.createElement("li",     { style: { fontFamily: SYSTEM_FONT, fontSize: "inherit", lineHeight: "inherit", color: "inherit" } }, children),
+      React.createElement(
+        _ReactMarkdown,
+        {
+          remarkPlugins: [_remarkGfm],
+          components: {
+            p: ({ children }: any) =>
+              React.createElement(
+                "p",
+                {
+                  style: {
+                    margin: "0 0 6px 0",
+                    fontFamily: SYSTEM_FONT,
+                    fontSize: "inherit",
+                    lineHeight: "inherit",
+                    color: "inherit",
+                  },
+                },
+                children,
+              ),
+            strong: ({ children }: any) =>
+              React.createElement(
+                "strong",
+                {
+                  style: {
+                    fontWeight: "700",
+                    color: cBold,
+                    fontFamily: SYSTEM_FONT,
+                  },
+                },
+                children,
+              ),
+            em: ({ children }: any) =>
+              React.createElement(
+                "em",
+                {
+                  style: {
+                    fontStyle: "italic",
+                    fontFamily: SYSTEM_FONT,
+                    color: "inherit",
+                  },
+                },
+                children,
+              ),
+            h1: ({ children }: any) =>
+              React.createElement(
+                "h1",
+                {
+                  style: {
+                    margin: "0 0 6px 0",
+                    fontSize: "17px",
+                    fontWeight: "700",
+                    color: cBold,
+                    fontFamily: SYSTEM_FONT,
+                  },
+                },
+                children,
+              ),
+            h2: ({ children }: any) =>
+              React.createElement(
+                "h2",
+                {
+                  style: {
+                    margin: "0 0 6px 0",
+                    fontSize: "16px",
+                    fontWeight: "700",
+                    color: cBold,
+                    fontFamily: SYSTEM_FONT,
+                  },
+                },
+                children,
+              ),
+            h3: ({ children }: any) =>
+              React.createElement(
+                "h3",
+                {
+                  style: {
+                    margin: "0 0 4px 0",
+                    fontSize: "15px",
+                    fontWeight: "700",
+                    color: cBold,
+                    fontFamily: SYSTEM_FONT,
+                  },
+                },
+                children,
+              ),
+            li: ({ children }: any) =>
+              React.createElement(
+                "li",
+                {
+                  style: {
+                    fontFamily: SYSTEM_FONT,
+                    fontSize: "inherit",
+                    lineHeight: "inherit",
+                    color: "inherit",
+                  },
+                },
+                children,
+              ),
+          },
         },
-      }, text),
+        text,
+      ),
     );
   }
 
@@ -76,9 +191,21 @@ function AiSummaryMarkdown({ text, isDark }: { text: string; isDark: boolean }) 
         if (line === "") return <View key={i} style={{ height: 6 }} />;
         const bullet = line.startsWith("- ") || line.startsWith("* ");
         const heading = /^#{1,3}\s/.test(line);
-        const content = bullet ? line.slice(2) : heading ? line.replace(/^#+\s/, "") : line;
+        const content = bullet
+          ? line.slice(2)
+          : heading
+            ? line.replace(/^#+\s/, "")
+            : line;
         return (
-          <Text key={i} style={{ marginBottom: 4, fontSize: heading ? 15 : 14, fontWeight: heading ? "700" : "400", letterSpacing: 0.2 }}>
+          <Text
+            key={i}
+            style={{
+              marginBottom: 4,
+              fontSize: heading ? 15 : 14,
+              fontWeight: heading ? "700" : "400",
+              letterSpacing: 0.2,
+            }}
+          >
             {bullet && <Text style={{ color: c }}>{"• "}</Text>}
             {_parseBold(content, c)}
           </Text>
@@ -170,7 +297,8 @@ export function ProjectOverviewScreen() {
   useEffect(() => {
     if (!project?.id) return;
     setAiInitialLoading(true);
-    api.get(`/projects/${project.id}/ai-summary`)
+    api
+      .get(`/projects/${project.id}/ai-summary`)
       .then((res) => applyAiResponse(res.data))
       .catch(() => {})
       .finally(() => setAiInitialLoading(false));
@@ -213,7 +341,6 @@ export function ProjectOverviewScreen() {
         refreshControl={maybeRefreshControl}
       >
         <View style={ov.pageContainer}>
-
           {/* ── Hero ── */}
           {project?.cover_image_url ? (
             <View style={ov.heroBanner}>
@@ -253,12 +380,22 @@ export function ProjectOverviewScreen() {
           {/* ── Stats 2×2 ── */}
           <View style={ov.statsRowA}>
             <View style={ov.statCard}>
-              <Ionicons name="people" size={20} color="#FF2A2A" style={ov.statIcon} />
+              <Ionicons
+                name="people"
+                size={20}
+                color="#FF2A2A"
+                style={ov.statIcon}
+              />
               <Text style={ov.statValue}>{members.length}</Text>
               <Text style={ov.statLabel}>Members</Text>
             </View>
             <View style={ov.statCard}>
-              <Ionicons name="document-text" size={20} color="#FF2A2A" style={ov.statIcon} />
+              <Ionicons
+                name="document-text"
+                size={20}
+                color="#FF2A2A"
+                style={ov.statIcon}
+              />
               <Text style={ov.statValue}>{notes.length}</Text>
               <Text style={ov.statLabel}>Notes</Text>
             </View>
@@ -277,7 +414,12 @@ export function ProjectOverviewScreen() {
               <Text style={ov.statLabel}>Visibility</Text>
             </View>
             <View style={ov.statCard}>
-              <Ionicons name="calendar-outline" size={20} color="#FF2A2A" style={ov.statIcon} />
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color="#FF2A2A"
+                style={ov.statIcon}
+              />
               <Text style={ov.statValueSm}>{createdLabel}</Text>
               <Text style={ov.statLabel}>Created</Text>
             </View>
@@ -305,7 +447,11 @@ export function ProjectOverviewScreen() {
             </View>
 
             {aiInitialLoading && (
-              <ActivityIndicator color="#FF2A2A" size="small" style={{ marginVertical: 10 }} />
+              <ActivityIndicator
+                color="#FF2A2A"
+                size="small"
+                style={{ marginVertical: 10 }}
+              />
             )}
 
             {!aiInitialLoading && !aiSummary && !aiGenerating && !aiError && (
@@ -321,9 +467,7 @@ export function ProjectOverviewScreen() {
               </View>
             )}
 
-            {!!aiError && !aiGenerating && (
-              <Text style={ov.aiError}>{aiError}</Text>
-            )}
+            {!!aiError && !aiGenerating && <Text style={ov.aiError}>{aiError}</Text>}
 
             {!!aiSummary && !aiGenerating && (
               <>
@@ -334,7 +478,8 @@ export function ProjectOverviewScreen() {
                   )}
                   {!!aiSummary && !canRefresh && (
                     <Text style={ov.aiChangesHint}>
-                      {aiThreshold - changesSince} more change{aiThreshold - changesSince !== 1 ? "s" : ""} until refresh
+                      {aiThreshold - changesSince} more change
+                      {aiThreshold - changesSince !== 1 ? "s" : ""} until refresh
                     </Text>
                   )}
                 </View>
@@ -372,10 +517,7 @@ export function ProjectOverviewScreen() {
                 {members.slice(0, 12).map((m, i) => (
                   <View key={m.user_id ?? i} style={ov.memberChip}>
                     {m.photo_url ? (
-                      <Image
-                        source={{ uri: m.photo_url }}
-                        style={ov.memberAvatar}
-                      />
+                      <Image source={{ uri: m.photo_url }} style={ov.memberAvatar} />
                     ) : (
                       <View style={[ov.memberAvatar, ov.memberAvatarFallback]}>
                         <Text style={ov.memberAvatarInitial}>
@@ -393,9 +535,7 @@ export function ProjectOverviewScreen() {
                 ))}
                 {members.length > 12 && (
                   <View style={ov.memberChipMore}>
-                    <Text style={ov.memberChipMoreText}>
-                      +{members.length - 12}
-                    </Text>
+                    <Text style={ov.memberChipMoreText}>+{members.length - 12}</Text>
                   </View>
                 )}
               </ScrollView>
@@ -414,7 +554,6 @@ export function ProjectOverviewScreen() {
               <Timeline projectId={project?.id as string} maxHeight={360} />
             </View>
           </View>
-
         </View>
       </ScrollView>
     </ProjectTabGuard>
