@@ -24,7 +24,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useActivity } from "../../hooks";
+import { useActivity } from "../../hooks/useActivity";
 import { activityService, ProjectActivity, authService } from "../../services";
 import { Loading, Card } from "../common";
 
@@ -53,7 +53,7 @@ export default function Timeline({
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActivityFilter>("all");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { activities, isLoading, hasMore, loadMore, refresh, error } = useActivity(
     projectId,
     mode === "personal",

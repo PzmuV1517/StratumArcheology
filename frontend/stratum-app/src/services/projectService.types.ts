@@ -69,9 +69,13 @@ export interface InviteResponse {
   token: string;
   project_id: string;
   role: string;
-  expires_at: string;
+  /** Null when the invite never expires. */
+  expires_at: string | null;
   accept_path: string;
   code?: string;
+  /** Null when the invite has unlimited uses. */
+  max_uses?: number | null;
+  use_count?: number;
 }
 
 /** Response returned after joining a project via invite. */

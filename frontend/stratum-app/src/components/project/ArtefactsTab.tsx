@@ -123,8 +123,7 @@ export default function ArtefactsTab({
               (c.name === "artefact.json" || c.name.endsWith(".json")),
           );
           if (metaFile) {
-            const res = await fileService.downloadFile(metaFile.id);
-            const text = await res.blob.text();
+            const text = await fileService.downloadFileAsText(metaFile.id);
             if (text) meta = JSON.parse(text);
           }
 
@@ -134,7 +133,7 @@ export default function ArtefactsTab({
           );
           if (pv && Platform.OS === "web") {
             const blobRes = await fileService.downloadFile(pv.id);
-            previewUrl = URL.createObjectURL(blobRes.blob);
+            if (blobRes.blob) previewUrl = URL.createObjectURL(blobRes.blob);
           }
         } catch {
           // Ignore per-folder metadata read errors and keep listing.

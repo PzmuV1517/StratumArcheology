@@ -254,8 +254,7 @@ export const MapEditorMobile: React.FC<{
                 (c.name === "artefact.json" || c.name.endsWith(".json")),
             );
             if (!metaFile) continue;
-            const res = await fileService.downloadFile(metaFile.id);
-            const text = await res.blob.text();
+            const text = await fileService.downloadFileAsText(metaFile.id);
             if (!text) continue;
             const manifest = JSON.parse(text);
             if (

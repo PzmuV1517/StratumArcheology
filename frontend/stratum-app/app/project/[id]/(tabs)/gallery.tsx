@@ -37,13 +37,13 @@ export default function ProjectGalleryRoute() {
 
   switch (subScreen) {
     case "gallery":
-      return <ProjectGalleryScreen onBack={() => setSubScreen("hub")} />;
+      return <ProjectGalleryScreen />;
     case "gps":
-      return <ProjectMapScreen onBack={() => setSubScreen("hub")} />;
+      return <ProjectMapScreen />;
     case "history":
-      return <ProjectHistoryScreen onBack={() => setSubScreen("hub")} />;
+      return <ProjectHistoryScreen />;
     case "tools":
-      return <ProjectToolsScreen onBack={() => setSubScreen("hub")} />;
+      return <ProjectToolsScreen />;
     default:
       return <ProjectMoreScreen onNavigate={setSubScreen} />;
   }

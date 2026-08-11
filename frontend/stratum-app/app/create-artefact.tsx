@@ -249,7 +249,7 @@ export default function CreateArtefactScreen() {
           });
           fd.append("file", file, "preview.jpg");
           const up = await fileService.uploadFormData(projectId, fd);
-          previewFileId = up.id || up.file_id || up.node_id || up?.file?.id;
+          previewFileId = up.id;
         } catch (e) {
           console.warn("Preview generation failed", e);
         }

@@ -79,7 +79,8 @@ export default function EditProjectScreen() {
   const stackScreenOptions = {
     title: "Edit Project",
     headerTransparent: Platform.OS === "ios",
-    headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+    headerBlurEffect:
+      Platform.OS === "ios" ? ("systemChromeMaterial" as const) : undefined,
     headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
     headerTintColor: "#FF2A2A",
     headerTitleStyle: {

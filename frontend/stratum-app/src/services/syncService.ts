@@ -29,7 +29,12 @@ import {
   LocalNote,
   LocalProject,
 } from "../db";
-import { offlineQueue, QueuedAction, conflicts } from "./offlineQueueService";
+import {
+  offlineQueue,
+  QueuedAction,
+  conflicts,
+  fileVersions,
+} from "./offlineQueueService";
 
 // Maximum number of retries for failed requests
 const MAX_RETRIES = 3;
@@ -222,7 +227,7 @@ async function processOfflineAction(action: QueuedAction): Promise<void> {
     }
 
     // Success - remove from queue
-    await offlineQueue.removeFromQueue(action.id);
+    await offlineQueue.dequeue(action.id);
     console.log(`[SyncService] Action ${action.id} completed successfully`);
   } catch (error: any) {
     const errorMessage =
@@ -232,15 +237,32 @@ async function processOfflineAction(action: QueuedAction): Promise<void> {
     // Check for conflicts (409)
     if (error.response?.status === 409) {
       await offlineQueue.updateActionStatus(action.id, "conflict", errorMessage);
-      // Record the conflict for user resolution
+      // Record the conflict for user resolution. The resolution modal reads
+      // fileName plus both version objects, so build them from the tracked
+      // version rather than dropping the raw action payload in.
+      const nodeId = action.entityId || "";
+      const tracked = nodeId ? await fileVersions.getVersion(nodeId) : null;
+      const serverData = error.response?.data || {};
       await conflicts.addConflict({
-        actionId: action.id,
-        entityType: action.type.includes("NOTE") ? "note" : "file",
-        entityId: action.entityId || "",
-        localVersion: action.data,
-        serverVersion: error.response?.data?.serverVersion,
-        localTimestamp: action.createdAt,
-        serverTimestamp: new Date().toISOString(),
+        nodeId,
+        projectId: action.projectId,
+        fileName: tracked?.name || action.data?.name || "Unknown file",
+        localVersion: tracked || {
+          nodeId,
+          projectId: action.projectId,
+          name: action.data?.name || "Unknown file",
+          localVersion: 0,
+          remoteVersion: serverData.serverVersion ?? 0,
+          localUpdatedAt: action.createdAt,
+          remoteUpdatedAt: serverData.serverUpdatedAt || action.createdAt,
+          hasLocalEdits: true,
+        },
+        remoteVersion: {
+          version: serverData.serverVersion ?? 0,
+          updatedAt: serverData.serverUpdatedAt || new Date().toISOString(),
+          updatedBy: serverData.updatedBy,
+        },
+        localEditPath: action.localPath || tracked?.localEditPath || "",
       });
     } else if (action.retryCount < MAX_RETRIES && isRetryableError(error)) {
       // Retry later

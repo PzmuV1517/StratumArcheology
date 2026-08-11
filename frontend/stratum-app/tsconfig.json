@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "strict": true,
-    "moduleSuffixes": [".native", ".web", ""],
+    "moduleSuffixes": ["", ".native", ".web"],
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -45,11 +45,20 @@ export const noteService = {
   },
 
   // Native-specific: upload audio from URI
+  /**
+   * Upload a recording as a note attachment.
+   *
+   * Shares its signature with the web implementation so cross-platform
+   * callers type-check on both; native always takes the URI form.
+   */
   uploadAudio: async (
     noteId: string,
-    audioUri: string,
+    audioUri: Blob | string,
     filename: string = "voice-note.m4a",
   ): Promise<Attachment> => {
+    if (typeof audioUri !== "string") {
+      throw new Error("uploadAudio on native expects a URI, not a Blob");
+    }
     const formData = new FormData();
     formData.append("file", {
       uri: audioUri,

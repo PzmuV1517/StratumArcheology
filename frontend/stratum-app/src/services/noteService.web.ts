@@ -30,24 +30,20 @@ export const noteService = {
   },
 
   // Web-specific: upload audio blob from MediaRecorder
+  /**
+   * Upload a recording as a note attachment.
+   *
+   * Shares its signature with the native implementation so cross-platform
+   * callers type-check on both; web always takes the Blob form.
+   */
   uploadAudio: async (
     noteId: string,
-    blob: Blob,
+    blob: Blob | string,
     filename: string = "voice-note.webm",
   ): Promise<Attachment> => {
-    const formData = new FormData();
-    const file = new File([blob], filename, { type: blob.type || "audio/webm" });
-    formData.append("file", file, filename);
-    const response = await api.post(`/notes/${noteId}/attachments`, formData);
-    return response.data;
-  },
-
-  // Alias for uploadAudio to match the interface expected by create-note
-  uploadAudioBlob: async (
-    noteId: string,
-    blob: Blob,
-    filename: string = "voice-note.webm",
-  ): Promise<Attachment> => {
+    if (typeof blob === "string") {
+      throw new Error("uploadAudio on web expects a Blob, not a URI");
+    }
     const formData = new FormData();
     const file = new File([blob], filename, { type: blob.type || "audio/webm" });
     formData.append("file", file, filename);

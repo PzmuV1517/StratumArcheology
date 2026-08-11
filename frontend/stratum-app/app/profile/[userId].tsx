@@ -132,7 +132,7 @@ export default function ProfileViewScreen() {
           <Text style={styles.backArrowText}>← Back</Text>
         </TouchableOpacity>
         {isOwnProfile && (
-          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+          <TouchableOpacity onPress={() => router.push("/settings")}>
             <Text style={styles.editLink}>Edit</Text>
           </TouchableOpacity>
         )}

@@ -23,7 +23,8 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import api from "../../services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api, { resolveBaseUrl } from "../../services/api";
 import { showAlert } from "../../utils/alert";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -223,8 +224,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
   ) => {
     try {
       const token = await AsyncStorage.getItem("authToken");
-      const apiBaseUrl =
-        config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
+      const apiBaseUrl = (await resolveBaseUrl()).replace("/api", "");
       const url = `${apiBaseUrl}/api/files/${fileId}/version/${version}/download?token=${token}`;
 
       if (Platform.OS === "web") {
@@ -264,23 +264,7 @@ export default function TimeMachineTab({ projectId }: TimeMachineTabProps) {
           style: "destructive",
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem("authToken");
-              const apiBaseUrl =
-                config.apiBaseUrl.replace("/api", "") || "http://localhost:8000";
-
-              const response = await fetch(
-                `${apiBaseUrl}/api/files/${fileId}/restore/${version}`,
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                },
-              );
-
-              if (!response.ok) {
-                throw new Error("Failed to restore version");
-              }
+              await api.post(`/files/${fileId}/restore/${version}`);
 
               showAlert("Success", `Restored ${fileName} to version ${version}`);
               loadTimeMachineData();

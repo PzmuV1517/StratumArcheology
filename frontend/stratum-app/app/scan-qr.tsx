@@ -106,7 +106,7 @@ function ResultModal({
 export default function ScanQRScreen() {
   // Redirect away on web
   if (Platform.OS === "web") {
-    return <Redirect href="/(tabs)/profile" />;
+    return <Redirect href="/(tabs)/projects" />;
   }
 
   return <ScannerContent />;

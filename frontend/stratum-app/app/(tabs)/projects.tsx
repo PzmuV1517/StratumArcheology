@@ -66,20 +66,20 @@ export default function ProjectsScreen() {
   const textPrimary = isDarkMode ? "#F5F5F5" : "#1A1A1A";
   const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const coverGradient = isDarkMode
-    ? [
+    ? ([
         "#1A1A1A",
         "rgba(26,26,26,0.92)",
         "rgba(26,26,26,0.5)",
         "rgba(26,26,26,0.15)",
         "transparent",
-      ]
-    : [
+      ] as const)
+    : ([
         "#FFFFFF",
         "rgba(255,255,255,0.9)",
         "rgba(255,255,255,0.55)",
         "rgba(255,255,255,0.2)",
         "transparent",
-      ];
+      ] as const);
 
   // Show onboarding prompt once for new users (or always in dev mode)
   useEffect(() => {

@@ -250,6 +250,7 @@ export default function DataPreviewScreen() {
 
         // Web: downloadFile returns { blob, contentLength, mimeType }
         const { blob } = await fileService.downloadFile(nodeId);
+        if (!blob) throw new Error("Download returned no file data");
 
         // AUDIO FIRST (handles audio/webm)
         const isBlobAudio = blob.type && /^audio\//.test(blob.type);
@@ -403,6 +404,7 @@ export default function DataPreviewScreen() {
       if (Platform.OS === "web") {
         // Web: downloadFile returns { blob, contentLength, mimeType }
         const { blob } = await fileService.downloadFile(nodeId);
+        if (!blob) throw new Error("Download returned no file data");
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -587,15 +589,13 @@ export default function DataPreviewScreen() {
         return;
       }
 
-      // Upload via replaceFile
-      const formData = new FormData();
+      // replaceFile builds its own FormData, so hand it the File directly.
       // On web, wrap blob in File so filename is sent
       const file =
         Platform.OS === "web"
           ? new File([blob], finalFilename, { type: blob.type })
           : (blob as any);
-      formData.append("file", file as any, finalFilename);
-      await fileService.replaceFile(nodeId as string, formData);
+      await fileService.replaceFile(nodeId as string, file);
       // Keep current editing mode; do not force exit on save
       setDirty(false);
       // Clear draft after successful save

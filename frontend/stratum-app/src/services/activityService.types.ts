@@ -67,7 +67,7 @@ export interface ActivityExtraData {
   new_role?: string;
   old_name?: string;
   new_name?: string;
-  new_owner_id?: number;
+  new_owner_id?: string;
   form_type?: string;
   record_id?: string;
   file_id?: string;
@@ -76,8 +76,8 @@ export interface ActivityExtraData {
 
 /** A single activity entry in a project timeline. */
 export interface ProjectActivity {
-  id: number;
-  project_id: number;
+  id: string;
+  project_id: string;
   user_id: string;
   activity_type: ActivityType | string;
   extra_data?: ActivityExtraData;

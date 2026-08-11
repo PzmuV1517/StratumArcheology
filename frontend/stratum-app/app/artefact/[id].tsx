@@ -221,8 +221,7 @@ export default function ArtefactDetail() {
       let parsedMeta: ArtefactMeta | null = null;
       if (metaFile) {
         try {
-          const res = await fileService.downloadFile(metaFile.id);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(metaFile.id);
           if (text) {
             parsedMeta = JSON.parse(text);
             setMeta(parsedMeta);
@@ -298,8 +297,7 @@ export default function ArtefactDetail() {
     } else {
       if (!noteContents.has(noteId)) {
         try {
-          const res = await fileService.downloadFile(noteId);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(noteId);
           setNoteContents((prev) => new Map(prev).set(noteId, text));
         } catch (e) {
           console.error("Failed to load note", e);
@@ -384,8 +382,7 @@ export default function ArtefactDetail() {
       let existing: Partial<ArtefactManifest> | undefined = undefined;
       if (existingMetaFile) {
         try {
-          const res = await fileService.downloadFile(existingMetaFile.id);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(existingMetaFile.id);
           if (text) existing = JSON.parse(text);
         } catch {}
       }
@@ -428,8 +425,7 @@ export default function ArtefactDetail() {
       if (!existingMetaFile) return;
       let existing: any = {};
       try {
-        const res = await fileService.downloadFile(existingMetaFile.id);
-        const text = await res.blob.text();
+        const text = await fileService.downloadFileAsText(existingMetaFile.id);
         if (text) existing = JSON.parse(text);
       } catch {}
       const updated = { ...existing, ...patch, updatedAt: new Date().toISOString() };
