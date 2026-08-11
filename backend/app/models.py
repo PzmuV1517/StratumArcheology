@@ -918,7 +918,10 @@ class ProjectAISummary(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     user_id = Column(
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False

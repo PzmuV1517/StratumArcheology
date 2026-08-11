@@ -211,7 +211,9 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
         # Local auth first (for local mode and local users in hybrid mode).
         if settings.local_auth_enabled:
-            local_user = _authenticate_local_user(normalized_email, request.password, db)
+            local_user = _authenticate_local_user(
+                normalized_email, request.password, db
+            )
             if local_user:
                 jwt_token = _issue_api_jwt(
                     user_id=local_user.id,
@@ -483,7 +485,10 @@ async def verify_firebase_token(
 
         resolved_provider = infer_auth_provider(decoded_token, firebase_user)
 
-        if not is_google_provider(resolved_provider) and not firebase_user.email_verified:
+        if (
+            not is_google_provider(resolved_provider)
+            and not firebase_user.email_verified
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Email not verified. Check your inbox for the verification link.",

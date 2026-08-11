@@ -80,7 +80,9 @@ async def transcribe_note_audio(
     'completed' or 'failed'. Emits a WebSocket note update on finish.
     """
     if _model is None:
-        logger.warning("Whisper model not loaded — transcription skipped for %s", note_id)
+        logger.warning(
+            "Whisper model not loaded — transcription skipped for %s", note_id
+        )
         db = SessionLocal()
         try:
             note = db.query(Note).filter(Note.id == note_id).first()
@@ -104,7 +106,9 @@ async def transcribe_note_audio(
         # Download audio bytes from MinIO
         audio_bytes = await minio_client.get_file(storage_path)
         if not audio_bytes:
-            raise RuntimeError(f"Could not download audio from MinIO: {storage_path}")
+            raise RuntimeError(
+                f"Could not download audio from MinIO: {storage_path}"
+            )
 
         # Write to a temp file (Whisper needs a path, not raw bytes)
         ext = filename.rsplit(".", 1)[-1] if "." in filename else "webm"
@@ -139,7 +143,9 @@ async def transcribe_note_audio(
                 note.transcription_status = "failed"
                 db.commit()
         except Exception:
-            logger.exception("Failed to mark transcription as failed for note %s", note_id)
+            logger.exception(
+                "Failed to mark transcription as failed for note %s", note_id
+            )
         return
     finally:
         db.close()

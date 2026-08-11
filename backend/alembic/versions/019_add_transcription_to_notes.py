@@ -26,7 +26,10 @@ def upgrade() -> None:
     op.add_column(
         "notes",
         sa.Column(
-            "transcription_modified", sa.Boolean(), nullable=False, server_default="false"
+            "transcription_modified",
+            sa.Boolean(),
+            nullable=False,
+            server_default="false",
         ),
     )
     op.add_column(

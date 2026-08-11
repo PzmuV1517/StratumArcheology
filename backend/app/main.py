@@ -75,7 +75,9 @@ if firebase_ready:
 elif settings.firebase_auth_enabled:
     logger.warning("Firebase unavailable - Google/Firebase auth will be disabled")
 else:
-    logger.info("Firebase auth disabled by configuration", auth_mode=settings.AUTH_MODE)
+    logger.info(
+        "Firebase auth disabled by configuration", auth_mode=settings.AUTH_MODE
+    )
 
 # =============================================================================
 # DATABASE MIGRATIONS
@@ -124,6 +126,7 @@ async def _capture_base_url(request: Request, call_next):
     if request.url.path.startswith("/api"):
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     return response
+
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -262,7 +265,9 @@ async def system_status(request: Request):
     base_url = str(request.base_url).rstrip("/")
     return {
         "status": "operational" if healthy else "degraded",
-        "started_at": getattr(app.state, "started_at_iso", _process_started_at.isoformat()),
+        "started_at": getattr(
+            app.state, "started_at_iso", _process_started_at.isoformat()
+        ),
         "uptime_seconds": round(_get_uptime_seconds(), 2),
         "resources": {
             "memory_rss_mb": _get_memory_rss_mb(),
@@ -309,7 +314,9 @@ async def _start_backup_scheduler():
 @app.on_event("startup")
 async def _load_whisper():
     if settings.DISABLE_WHISPER:
-        logger.info("Whisper disabled via DISABLE_WHISPER=true — skipping model load")
+        logger.info(
+            "Whisper disabled via DISABLE_WHISPER=true — skipping model load"
+        )
         return
     try:
         loop = __import__("asyncio").get_running_loop()

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 FieldType = str
 
 
@@ -28,7 +27,7 @@ class FormSection:
     label: str
     required: bool = False
     fields: tuple[FormField, ...] = ()
-    subsections: tuple["FormSection", ...] = ()
+    subsections: tuple[FormSection, ...] = ()
 
 
 EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
@@ -40,15 +39,20 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
             FormField("denumire", "Denumire", "text", required=True),
             FormField("cod_lmi", "Cod LMI", "text"),
             FormField("cod_ran", "Cod RAN", "text"),
-            FormField("statut", "Statut", "select", options=(
-                "declasat_total",
-                "declasat_partial",
-                "in_procedura_clasare",
-                "clasat",
-                "in_litigiu",
-                "ran",
-                "susceptibil",
-            )),
+            FormField(
+                "statut",
+                "Statut",
+                "select",
+                options=(
+                    "declasat_total",
+                    "declasat_partial",
+                    "in_procedura_clasare",
+                    "clasat",
+                    "in_litigiu",
+                    "ran",
+                    "susceptibil",
+                ),
+            ),
         ),
     ),
     FormSection(
@@ -81,7 +85,12 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
                             "alte_denumiri",
                         ),
                     ),
-                    FormField("inventar_aferent", "Inventar aferent", "multi_select", multiple=True),
+                    FormField(
+                        "inventar_aferent",
+                        "Inventar aferent",
+                        "multi_select",
+                        multiple=True,
+                    ),
                     FormField("datare_inceput", "Datare inceput", "date"),
                     FormField("datare_sfarsit", "Datare sfarsit", "date"),
                     FormField("justificare", "Justificare", "long_text"),
@@ -95,8 +104,19 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         label="2. Localizare",
         required=True,
         fields=(
-            FormField("tip", "Tip", "select", required=True, options=("actuala", "anterioara")),
-            FormField("precizie_localizare", "Precizia localizarii", "select", required=True),
+            FormField(
+                "tip",
+                "Tip",
+                "select",
+                required=True,
+                options=("actuala", "anterioara"),
+            ),
+            FormField(
+                "precizie_localizare",
+                "Precizia localizarii",
+                "select",
+                required=True,
+            ),
             FormField("data", "Data", "date", required=True),
             FormField("judet", "Judet", "text", required=True),
             FormField("uat", "UAT", "text", required=True),
@@ -109,7 +129,9 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
                 label="Adresa",
                 fields=(
                     FormField("tip_artera", "Tip artera", "select", required=True),
-                    FormField("denumire_artera", "Denumire artera", "text", required=True),
+                    FormField(
+                        "denumire_artera", "Denumire artera", "text", required=True
+                    ),
                     FormField("numar_postal", "Numar postal", "text", required=True),
                     FormField("cod_postal", "Cod postal", "text"),
                     FormField(
@@ -143,11 +165,18 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
                 key="referinte_cadastrale",
                 label="Referinte cadastrale",
                 fields=(
-                    FormField("numar_carte_funciara", "Numar carte funciara", "text"),
+                    FormField(
+                        "numar_carte_funciara", "Numar carte funciara", "text"
+                    ),
                     FormField("numar_cadastru", "Numar cadastru", "text"),
                     FormField("numar_parcela", "Numar parcela", "text"),
                     FormField("suprafata_parcela", "Suprafata parcela", "number"),
-                    FormField("unitate_masura", "Unitate masura", "select", options=("mp", "ha")),
+                    FormField(
+                        "unitate_masura",
+                        "Unitate masura",
+                        "select",
+                        options=("mp", "ha"),
+                    ),
                 ),
             ),
             FormSection(
@@ -166,8 +195,15 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         key="tip_proprietate",
         label="3. Tip de proprietate",
         fields=(
-            FormField("tip", "Tip", "select", required=True, options=("actual", "anterior")),
-            FormField("tip_regim", "Tipul regimului de proprietate", "select", required=True),
+            FormField(
+                "tip", "Tip", "select", required=True, options=("actual", "anterior")
+            ),
+            FormField(
+                "tip_regim",
+                "Tipul regimului de proprietate",
+                "select",
+                required=True,
+            ),
             FormField("data_inceput", "Data inceput", "date"),
             FormField("data_sfarsit", "Data sfarsit", "date"),
             FormField("justificare", "Justificare", "long_text"),
@@ -178,9 +214,15 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         key="programe_functionale",
         label="3.3 Programe functionale, date privind folosinta",
         fields=(
-            FormField("clasificare_destinatie", "Clasificare dupa destinatie", "long_text"),
+            FormField(
+                "clasificare_destinatie", "Clasificare dupa destinatie", "long_text"
+            ),
             FormField("destinatia_terenului", "Destinatia terenului", "long_text"),
-            FormField("utilizare_cladiri", "Date privind utilizarea cladirilor", "long_text"),
+            FormField(
+                "utilizare_cladiri",
+                "Date privind utilizarea cladirilor",
+                "long_text",
+            ),
             FormField("conditii_utilizare", "Conditii de utilizare", "long_text"),
             FormField("conditii_exploatare", "Conditii de exploatare", "long_text"),
         ),
@@ -189,12 +231,22 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         key="datare",
         label="4. Datarea obiectivului",
         fields=(
-            FormField("tip_istoric_clasare", "Tip in raport cu istoricul de clasare", "select", required=True),
+            FormField(
+                "tip_istoric_clasare",
+                "Tip in raport cu istoricul de clasare",
+                "select",
+                required=True,
+            ),
             FormField("inventar_aferent", "Inventar aferent", "select"),
             FormField("epoca", "Epoca", "long_text"),
             FormField("secol", "Secol", "long_text"),
             FormField("interval_date", "Interval de date", "long_text"),
-            FormField("atestare_documentara", "Atestare documentara", "long_text", required=True),
+            FormField(
+                "atestare_documentara",
+                "Atestare documentara",
+                "long_text",
+                required=True,
+            ),
             FormField("observatii", "Observatii", "long_text"),
         ),
     ),
@@ -204,7 +256,9 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         fields=(
             FormField("istoric", "Istoric", "long_text", required=True),
             FormField("evenimente_istorice", "Evenimente istorice", "long_text"),
-            FormField("persoane_organizatii", "Persoane/organizatii asociate", "long_text"),
+            FormField(
+                "persoane_organizatii", "Persoane/organizatii asociate", "long_text"
+            ),
         ),
     ),
     FormSection(
@@ -216,9 +270,15 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
             FormField("obiectiv_individual", "Obiectiv individual", "long_text"),
             FormField("structura", "Structura", "long_text"),
             FormField("sistem_acoperire", "Sistem acoperire", "long_text"),
-            FormField("elemente_finisaj", "Elemente nestructurale si de finisaj", "long_text"),
+            FormField(
+                "elemente_finisaj",
+                "Elemente nestructurale si de finisaj",
+                "long_text",
+            ),
             FormField("componente_artistice", "Componente artistice", "long_text"),
-            FormField("instalatii_echipamente", "Instalatii si echipamente", "long_text"),
+            FormField(
+                "instalatii_echipamente", "Instalatii si echipamente", "long_text"
+            ),
             FormField("inscriptii", "Inscriptii", "long_text"),
         ),
     ),
@@ -235,7 +295,12 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         key="stare_conservare_riscuri",
         label="8. Stare de conservare si riscuri",
         fields=(
-            FormField("stare_generala", "Starea generala de conservare", "select", required=True),
+            FormField(
+                "stare_generala",
+                "Starea generala de conservare",
+                "select",
+                required=True,
+            ),
             FormField("data_evaluarii", "Data evaluarii", "date", required=True),
             FormField("riscuri", "Riscuri", "long_text"),
             FormField("probabilitate", "Probabilitate (P)", "number"),
@@ -243,7 +308,9 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
             FormField("nivel_risc", "Nivel risc (R)", "number"),
             FormField("masuri", "Masuri", "long_text"),
             FormField("recomandari", "Recomandari", "long_text"),
-            FormField("conditii_intretinere", "Conditiile de intretinere", "long_text"),
+            FormField(
+                "conditii_intretinere", "Conditiile de intretinere", "long_text"
+            ),
         ),
     ),
     FormSection(
@@ -260,19 +327,38 @@ EMONUMENT_FORM_SCHEMA: tuple[FormSection, ...] = (
         label="9. Protectie si valorificare",
         fields=(
             FormField("lmi_administrativ", "LMI - date administrative", "long_text"),
-            FormField("criterii_evaluare_globala", "Criterii de evaluare globala", "long_text", required=True),
-            FormField("proceduri_protectie", "Proceduri privind regimul de protectie", "long_text"),
+            FormField(
+                "criterii_evaluare_globala",
+                "Criterii de evaluare globala",
+                "long_text",
+                required=True,
+            ),
+            FormField(
+                "proceduri_protectie",
+                "Proceduri privind regimul de protectie",
+                "long_text",
+            ),
             FormField("ran_date", "RAN - date administrative", "long_text"),
-            FormField("lista_patrimoniului_mondial", "Lista patrimoniului mondial", "long_text"),
+            FormField(
+                "lista_patrimoniului_mondial",
+                "Lista patrimoniului mondial",
+                "long_text",
+            ),
             FormField("lista_indicativa", "Lista indicativa", "long_text"),
-            FormField("marca_patrimoniului_european", "Marca patrimoniului european", "long_text"),
+            FormField(
+                "marca_patrimoniului_european",
+                "Marca patrimoniului european",
+                "long_text",
+            ),
             FormField("alte_instrumente", "Alte instrumente", "long_text"),
         ),
     ),
 )
 
 
-def schema_to_dict(sections: tuple[FormSection, ...] = EMONUMENT_FORM_SCHEMA) -> list[dict]:
+def schema_to_dict(
+    sections: tuple[FormSection, ...] = EMONUMENT_FORM_SCHEMA,
+) -> list[dict]:
     """Serialize immutable schema objects for API responses."""
 
     def _field_to_dict(field: FormField) -> dict:

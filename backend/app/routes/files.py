@@ -172,7 +172,9 @@ async def storage_proxy(bucket: str, path: str):
     API, avoiding direct MinIO ``localhost`` presigned URLs.
     """
     if bucket not in _ALLOWED_BUCKETS:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
 
     if not minio_client.client:
         raise HTTPException(
@@ -1778,37 +1780,6 @@ async def get_files_shared_by_me(
     return files
 
 
-@router.get("/project/{project_id}/users-folder", response_model=list[FileNodeBase])
-async def list_users_folder(
-    project_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """List contents of users folder with privacy filtering"""
-    check_project_permission(project_id, current_user, db)
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    users_folder = await ensure_users_folder(project_id, db)
-
-    # Get all user folders
-    user_folders = (
-        db.query(FileNode)
-        .filter(
-            FileNode.parent_id == users_folder.id,
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .all()
-    )
-
-    # Project leader can see all folders
-    if project.owner_id == current_user.id:
-        return user_folders
-
-    # Regular users can only see their own folder
-    visible_folders = [f for f in user_folders if f.owner_id == current_user.id]
-    return visible_folders
-
-
 @router.get("/info/{node_id}", response_model=FileNodeBase)
 async def get_file_info(
     node_id: str,
@@ -1826,29 +1797,3 @@ async def get_file_info(
         raise HTTPException(status_code=403, detail="Access denied")
 
     return node
-
-
-@router.get("/project/{project_id}/files-info", response_model=list[FileNodeBase])
-async def get_files_info_batch(
-    project_id: str,
-    node_ids: str,  # Comma-separated list of node IDs
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get info for multiple files at once (for offline sync)"""
-    check_project_permission(project_id, current_user, db)
-
-    ids = [id.strip() for id in node_ids.split(",") if id.strip()]
-    if not ids:
-        return []
-
-    nodes = (
-        db.query(FileNode)
-        .filter(FileNode.id.in_(ids), FileNode.project_id == project_id)
-        .all()
-    )
-
-    # Filter by access
-    accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
-
-    return accessible_nodes

@@ -19,12 +19,24 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column("projects", sa.Column("public_history_review", sa.Text(), nullable=True))
-    op.add_column("projects", sa.Column("public_history_provider", sa.String(), nullable=True))
-    op.add_column("projects", sa.Column("public_history_generated_at", sa.DateTime(), nullable=True))
+    op.add_column(
+        "projects", sa.Column("public_history_review", sa.Text(), nullable=True)
+    )
+    op.add_column(
+        "projects", sa.Column("public_history_provider", sa.String(), nullable=True)
+    )
     op.add_column(
         "projects",
-        sa.Column("history_needs_refresh", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("public_history_generated_at", sa.DateTime(), nullable=True),
+    )
+    op.add_column(
+        "projects",
+        sa.Column(
+            "history_needs_refresh",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.true(),
+        ),
     )
 
 

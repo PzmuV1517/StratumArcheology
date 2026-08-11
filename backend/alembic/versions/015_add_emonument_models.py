@@ -6,17 +6,19 @@ Create Date: 2026-03-18 20:53:22.699111
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "4bbfeda351c1"
-down_revision: Union[str, Sequence[str], None] = "c2332d99d8d6"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "c2332d99d8d6"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 FISA_INSTANCE_STATUS_ENUM = postgresql.ENUM(
@@ -95,7 +97,9 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=False),
         sa.Column("monument_id", sa.String(), nullable=False),
         sa.Column("allocated_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["monument_id"], ["monuments.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["monument_id"], ["monuments.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -139,7 +143,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["device_id"], ["device_whitelist.device_id"], ondelete="SET NULL"
         ),
-        sa.ForeignKeyConstraint(["monument_id"], ["monuments.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["monument_id"], ["monuments.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -149,7 +155,9 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.drop_table("fisa_instances")
     op.drop_table("monument_allocations")
-    op.drop_index(op.f("ix_device_whitelist_device_id"), table_name="device_whitelist")
+    op.drop_index(
+        op.f("ix_device_whitelist_device_id"), table_name="device_whitelist"
+    )
     op.drop_table("device_whitelist")
     op.drop_index(op.f("ix_monuments_lmi_code"), table_name="monuments")
     op.drop_table("monuments")

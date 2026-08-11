@@ -20,7 +20,7 @@ from app.dependencies import get_current_user
 from app.routes.convert import router as convert_router
 
 
-def _override_get_db() -> Generator[object, None, None]:
+def _override_get_db() -> Generator[object]:
     """Provide a dummy DB dependency for auth checks in tests."""
     yield object()
 
@@ -66,7 +66,9 @@ def test_convert_pointcloud_post_requires_auth() -> None:
     assert response.status_code == 401
 
 
-def test_convert_pointcloud_get_remote_mode_disabled_for_authenticated_user() -> None:
+def test_convert_pointcloud_get_remote_mode_disabled_for_authenticated_user() -> (
+    None
+):
     app = _build_app(authenticated=True)
 
     with TestClient(app) as client:

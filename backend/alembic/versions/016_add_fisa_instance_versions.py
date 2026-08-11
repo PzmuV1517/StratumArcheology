@@ -6,17 +6,19 @@ Create Date: 2026-03-18 21:10:00.000000
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = "f5e0c2199d1a"
-down_revision: Union[str, Sequence[str], None] = "4bbfeda351c1"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "4bbfeda351c1"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 FISA_INSTANCE_STATUS_ENUM = postgresql.ENUM(
@@ -44,9 +46,7 @@ def upgrade() -> None:
         sa.Column("rejection_reason", sa.Text(), nullable=True),
         sa.Column("changed_by", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["changed_by"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["changed_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["fisa_instance_id"], ["fisa_instances.id"], ondelete="CASCADE"
         ),

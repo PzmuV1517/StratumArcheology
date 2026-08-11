@@ -58,7 +58,9 @@ def initialize_firebase(*, strict: bool = True) -> bool:
             "type": "service_account",
             "project_id": settings.FIREBASE_PROJECT_ID,
             "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
-            "private_key": (settings.FIREBASE_PRIVATE_KEY or "").replace("\\n", "\n"),
+            "private_key": (settings.FIREBASE_PRIVATE_KEY or "").replace(
+                "\\n", "\n"
+            ),
             "client_email": settings.FIREBASE_CLIENT_EMAIL,
             "client_id": settings.FIREBASE_CLIENT_ID,
             "auth_uri": settings.FIREBASE_AUTH_URI,

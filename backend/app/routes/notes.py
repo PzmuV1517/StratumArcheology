@@ -28,6 +28,7 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
 from app.minio_client import minio_client
@@ -39,7 +40,6 @@ from app.models import (
     NoteFileLink,
     User,
 )
-from app.config import settings
 from app.schemas import NoteCreate, NoteResponse, NoteUpdate
 from app.transcription import transcribe_note_audio
 from app.websocket import emit_content_update, log_activity
@@ -265,60 +265,6 @@ async def update_note(
     await emit_content_update(note.project_id, "notes")
 
     return note
-
-
-@router.post("/{note_id}/sync-from-file", response_model=NoteResponse)
-async def sync_note_from_file(
-    note_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Sync note content from its associated txt file"""
-    note = db.query(Note).filter(Note.id == note_id).first()
-
-    if not note:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Note not found"
-        )
-
-    check_project_permission(note.project_id, current_user, db)
-
-    # Get the linked file node
-    file_link = (
-        db.query(NoteFileLink).filter(NoteFileLink.note_id == note_id).first()
-    )
-    if (
-        not file_link
-        or not file_link.file_node
-        or not file_link.file_node.storage_path
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No associated txt file found",
-        )
-
-    try:
-        # Get content from txt file
-        file_data = await minio_client.get_file(file_link.file_node.storage_path)
-        file_content = file_data.decode("utf-8")
-
-        # Update note content and title from filename
-        note.content = file_content
-        filename = file_link.file_node.name
-        if filename.endswith(".txt"):
-            note.title = filename[:-4]  # Remove .txt extension
-        note.updated_at = datetime.utcnow()
-
-        db.commit()
-        db.refresh(note)
-
-        return note
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to sync from file: {str(e)}",
-        )
 
 
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -641,7 +587,9 @@ async def reset_transcription(
     check_project_permission(note.project_id, current_user, db)
 
     if not note.transcription_original:
-        raise HTTPException(status_code=400, detail="No original transcription to reset to")
+        raise HTTPException(
+            status_code=400, detail="No original transcription to reset to"
+        )
 
     note.transcription = note.transcription_original
     note.transcription_modified = False

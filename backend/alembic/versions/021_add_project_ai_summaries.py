@@ -30,11 +30,17 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("project_id", "user_id", name="uq_project_user_ai_summary"),
+        sa.UniqueConstraint(
+            "project_id", "user_id", name="uq_project_user_ai_summary"
+        ),
     )
-    op.create_index("ix_project_ai_summaries_project_id", "project_ai_summaries", ["project_id"])
+    op.create_index(
+        "ix_project_ai_summaries_project_id", "project_ai_summaries", ["project_id"]
+    )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_project_ai_summaries_project_id", table_name="project_ai_summaries")
+    op.drop_index(
+        "ix_project_ai_summaries_project_id", table_name="project_ai_summaries"
+    )
     op.drop_table("project_ai_summaries")

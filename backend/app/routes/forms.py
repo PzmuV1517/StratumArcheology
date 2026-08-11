@@ -104,12 +104,7 @@ def _ensure_locked_csv_file(
         writer = csv.writer(output)
         writer.writerow(header)
         data_bytes = output.getvalue().encode("utf-8")
-        # Upload and create node
-        awaitable = minio_client.upload_file(
-            data_bytes, object_path, content_type="text/csv"
-        )
-        # minio_client methods are async; but FastAPI handlers will call this inside async context
-        # We'll execute upload in the handler; here we just prepare
+        # No upload here: every caller writes the full header+rows CSV right after.
         node = FileNode(
             project_id=project_id,
             parent_id=parent_id,

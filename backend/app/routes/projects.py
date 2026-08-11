@@ -43,8 +43,6 @@ from app.models import (
     UserRole,
     project_members,
 )
-
-_log = get_logger(__name__)
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -62,6 +60,8 @@ from app.websocket import (
     log_activity,
 )
 from app.wheeler_renderer import generate_wheeler_svg
+
+_log = get_logger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -273,7 +273,9 @@ async def _generate_history_background(project_id: str) -> None:
 
         prompt = PROMPT_SITE_HISTORY.format(
             project_name=project.name,
-            lmi_line=f"LMI Code: {project.ran_lmi_id}\n" if project.ran_lmi_id else "",
+            lmi_line=f"LMI Code: {project.ran_lmi_id}\n"
+            if project.ran_lmi_id
+            else "",
             description=project.description or "No description provided.",
             created_at=(
                 project.created_at.strftime("%B %d, %Y")
@@ -281,8 +283,11 @@ async def _generate_history_background(project_id: str) -> None:
                 else "Unknown"
             ),
             member_count=db.execute(
-                select(func.count()).where(project_members.c.project_id == project_id)
-            ).scalar() or 0,
+                select(func.count()).where(
+                    project_members.c.project_id == project_id
+                )
+            ).scalar()
+            or 0,
             note_count=len(notes),
             notes_text=notes_text,
             activity_count=len(activities),
@@ -968,8 +973,6 @@ async def update_member_role(
         else role_data.role.value
     )
 
-    role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
-
     # Leaders can do anything (except promote to leader, that's transfer)
     if current_user_role == "leader":
         if new_role == "leader":
@@ -1217,6 +1220,7 @@ async def get_wheeler_data(
         "render_version": project.wheeler_render_version,
     }
 
+
 @router.get("/{project_id}/wheeler/render")
 async def get_wheeler_render(
     project_id: str,
@@ -1225,8 +1229,8 @@ async def get_wheeler_render(
 ):
     """Proxy the publication SVG from MinIO so mobile clients don't need direct
     MinIO access (their 'localhost' resolves to the device, not the server)."""
-    from fastapi.responses import Response
     import httpx
+    from fastapi.responses import Response
 
     check_project_permission(project_id, current_user, db)
 
@@ -1242,7 +1246,9 @@ async def get_wheeler_render(
             "wheeler-renders", project.wheeler_render_path
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Could not generate presigned URL: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Could not generate presigned URL: {exc}"
+        ) from exc
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -1254,7 +1260,9 @@ async def get_wheeler_render(
             headers={"Cache-Control": "private, max-age=300"},
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch SVG: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Failed to fetch SVG: {exc}"
+        ) from exc
 
 
 @router.put("/{project_id}/wheeler")

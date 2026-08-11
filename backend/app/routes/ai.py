@@ -55,7 +55,9 @@ def _changes_since(db: Session, project_id: str, since: datetime | None) -> int:
     return q.scalar() or 0
 
 
-def _build_response(stored: ProjectAISummary | None, changes: int) -> AISummaryResponse:
+def _build_response(
+    stored: ProjectAISummary | None, changes: int
+) -> AISummaryResponse:
     threshold = settings.AI_SUMMARY_CHANGE_THRESHOLD
     return AISummaryResponse(
         summary=stored.summary if stored else None,
@@ -118,9 +120,13 @@ async def generate_project_summary(
         sa_select(project_members).where(project_members.c.project_id == project_id)
     ).fetchall()
 
-    notes_text = "\n".join(
-        f"- {n.title}" + (f": {n.content[:200]}" if n.content else "") for n in notes
-    ) or "No notes recorded yet."
+    notes_text = (
+        "\n".join(
+            f"- {n.title}" + (f": {n.content[:200]}" if n.content else "")
+            for n in notes
+        )
+        or "No notes recorded yet."
+    )
 
     activities_text = (
         "\n".join(f"- {a.description}" for a in activities) or "No recent activity."
@@ -149,10 +155,13 @@ async def generate_project_summary(
             if isinstance(exc, anthropic.APIStatusError)
             else exc.response.status_code
         )
-        logger.error("AI provider error", status=status, error=str(exc), project_id=project_id)
+        logger.error(
+            "AI provider error", status=status, error=str(exc), project_id=project_id
+        )
         if status == 429:
             raise HTTPException(
-                status_code=429, detail="AI rate limit reached. Please wait and try again."
+                status_code=429,
+                detail="AI rate limit reached. Please wait and try again.",
             )
         raise HTTPException(status_code=502, detail=f"AI service error: {exc}")
     except Exception as exc:

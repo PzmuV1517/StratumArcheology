@@ -81,10 +81,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # AI Summary
-    AI_SUMMARY_CHANGE_THRESHOLD: int = 15  # activities since last summary before refresh is offered
+    AI_SUMMARY_CHANGE_THRESHOLD: int = (
+        15  # activities since last summary before refresh is offered
+    )
 
     # Transcription (local Whisper)
-    DISABLE_WHISPER: bool = False  # set True to skip model load and transcription entirely
+    DISABLE_WHISPER: bool = (
+        False  # set True to skip model load and transcription entirely
+    )
     WHISPER_MODEL: str = "base"  # tiny | base | small | medium | large
 
     # Rate Limiting

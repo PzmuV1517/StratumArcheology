@@ -29,12 +29,12 @@ from dotenv import dotenv_values
 
 # Anthropic Claude
 CLAUDE_HAIKU = "claude-haiku-4-5-20251001"  # fast, cheap — routine tasks
-CLAUDE_SONNET = "claude-sonnet-4-6"         # balanced — most tasks
-CLAUDE_OPUS = "claude-opus-4-7"             # most capable — complex reasoning
+CLAUDE_SONNET = "claude-sonnet-4-6"  # balanced — most tasks
+CLAUDE_OPUS = "claude-opus-4-7"  # most capable — complex reasoning
 
 # Google Gemini
 GEMINI_FLASH_LITE = "gemini-2.0-flash-lite"  # fast, high RPM
-GEMINI_FLASH = "gemini-2.0-flash"            # standard
+GEMINI_FLASH = "gemini-2.0-flash"  # standard
 
 # ---------------------------------------------------------------------------
 # Provider defaults (used when the caller passes model=None)
@@ -45,8 +45,7 @@ _PROVIDER_DEFAULT_MODELS: dict[str, str] = {
 }
 
 _GEMINI_BASE_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models"
-    "/{model}:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
 
 # Path to the backend .env file (two levels up: app/ → backend/)
@@ -135,7 +134,9 @@ async def generate_summary(
     if cfg.provider == "ANTHROPIC":
         resolved_model = resolved_model or CLAUDE_HAIKU
         text = await _call_anthropic(cfg.api_key, prompt, resolved_model, max_tokens)
-        tier = resolved_model.split("-")[1].capitalize()  # haiku -> Haiku, sonnet -> Sonnet
+        tier = resolved_model.split("-")[
+            1
+        ].capitalize()  # haiku -> Haiku, sonnet -> Sonnet
         return text, f"Claude {tier}"
 
     if cfg.provider == "GEMINI":
@@ -149,7 +150,9 @@ async def generate_summary(
     )
 
 
-async def _call_anthropic(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
+async def _call_anthropic(
+    api_key: str, prompt: str, model: str, max_tokens: int = 1024
+) -> str:
     client = anthropic.AsyncAnthropic(api_key=api_key)
     message = await client.messages.create(
         model=model,
@@ -159,7 +162,9 @@ async def _call_anthropic(api_key: str, prompt: str, model: str, max_tokens: int
     return message.content[0].text
 
 
-async def _call_gemini(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
+async def _call_gemini(
+    api_key: str, prompt: str, model: str, max_tokens: int = 1024
+) -> str:
     url = _GEMINI_BASE_URL.format(model=model)
     headers = {
         "Content-Type": "application/json",

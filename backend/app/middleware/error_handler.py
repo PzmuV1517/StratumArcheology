@@ -118,10 +118,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         upload_tracker = UploadCleanupTracker()
         request.state.upload_tracker = upload_tracker
 
-        # Extract user info from request state (set by auth dependency)
-        user_id = None
-        project_id = None
-
         try:
             # Log incoming request
             logger.info(

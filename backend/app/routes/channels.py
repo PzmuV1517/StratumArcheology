@@ -83,7 +83,7 @@ def _ensure_default_channel(
     """Ensure a default #general channel exists for the project, creating it if needed."""
     ch = (
         db.query(Channel)
-        .filter(Channel.project_id == project_id, Channel.is_default == True)
+        .filter(Channel.project_id == project_id, Channel.is_default.is_(True))
         .first()
     )
     if ch:
