@@ -308,11 +308,15 @@ def _random_secret() -> str:
 
 
 def _default_backend_env() -> str:
+    # Every credential here is generated per install. Shipping fixed defaults
+    # would put the admin password of every self-hosted deployment in this
+    # public repo, and the maintainer account bypasses project permissions.
     postgres_user = "stratum_user"
-    postgres_password = "stratum_secure_pass_2025"
+    postgres_password = _random_secret()
     postgres_db = "stratum_db"
     minio_access = "stratum_minio_access"
-    minio_secret = "stratum_minio_secret_2026"
+    minio_secret = _random_secret()
+    maintainer_password = _random_secret()
 
     return "\n".join(
         [
@@ -332,7 +336,7 @@ def _default_backend_env() -> str:
             "MINIO_BUCKET_NAME=stratum-files",
             "MINIO_USE_SSL=false",
             "MAINTAINER_EMAIL=maintainer@localhost",
-            "MAINTAINER_PASSWORD=maintainer-local-password",
+            f"MAINTAINER_PASSWORD={maintainer_password}",
             "APP_SECRET_KEY=" + _random_secret(),
             "APP_DEBUG=False",
             "APP_HOST=0.0.0.0",
@@ -355,8 +359,17 @@ def _ensure_backend_env() -> None:
     if backend_env_file.exists():
         return
 
-    backend_env_file.write_text(_default_backend_env(), encoding="utf-8")
-    _print(f"Created {backend_env_file} with local self-host defaults")
+    env_text = _default_backend_env()
+    backend_env_file.write_text(env_text, encoding="utf-8")
+    backend_env_file.chmod(0o600)
+    _print(f"Created {backend_env_file} with freshly generated credentials")
+
+    # The maintainer password is randomly generated, so show it once here.
+    # There is no other way for the operator to learn it.
+    for line in env_text.splitlines():
+        if line.startswith(("MAINTAINER_EMAIL=", "MAINTAINER_PASSWORD=")):
+            _print(f"  {line}")
+    _print(f"  (stored in {backend_env_file}, keep it out of version control)")
 
 
 def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:

@@ -9,6 +9,9 @@ No license is granted. Unauthorized copying, modification, distribution, or use 
 Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
+import hashlib
+import hmac
+import time
 from contextvars import ContextVar
 from io import BytesIO
 from typing import Optional
@@ -29,6 +32,44 @@ _request_base_url: ContextVar[str | None] = ContextVar(
 def set_request_base_url(url: str) -> None:
     """Called by middleware to capture the incoming request's base URL."""
     _request_base_url.set(url)
+
+
+def sign_storage_path(bucket: str, key: str, expires_at: int) -> str:
+    """Return the HMAC tag authorising a storage-proxy read of *key*.
+
+    The proxy is deliberately unauthenticated so that <img>, <video> and
+    native download code can fetch objects without setting an Authorization
+    header. This signature is what makes that safe: without it the proxy
+    URL would be a permanent public link to the object.
+    """
+    msg = f"{bucket}\n{key}\n{expires_at}".encode()
+    return hmac.new(
+        settings.JWT_SECRET_KEY.encode(), msg, hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def verify_storage_signature(bucket: str, key: str, exp: str, sig: str) -> bool:
+    """Check a storage-proxy signature, returning False if absent or stale."""
+    if not exp or not sig:
+        return False
+    try:
+        expires_at = int(exp)
+    except ValueError:
+        return False
+    if expires_at < time.time():
+        return False
+    return hmac.compare_digest(sign_storage_path(bucket, key, expires_at), sig)
+
+
+def _proxy_url(base_url: str, bucket: str, key: str, expiry: int) -> str:
+    """Build a signed, expiring storage-proxy URL for *key*."""
+    expires_at = int(time.time()) + expiry
+    return (
+        f"{base_url}api/files/storage/"
+        f"{quote(bucket, safe='')}"
+        f"/{quote(key, safe='/')}"
+        f"?exp={expires_at}&sig={sign_storage_path(bucket, key, expires_at)}"
+    )
 
 
 class MinIOClient:
@@ -147,11 +188,7 @@ class MinIOClient:
         """
         base_url = _request_base_url.get()
         if base_url:
-            return (
-                f"{base_url}api/files/storage/"
-                f"{quote(self.bucket_name, safe='')}"
-                f"/{quote(object_name, safe='/')}"
-            )
+            return _proxy_url(base_url, self.bucket_name, object_name, expiry)
 
         if not self.client:
             raise RuntimeError("MinIO client unavailable")
@@ -207,11 +244,7 @@ class MinIOClient:
         """
         base_url = _request_base_url.get()
         if base_url:
-            return (
-                f"{base_url}api/files/storage/"
-                f"{quote(bucket, safe='')}"
-                f"/{quote(key, safe='/')}"
-            )
+            return _proxy_url(base_url, bucket, key, expiry_seconds)
 
         if not self.client:
             raise RuntimeError("MinIO client unavailable")

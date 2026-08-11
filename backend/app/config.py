@@ -68,7 +68,9 @@ class Settings(BaseSettings):
 
     # App
     APP_SECRET_KEY: str
-    APP_DEBUG: bool = True
+    # Off by default: debug logging is verbose and echoes request detail, so
+    # a deployment that forgets to set it should get the quiet, safe mode.
+    APP_DEBUG: bool = False
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     ALLOWED_ORIGINS: str
@@ -147,6 +149,27 @@ class Settings(BaseSettings):
                 f"{self.auth_mode_normalized}: {missing_csv}"
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_hardening(self) -> "Settings":
+        """Refuse to boot a production server with obviously unsafe config."""
+        if self.ENVIRONMENT.strip().lower() != "production":
+            return self
+
+        problems = []
+        if len(self.JWT_SECRET_KEY) < 32:
+            problems.append("JWT_SECRET_KEY must be at least 32 characters")
+        if len(self.MAINTAINER_PASSWORD) < 16:
+            problems.append("MAINTAINER_PASSWORD must be at least 16 characters")
+        if "*" in self.allowed_origins_list:
+            problems.append(
+                "ALLOWED_ORIGINS cannot be '*' while credentials are allowed"
+            )
+        if problems:
+            raise ValueError(
+                "Unsafe production configuration: " + "; ".join(problems)
+            )
         return self
 
     @property

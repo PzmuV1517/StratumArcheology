@@ -37,7 +37,7 @@ from app.dependencies import (
     get_current_user,
     get_current_user_or_token,
 )
-from app.minio_client import minio_client
+from app.minio_client import minio_client, verify_storage_signature
 from app.models import (
     FileNode,
     FileNodeType,
@@ -165,15 +165,30 @@ _ALLOWED_BUCKETS: set[str] = {
 
 
 @router.get("/storage/{bucket}/{path:path}")
-async def storage_proxy(bucket: str, path: str):
+async def storage_proxy(
+    bucket: str,
+    path: str,
+    exp: str = Query("", description="Signature expiry (unix seconds)"),
+    sig: str = Query("", description="HMAC signature for this object"),
+):
     """Stream a MinIO object through the API.
 
     This makes stored files reachable from any device that can reach the
     API, avoiding direct MinIO ``localhost`` presigned URLs.
+
+    Unauthenticated by design so <img>/<video> tags and native downloads
+    can fetch without an Authorization header; the ``exp``/``sig`` pair
+    from :func:`sign_storage_path` is what gates access.
     """
     if bucket not in _ALLOWED_BUCKETS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
+
+    if not verify_storage_signature(bucket, path, exp, sig):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired storage link",
         )
 
     if not minio_client.client:

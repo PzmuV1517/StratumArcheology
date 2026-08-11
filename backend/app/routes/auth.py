@@ -11,13 +11,14 @@ No license is granted. Unauthorized copying, modification, distribution, or use 
 Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
 import firebase_admin.auth as firebase_auth
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,7 @@ from app.database import get_db
 from app.dependencies import build_maintainer_user, get_current_user
 from app.middleware import get_logger
 from app.models import User
+from app.rate_limiter import limiter
 from app.schemas import (
     AuthResponse,
     FirebaseTokenRequest,
@@ -188,15 +190,21 @@ async def send_firebase_oob_code(
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10 per minute")
+async def login(
+    request: Request,
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+):
     """Login with email and password - verified against Firebase Auth."""
     try:
-        normalized_email = request.email.strip().lower()
+        normalized_email = payload.email.strip().lower()
 
         # Maintainer account is managed from backend env variables.
-        if (
-            normalized_email == settings.MAINTAINER_EMAIL.strip().lower()
-            and request.password == settings.MAINTAINER_PASSWORD
+        # compare_digest: the maintainer bypasses every project permission
+        # check, so its password must not be guessable by timing.
+        if normalized_email == settings.MAINTAINER_EMAIL.strip().lower() and (
+            secrets.compare_digest(payload.password, settings.MAINTAINER_PASSWORD)
         ):
             maintainer_user = build_maintainer_user()
             jwt_token = _issue_api_jwt(
@@ -212,7 +220,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         # Local auth first (for local mode and local users in hybrid mode).
         if settings.local_auth_enabled:
             local_user = _authenticate_local_user(
-                normalized_email, request.password, db
+                normalized_email, payload.password, db
             )
             if local_user:
                 jwt_token = _issue_api_jwt(
@@ -235,7 +243,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         _ensure_firebase_auth_enabled()
 
         # 1. Verify password against Firebase Auth REST API
-        await verify_password_with_firebase(normalized_email, request.password)
+        await verify_password_with_firebase(normalized_email, payload.password)
 
         # 2. Read provider and status from Firebase account
         firebase_user = firebase_auth.get_user_by_email(normalized_email)
@@ -298,19 +306,24 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.exception(
-            "Login failed with unexpected error", email=request.email, error=str(e)
+            "Login failed with unexpected error", email=payload.email, error=str(e)
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authentication failed: {str(e)}",
+            detail="Authentication failed",
         )
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("5 per minute")
+async def register(
+    request: Request,
+    payload: RegisterRequest,
+    db: Session = Depends(get_db),
+):
     """Register new user and require immediate Firebase email verification."""
     try:
-        normalized_email = request.email.strip().lower()
+        normalized_email = payload.email.strip().lower()
 
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == normalized_email).first()
@@ -321,7 +334,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             )
 
         # Validate username
-        username = request.username.strip().lower()
+        username = payload.username.strip().lower()
         if len(username) < 3 or len(username) > 30:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -347,9 +360,9 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
                 firebase_uid=f"{LOCAL_UID_PREFIX}{uuid.uuid4().hex}",
                 email=normalized_email,
                 username=username,
-                display_name=request.display_name,
+                display_name=payload.display_name,
                 auth_provider=LOCAL_PROVIDER_ID,
-                password_hash=pwd_context.hash(request.password),
+                password_hash=pwd_context.hash(payload.password),
                 created_at=datetime.utcnow(),
                 last_login=datetime.utcnow(),
             )
@@ -373,8 +386,8 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # Create user in Firebase
         firebase_user = firebase_auth.create_user(
             email=normalized_email,
-            password=request.password,
-            display_name=request.display_name,
+            password=payload.password,
+            display_name=payload.display_name,
         )
 
         # Create user in our database
@@ -383,7 +396,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             firebase_uid=firebase_user.uid,
             email=normalized_email,
             username=username,
-            display_name=request.display_name,
+            display_name=payload.display_name,
             auth_provider=PASSWORD_PROVIDER_ID,
             created_at=datetime.utcnow(),
             last_login=None,
@@ -394,7 +407,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
         try:
             sign_in = await verify_password_with_firebase(
-                normalized_email, request.password
+                normalized_email, payload.password
             )
             id_token = sign_in.get("idToken")
             if not id_token:

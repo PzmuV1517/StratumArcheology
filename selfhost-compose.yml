@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-stratum_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stratum_secure_pass_2025}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (backend/.env)}
       POSTGRES_DB: ${POSTGRES_DB:-stratum_db}
     ports:
       - "${STRATUM_POSTGRES_PORT:-5432}:5432"
@@ -24,7 +24,7 @@ services:
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-stratum_minio_access}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-stratum_minio_secret_2026}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY (backend/.env)}
     ports:
       - "${STRATUM_MINIO_PORT:-9000}:9000"
       - "${STRATUM_MINIO_CONSOLE_PORT:-9001}:9001"
@@ -47,12 +47,12 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_USER: ${POSTGRES_USER:-stratum_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stratum_secure_pass_2025}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (backend/.env)}
       POSTGRES_DB: ${POSTGRES_DB:-stratum_db}
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-stratum_user}:${POSTGRES_PASSWORD:-stratum_secure_pass_2025}@postgres:5432/${POSTGRES_DB:-stratum_db}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-stratum_user}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD (backend/.env)}@postgres:5432/${POSTGRES_DB:-stratum_db}
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-stratum_minio_access}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-stratum_minio_secret_2026}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?set MINIO_SECRET_KEY (backend/.env)}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-stratum-files}
       MINIO_USE_SSL: "false"
       APP_HOST: 0.0.0.0
