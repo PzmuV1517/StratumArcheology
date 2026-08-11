@@ -25,15 +25,15 @@ import api from "../services/api";
  *  Onboarding Context  (web-only, swiper-based)
  *
  *  Manages two pieces of state:
- *    1. showPrompt  – the "Would you like a tour?" popup
- *    2. showOnboarding – the full-screen swiper onboarding
+ *    1. showPrompt  - the "Would you like a tour?" popup
+ *    2. showOnboarding - the full-screen swiper onboarding
  *
  *  DEV_ALWAYS_SHOW_ONBOARDING (below) can be toggled to `true`
  *  to force the prompt on every page refresh regardless of
  *  the backend flag.
  * ────────────────────────────────────────────────────────────── */
 
-/** 🔧  Dev toggle — set to `true` to see the prompt on every refresh */
+/** 🔧  Dev toggle - set to `true` to see the prompt on every refresh */
 export const DEV_ALWAYS_SHOW_ONBOARDING = false;
 
 interface OnboardingContextType {
@@ -41,7 +41,7 @@ interface OnboardingContextType {
   showPrompt: boolean;
   /** Whether the full onboarding swiper is open */
   showOnboarding: boolean;
-  /** User accepted — open the onboarding swiper */
+  /** User accepted - open the onboarding swiper */
   acceptOnboarding: () => void;
   /** User declined the initial prompt */
   declineOnboarding: () => Promise<void>;

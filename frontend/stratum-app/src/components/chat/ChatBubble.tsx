@@ -151,7 +151,7 @@ export default function ChatBubble({
         isGrouped && styles.rowGrouped,
       ]}
     >
-      {/* Avatar — tap to view profile (hidden when grouped) */}
+      {/* Avatar - tap to view profile (hidden when grouped) */}
       {!isOwnMessage &&
         (isGrouped ? (
           <View style={styles.avatarSpacer} />

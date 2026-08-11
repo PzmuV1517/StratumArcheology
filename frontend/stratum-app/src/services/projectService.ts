@@ -198,7 +198,7 @@ export const projectService = {
     asset: { uri: string; type?: string; name?: string },
   ): Promise<Project> => {
     // On native, use FileSystem.uploadAsync which correctly sends the file URI
-    // as a real binary multipart part — bypassing FormData serialization issues.
+    // as a real binary multipart part - bypassing FormData serialization issues.
     if (Platform.OS !== "web") {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -632,7 +632,7 @@ export default function CreateNoteScreen() {
               <View style={styles.noiseWarning}>
                 <Ionicons name="warning-outline" size={15} color="#B45309" />
                 <Text style={styles.noiseWarningText}>
-                  High background noise detected — transcription may be less
+                  High background noise detected - transcription may be less
                   accurate. Try recording in a quieter spot.
                 </Text>
               </View>

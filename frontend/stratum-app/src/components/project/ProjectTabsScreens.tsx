@@ -185,7 +185,7 @@ export function ProjectOverviewScreen() {
       applyAiResponse(res.data);
     } catch (err: any) {
       if (err.response?.status === 429) {
-        setAiError("Rate limit reached — wait a moment and try again.");
+        setAiError("Rate limit reached - wait a moment and try again.");
       } else {
         setAiError(
           err.response?.data?.detail ??
@@ -202,7 +202,7 @@ export function ProjectOverviewScreen() {
         month: "short",
         year: "numeric",
       })
-    : "—";
+    : "-";
 
   return (
     <ProjectTabGuard>

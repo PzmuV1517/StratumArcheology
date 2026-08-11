@@ -63,7 +63,7 @@ export default function EditProjectScreen() {
   const [ranLmiId, setRanLmiId] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  // Crop modal state (web only — native uses system crop UI)
+  // Crop modal state (web only - native uses system crop UI)
   const [cropImage, setCropImage] = useState<{
     uri: string;
     mimeType: string;
@@ -236,7 +236,7 @@ export default function EditProjectScreen() {
       // On web, show our custom crop modal
       setCropImage({ uri: asset.uri, mimeType });
     } else {
-      // On native, the system already cropped — upload directly
+      // On native, the system already cropped - upload directly
       await uploadCoverImage(asset.uri, mimeType);
     }
   };

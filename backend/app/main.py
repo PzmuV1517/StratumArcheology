@@ -315,7 +315,7 @@ async def _start_backup_scheduler():
 async def _load_whisper():
     if settings.DISABLE_WHISPER:
         logger.info(
-            "Whisper disabled via DISABLE_WHISPER=true — skipping model load"
+            "Whisper disabled via DISABLE_WHISPER=true - skipping model load"
         )
         return
     try:

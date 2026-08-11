@@ -1,8 +1,8 @@
 """
 AI-powered project summary routes.
 
-GET  /projects/{project_id}/ai-summary  — Fetch stored AI summary + change count.
-POST /projects/{project_id}/ai-summary  — Generate new summary, persist it, return result.
+GET  /projects/{project_id}/ai-summary - Fetch stored AI summary + change count.
+POST /projects/{project_id}/ai-summary - Generate new summary, persist it, return result.
 
 POST is rate-limited to 10 requests per minute per IP.
 """
@@ -146,7 +146,7 @@ async def generate_project_summary(
 
     try:
         summary_text, provider = await generate_summary(prompt, model=CLAUDE_HAIKU)
-        summary_text = summary_text.replace("—", ", ")
+        summary_text = summary_text.replace("-", ", ")
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except (anthropic.APIStatusError, httpx.HTTPStatusError) as exc:

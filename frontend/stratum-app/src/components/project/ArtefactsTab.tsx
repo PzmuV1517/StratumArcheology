@@ -262,7 +262,7 @@ export default function ArtefactsTab({
               <Text style={styles.cardTitle} numberOfLines={1}>
                 {meta?.name || folder.name}
               </Text>
-              <Text style={styles.cardMeta}>#{meta?.number ?? "—"}</Text>
+              <Text style={styles.cardMeta}>#{meta?.number ?? "-"}</Text>
             </TouchableOpacity>
           ))}
         </View>

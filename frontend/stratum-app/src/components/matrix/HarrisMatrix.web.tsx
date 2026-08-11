@@ -1174,17 +1174,17 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           if (!select) return;
           const currentVal = select.value;
           if (id === "editGroupAssignment") {
-            select.innerHTML = '<option value="">— None —</option>';
+            select.innerHTML = '<option value="">- None -</option>';
             groups.forEach((group: any) => {
               select.innerHTML += `<option value="${group.id}">${group.name}</option>`;
             });
           } else if (id === "editSubGroupAssignment") {
-            select.innerHTML = '<option value="">— None —</option>';
+            select.innerHTML = '<option value="">- None -</option>';
             subGroups.forEach((sg: any) => {
               select.innerHTML += `<option value="${sg.id}">${sg.name}</option>`;
             });
           } else {
-            select.innerHTML = '<option value="">— None —</option>';
+            select.innerHTML = '<option value="">- None -</option>';
             phases.forEach((ph: any) => {
               select.innerHTML += `<option value="${ph.id}">${ph.name}</option>`;
             });
@@ -3522,7 +3522,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 <div className="form-group">
                   <label>Feature Type</label>
                   <select id="cf_featureType">
-                    <option value="">— Select —</option>
+                    <option value="">- Select -</option>
                     <option value="pit">Pit</option>
                     <option value="trench">Trench</option>
                     <option value="house">House</option>
@@ -3576,7 +3576,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                 <div className="form-group">
                   <label>Shape</label>
                   <select id="cf_shape">
-                    <option value="">— Select —</option>
+                    <option value="">- Select -</option>
                     <option value="circular">Circular</option>
                     <option value="oval">Oval</option>
                     <option value="rectangular">Rectangular</option>
@@ -3737,7 +3737,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Unit Type</label>
                     <select id="su_unitType">
-                      <option value="">— Select —</option>
+                      <option value="">- Select -</option>
                       {[
                         "cut",
                         "deposit_fill",
@@ -3829,7 +3829,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                           "medium",
                         ].map((t) => (
                           <option key={t} value={t}>
-                            {t || "— Select —"}
+                            {t || "- Select -"}
                           </option>
                         ))}
                       </select>
@@ -3889,7 +3889,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                     <select id="su_granulation">
                       {["", "high", "medium", "low"].map((t) => (
                         <option key={t} value={t}>
-                          {t || "— Select —"}
+                          {t || "- Select -"}
                         </option>
                       ))}
                     </select>
@@ -3899,7 +3899,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                     <select id="su_contamination">
                       {["", "high", "medium", "low"].map((t) => (
                         <option key={t} value={t}>
-                          {t || "— Select —"}
+                          {t || "- Select -"}
                         </option>
                       ))}
                     </select>
@@ -4408,7 +4408,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               </select>
             </div>
             <select id="dateType" style={{ marginTop: 10 }}>
-              <option value="">— Date Type —</option>
+              <option value="">- Date Type -</option>
               <option>Absolute</option>
               <option>Relative</option>
               <option>Terminus Ante Quem</option>
@@ -4500,7 +4500,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
               </select>
             </div>
             <select id="editDateType" style={{ marginTop: 10 }}>
-              <option value="">— Date Type —</option>
+              <option value="">- Date Type -</option>
               <option>Absolute</option>
               <option>Relative</option>
               <option>Terminus Ante Quem</option>
@@ -4510,19 +4510,19 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           <div className="form-group">
             <label>Group Assignment</label>
             <select id="editGroupAssignment">
-              <option value="">— None —</option>
+              <option value="">- None -</option>
             </select>
           </div>
           <div className="form-group">
             <label>Sub-Group Assignment</label>
             <select id="editSubGroupAssignment">
-              <option value="">— None —</option>
+              <option value="">- None -</option>
             </select>
           </div>
           <div className="form-group">
             <label>Phase Assignment</label>
             <select id="editPhaseAssignment">
-              <option value="">— None —</option>
+              <option value="">- None -</option>
             </select>
           </div>
           <div className="modal-buttons">

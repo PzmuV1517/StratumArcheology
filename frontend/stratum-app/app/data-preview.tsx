@@ -368,7 +368,7 @@ export default function DataPreviewScreen() {
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
             if (!XLSX) {
               setTextContent(
-                '[xlsx library not installed – install "xlsx" to preview Excel files]',
+                '[xlsx library not installed - install "xlsx" to preview Excel files]',
               );
             } else {
               const arrayBuffer = await blob.arrayBuffer();
@@ -570,7 +570,7 @@ export default function DataPreviewScreen() {
           if (!XLSX) {
             showAlert(
               "Error",
-              "xlsx library not installed – cannot save Excel files",
+              "xlsx library not installed - cannot save Excel files",
             );
             return;
           }

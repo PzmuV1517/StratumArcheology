@@ -251,7 +251,7 @@ export default function ArtefactDetail() {
           }
         } catch {}
       }
-      // Load preview image — prefer preview.* file, fall back to first image
+      // Load preview image - prefer preview.* file, fall back to first image
       const pv = ch.find(
         (c: any) =>
           c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
@@ -509,7 +509,7 @@ export default function ArtefactDetail() {
     <View style={s.container}>
       <Stack.Screen
         options={{
-          title: meta?.name ? `${meta.name} #${meta.number ?? "—"}` : "Artefact",
+          title: meta?.name ? `${meta.name} #${meta.number ?? "-"}` : "Artefact",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
           headerStyle: isIOS
@@ -920,7 +920,7 @@ export default function ArtefactDetail() {
                       printQr(
                         qrDataUrl,
                         `${meta?.name || "artefact"}-qr.png`,
-                        `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
+                        `${meta?.name || "Artefact"} #${meta?.number ?? "-"}`,
                       )
                     }
                   >
@@ -944,7 +944,7 @@ export default function ArtefactDetail() {
               <View style={{ alignItems: "center", marginTop: 12 }}>
                 <QRCodeView
                   value={qrUrl || ""}
-                  label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
+                  label={`${meta?.name || "Artefact"} #${meta?.number ?? "-"}`}
                   onReadyDataUrl={setQrDataUrl}
                 />
               </View>
@@ -991,7 +991,7 @@ export default function ArtefactDetail() {
                   fontWeight: "700",
                 }}
               >
-                {meta?.name || "—"}
+                {meta?.name || "-"}
               </Text>
             </Text>
             <TextInput
@@ -1397,7 +1397,7 @@ export default function ArtefactDetail() {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — matching new-project / join-project design language
+// Styles - matching new-project / join-project design language
 // ---------------------------------------------------------------------------
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({

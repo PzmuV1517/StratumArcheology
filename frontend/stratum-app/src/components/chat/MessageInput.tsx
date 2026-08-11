@@ -133,7 +133,7 @@ export default function MessageInput({
 
   const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
     if (Platform.OS === "web" && e.nativeEvent.key === "Enter") {
-      // @ts-ignore — web-only shiftKey
+      // @ts-ignore - web-only shiftKey
       if (!(e.nativeEvent as any).shiftKey) {
         e.preventDefault?.();
         handleSend();

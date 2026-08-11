@@ -298,7 +298,7 @@ async def _generate_history_background(project_id: str) -> None:
             history_text, provider = await generate_summary(
                 prompt, model=CLAUDE_SONNET, max_tokens=3000
             )
-            history_text = history_text.replace("—", ", ")
+            history_text = history_text.replace("-", ", ")
         except Exception as exc:
             _log.error(
                 "History generation failed", project_id=project_id, error=str(exc)
@@ -399,7 +399,7 @@ async def set_e2ee_key(
         raise HTTPException(status_code=404, detail="Project not found")
 
     if project.e2ee_key and key:
-        # Key already exists — only owner can rotate
+        # Key already exists - only owner can rotate
         if project.owner_id != current_user.id:
             raise HTTPException(
                 status_code=403,

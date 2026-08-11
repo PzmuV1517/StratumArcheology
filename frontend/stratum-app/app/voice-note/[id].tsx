@@ -191,7 +191,7 @@ export default function VoiceNoteScreen() {
         </View>
 
         <Text style={[styles.disclaimer, { color: textSecondary }]}>
-          ⚠ Auto-generated — may contain errors
+          ⚠ Auto-generated - may contain errors
         </Text>
 
         {isEditing ? (

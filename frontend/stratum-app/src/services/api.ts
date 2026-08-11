@@ -242,7 +242,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Only treat as session expiry for authenticated endpoints.
       // Auth routes (login/register) naturally return 401 for bad credentials
-      // — that's NOT a session expiry.
+      // - that's NOT a session expiry.
       const requestUrl = error.config?.url || "";
       const isAuthRoute =
         requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
@@ -250,7 +250,7 @@ api.interceptors.response.use(
       if (!isAuthRoute) {
         // Guard against race condition: if a login just succeeded and stored a
         // new token, the stale /auth/me request from checkAuthStatus will come
-        // back 401 — but we should NOT wipe the brand-new token.
+        // back 401 - but we should NOT wipe the brand-new token.
         // Only clear if the failed request's token matches what's currently stored.
         const failedToken = error.config?.headers?.Authorization?.replace(
           "Bearer ",
@@ -259,13 +259,13 @@ api.interceptors.response.use(
         const currentToken = await AsyncStorage.getItem("authToken");
 
         if (!currentToken || currentToken === failedToken) {
-          // Token expired and nothing newer has replaced it—clear session
+          // Token expired and nothing newer has replaced it-clear session
           await AsyncStorage.removeItem("authToken");
           await AsyncStorage.removeItem("userData");
           authEvents.emit(AUTH_SESSION_EXPIRED);
         } else {
-          // A newer token exists (login just completed)—ignore this stale 401
-          console.log("[API] Ignoring stale 401 — a newer token is already stored");
+          // A newer token exists (login just completed)-ignore this stale 401
+          console.log("[API] Ignoring stale 401 - a newer token is already stored");
         }
       }
     }

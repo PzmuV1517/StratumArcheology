@@ -4,7 +4,7 @@
  *
  * Renders a Wheeler Space–Time diagram as an interactive SVG
  * with sloping sequence boundaries, unconformity markers, and
- * cross-hatch hiatus zones — closely following Wheeler (1964).
+ * cross-hatch hiatus zones - closely following Wheeler (1964).
  *
  * STRATUM - Proprietary and Confidential
  * Copyright (c) 2026 Andrei Banu, Mircea Levin-Constantin, Ferritworks S.R.L., and its licensees.
@@ -386,7 +386,7 @@ const HELP_STEPS: HelpStep[] = [
   {
     title: "Add a Trench",
     description:
-      "Trenches (or sections) form the X-axis — each one is a spatial position on your site. Hit '+ Trench' in the toolbar, give it an ID and an optional display label, then press Add.",
+      "Trenches (or sections) form the X-axis - each one is a spatial position on your site. Hit '+ Trench' in the toolbar, give it an ID and an optional display label, then press Add.",
     icon: <HelpIconRuler />,
     shortcut: "toolbar → + Trench",
   },
@@ -400,20 +400,20 @@ const HELP_STEPS: HelpStep[] = [
   {
     title: "Edit or Delete a Context",
     description:
-      "Click any filled cell in Edit mode to re-open its form — change the type, description, notes, trench span, or row range. Use the Delete button inside the form to remove it entirely.",
+      "Click any filled cell in Edit mode to re-open its form - change the type, description, notes, trench span, or row range. Use the Delete button inside the form to remove it entirely.",
     icon: <HelpIconPencil />,
   },
   {
     title: "Mark a Lacuna",
     description:
-      "A lacuna is a missing interval within a sequence — rock that was never deposited, eroded away, or not excavated. It renders as a cross-hatched amber zone. Use '+ Lacuna' and define the affected trenches and row range.",
+      "A lacuna is a missing interval within a sequence - rock that was never deposited, eroded away, or not excavated. It renders as a cross-hatched amber zone. Use '+ Lacuna' and define the affected trenches and row range.",
     icon: <HelpIconBarChart />,
     shortcut: "toolbar → + Lacuna",
   },
   {
     title: "Save, Pull & Discard",
     description:
-      "'Save' pushes your local changes to the server (button turns red when unsaved). 'Pull' fetches the latest server version — use it any time to sync. 'Discard' throws away all unsaved local changes and reloads from the last saved version.",
+      "'Save' pushes your local changes to the server (button turns red when unsaved). 'Pull' fetches the latest server version - use it any time to sync. 'Discard' throws away all unsaved local changes and reloads from the last saved version.",
     icon: <HelpIconSave />,
     shortcut: "toolbar → Save / Pull / Discard",
   },
@@ -866,7 +866,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     const rowStart = parseInt(lacunaFormRowStart, 10);
     const rowEnd = parseInt(lacunaFormRowEnd, 10);
     if (isNaN(rowStart) || isNaN(rowEnd) || rowStart < 0 || rowEnd < rowStart) {
-      setLacunaFormError("Invalid row range — rowEnd must be ≥ rowStart.");
+      setLacunaFormError("Invalid row range - rowEnd must be ≥ rowStart.");
       return;
     }
     addLacuna({
@@ -897,27 +897,27 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       { id: "T4", label: "Trench IV", order: 3 },
     ];
     const demoPlacements = [
-      // t1 – natural subsoil spans all trenches
+      // t1 - natural subsoil spans all trenches
       {
         contextId: "SU-101",
         trenchIds: ["T1", "T2", "T3", "T4"],
         rowStart: 0,
         rowEnd: 0,
       },
-      // t2 – early alluvial deposit, partial
+      // t2 - early alluvial deposit, partial
       { contextId: "SU-102", trenchIds: ["T1", "T2", "T3"], rowStart: 1, rowEnd: 1 },
       { contextId: "SU-103", trenchIds: ["T4"], rowStart: 1, rowEnd: 1 },
-      // t3 – deposition continues then retreats left (vacuity on right)
+      // t3 - deposition continues then retreats left (vacuity on right)
       { contextId: "SU-104", trenchIds: ["T1", "T2"], rowStart: 2, rowEnd: 2 },
       { contextId: "SU-105", trenchIds: ["T3"], rowStart: 2, rowEnd: 3 },
-      // t4 – hiatus gap (rows 3 has only T3, row 4 is truly empty → hiatus)
-      // t5 – re-occupation after hiatus
+      // t4 - hiatus gap (rows 3 has only T3, row 4 is truly empty → hiatus)
+      // t5 - re-occupation after hiatus
       { contextId: "SU-106", trenchIds: ["T2", "T3", "T4"], rowStart: 5, rowEnd: 5 },
       { contextId: "SU-107", trenchIds: ["T1"], rowStart: 5, rowEnd: 6 },
-      // t6-t7 – structure period
+      // t6-t7 - structure period
       { contextId: "SU-108", trenchIds: ["T2", "T3"], rowStart: 6, rowEnd: 7 },
       { contextId: "SU-109", trenchIds: ["T4"], rowStart: 6, rowEnd: 6 },
-      // t8 – latest layer
+      // t8 - latest layer
       {
         contextId: "SU-110",
         trenchIds: ["T1", "T2", "T3", "T4"],
@@ -1114,7 +1114,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
           setData({ trenches, placements, lacunae });
         } catch {
-          alert("Failed to parse CSV — make sure it was exported from this app.");
+          alert("Failed to parse CSV - make sure it was exported from this app.");
         }
       };
       reader.readAsText(file);
@@ -1208,7 +1208,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
     const cols = sortedTrenches.length;
     if (cols === 0) return null;
 
-    // Layout constants — the diagram spans a continuous coordinate space
+    // Layout constants - the diagram spans a continuous coordinate space
     const PAD_L = 100; // left margin for Y-axis labels
     const PAD_R = 60;
     const PAD_T = 56; // top margin for X-axis labels
@@ -2125,7 +2125,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               }
               title={
                 hasServerChanges
-                  ? "Server has a newer version — click to pull"
+                  ? "Server has a newer version - click to pull"
                   : "Pull latest from server"
               }
             >
@@ -2920,7 +2920,7 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               Add Lacuna
             </h3>
             <p style={{ margin: "0 0 16px", fontSize: 12, color: "#888" }}>
-              A lacuna marks a missing interval <em>within</em> a sequence — where
+              A lacuna marks a missing interval <em>within</em> a sequence - where
               the record is absent (not excavated / eroded). It appears as a hatched
               amber zone in the diagram.
             </p>

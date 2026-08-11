@@ -153,7 +153,7 @@ async def upload_banner_image(
 
 
 # =============================================================================
-# STORAGE PROXY  –  streams MinIO objects through the API server so mobile
+# STORAGE PROXY  -  streams MinIO objects through the API server so mobile
 # and remote clients don't need direct access to the MinIO endpoint.
 # =============================================================================
 
@@ -202,7 +202,7 @@ async def storage_proxy(bucket: str, path: str):
             headers={"Cache-Control": "public, max-age=3600"},
         )
     except Exception as exc:
-        # Catch S3Error or anything else – return 404 for missing keys
+        # Catch S3Error or anything else - return 404 for missing keys
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found",

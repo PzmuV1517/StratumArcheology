@@ -260,7 +260,7 @@ function ScannerContent() {
             return;
           }
 
-          // Unknown type from registry – show what we got
+          // Unknown type from registry - show what we got
           setResultModal({
             title: `QR: ${resolved.type}`,
             message: `Resource: ${resolved.resource_id}`,
@@ -269,7 +269,7 @@ function ScannerContent() {
           setProcessing(false);
           return;
         } catch {
-          // Code not found in registry – fall through to legacy handling
+          // Code not found in registry - fall through to legacy handling
         }
 
         // ── 2. Legacy: stratum:artefact: prefix ────────────────────────
@@ -427,7 +427,7 @@ function ScannerContent() {
                 overflow: "hidden",
               }}
             >
-              {/* Corner markers — rounded */}
+              {/* Corner markers - rounded */}
               <View style={[styles.corner, styles.cornerTL]} />
               <View style={[styles.corner, styles.cornerTR]} />
               <View style={[styles.corner, styles.cornerBL]} />
@@ -465,7 +465,7 @@ function ScannerContent() {
           </View>
         </View>
 
-        {/* "Freeze" overlay — darkens camera when QR is detected */}
+        {/* "Freeze" overlay - darkens camera when QR is detected */}
         <Animated.View
           style={[styles.freezeOverlay, { opacity: lockOpacity }]}
           pointerEvents="none"
@@ -614,7 +614,7 @@ const createStyles = (isDarkMode: boolean) =>
       marginTop: 20,
     },
     rescanText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-    // Corner markers — rounded
+    // Corner markers - rounded
     corner: {
       position: "absolute",
       width: 36,

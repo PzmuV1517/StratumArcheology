@@ -209,7 +209,7 @@ export default function UnearthedScreen() {
               Updated{" "}
               {project.updated_at
                 ? new Date(project.updated_at).toLocaleDateString()
-                : "—"}
+                : "-"}
             </Text>
             {memberCount != null && memberCount > 0 && (
               <View style={styles.memberBadge}>

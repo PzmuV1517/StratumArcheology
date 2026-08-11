@@ -24,13 +24,13 @@ import httpx
 from dotenv import dotenv_values
 
 # ---------------------------------------------------------------------------
-# Model constants — import and pass to generate_summary() at each call site
+# Model constants - import and pass to generate_summary() at each call site
 # ---------------------------------------------------------------------------
 
 # Anthropic Claude
-CLAUDE_HAIKU = "claude-haiku-4-5-20251001"  # fast, cheap — routine tasks
-CLAUDE_SONNET = "claude-sonnet-4-6"  # balanced — most tasks
-CLAUDE_OPUS = "claude-opus-4-7"  # most capable — complex reasoning
+CLAUDE_HAIKU = "claude-haiku-4-5-20251001"  # fast, cheap - routine tasks
+CLAUDE_SONNET = "claude-sonnet-4-6"  # balanced - most tasks
+CLAUDE_OPUS = "claude-opus-4-7"  # most capable - complex reasoning
 
 # Google Gemini
 GEMINI_FLASH_LITE = "gemini-2.0-flash-lite"  # fast, high RPM
@@ -118,9 +118,9 @@ async def generate_summary(
         (response_text, display_provider_name).
 
     Raises:
-        ValueError               — misconfiguration (no keys, unsupported provider).
-        anthropic.APIStatusError — Anthropic HTTP / API errors.
-        httpx.HTTPStatusError    — Gemini HTTP errors.
+        ValueError              - misconfiguration (no keys, unsupported provider).
+        anthropic.APIStatusError - Anthropic HTTP / API errors.
+        httpx.HTTPStatusError   - Gemini HTTP errors.
     """
     cfg = _next()
     if cfg is None:

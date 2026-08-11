@@ -6,7 +6,7 @@
  * useChat, and supports channel switching, creating new channels,
  * editing & deleting messages.
  *
- * Rebuilt from scratch — zero useCallback, refs for closures, primitive
+ * Rebuilt from scratch - zero useCallback, refs for closures, primitive
  * effect deps only. Immune to React Compiler memoisation issues.
  *
  * STRATUM - Proprietary and Confidential
@@ -272,7 +272,7 @@ export default function ProjectChatScreen() {
         ) : channelsError ? (
           <TouchableOpacity style={s.barRow} onPress={retryChannels}>
             <Text style={s.hash}>!</Text>
-            <Text style={s.barTextWarn}>Couldn't load channels — tap to retry</Text>
+            <Text style={s.barTextWarn}>Couldn't load channels - tap to retry</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity

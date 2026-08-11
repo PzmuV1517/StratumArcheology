@@ -659,7 +659,7 @@ class UserGroupMember(Base):
 
 
 class ChatMessage(Base):
-    """A single chat message — channel message, project room message, or DM.
+    """A single chat message - channel message, project room message, or DM.
 
     * channel_id set  → channel message (Slack-like)
     * project_id set + channel_id NULL + recipient_id NULL  → legacy project room

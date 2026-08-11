@@ -189,7 +189,7 @@ async def send_firebase_oob_code(
 
 @router.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Login with email and password — verified against Firebase Auth."""
+    """Login with email and password - verified against Firebase Auth."""
     try:
         normalized_email = request.email.strip().lower()
 

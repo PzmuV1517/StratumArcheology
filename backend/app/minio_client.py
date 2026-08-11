@@ -239,7 +239,7 @@ def resolve_storage_url(url: str | None) -> str | None:
     """
     if not url:
         return None
-    # Already a full URL – nothing to resolve
+    # Already a full URL - nothing to resolve
     if url.startswith(("http://", "https://", "data:")):
         return url
     # Treat as a MinIO object key → generate a 1-hour presigned URL

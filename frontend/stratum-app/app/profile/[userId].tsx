@@ -171,7 +171,7 @@ export default function ProfileViewScreen() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>🕐 Local time</Text>
             <Text style={styles.infoValue}>
-              {localTime || "—"} ({profile.timezone})
+              {localTime || "-"} ({profile.timezone})
             </Text>
           </View>
         )}

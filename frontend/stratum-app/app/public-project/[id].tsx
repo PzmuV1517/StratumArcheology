@@ -397,7 +397,7 @@ export default function PublicProjectDetailScreen() {
             </View>
           ) : null}
 
-          {/* History Review — shown once the field is present in the response */}
+          {/* History Review - shown once the field is present in the response */}
           {"public_history_review" in project && (
             <View style={styles.card}>
               <View style={styles.historyCardHeader}>
@@ -478,7 +478,7 @@ export default function PublicProjectDetailScreen() {
             </View>
           )}
 
-          {/* ── Map card — reuses the same MapEditor as the project GPS tab ── */}
+          {/* ── Map card - reuses the same MapEditor as the project GPS tab ── */}
           {hasGps && project.id && (
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Site Map</Text>

@@ -45,7 +45,7 @@ import {
   ProjectWheelerScreen,
 } from "@/components/project/ProjectTabsScreens";
 
-// liquid-react native components — loaded at module scope.
+// liquid-react native components - loaded at module scope.
 // Only available in dev client / production builds (not Expo Go).
 // STRATUM uses the new React Native architecture so there is no RCTCxxBridge
 // watchdog risk; module-level require is safe and must be used here because
@@ -69,7 +69,7 @@ if (Platform.OS === "ios") {
       }
     }
   } catch {
-    // liquid-react not available — fall back to ActionSheetIOS
+    // liquid-react not available - fall back to ActionSheetIOS
   }
 }
 
@@ -137,7 +137,7 @@ function ProjectStack() {
     [settingsChildren],
   );
 
-  /** Dispatch a menu action by id — shared by NativeToolbarMenu and ActionSheetIOS. */
+  /** Dispatch a menu action by id - shared by NativeToolbarMenu and ActionSheetIOS. */
   const dispatchMenuAction = useCallback(
     (id: string) => {
       switch (id) {

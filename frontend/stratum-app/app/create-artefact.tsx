@@ -578,7 +578,7 @@ export default function CreateArtefactScreen() {
                   ? (() => {
                       const ctx = hmContexts.find((c) => c.id === selectedHmContext);
                       return ctx
-                        ? `[${ctx.type.toUpperCase()}] ${ctx.id}${ctx.description ? " — " + ctx.description : ""}`
+                        ? `[${ctx.type.toUpperCase()}] ${ctx.id}${ctx.description ? " - " + ctx.description : ""}`
                         : selectedHmContext;
                     })()
                   : "Select a context…"}
@@ -661,7 +661,7 @@ export default function CreateArtefactScreen() {
           <View style={{ alignItems: "center", marginTop: 8 }}>
             <QRCodeView
               value={qrCode || qrPreviewValue}
-              label={`${name || "Artefact"} #—`}
+              label={`${name || "Artefact"} #-`}
               onReadyDataUrl={setQrDataUrl}
             />
           </View>
@@ -680,7 +680,7 @@ export default function CreateArtefactScreen() {
                   printQr(
                     qrDataUrl,
                     `${name || "artefact"}-qr.png`,
-                    `${name || "Artefact"} #—`,
+                    `${name || "Artefact"} #-`,
                   )
                 }
               >
@@ -939,7 +939,7 @@ function printQr(dataUrl: string, _filename: string, label?: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — matches modal.tsx / join-project.tsx pattern
+// Styles - matches modal.tsx / join-project.tsx pattern
 // ---------------------------------------------------------------------------
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({

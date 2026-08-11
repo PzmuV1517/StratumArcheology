@@ -1,5 +1,5 @@
 """
-Wheeler Stratigraphic Notation – SVG publication renderer.
+Wheeler Stratigraphic Notation - SVG publication renderer.
 
 Generates a 1964-style black-and-white Wheeler Space–Time diagram as a
 standalone SVG string.
@@ -37,8 +37,8 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
 
     Args:
         data: dict with keys:
-            ``trenches``   – list of ``{id, label, order}`` dicts
-            ``placements`` – list of ``{contextId, trenchIds, rowStart, rowEnd}``
+            ``trenches``   - list of ``{id, label, order}`` dicts
+            ``placements`` - list of ``{contextId, trenchIds, rowStart, rowEnd}``
 
     Returns:
         A self-contained SVG string (UTF-8).
@@ -98,7 +98,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     total_h = PAD_T + graph_h + PAD_B
 
     # ── Row extents (leftmost / rightmost occupied column per row) ────────────
-    row_exts: list[tuple[int, int]] = []  # (left, right) — -1 if empty
+    row_exts: list[tuple[int, int]] = []  # (left, right) - -1 if empty
     for r in range(total_rows):
         left = -1
         right = -1
