@@ -1495,7 +1495,6 @@ const createStyles = (isDarkMode: boolean) =>
       gap: 8,
     },
     emptyText: { fontSize: 14, color: isDarkMode ? "#666666" : "#7A7A7A" },
-    // Input
     input: {
       backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
       borderRadius: 12,

@@ -184,7 +184,6 @@ async def append_context_feature(
     """Append a Context Feature record to CSV in a locked Forms folder."""
     check_project_permission(project_id, current_user, db)
 
-    # Ensure Forms folder
     forms_folder = _ensure_locked_folder(db, project_id, "Forms")
 
     # Prepare header and row (flatten payload)
@@ -305,7 +304,6 @@ async def append_context_feature(
         payload.get("dateChecked", ""),
     ]
 
-    # Ensure file and existing rows
     node, existing = _ensure_locked_csv_file(
         db, project_id, forms_folder.id, "context_features.csv", header
     )
@@ -332,7 +330,6 @@ async def append_context_feature(
     # Notify all users in project that forms have been updated (context feature added)
     await emit_content_update(project_id, "forms")
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -514,7 +511,6 @@ async def append_stratigraphic_unit(
     # Notify all users in project that forms have been updated (stratigraphic unit added)
     await emit_content_update(project_id, "forms")
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -639,7 +635,6 @@ async def append_artefact(
     # Notify all users in project that forms have been updated (artefact added)
     await emit_content_update(project_id, "forms")
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,

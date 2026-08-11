@@ -347,7 +347,6 @@ export default function LandingPage() {
             </View>
           </View>
 
-          {/* How it works */}
           <View style={styles.sectionBlock}>
             <Text style={styles.sectionHeading}>How it works</Text>
             <View style={styles.stepList}>

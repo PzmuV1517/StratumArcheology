@@ -46,7 +46,6 @@ const getCacheDir = (): string => {
   return dir;
 };
 
-// Re-export core methods
 export * from "./fileService.core";
 
 /** Native file service with Expo file system, document picker, and sharing support. */

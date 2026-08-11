@@ -204,7 +204,6 @@ export default function DataPreviewScreen() {
             return;
           }
 
-          // PDF
           if (ext.endsWith(".pdf") || kind === "pdf") {
             if (!cancelled) {
               setPdfUrl(res.uri);
@@ -272,7 +271,6 @@ export default function DataPreviewScreen() {
           return;
         }
 
-        // PDF
         if (ext.endsWith(".pdf") || kind === "pdf") {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
@@ -303,7 +301,6 @@ export default function DataPreviewScreen() {
           return;
         }
 
-        // MESH
         if (/\.(glb|gltf)$/i.test(ext) || kind === "mesh") {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
@@ -334,7 +331,6 @@ export default function DataPreviewScreen() {
         }
 
         // TEXT / CSV / EXCEL (unchanged below)
-        // Handle text files (txt, md, json)
         if (ext.endsWith(".txt") || ext.endsWith(".md") || ext.endsWith(".json")) {
           const text = await blob.text();
           // Handle empty files gracefully - set empty string instead of null

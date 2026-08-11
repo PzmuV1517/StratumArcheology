@@ -697,7 +697,6 @@ export default function HarrisMatrix({
         ) : null}
       </View>
 
-      {/* ── Toolbar ── */}
       <View style={styles.toolbar}>
         <Pressable style={styles.toolBtn} onPress={resetView}>
           <Text style={styles.toolBtnText}>Reset</Text>
@@ -779,7 +778,6 @@ export default function HarrisMatrix({
                   </Marker>
                 </Defs>
 
-                {/* Edges */}
                 {edges.map((e, i) => (
                   <Path
                     key={`edge-${i}`}

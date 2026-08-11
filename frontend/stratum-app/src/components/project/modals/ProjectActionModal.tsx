@@ -49,7 +49,6 @@ export function ProjectActionModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.container} onStartShouldSetResponder={() => true}>
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Project</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -57,7 +56,6 @@ export function ProjectActionModal({
             </TouchableOpacity>
           </View>
 
-          {/* Divider */}
           <View style={styles.divider} />
 
           {/* Options */}

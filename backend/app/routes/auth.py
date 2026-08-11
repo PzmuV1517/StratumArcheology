@@ -286,12 +286,10 @@ async def login(
                 detail="This account is configured for local sign-in",
             )
 
-        # 4. Update last login
         _set_user_auth_provider(user, resolved_provider)
         user.last_login = datetime.utcnow()
         db.commit()
 
-        # 5. Issue our API JWT
         jwt_token = _issue_api_jwt(
             user_id=user.id,
             firebase_uid=user.firebase_uid,
@@ -383,7 +381,6 @@ async def register(
 
         _ensure_firebase_auth_enabled()
 
-        # Create user in Firebase
         firebase_user = firebase_auth.create_user(
             email=normalized_email,
             password=payload.password,
@@ -529,7 +526,6 @@ async def verify_firebase_token(
             user.last_login = datetime.utcnow()
             db.commit()
 
-        # Generate JWT token for our API
         access_token = _issue_api_jwt(
             user_id=user.id,
             firebase_uid=user.firebase_uid,

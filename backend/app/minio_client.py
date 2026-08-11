@@ -259,7 +259,6 @@ class MinIOClient:
             raise
 
 
-# Initialize MinIO client
 minio_client = MinIOClient()
 
 

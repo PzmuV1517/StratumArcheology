@@ -136,7 +136,6 @@ async def get_public_project_detail(
             status_code=status.HTTP_404_NOT_FOUND, detail="Public project not found"
         )
 
-    # Members -----------------------------------------------------------
     members_with_roles = db.execute(
         select(User, project_members.c.role)
         .join(project_members, User.id == project_members.c.user_id)
@@ -200,7 +199,6 @@ async def get_public_project_detail(
         except Exception:
             pass
 
-    # Cover image presigned URL -----------------------------------------
     cover_presigned: str | None = None
     if project.cover_image_url:
         try:
@@ -477,7 +475,6 @@ async def create_project(
     db.add(notes_folder)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project.id,
@@ -825,7 +822,6 @@ async def add_project_member(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -863,7 +859,6 @@ async def remove_project_member(
             detail="Project owner cannot leave. Transfer leadership or delete the project instead.",
         )
 
-    # Get current user's role
     if project.owner_id == current_user.id:
         current_user_role = "leader"
     else:
@@ -908,7 +903,6 @@ async def remove_project_member(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     removed_user = db.query(User).filter(User.id == user_id).first()
     await log_activity(
         db=db,
@@ -942,7 +936,6 @@ async def update_member_role(
 
     project = db.query(Project).filter(Project.id == project_id).first()
 
-    # Get current user's role
     if project.owner_id == current_user.id:
         current_user_role = "leader"
     else:
@@ -1010,7 +1003,6 @@ async def update_member_role(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     target_user = db.query(User).filter(User.id == user_id).first()
     await log_activity(
         db=db,
@@ -1075,7 +1067,6 @@ async def transfer_ownership(
             detail="New owner must be a project member",
         )
 
-    # Update project owner
     old_owner_id = project.owner_id
     project.owner_id = new_owner_id
 
@@ -1166,7 +1157,6 @@ async def update_harris_matrix(
 
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1317,7 +1307,6 @@ async def update_wheeler_data(
     except Exception as exc:
         print(f"⚠ Wheeler SVG render/upload failed (non-fatal): {exc}")
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,

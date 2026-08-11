@@ -30,7 +30,6 @@ sio = socketio.AsyncServer(
 # Format: {project_id: {user_id1, user_id2, ...}}
 project_rooms: dict[str, set[str]] = {}
 
-# Track user sessions
 # Format: {session_id: {"user_id": "...", "project_id": "..."}}
 user_sessions: dict[str, dict[str, str]] = {}
 
@@ -356,7 +355,6 @@ async def log_activity(
         db.add(activity)
         db.commit()
 
-        # Emit timeline update via WebSocket
         await emit_timeline_update(project_id)
 
         logger.info(f"Logged activity: {activity_type} for project {project_id}")

@@ -954,14 +954,12 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
 
     const lines: string[] = [];
 
-    // Trenches section
     lines.push("SECTION,TRENCHES");
     lines.push("id,label,order");
     for (const t of data.trenches) {
       lines.push([esc(t.id), esc(t.label), String(t.order)].join(","));
     }
 
-    // Placements section
     lines.push("");
     lines.push("SECTION,PLACEMENTS");
     lines.push("contextId,trenchIds,rowStart,rowEnd,type,description,notes");
@@ -979,7 +977,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
       );
     }
 
-    // Lacunae section
     lines.push("");
     lines.push("SECTION,LACUNAE");
     lines.push("id,trenchIds,rowStart,rowEnd,label");
@@ -2299,7 +2296,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
                   strokeWidth={1}
                 />
               </pattern>
-              {/* Unconformity wavy pattern */}
               <pattern
                 id="unconformity-pattern"
                 patternUnits="userSpaceOnUse"
@@ -2729,7 +2725,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               {ctxEditMode ? "Edit Context" : "Add Context"}
             </h3>
 
-            {/* Context ID */}
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Context ID *</label>
               <input
@@ -2747,7 +2742,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               />
             </div>
 
-            {/* Type */}
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Type</label>
               <select
@@ -2763,7 +2757,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               </select>
             </div>
 
-            {/* Description */}
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Description</label>
               <input
@@ -2774,7 +2767,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               />
             </div>
 
-            {/* Notes */}
             <div style={{ marginBottom: 12 }}>
               <label style={labelStyle}>Notes</label>
               <textarea
@@ -2990,7 +2982,6 @@ export const WheelerDiagram: React.FC<WheelerDiagramProps> = ({
               </div>
             </div>
 
-            {/* Optional label */}
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Label (optional)</label>
               <input

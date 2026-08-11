@@ -359,7 +359,6 @@ export function useChat({
       mentions: mentions ?? null,
     };
 
-    // Optimistic
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimistic: ChatMessage = {
       id: tempId,

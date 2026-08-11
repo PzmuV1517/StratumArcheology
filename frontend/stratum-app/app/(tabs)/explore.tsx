@@ -307,7 +307,6 @@ export default function UnearthedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: pageBackground }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: pageBackground }]}>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>Unearthed</Text>
         <Text style={[styles.headerSubtitle, { color: textSecondary }]}>

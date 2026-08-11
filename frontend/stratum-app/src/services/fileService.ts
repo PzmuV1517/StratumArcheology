@@ -19,7 +19,6 @@
 
 import { Platform } from "react-native";
 
-// Re-export types from core
 export * from "./fileService.core";
 
 // Platform-specific imports

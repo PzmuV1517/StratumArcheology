@@ -74,7 +74,6 @@ class LogContext:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Restore previous context
         _log_context.set(self._previous_context)
         return False  # Don't suppress exceptions
 
@@ -158,11 +157,8 @@ def configure_logging(debug: bool = False) -> None:
 
     # Configure structlog processors
     shared_processors = [
-        # Add log level
         structlog.stdlib.add_log_level,
-        # Add logger name
         structlog.stdlib.add_logger_name,
-        # Add our custom context
         add_log_context,
         # Handle exceptions
         structlog.processors.StackInfoRenderer(),

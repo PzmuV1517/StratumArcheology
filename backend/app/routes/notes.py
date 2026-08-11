@@ -120,7 +120,6 @@ async def create_note(
         db.add(link)
         db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=note.project_id,
@@ -183,7 +182,6 @@ async def get_note(
     )
     if file_link and file_link.file_node and file_link.file_node.storage_path:
         try:
-            # Get content from txt file
             file_data = await minio_client.get_file(file_link.file_node.storage_path)
             file_content = file_data.decode("utf-8")
 
@@ -251,7 +249,6 @@ async def update_note(
     db.commit()
     db.refresh(note)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=note.project_id,
@@ -297,7 +294,6 @@ async def delete_note(
         await minio_client.delete_file(file_link.file_node.storage_path)
         db.delete(file_link.file_node)
 
-    # Delete attachments from MinIO
     for attachment in note.attachments:
         await minio_client.delete_file(attachment.file_path)
 
@@ -306,7 +302,6 @@ async def delete_note(
     db.delete(note)
     db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -441,7 +436,6 @@ async def add_note_attachment(
     db.commit()
     db.refresh(attachment)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=note.project_id,
@@ -511,7 +505,6 @@ async def delete_note_attachment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
         )
 
-    # Delete from MinIO
     await minio_client.delete_file(attachment.file_path)
 
     # Store info before deletion
@@ -523,7 +516,6 @@ async def delete_note_attachment(
     db.delete(attachment)
     db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -650,7 +642,6 @@ async def stream_note_attachment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
         )
 
-    # Get file from MinIO
     file_data = await minio_client.get_file(attachment.file_path)
     if not file_data:
         raise HTTPException(

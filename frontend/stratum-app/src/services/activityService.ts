@@ -72,7 +72,6 @@ export const activityService = {
    */
   getActivityIcon: (activityType: ActivityType | string): string => {
     const iconMap: Record<string, string> = {
-      // Project
       [ActivityType.PROJECT_CREATED]: "briefcase-outline",
       [ActivityType.PROJECT_UPDATED]: "settings-outline",
       [ActivityType.PROJECT_DELETED]: "trash-outline",
@@ -107,12 +106,10 @@ export const activityService = {
       [ActivityType.ARTEFACT_CREATED]: "diamond-outline",
       [ActivityType.ARTEFACT_ADDED]: "diamond-outline",
 
-      // GPS
       [ActivityType.GPS_ENABLED]: "location-outline",
       [ActivityType.GPS_DISABLED]: "location-outline",
       [ActivityType.GPS_UPDATED]: "navigate-outline",
 
-      // Harris Matrix
       [ActivityType.HARRIS_MATRIX_UPDATED]: "git-network-outline",
     };
 
@@ -168,7 +165,6 @@ export const activityService = {
       [ActivityType.GPS_DISABLED]: "#8E8E93",
       [ActivityType.GPS_UPDATED]: "#007AFF",
 
-      // Harris Matrix
       [ActivityType.HARRIS_MATRIX_UPDATED]: "#FFD60A",
     };
 
@@ -188,7 +184,6 @@ export const activityService = {
     const extra = activity.extra_data || {};
 
     const descriptions: Record<string, string> = {
-      // Project
       [ActivityType.PROJECT_CREATED]: `${userName} created the project`,
       [ActivityType.PROJECT_UPDATED]: `${userName} updated project settings`,
       [ActivityType.PROJECT_DELETED]: `${userName} deleted the project`,
@@ -225,12 +220,10 @@ export const activityService = {
       [ActivityType.ARTEFACT_CREATED]: `${userName} recorded an artefact`,
       [ActivityType.ARTEFACT_ADDED]: `${userName} recorded an artefact`,
 
-      // GPS
       [ActivityType.GPS_ENABLED]: `${userName} enabled GPS tracking`,
       [ActivityType.GPS_DISABLED]: `${userName} disabled GPS tracking`,
       [ActivityType.GPS_UPDATED]: `${userName} updated GPS location`,
 
-      // Harris Matrix
       [ActivityType.HARRIS_MATRIX_UPDATED]: `${userName} updated the Harris Matrix`,
     };
 

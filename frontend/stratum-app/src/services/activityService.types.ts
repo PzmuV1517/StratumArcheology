@@ -11,11 +11,9 @@
  * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
  * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
-// Types for project activity/timeline
 
 /** Enumeration of all trackable activity types in a project. */
 export enum ActivityType {
-  // Project
   PROJECT_CREATED = "project_created",
   PROJECT_UPDATED = "project_updated",
   PROJECT_DELETED = "project_deleted",
@@ -50,12 +48,10 @@ export enum ActivityType {
   ARTEFACT_CREATED = "artefact_created",
   ARTEFACT_ADDED = "artefact_added",
 
-  // GPS
   GPS_ENABLED = "gps_enabled",
   GPS_DISABLED = "gps_disabled",
   GPS_UPDATED = "gps_updated",
 
-  // Harris Matrix
   HARRIS_MATRIX_UPDATED = "harris_matrix_updated",
 }
 

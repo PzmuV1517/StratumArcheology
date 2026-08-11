@@ -103,7 +103,6 @@ async def transcribe_note_audio(
         note.transcription_status = "processing"
         db.commit()
 
-        # Download audio bytes from MinIO
         audio_bytes = await minio_client.get_file(storage_path)
         if not audio_bytes:
             raise RuntimeError(

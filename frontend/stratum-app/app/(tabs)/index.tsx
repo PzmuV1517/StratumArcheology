@@ -70,7 +70,6 @@ export default function OverviewScreen() {
       setLoading(true);
       const projects = await projectService.getProjects();
 
-      // Sort by updated_at/created_at and get top 3
       const sorted = projects.sort((a, b) => {
         const dateA = new Date(a.updated_at || a.created_at).getTime();
         const dateB = new Date(b.updated_at || b.created_at).getTime();
@@ -243,7 +242,6 @@ export default function OverviewScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: pageBackground }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: pageBackground }]}>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>Overview</Text>
         <Text style={[styles.headerSubtitle, { color: textSecondary }]}>

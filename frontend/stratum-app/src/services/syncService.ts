@@ -105,7 +105,6 @@ function setupNetworkListener(): void {
     );
 
     if (isOnline && wasOffline) {
-      // Connection restored - trigger auto-sync
       console.log("[SyncService] Connection restored - triggering auto-sync");
       wasOffline = false;
 
@@ -339,7 +338,6 @@ export async function initSyncService(): Promise<void> {
       return;
     }
 
-    // Setup network listener for auto-sync
     setupNetworkListener();
     console.log("[SyncService] Network listener setup for auto-sync");
 
@@ -438,7 +436,6 @@ async function processRequest(request: QueuedRequest): Promise<void> {
     // Mark as processing
     await updateRequestStatus(request.id, "processing");
 
-    // Parse stored data
     const headers = JSON.parse(request.headers);
     const data = request.data ? JSON.parse(request.data) : undefined;
 

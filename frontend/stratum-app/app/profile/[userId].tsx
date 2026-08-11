@@ -139,7 +139,6 @@ export default function ProfileViewScreen() {
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        {/* Banner */}
         {profile.banner_url ? (
           <Image source={{ uri: profile.banner_url }} style={styles.banner} />
         ) : (
@@ -176,7 +175,6 @@ export default function ProfileViewScreen() {
           </View>
         )}
 
-        {/* Description */}
         {profile.description ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
@@ -211,7 +209,6 @@ export default function ProfileViewScreen() {
           </View>
         )}
 
-        {/* Phone */}
         {profile.phone ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact</Text>

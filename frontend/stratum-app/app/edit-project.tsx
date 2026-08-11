@@ -305,7 +305,6 @@ export default function EditProjectScreen() {
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Edit Project</Text>
 
-          {/* Cover Image */}
           <Text style={styles.label}>Cover Image</Text>
           {coverImageUrl ? (
             <View style={styles.coverImageContainer}>

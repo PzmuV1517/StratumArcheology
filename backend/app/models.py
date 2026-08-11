@@ -95,7 +95,6 @@ class ActivityType(str, enum.Enum):
     # GPS activities
     GPS_UPDATED = "gps_updated"
 
-    # Harris Matrix activities
     HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
 
     # Wheeler Diagram activities
@@ -105,7 +104,6 @@ class ActivityType(str, enum.Enum):
     MESSAGE_SENT = "message_sent"
 
 
-# Association table for project members
 project_members = Table(
     "project_members",
     Base.metadata,

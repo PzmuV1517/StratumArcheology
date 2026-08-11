@@ -65,7 +65,6 @@ export const ConflictResolutionModal: React.FC<ConflictResolutionModalProps> = (
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerIcon}>
               <Ionicons name="git-compare" size={24} color="#f97316" />

@@ -175,7 +175,6 @@ function HistoryMarkdown({ text, isDark }: { text: string; isDark: boolean }) {
           );
         }
 
-        // Heading / bullet / paragraph
         const heading = /^#{1,3}\s/.test(line);
         const bullet = line.startsWith("- ") || line.startsWith("* ");
         const content = heading ? line.replace(/^#+\s/, "") : bullet ? line.slice(2) : line;
@@ -389,7 +388,6 @@ export default function PublicProjectDetailScreen() {
 
         {/* ── Info cards ───────────────────────────────────────────── */}
         <View style={styles.content}>
-          {/* Description */}
           {project.description ? (
             <View style={styles.card}>
               <Text style={styles.cardLabel}>About this Site</Text>

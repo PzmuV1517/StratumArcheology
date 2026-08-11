@@ -72,7 +72,6 @@ async def upload_profile_picture(
     db: Session = Depends(get_db),
 ):
     """Upload a profile picture for the current user"""
-    # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -93,7 +92,6 @@ async def upload_profile_picture(
     filename = f"profile_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
     storage_path = f"profiles/{current_user.id}/{filename}"
 
-    # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
     # Store object path (NOT a presigned URL) so it never expires
@@ -118,7 +116,6 @@ async def upload_banner_image(
     db: Session = Depends(get_db),
 ):
     """Upload a banner image for the current user"""
-    # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -139,7 +136,6 @@ async def upload_banner_image(
     filename = f"banner_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
     storage_path = f"banners/{current_user.id}/{filename}"
 
-    # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
     # Store object path (NOT a presigned URL) so it never expires
@@ -504,7 +500,6 @@ async def create_my_folder(
             detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder.",
         )
 
-    # Ensure the /users folder exists
     users_folder = await ensure_users_folder(project_id, db)
 
     # Check if user already has a folder in /users (by owner_id)
@@ -562,7 +557,6 @@ async def create_my_folder(
     return my_folder
 
 
-# Request model for folder permission settings
 class FolderPermissionSettings(BaseModel):
     """Request body for updating personal folder permission settings.
 
@@ -623,7 +617,6 @@ async def update_my_folder_permissions(
         if perm.get("can_view", False):
             shared_with.append(perm["user_id"])
 
-    # Update the folder's privacy and shared_with
     if not settings.default_can_view and len(shared_with) == 0:
         my_folder.privacy = PrivacyLevel.PRIVATE
     elif settings.default_can_view:
@@ -809,7 +802,6 @@ async def list_children(
         raise HTTPException(status_code=404, detail="Folder not found")
     check_project_permission(node.project_id, current_user, db)
 
-    # Check if user can access the parent folder
     if not can_access_file(node, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied to this folder")
 
@@ -913,7 +905,6 @@ async def create_folder(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -980,7 +971,6 @@ async def move_node(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
@@ -1065,7 +1055,6 @@ async def rename_node(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
@@ -1113,7 +1102,6 @@ async def delete_node(
         children = db.query(FileNode).filter(FileNode.parent_id == n.id).all()
         for c in children:
             await _delete_subtree(c)
-        # delete storage if file
         if n.type == FileNodeType.FILE and n.storage_path:
             await minio_client.delete_file(n.storage_path)
         db.delete(n)
@@ -1124,7 +1112,6 @@ async def delete_node(
     await _delete_subtree(node)
     db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1278,7 +1265,6 @@ async def upload_file(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1441,7 +1427,6 @@ async def replace_file_content(
     if not new_file:
         raise HTTPException(status_code=422, detail="No file provided")
 
-    # Read new content
     data = await new_file.read()
 
     # Save current version to history before overwriting
@@ -1466,7 +1451,6 @@ async def replace_file_content(
         new_file.content_type or node.mime_type or "application/octet-stream",
     )
 
-    # Calculate new checksum
     new_checksum = hashlib.md5(data).hexdigest()
 
     # Update metadata

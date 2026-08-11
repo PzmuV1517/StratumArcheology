@@ -143,7 +143,6 @@ async def put_project_gps(
         db.add(row)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,

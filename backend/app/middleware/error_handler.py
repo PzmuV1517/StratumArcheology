@@ -129,7 +129,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         # Start timing
         start_time = time.time()
 
-        # Create upload tracker for this request
         upload_tracker = UploadCleanupTracker()
         request.state.upload_tracker = upload_tracker
 
@@ -160,7 +159,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 duration_ms=round(duration_ms, 2),
             )
 
-            # Add request ID to response headers
             response.headers["X-Request-ID"] = request_id
 
             return response
@@ -211,7 +209,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             )
 
         finally:
-            # Clear request context
             clear_request_id()
 
     def _get_user_message(self, exc: Exception) -> str:

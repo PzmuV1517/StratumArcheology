@@ -468,7 +468,6 @@ export default function WheelerDiagram({
 
   return (
     <View style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Wheeler Diagram</Text>
         {isPlaceholder && (

@@ -672,14 +672,12 @@ export default function MembersModal({
                         </Text>
                       </View>
 
-                      {/* Bio */}
                       {viewingProfile.bio ? (
                         <Text style={styles.profileBio}>{viewingProfile.bio}</Text>
                       ) : (
                         <Text style={styles.profileBioEmpty}>No bio added</Text>
                       )}
 
-                      {/* Email */}
                       <Text style={styles.profileEmail}>{viewingProfile.email}</Text>
                     </>
                   )}
@@ -756,7 +754,6 @@ export default function MembersModal({
                   </TouchableOpacity>
                 </View>
 
-                {/* Max uses selector */}
                 <Text style={styles.inviteSubtitle}>Max uses</Text>
                 <View style={styles.roleSelector}>
                   <TouchableOpacity
@@ -847,7 +844,6 @@ export default function MembersModal({
                       </View>
                     )}
 
-                    {/* Invite Link Section */}
                     <Text style={styles.codeSectionLabel}>Invite Link</Text>
                     <Text selectable style={styles.linkText} numberOfLines={2}>
                       {generatedLink}

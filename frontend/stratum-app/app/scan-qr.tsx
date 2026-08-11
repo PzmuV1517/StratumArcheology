@@ -388,7 +388,6 @@ function ScannerContent() {
     );
   }
 
-  // Animated viewport size
   const animatedSize = viewportScale.interpolate({
     inputRange: [VIEWPORT_LOCKED_SIZE / VIEWPORT_SIZE, 1],
     outputRange: [VIEWPORT_LOCKED_SIZE, VIEWPORT_SIZE],
@@ -585,7 +584,6 @@ const createStyles = (isDarkMode: boolean) =>
     },
     backButton: { paddingVertical: 14, paddingHorizontal: 32 },
     backButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 16 },
-    // Overlay
     overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center" },
     overlayTop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
     overlayMiddle: { flexDirection: "row", alignSelf: "center" },

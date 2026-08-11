@@ -29,11 +29,9 @@ const generateUUID = (): string => {
 const QUEUE_KEY = "@stratum_offline_queue";
 const FILE_VERSIONS_KEY = "@stratum_file_versions";
 // Reserved for future use
-// const PENDING_UPLOADS_KEY = "@stratum_pending_uploads";
 const PENDING_EDITS_KEY = "@stratum_pending_edits";
 const CONFLICTS_KEY = "@stratum_conflicts";
 
-// Types
 /** Possible action types that can be queued for offline processing. */
 export type QueueActionType =
   | "CREATE_NOTE"

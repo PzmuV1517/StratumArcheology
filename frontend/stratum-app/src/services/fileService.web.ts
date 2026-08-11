@@ -16,7 +16,6 @@ import api from "./api";
 import { fileServiceCore, FileNode, DownloadResult } from "./fileService.core";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Re-export core methods
 export * from "./fileService.core";
 
 /** Web-specific file service with browser download and upload support. */

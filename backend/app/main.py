@@ -66,7 +66,6 @@ logger = get_logger(__name__)
 _process_started_monotonic = time.monotonic()
 _process_started_at = datetime.now(UTC)
 
-# Initialize Firebase based on auth mode.
 firebase_ready = initialize_firebase(
     strict=settings.auth_mode_normalized == "firebase"
 )
@@ -87,7 +86,6 @@ else:
 # Run migrations with: alembic upgrade head
 # =============================================================================
 
-# Create FastAPI app
 app = FastAPI(
     title="STRATUM API",
     description="Archaeological site management and collaboration platform",
@@ -97,7 +95,6 @@ app.state.started_at_iso = _process_started_at.isoformat()
 app.state.started_monotonic = _process_started_monotonic
 app.state.firebase_ready = firebase_ready
 
-# Attach the rate limiter to the app
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -341,6 +338,5 @@ if __name__ == "__main__":
     )
 
 
-# Mount Socket.IO app
 # This must be done after all routes are registered
 app.mount("/ws", sio_app)
