@@ -282,7 +282,15 @@ def _find_compose_base_cmd() -> list[str]:
 
 
 def _compose_cmd(*args: str) -> list[str]:
-    return [*_find_compose_base_cmd(), "-f", str(_compose_file()), *args]
+    # Compose reads .env next to the compose file, but the generated
+    # credentials live in backend/.env, so point it there explicitly.
+    # Without this the compose file cannot resolve POSTGRES_PASSWORD or
+    # MINIO_SECRET_KEY and refuses to start.
+    cmd = [*_find_compose_base_cmd(), "-f", str(_compose_file())]
+    env_file = _backend_env_file()
+    if env_file.exists():
+        cmd += ["--env-file", str(env_file)]
+    return [*cmd, *args]
 
 
 def _run(

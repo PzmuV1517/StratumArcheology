@@ -19,9 +19,16 @@ import os
 import threading
 from typing import NamedTuple
 
-import anthropic
 import httpx
 from dotenv import dotenv_values
+
+# Optional: the self-host image installs requirements-selfhost.txt, which
+# leaves out the cloud AI SDKs. Importing it eagerly made the whole API fail
+# to boot there, so absence is handled at the call site instead.
+try:
+    import anthropic
+except ModuleNotFoundError:  # pragma: no cover - depends on install profile
+    anthropic = None
 
 # ---------------------------------------------------------------------------
 # Model constants - import and pass to generate_summary() at each call site
@@ -153,6 +160,11 @@ async def generate_summary(
 async def _call_anthropic(
     api_key: str, prompt: str, model: str, max_tokens: int = 1024
 ) -> str:
+    if anthropic is None:
+        raise ValueError(
+            "Anthropic support is not installed on this server "
+            "(pip install anthropic to enable AI summaries)."
+        )
     client = anthropic.AsyncAnthropic(api_key=api_key)
     message = await client.messages.create(
         model=model,

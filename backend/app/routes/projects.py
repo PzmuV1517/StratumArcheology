@@ -296,7 +296,7 @@ async def _generate_history_background(project_id: str) -> None:
             history_text, provider = await generate_summary(
                 prompt, model=CLAUDE_SONNET, max_tokens=3000
             )
-            history_text = history_text.replace("-", ", ")
+            history_text = history_text.replace("\u2014", ", ")
         except Exception as exc:
             _log.error(
                 "History generation failed", project_id=project_id, error=str(exc)

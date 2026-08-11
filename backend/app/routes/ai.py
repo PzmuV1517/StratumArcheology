@@ -9,7 +9,6 @@ POST is rate-limited to 10 requests per minute per IP.
 
 from datetime import datetime
 
-import anthropic
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -18,7 +17,7 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.orm import Session
 
 from app.ai_prompts import PROMPT_PROJECT_SUMMARY
-from app.ai_service import CLAUDE_HAIKU, generate_summary
+from app.ai_service import CLAUDE_HAIKU, anthropic, generate_summary
 from app.config import settings
 from app.database import get_db
 from app.dependencies import check_project_permission, get_current_user
@@ -35,6 +34,20 @@ from app.rate_limiter import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/projects", tags=["ai"])
+
+
+class _AnthropicUnavailable(Exception):
+    """Never raised. Stands in for the SDK's error type when it is absent.
+
+    An empty tuple cannot be used here: Python rejects it in an except
+    clause with "catching classes that do not inherit from BaseException".
+    """
+
+
+# anthropic is absent in the self-host install profile.
+_AI_STATUS_ERRORS = (
+    anthropic.APIStatusError if anthropic is not None else _AnthropicUnavailable
+)
 
 
 class AISummaryResponse(BaseModel):
@@ -146,13 +159,15 @@ async def generate_project_summary(
 
     try:
         summary_text, provider = await generate_summary(prompt, model=CLAUDE_HAIKU)
-        summary_text = summary_text.replace("-", ", ")
+        # Strip em dashes the model slipped in despite the prompt. Escaped so
+        # the literal character stays out of the source.
+        summary_text = summary_text.replace("\u2014", ", ")
     except ValueError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    except (anthropic.APIStatusError, httpx.HTTPStatusError) as exc:
+    except (_AI_STATUS_ERRORS, httpx.HTTPStatusError) as exc:
         status = (
             exc.status_code
-            if isinstance(exc, anthropic.APIStatusError)
+            if anthropic is not None and isinstance(exc, anthropic.APIStatusError)
             else exc.response.status_code
         )
         logger.error(
