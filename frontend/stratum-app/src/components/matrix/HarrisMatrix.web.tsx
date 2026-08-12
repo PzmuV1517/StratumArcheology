@@ -78,6 +78,22 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
     [],
   );
 
+  // Scale the diagram to the pane rather than the window: the pane is what
+  // the drawing actually has to fit inside.
+  const fitToPane = useCallback(() => {
+    const pane = scrollRef.current;
+    if (!pane || layout.width <= 0 || layout.height <= 0) return;
+    const available = {
+      width: Math.max(1, pane.clientWidth - 32),
+      height: Math.max(1, pane.clientHeight - 32),
+    };
+    const scale = Math.min(
+      available.width / layout.width,
+      available.height / layout.height,
+    );
+    setZoom(Math.min(3, Math.max(0.25, scale)));
+  }, [layout.width, layout.height]);
+
   if (matrix.loading) {
     return (
       <div style={{ padding: 24, color: c.text, background: c.bg, height: "100%" }}>
@@ -113,6 +129,9 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
         display: "flex",
         height: "100%",
         width: "100%",
+        // Without this the panels can paint over the rounded container edge.
+        overflow: "hidden",
+        boxSizing: "border-box",
         background: c.bg,
         color: c.text,
         font: "14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif",
@@ -121,10 +140,13 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
       <div
         style={{
           width: 340,
-          minWidth: 300,
+          // A fixed width alone still collapses once the diagram column
+          // demands room, which loses the entry form on a narrow window.
+          flex: "0 0 340px",
           borderRight: `1px solid ${c.border}`,
           display: "flex",
           flexDirection: "column",
+          minHeight: 0,
           background: c.panel,
         }}
       >
@@ -262,7 +284,21 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
         </div>
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      {/*
+        minWidth/minHeight 0 are load bearing. A flex item defaults to
+        min-width:auto, so a diagram wider than the window refuses to shrink
+        and pushes the whole editor past the right edge instead of scrolling
+        inside its own pane.
+      */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          minHeight: 0,
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -289,14 +325,27 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             +
           </button>
           <button style={buttonStyle} onClick={() => setZoom(1)}>
-            Reset
+            100%
           </button>
-          <span style={{ color: c.muted, marginLeft: "auto" }}>
+          <button style={buttonStyle} onClick={fitToPane}>
+            Fit
+          </button>
+          <span style={{ color: c.muted, marginLeft: "auto", whiteSpace: "nowrap" }}>
             Earliest units at the bottom
           </span>
         </div>
 
-        <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: 16 }}>
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            overflow: "auto",
+            padding: 16,
+            minWidth: 0,
+            minHeight: 0,
+            boxSizing: "border-box",
+          }}
+        >
           {layout.nodes.length === 0 ? (
             <p style={{ color: c.muted }}>
               No units yet. Add contexts on the left and the matrix builds itself.
