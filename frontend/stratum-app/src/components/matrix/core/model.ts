@@ -40,12 +40,24 @@ export const UNIT_TYPES: UnitType[] = [
  * "above" is the stratigraphic sequence: `from` was deposited later than `to`.
  * The excavator's vocabulary (seals, cuts, fills) all carry that same
  * ordering, so they are recorded as a label on the relation rather than as
- * separate edge kinds. "same_as" correlates two records of one deposit.
+ * separate edge kinds.
+ *
+ * "same_as" and "contemporary" are deliberately separate. Same-as means two
+ * records describe one deposit, so they collapse into a single node.
+ * Contemporary means two distinct deposits formed at the same time: they stay
+ * distinct units, drawn side by side and tied, because merging them would
+ * destroy the record of two separate contexts.
  */
-export type RelationType = "above" | "same_as";
+export type RelationType = "above" | "same_as" | "contemporary";
 
 /** Excavation vocabulary, kept for the record sheet but not for the graph. */
-export type RelationVerb = "above" | "seals" | "cuts" | "fills" | "same_as";
+export type RelationVerb =
+  | "above"
+  | "seals"
+  | "cuts"
+  | "fills"
+  | "same_as"
+  | "contemporary";
 
 export const RELATION_VERBS: RelationVerb[] = [
   "above",
@@ -53,6 +65,7 @@ export const RELATION_VERBS: RelationVerb[] = [
   "cuts",
   "fills",
   "same_as",
+  "contemporary",
 ];
 
 export interface Unit {
@@ -74,15 +87,48 @@ export interface Relation {
   verb?: RelationVerb;
 }
 
+/**
+ * A named set of units drawn as one block.
+ *
+ * Large sites become unreadable as a flat sequence, so excavators bundle
+ * contexts into a feature or a period and reason about those.
+ */
+export interface Group {
+  id: string;
+  name: string;
+  unitIds: string[];
+  /** Explicit colour, otherwise one is derived from the name. */
+  color?: string;
+  /** Collapsed groups draw as a single node instead of their members. */
+  collapsed?: boolean;
+}
+
 export interface MatrixDocument {
   version: number;
   units: Unit[];
   relations: Relation[];
+  groups: Group[];
+  /**
+   * Manual node placement, keyed by node id. Automatic layout is used for
+   * anything absent, so a nudged diagram still absorbs new units.
+   */
+  positions: Record<string, { x: number; y: number }>;
+  /** Order phases are drawn and coloured in; unlisted phases follow. */
+  phaseOrder: string[];
+  title?: string;
+  notes?: string;
   updatedAt?: string;
 }
 
 export function emptyDocument(): MatrixDocument {
-  return { version: MATRIX_FORMAT_VERSION, units: [], relations: [] };
+  return {
+    version: MATRIX_FORMAT_VERSION,
+    units: [],
+    relations: [],
+    groups: [],
+    positions: {},
+    phaseOrder: [],
+  };
 }
 
 /** Verbs that mean "the subject is the later, upper unit". */
@@ -191,15 +237,65 @@ function parseCurrent(data: Record<string, unknown>): MatrixDocument {
       id: asString(record.id) || newId("rel"),
       from,
       to,
-      type: record.type === "same_as" ? "same_as" : "above",
+      type:
+        record.type === "same_as"
+          ? "same_as"
+          : record.type === "contemporary"
+            ? "contemporary"
+            : "above",
       verb: (asString(record.verb) as RelationVerb) || undefined,
     });
   }
+
+  const groups: Group[] = [];
+  if (Array.isArray(data.groups)) {
+    for (const entry of data.groups) {
+      if (!entry || typeof entry !== "object") continue;
+      const record = entry as Record<string, unknown>;
+      const id = asString(record.id);
+      if (!id) continue;
+      const unitIds = Array.isArray(record.unitIds)
+        ? record.unitIds.filter(
+            (value): value is string =>
+              typeof value === "string" && seenUnits.has(value),
+          )
+        : [];
+      groups.push({
+        id,
+        name: asString(record.name) || "Group",
+        unitIds,
+        color: asString(record.color) || undefined,
+        collapsed: record.collapsed === true,
+      });
+    }
+  }
+
+  const positions: Record<string, { x: number; y: number }> = {};
+  if (data.positions && typeof data.positions === "object") {
+    for (const [key, value] of Object.entries(
+      data.positions as Record<string, unknown>,
+    )) {
+      if (!value || typeof value !== "object") continue;
+      const point = value as Record<string, unknown>;
+      if (typeof point.x === "number" && typeof point.y === "number") {
+        positions[key] = { x: point.x, y: point.y };
+      }
+    }
+  }
+
+  const phaseOrder = Array.isArray(data.phaseOrder)
+    ? data.phaseOrder.filter((value): value is string => typeof value === "string")
+    : [];
 
   return {
     version: MATRIX_FORMAT_VERSION,
     units,
     relations,
+    groups,
+    positions,
+    phaseOrder,
+    title: asString(data.title) || undefined,
+    notes: asString(data.notes) || undefined,
     updatedAt: asString(data.updatedAt) || undefined,
   };
 }
@@ -247,7 +343,9 @@ function parseLegacy(data: Record<string, unknown>): MatrixDocument {
     const verb = asString(record.type).toLowerCase();
     if (!byId.has(from) || !byId.has(to)) continue;
 
-    if (CORRELATION_VERBS.has(verb)) {
+    if (verb === "contemporary_with" || verb === "contemporary") {
+      relations.push({ id: newId("rel"), from, to, type: "contemporary" });
+    } else if (CORRELATION_VERBS.has(verb)) {
       relations.push({ id: newId("rel"), from, to, type: "same_as" });
     } else if (UPPER_FIRST_VERBS.has(verb)) {
       relations.push({ id: newId("rel"), from, to, type: "above" });
@@ -256,5 +354,62 @@ function parseLegacy(data: Record<string, unknown>): MatrixDocument {
     }
   }
 
-  return { version: MATRIX_FORMAT_VERSION, units, relations };
+  const groups: Group[] = [];
+  const legacyGroups = Array.isArray(data.groups) ? data.groups : [];
+  for (const entry of legacyGroups) {
+    if (!Array.isArray(entry)) continue;
+    const id = asString(entry[0]);
+    const payload = (entry[1] as Record<string, unknown>) || {};
+    if (!id) continue;
+    const members = Array.isArray(payload.contexts) ? payload.contexts : [];
+    groups.push({
+      id,
+      name: asString(payload.name) || "Group",
+      unitIds: members.filter(
+        (value): value is string => typeof value === "string" && byId.has(value),
+      ),
+      color: asString(payload.color) || undefined,
+    });
+  }
+
+  return {
+    version: MATRIX_FORMAT_VERSION,
+    units,
+    relations,
+    groups,
+    positions: {},
+    phaseOrder: [],
+  };
+}
+
+/**
+ * A stable colour per phase.
+ *
+ * Derived from the name rather than stored, so a phase typed on a phone and a
+ * phase typed on a laptop get the same colour without having to sync a
+ * palette. Fixed lightness and saturation keep the labels readable.
+ */
+export function phaseColor(phase: string, order: string[] = []): string {
+  const index = order.indexOf(phase);
+  if (index >= 0) {
+    return `hsl(${(index * 137.5) % 360}, 55%, 62%)`;
+  }
+  let hash = 0;
+  for (let i = 0; i < phase.length; i += 1) {
+    hash = (hash * 31 + phase.charCodeAt(i)) % 360;
+  }
+  return `hsl(${hash}, 55%, 62%)`;
+}
+
+/** Every phase named by a unit, in the document's preferred order. */
+export function listPhases(doc: MatrixDocument): string[] {
+  const seen = new Set<string>();
+  for (const unit of doc.units) {
+    if (unit.phase) seen.add(unit.phase);
+  }
+  const ordered = doc.phaseOrder.filter((phase) => seen.has(phase));
+  const rest = Array.from(seen)
+    .filter((phase) => !ordered.includes(phase))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  return [...ordered, ...rest];
 }

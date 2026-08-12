@@ -16,11 +16,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { buildGraph, wouldCreateCycle } from "./graph";
 import type { MatrixGraph } from "./graph";
+import { parseImport } from "./importMatrix";
+import type { ImportReport } from "./importMatrix";
 import { emptyDocument, newId } from "./model";
-import type { MatrixDocument, RelationVerb, Unit, UnitType } from "./model";
+import type { Group, MatrixDocument, RelationVerb, Unit, UnitType } from "./model";
 import { loadMatrix, saveMatrix } from "./store";
 
 const AUTOSAVE_DELAY_MS = 1200;
+
+/**
+ * How many steps back the editor can go.
+ *
+ * Deep enough to cover a recording session, shallow enough that a large
+ * matrix does not pin many copies of the document in memory on a phone.
+ */
+const HISTORY_LIMIT = 50;
 
 export type SaveState = "idle" | "saving" | "saved" | "unsynced";
 
@@ -45,6 +55,25 @@ export interface UseMatrixResult {
   };
   removeRelation: (id: string) => void;
   reload: () => void;
+
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+
+  search: (query: string) => Unit[];
+
+  importText: (text: string) => ImportReport;
+
+  addGroup: (name: string, unitIds: string[]) => void;
+  updateGroup: (id: string, patch: Partial<Omit<Group, "id">>) => void;
+  removeGroup: (id: string) => void;
+
+  setPosition: (nodeId: string, point: { x: number; y: number }) => void;
+  clearPositions: () => void;
+
+  setPhaseOrder: (phases: string[]) => void;
+  setTitle: (title: string) => void;
 }
 
 /** Verbs whose subject is the upper, later unit. */
@@ -53,6 +82,7 @@ const VERB_IS_ABOVE: Record<RelationVerb, boolean> = {
   seals: true,
   cuts: true,
   fills: false,
+  contemporary: false,
   same_as: false,
 };
 
@@ -70,6 +100,12 @@ export function useMatrix(
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDoc = useRef<MatrixDocument | null>(null);
   const mounted = useRef(true);
+
+  // Whole-document snapshots. The alternative is an inverse operation per
+  // edit, which is far more code and gets undo subtly wrong exactly when it
+  // matters, such as undoing a unit deletion that also removed relations.
+  const [past, setPast] = useState<MatrixDocument[]>([]);
+  const [future, setFuture] = useState<MatrixDocument[]>([]);
 
   useEffect(() => {
     mounted.current = true;
@@ -89,6 +125,10 @@ export function useMatrix(
       .then((result) => {
         if (cancelled) return;
         setDoc(result.doc);
+        // A freshly loaded document is the new baseline; undoing back past it
+        // would restore a different project's state.
+        setPast([]);
+        setFuture([]);
         setOffline(result.offline);
         setSaveState(result.pendingUpload ? "unsynced" : "idle");
         setError(null);
@@ -140,10 +180,135 @@ export function useMatrix(
 
   const commit = useCallback(
     (next: MatrixDocument) => {
+      setPast((history) => [...history, doc].slice(-HISTORY_LIMIT));
+      // A fresh edit invalidates anything that was undone.
+      setFuture([]);
       setDoc(next);
       queueSave(next);
     },
-    [queueSave],
+    [doc, queueSave],
+  );
+
+  const undo = useCallback(() => {
+    if (!canEdit) return;
+    setPast((history) => {
+      if (history.length === 0) return history;
+      const previous = history[history.length - 1];
+      setFuture((ahead) => [doc, ...ahead].slice(0, HISTORY_LIMIT));
+      setDoc(previous);
+      queueSave(previous);
+      return history.slice(0, -1);
+    });
+  }, [canEdit, doc, queueSave]);
+
+  const redo = useCallback(() => {
+    if (!canEdit) return;
+    setFuture((ahead) => {
+      if (ahead.length === 0) return ahead;
+      const next = ahead[0];
+      setPast((history) => [...history, doc].slice(-HISTORY_LIMIT));
+      setDoc(next);
+      queueSave(next);
+      return ahead.slice(1);
+    });
+  }, [canEdit, doc, queueSave]);
+
+  /**
+   * Find units by context number, description or phase.
+   *
+   * Substring rather than prefix: on site people search for the digits they
+   * remember, which are as often the end of a number as the start.
+   */
+  const search = useCallback<UseMatrixResult["search"]>(
+    (query) => {
+      const needle = query.trim().toLowerCase();
+      if (!needle) return [];
+      return doc.units
+        .filter(
+          (unit) =>
+            unit.label.toLowerCase().includes(needle) ||
+            (unit.description ?? "").toLowerCase().includes(needle) ||
+            (unit.phase ?? "").toLowerCase().includes(needle) ||
+            unit.type.includes(needle),
+        )
+        .sort((a, b) => {
+          // An exact context number is almost always the one wanted.
+          const aExact = a.label.toLowerCase() === needle ? 0 : 1;
+          const bExact = b.label.toLowerCase() === needle ? 0 : 1;
+          return (
+            aExact - bExact ||
+            a.label.localeCompare(b.label, undefined, { numeric: true })
+          );
+        });
+    },
+    [doc],
+  );
+
+  const importText = useCallback<UseMatrixResult["importText"]>(
+    (text) => {
+      const report = parseImport(text, doc);
+      if (report.unitsAdded > 0 || report.relationsAdded > 0) {
+        commit(report.doc);
+      }
+      return report;
+    },
+    [doc, commit],
+  );
+
+  const addGroup = useCallback<UseMatrixResult["addGroup"]>(
+    (name, unitIds) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      commit({
+        ...doc,
+        groups: [...doc.groups, { id: newId("g"), name: trimmed, unitIds }],
+      });
+    },
+    [doc, commit],
+  );
+
+  const updateGroup = useCallback<UseMatrixResult["updateGroup"]>(
+    (id, patch) => {
+      commit({
+        ...doc,
+        groups: doc.groups.map((group) =>
+          group.id === id ? { ...group, ...patch } : group,
+        ),
+      });
+    },
+    [doc, commit],
+  );
+
+  const removeGroup = useCallback<UseMatrixResult["removeGroup"]>(
+    (id) => {
+      commit({ ...doc, groups: doc.groups.filter((group) => group.id !== id) });
+    },
+    [doc, commit],
+  );
+
+  const setPosition = useCallback<UseMatrixResult["setPosition"]>(
+    (nodeId, point) => {
+      commit({ ...doc, positions: { ...doc.positions, [nodeId]: point } });
+    },
+    [doc, commit],
+  );
+
+  const clearPositions = useCallback(() => {
+    commit({ ...doc, positions: {} });
+  }, [doc, commit]);
+
+  const setPhaseOrder = useCallback<UseMatrixResult["setPhaseOrder"]>(
+    (phases) => {
+      commit({ ...doc, phaseOrder: phases });
+    },
+    [doc, commit],
+  );
+
+  const setTitle = useCallback<UseMatrixResult["setTitle"]>(
+    (title) => {
+      commit({ ...doc, title });
+    },
+    [doc, commit],
   );
 
   const addUnit = useCallback<UseMatrixResult["addUnit"]>(
@@ -201,17 +366,24 @@ export function useMatrix(
         return { ok: false, error: "A unit cannot relate to itself." };
       }
 
-      const type = verb === "same_as" ? "same_as" : "above";
+      const type =
+        verb === "same_as"
+          ? "same_as"
+          : verb === "contemporary"
+            ? "contemporary"
+            : "above";
       // "A fills B" means A is inside, and so later than, B.
       const upperFirst = VERB_IS_ABOVE[verb];
-      const orderedFrom = type === "same_as" || upperFirst ? from : to;
-      const orderedTo = type === "same_as" || upperFirst ? to : from;
+      const symmetric = type !== "above";
+      const orderedFrom = symmetric || upperFirst ? from : to;
+      const orderedTo = symmetric || upperFirst ? to : from;
 
       const duplicate = doc.relations.some(
         (relation) =>
           relation.type === type &&
           ((relation.from === orderedFrom && relation.to === orderedTo) ||
-            (type === "same_as" &&
+            // same-as and contemporary read the same either way round.
+            (symmetric &&
               relation.from === orderedTo &&
               relation.to === orderedFrom)),
       );
@@ -253,6 +425,19 @@ export function useMatrix(
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
 
   return {
+    undo,
+    redo,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    search,
+    importText,
+    addGroup,
+    updateGroup,
+    removeGroup,
+    setPosition,
+    clearPositions,
+    setPhaseOrder,
+    setTitle,
     doc,
     graph,
     loading,

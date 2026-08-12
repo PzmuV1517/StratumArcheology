@@ -27,15 +27,19 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/** Self-contained SVG: no external fonts or stylesheets to go missing. */
-export function toSvg(layout: MatrixLayout, title: string): string {
+/** The drawing itself, without the <svg> wrapper, so pages can reuse it. */
+function drawingBody(layout: MatrixLayout): string {
   const parts: string[] = [];
 
-  parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`,
-  );
-  parts.push(`<title>${escapeXml(title)}</title>`);
-  parts.push(`<rect width="100%" height="100%" fill="#ffffff"/>`);
+  for (const group of layout.groups) {
+    parts.push(
+      `<rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" fill="none" stroke="${group.color}" stroke-width="1.5" stroke-dasharray="4 3" rx="6"/>`,
+    );
+    parts.push(
+      `<text x="${group.x + 6}" y="${group.y + 12}" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="${group.color}">${escapeXml(group.name)}</text>`,
+    );
+  }
+
   parts.push(
     `<g fill="none" stroke="#111111" stroke-width="1.5" stroke-linejoin="miter">`,
   );
@@ -52,17 +56,83 @@ export function toSvg(layout: MatrixLayout, title: string): string {
   }
   parts.push(`</g>`);
 
+  // Contemporary ties use a different dash so they cannot be mistaken for a
+  // correlation, which means something else entirely.
+  parts.push(`<g stroke="#111111" stroke-width="1.5" stroke-dasharray="2 3">`);
+  for (const link of layout.contemporaries) {
+    parts.push(
+      `<line x1="${link.from.x}" y1="${link.from.y}" x2="${link.to.x}" y2="${link.to.y}"/>`,
+    );
+  }
+  parts.push(`</g>`);
+
   for (const node of layout.nodes) {
     parts.push(
-      `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="#ffffff" stroke="#111111" stroke-width="1.5"/>`,
+      `<rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" fill="${node.phaseColor ?? "#ffffff"}" stroke="#111111" stroke-width="1.5"/>`,
     );
     parts.push(
       `<text x="${node.x + node.width / 2}" y="${node.y + node.height / 2 + 5}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#111111">${escapeXml(node.label)}</text>`,
     );
   }
 
-  parts.push(`</svg>`);
   return parts.join("\n");
+}
+
+/** Self-contained SVG: no external fonts or stylesheets to go missing. */
+export function toSvg(layout: MatrixLayout, title: string): string {
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`,
+    `<title>${escapeXml(title)}</title>`,
+    `<rect width="100%" height="100%" fill="#ffffff"/>`,
+    drawingBody(layout),
+    `</svg>`,
+  ].join("\n");
+}
+
+export interface PageSize {
+  width: number;
+  height: number;
+}
+
+/** A4 at 96dpi, less a 10mm margin. */
+export const A4_PORTRAIT: PageSize = { width: 756, height: 1046 };
+
+/**
+ * Split the diagram into printable tiles.
+ *
+ * Scaling a large matrix onto one sheet makes the context numbers unreadable,
+ * which defeats the point of printing it for the trench. Tiling keeps the
+ * drawing at full size and lets the sheets be laid out side by side, which is
+ * how excavation matrices have always been published.
+ */
+export function toPrintPages(
+  layout: MatrixLayout,
+  title: string,
+  page: PageSize = A4_PORTRAIT,
+): string[] {
+  const columns = Math.max(1, Math.ceil(layout.width / page.width));
+  const rows = Math.max(1, Math.ceil(layout.height / page.height));
+  const pages: string[] = [];
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const originX = column * page.width;
+      const originY = row * page.height;
+      pages.push(
+        [
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${page.width}" height="${page.height}" viewBox="${originX} ${originY} ${page.width} ${page.height}">`,
+          `<title>${escapeXml(title)} (${column + 1},${row + 1})</title>`,
+          `<rect x="${originX}" y="${originY}" width="${page.width}" height="${page.height}" fill="#ffffff"/>`,
+          drawingBody(layout),
+          // Sheet reference, so a wall of pages can be reassembled.
+          `<text x="${originX + page.width - 6}" y="${originY + page.height - 6}" text-anchor="end" font-family="Helvetica, Arial, sans-serif" font-size="10" fill="#666666">${escapeXml(title)} - sheet ${column + 1} of ${columns} across, ${row + 1} of ${rows} down</text>`,
+          `</svg>`,
+        ].join("\n"),
+      );
+    }
+  }
+
+  return pages;
 }
 
 /** The stratigraphic index: every unit with what it is above and below. */

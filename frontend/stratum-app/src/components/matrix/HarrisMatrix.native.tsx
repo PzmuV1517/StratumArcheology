@@ -20,6 +20,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -28,17 +29,19 @@ import {
 } from "react-native";
 import Svg, { Line, Polyline, Rect, Text as SvgText } from "react-native-svg";
 
+import { toCsv, toText } from "./core/exportMatrix";
 import { layoutGraph, PHONE_LAYOUT, polylinePoints } from "./core/layout";
-import { RELATION_VERBS, UNIT_TYPES } from "./core/model";
+import { listPhases, phaseColor, RELATION_VERBS, UNIT_TYPES } from "./core/model";
 import type { RelationVerb, UnitType } from "./core/model";
 import { useMatrix } from "./core/useMatrix";
+import type { UseMatrixResult } from "./core/useMatrix";
 
 interface HarrisMatrixProps {
   projectId: string;
   canEdit?: boolean;
 }
 
-type View_ = "diagram" | "units" | "relations" | "problems";
+type View_ = "diagram" | "units" | "relations" | "problems" | "data";
 
 export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   projectId,
@@ -50,9 +53,10 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
   const [zoom, setZoom] = useState(1);
 
   const layout = useMemo(
-    () => layoutGraph(matrix.graph, PHONE_LAYOUT),
-    [matrix.graph],
+    () => layoutGraph(matrix.graph, PHONE_LAYOUT, matrix.doc),
+    [matrix.graph, matrix.doc],
   );
+  const phases = useMemo(() => listPhases(matrix.doc), [matrix.doc]);
 
   const c = useMemo(
     () => ({
@@ -88,25 +92,29 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           { borderBottomColor: c.border, backgroundColor: c.panel },
         ]}
       >
-        {(["diagram", "units", "relations", "problems"] as View_[]).map((name) => (
-          <Pressable
-            key={name}
-            onPress={() => setView(name)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: view === name }}
-            accessibilityLabel={
-              name === "problems" && errors.length > 0
-                ? `Problems, ${errors.length} to fix`
-                : name
-            }
-            style={[styles.tab, view === name && { backgroundColor: c.accent }]}
-          >
-            <Text style={{ color: c.text, textTransform: "capitalize" }}>
-              {name}
-              {name === "problems" && errors.length > 0 ? ` (${errors.length})` : ""}
-            </Text>
-          </Pressable>
-        ))}
+        {(["diagram", "units", "relations", "problems", "data"] as View_[]).map(
+          (name) => (
+            <Pressable
+              key={name}
+              onPress={() => setView(name)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: view === name }}
+              accessibilityLabel={
+                name === "problems" && errors.length > 0
+                  ? `Problems, ${errors.length} to fix`
+                  : name
+              }
+              style={[styles.tab, view === name && { backgroundColor: c.accent }]}
+            >
+              <Text style={{ color: c.text, textTransform: "capitalize" }}>
+                {name}
+                {name === "problems" && errors.length > 0
+                  ? ` (${errors.length})`
+                  : ""}
+              </Text>
+            </Pressable>
+          ),
+        )}
       </View>
 
       {view === "diagram" && (
@@ -129,10 +137,72 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
             >
               <Text style={{ color: c.text, fontSize: 18 }}>+</Text>
             </Pressable>
+            {canEdit && (
+              <>
+                <Pressable
+                  onPress={matrix.undo}
+                  disabled={!matrix.canUndo}
+                  accessibilityLabel="Undo"
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: c.accent,
+                      opacity: matrix.canUndo ? 1 : 0.4,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: c.text }}>Undo</Text>
+                </Pressable>
+                <Pressable
+                  onPress={matrix.redo}
+                  disabled={!matrix.canRedo}
+                  accessibilityLabel="Redo"
+                  style={[
+                    styles.button,
+                    {
+                      backgroundColor: c.accent,
+                      opacity: matrix.canRedo ? 1 : 0.4,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: c.text }}>Redo</Text>
+                </Pressable>
+              </>
+            )}
             <Text style={{ color: c.muted, marginLeft: "auto", fontSize: 12 }}>
               Earliest at the bottom
             </Text>
           </View>
+
+          {phases.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{
+                flexGrow: 0,
+                borderBottomWidth: 1,
+                borderBottomColor: c.border,
+              }}
+              contentContainerStyle={{ padding: 8, gap: 12 }}
+            >
+              {phases.map((phase) => (
+                <View
+                  key={phase}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <View
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 2,
+                      backgroundColor: phaseColor(phase, matrix.doc.phaseOrder),
+                    }}
+                  />
+                  <Text style={{ color: c.muted, fontSize: 12 }}>{phase}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
 
           {layout.nodes.length === 0 ? (
             <View style={styles.centre}>
@@ -162,9 +232,32 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                       strokeWidth={1.5}
                     />
                   ))}
+                  {layout.groups.map((group) => (
+                    <React.Fragment key={group.id}>
+                      <Rect
+                        x={group.x}
+                        y={group.y}
+                        width={group.width}
+                        height={group.height}
+                        fill="none"
+                        stroke={group.color}
+                        strokeWidth={1.5}
+                        strokeDasharray="4 3"
+                        rx={6}
+                      />
+                      <SvgText
+                        x={group.x + 6}
+                        y={group.y + 12}
+                        fontSize={11}
+                        fill={group.color}
+                      >
+                        {group.name}
+                      </SvgText>
+                    </React.Fragment>
+                  ))}
                   {layout.correlations.map((link, index) => (
                     <Line
-                      key={index}
+                      key={`corr${index}`}
                       x1={link.from.x}
                       y1={link.from.y}
                       x2={link.to.x}
@@ -174,6 +267,18 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                       strokeDasharray="6 4"
                     />
                   ))}
+                  {layout.contemporaries.map((link, index) => (
+                    <Line
+                      key={`cont${index}`}
+                      x1={link.from.x}
+                      y1={link.from.y}
+                      x2={link.to.x}
+                      y2={link.to.y}
+                      stroke={c.text}
+                      strokeWidth={1.5}
+                      strokeDasharray="2 3"
+                    />
+                  ))}
                   {layout.nodes.map((node) => (
                     <React.Fragment key={node.id}>
                       <Rect
@@ -181,7 +286,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                         y={node.y}
                         width={node.width}
                         height={node.height}
-                        fill={c.panel}
+                        fill={node.phaseColor ?? c.panel}
                         stroke={node.hasProblem ? c.error : c.text}
                         strokeWidth={node.hasProblem ? 2.5 : 1.5}
                       />
@@ -190,7 +295,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
                         y={node.y + node.height / 2 + 5}
                         textAnchor="middle"
                         fontSize={14}
-                        fill={c.text}
+                        fill={node.phaseColor ? "#111111" : c.text}
                       >
                         {node.label}
                       </SvgText>
@@ -236,6 +341,7 @@ export const HarrisMatrix: React.FC<HarrisMatrixProps> = ({
           ))}
         </ScrollView>
       )}
+      {view === "data" && <DataView matrix={matrix} canEdit={canEdit} colors={c} />}
 
       <View style={[styles.status, { borderTopColor: c.border }]}>
         <Text style={{ color: c.muted, fontSize: 12 }}>
@@ -257,12 +363,120 @@ function statusLine(saveState: string, offline: boolean, canEdit: boolean): stri
 }
 
 interface ViewProps {
-  matrix: ReturnType<typeof useMatrix>;
+  matrix: UseMatrixResult;
   canEdit: boolean;
   colors: Record<string, string>;
 }
 
+/**
+ * Import and export on the phone.
+ *
+ * Sharing rather than downloading: a phone has no useful download folder, and
+ * the crew needs the file to reach a laptop or an email in one step.
+ */
+const DataView: React.FC<ViewProps> = ({ matrix, canEdit, colors }) => {
+  const [paste, setPaste] = useState("");
+  const [report, setReport] = useState<string | null>(null);
+
+  const runImport = () => {
+    if (!paste.trim()) return;
+    const result = matrix.importText(paste);
+    const lines = [
+      `Added ${result.unitsAdded} units and ${result.relationsAdded} relationships.`,
+    ];
+    if (result.skipped.length > 0) {
+      lines.push(`Could not read ${result.skipped.length} lines.`);
+      for (const skip of result.skipped.slice(0, 5)) {
+        lines.push(`line ${skip.line}: ${skip.reason}`);
+      }
+    }
+    setReport(lines.join("\n"));
+    setPaste("");
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 12 }}>
+      {canEdit && (
+        <>
+          <Text style={{ color: colors.text, fontWeight: "600" }}>Import</Text>
+          <Text style={{ color: colors.muted, marginBottom: 8 }}>
+            One relationship per line, for example 1001,above,1002
+          </Text>
+          <TextInput
+            value={paste}
+            onChangeText={setPaste}
+            multiline
+            placeholder={"1001,above,1002"}
+            placeholderTextColor={colors.muted}
+            accessibilityLabel="Paste matrix data"
+            style={[
+              styles.input,
+              {
+                color: colors.text,
+                borderColor: colors.border,
+                backgroundColor: colors.panel,
+                minHeight: 110,
+                textAlignVertical: "top",
+                paddingTop: 10,
+              },
+            ]}
+          />
+          <Pressable
+            onPress={runImport}
+            style={[
+              styles.primary,
+              { backgroundColor: colors.accent, borderColor: colors.border },
+            ]}
+          >
+            <Text style={{ color: colors.text }}>Import</Text>
+          </Pressable>
+          {report && (
+            <Text style={{ color: colors.muted, marginTop: 8 }}>{report}</Text>
+          )}
+        </>
+      )}
+
+      <Text style={{ color: colors.text, fontWeight: "600", marginTop: 20 }}>
+        Export
+      </Text>
+      <Pressable
+        onPress={() =>
+          Share.share({
+            title: "Stratigraphic index",
+            message: toText(matrix.doc, matrix.graph),
+          })
+        }
+        style={[
+          styles.primary,
+          { backgroundColor: colors.accent, borderColor: colors.border },
+        ]}
+      >
+        <Text style={{ color: colors.text }}>Share stratigraphic index</Text>
+      </Pressable>
+      <Pressable
+        onPress={() =>
+          Share.share({
+            title: "Relationships",
+            message: toCsv(matrix.doc),
+          })
+        }
+        style={[
+          styles.primary,
+          { backgroundColor: colors.accent, borderColor: colors.border },
+        ]}
+      >
+        <Text style={{ color: colors.text }}>Share relationships (CSV)</Text>
+      </Pressable>
+      <Text style={{ color: colors.muted, marginTop: 12 }}>
+        {matrix.doc.units.length} units, {matrix.doc.relations.length} recorded
+        relationships.
+      </Text>
+    </ScrollView>
+  );
+};
+
 const UnitsView: React.FC<ViewProps> = ({ matrix, canEdit, colors }) => {
+  const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
   const [type, setType] = useState<UnitType>("deposit");
   const [error, setError] = useState<string | null>(null);
@@ -277,12 +491,33 @@ const UnitsView: React.FC<ViewProps> = ({ matrix, canEdit, colors }) => {
     setLabel("");
   };
 
-  const units = [...matrix.doc.units].sort((a, b) =>
+  const all = [...matrix.doc.units].sort((a, b) =>
     a.label.localeCompare(b.label, undefined, { numeric: true }),
   );
+  // Searching is how a unit gets found once a site passes a hundred contexts;
+  // scrolling stops working long before that.
+  const units = query.trim() ? matrix.search(query) : all;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
+    <ScrollView
+      contentContainerStyle={{ padding: 12 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search context, phase or description"
+        placeholderTextColor={colors.muted}
+        accessibilityLabel="Search units"
+        style={[
+          styles.input,
+          {
+            color: colors.text,
+            borderColor: colors.border,
+            backgroundColor: colors.panel,
+          },
+        ]}
+      />
       {canEdit && (
         <View style={{ marginBottom: 16 }}>
           <TextInput
@@ -333,7 +568,9 @@ const UnitsView: React.FC<ViewProps> = ({ matrix, canEdit, colors }) => {
       )}
 
       {units.length === 0 && (
-        <Text style={{ color: colors.muted }}>No units recorded.</Text>
+        <Text style={{ color: colors.muted }}>
+          {query.trim() ? "No unit matches." : "No units recorded."}
+        </Text>
       )}
 
       {units.map((unit) => (

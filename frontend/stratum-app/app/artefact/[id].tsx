@@ -40,6 +40,8 @@ import {
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
 import api from "../../src/services/api";
+import { listContexts } from "@/components/matrix/core/contexts";
+import type { MatrixContextSummary } from "@/components/matrix/core/contexts";
 
 const isIOS = Platform.OS === "ios";
 
@@ -91,7 +93,7 @@ export default function ArtefactDetail() {
   const [qrExpanded, setQrExpanded] = useState(false);
 
   // Harris Matrix context info
-  type HMContext = { id: string; type: string; description: string };
+  type HMContext = MatrixContextSummary;
   const [hmContextInfo, setHmContextInfo] = useState<HMContext | null>(null);
   const [hmContexts, setHmContexts] = useState<HMContext[]>([]);
   const [showHmPicker, setShowHmPicker] = useState(false);
@@ -233,21 +235,10 @@ export default function ArtefactDetail() {
       if (loadedProjectId && parsedMeta?.harrisMatrixContextId) {
         try {
           const hmRes = await api.get(`/projects/${loadedProjectId}/harris-matrix`);
-          const hmData = hmRes.data?.data;
-          if (hmData?.contexts) {
-            const ctxs: HMContext[] = (hmData.contexts as [string, any][]).map(
-              ([cid, ctx]) => ({
-                id: cid,
-                type: ctx.type || "layer",
-                description: ctx.description || "",
-              }),
-            );
-            setHmContexts(ctxs);
-            const found = ctxs.find(
-              (c) => c.id === parsedMeta!.harrisMatrixContextId,
-            );
-            if (found) setHmContextInfo(found);
-          }
+          const ctxs = listContexts(hmRes.data?.data);
+          setHmContexts(ctxs);
+          const found = ctxs.find((c) => c.id === parsedMeta!.harrisMatrixContextId);
+          if (found) setHmContextInfo(found);
         } catch {}
       }
       // Load preview image - prefer preview.* file, fall back to first image
@@ -597,17 +588,7 @@ export default function ArtefactDetail() {
                     const hmRes = await api.get(
                       `/projects/${projectId}/harris-matrix`,
                     );
-                    const hmData = hmRes.data?.data;
-                    if (hmData?.contexts) {
-                      const ctxs: HMContext[] = (
-                        hmData.contexts as [string, any][]
-                      ).map(([cid, ctx]) => ({
-                        id: cid,
-                        type: ctx.type || "layer",
-                        description: ctx.description || "",
-                      }));
-                      setHmContexts(ctxs);
-                    }
+                    setHmContexts(listContexts(hmRes.data?.data));
                   } catch {}
                 }
                 setShowHmPicker(true);
@@ -657,7 +638,7 @@ export default function ArtefactDetail() {
                     fontWeight: "600",
                   }}
                 >
-                  {hmContextInfo.id}
+                  {hmContextInfo.label}
                   <Text
                     style={{
                       color:
@@ -1214,7 +1195,7 @@ export default function ArtefactDetail() {
                           fontWeight: "600",
                         }}
                       >
-                        {item.id}
+                        {item.label}
                         <Text
                           style={{
                             color: typeColors[item.type] || "#9A9A9A",

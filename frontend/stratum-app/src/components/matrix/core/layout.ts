@@ -14,6 +14,8 @@
  */
 
 import type { MatrixGraph } from "./graph";
+import { phaseColor } from "./model";
+import type { MatrixDocument } from "./model";
 
 export interface LayoutOptions {
   nodeWidth: number;
@@ -50,6 +52,11 @@ export interface PlacedNode {
   level: number;
   unitIds: string[];
   hasProblem: boolean;
+  /** Phase tint, when the units carry a phase. */
+  phase?: string;
+  phaseColor?: string;
+  /** True when the operator has dragged this node off the automatic grid. */
+  pinned: boolean;
 }
 
 export interface PlacedEdge {
@@ -64,10 +71,23 @@ export interface PlacedCorrelation {
   to: { x: number; y: number };
 }
 
+/** A labelled box drawn behind the units that belong to a group. */
+export interface PlacedGroup {
+  id: string;
+  name: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface MatrixLayout {
   nodes: PlacedNode[];
   edges: PlacedEdge[];
   correlations: PlacedCorrelation[];
+  contemporaries: PlacedCorrelation[];
+  groups: PlacedGroup[];
   width: number;
   height: number;
 }
@@ -81,8 +101,11 @@ export interface MatrixLayout {
 export function layoutGraph(
   graph: MatrixGraph,
   options: LayoutOptions = DEFAULT_LAYOUT,
+  doc?: MatrixDocument,
 ): MatrixLayout {
   const { nodeWidth, nodeHeight, columnGap, rowGap, padding } = options;
+  const positions = doc?.positions ?? {};
+  const phaseOrder = doc?.phaseOrder ?? [];
 
   const rows = new Map<number, typeof graph.nodes>();
   for (const node of graph.nodes) {
@@ -117,16 +140,23 @@ export function layoutGraph(
 
     bucket.forEach((node, index) => {
       const unitIds = node.members.map((member) => member.id);
+      // The phase of the first member that has one: correlated records of a
+      // single deposit belong to a single phase.
+      const phase = node.members.find((member) => member.phase)?.phase;
+      const manual = positions[node.id];
       const entry: PlacedNode = {
         id: node.id,
         label: node.label,
-        x: rowStart + index * (nodeWidth + columnGap),
-        y: padding + level * (nodeHeight + rowGap),
+        x: manual ? manual.x : rowStart + index * (nodeWidth + columnGap),
+        y: manual ? manual.y : padding + level * (nodeHeight + rowGap),
         width: nodeWidth,
         height: nodeHeight,
         level,
         unitIds,
         hasProblem: unitIds.some((id) => problemUnits.has(id)),
+        phase,
+        phaseColor: phase ? phaseColor(phase, phaseOrder) : undefined,
+        pinned: Boolean(manual),
       };
       placed.set(node.id, entry);
       nodes.push(entry);
@@ -172,34 +202,76 @@ export function layoutGraph(
     });
   }
 
-  const correlations: PlacedCorrelation[] = [];
-  const seenCorrelation = new Set<string>();
-  for (const link of graph.correlations) {
-    const fromNode = graph.nodeOfUnit.get(link.from);
-    const toNode = graph.nodeOfUnit.get(link.to);
-    if (!fromNode || !toNode || fromNode === toNode) continue;
-    const key =
-      fromNode < toNode ? `${fromNode}|${toNode}` : `${toNode}|${fromNode}`;
-    if (seenCorrelation.has(key)) continue;
-    seenCorrelation.add(key);
+  const tie = (links: { from: string; to: string }[]): PlacedCorrelation[] => {
+    const result: PlacedCorrelation[] = [];
+    const seen = new Set<string>();
+    for (const link of links) {
+      const fromNode = graph.nodeOfUnit.get(link.from);
+      const toNode = graph.nodeOfUnit.get(link.to);
+      if (!fromNode || !toNode || fromNode === toNode) continue;
+      const key =
+        fromNode < toNode ? `${fromNode}|${toNode}` : `${toNode}|${fromNode}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const a = placed.get(fromNode);
+      const b = placed.get(toNode);
+      if (!a || !b) continue;
+      // Join the facing edges so the tie does not cut through either box.
+      const [left, right] = a.x <= b.x ? [a, b] : [b, a];
+      result.push({
+        from: { x: left.x + left.width, y: left.y + left.height / 2 },
+        to: { x: right.x, y: right.y + right.height / 2 },
+      });
+    }
+    return result;
+  };
 
-    const a = placed.get(fromNode);
-    const b = placed.get(toNode);
-    if (!a || !b) continue;
-    correlations.push({
-      from: { x: a.x + a.width, y: a.y + a.height / 2 },
-      to: { x: b.x, y: b.y + b.height / 2 },
+  const contemporaries = tie(graph.contemporaries);
+
+  // Group boxes are drawn behind their members, so they need the members'
+  // final coordinates rather than the level grid.
+  const groups: PlacedGroup[] = [];
+  const groupPadding = 10;
+  for (const group of doc?.groups ?? []) {
+    const members = nodes.filter((node) =>
+      node.unitIds.some((unitId) => group.unitIds.includes(unitId)),
+    );
+    if (members.length === 0) continue;
+    const minX = Math.min(...members.map((node) => node.x));
+    const minY = Math.min(...members.map((node) => node.y));
+    const maxX = Math.max(...members.map((node) => node.x + node.width));
+    const maxY = Math.max(...members.map((node) => node.y + node.height));
+    groups.push({
+      id: group.id,
+      name: group.name,
+      color: group.color ?? phaseColor(group.name),
+      x: minX - groupPadding,
+      // Extra room above for the group's name.
+      y: minY - groupPadding - 14,
+      width: maxX - minX + groupPadding * 2,
+      height: maxY - minY + groupPadding * 2 + 14,
     });
   }
 
-  const maxLevel = nodes.reduce((max, node) => Math.max(max, node.level), 0);
+  // Dragged nodes can sit outside the automatic grid, so measure the drawing
+  // rather than assuming it.
+  const contentRight = nodes.reduce(
+    (max, node) => Math.max(max, node.x + node.width),
+    contentWidth + padding,
+  );
+  const contentBottom = nodes.reduce(
+    (max, node) => Math.max(max, node.y + node.height),
+    padding,
+  );
 
   return {
     nodes,
     edges,
-    correlations,
-    width: contentWidth + padding * 2,
-    height: padding * 2 + (maxLevel + 1) * nodeHeight + maxLevel * rowGap,
+    correlations: tie(graph.correlations),
+    contemporaries,
+    groups,
+    width: contentRight + padding,
+    height: contentBottom + padding,
   };
 }
 

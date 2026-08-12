@@ -10,17 +10,21 @@
  */
 
 import { buildGraph, wouldCreateCycle } from "../src/components/matrix/core/graph";
-import { parseDocument } from "../src/components/matrix/core/model";
+import {
+  listPhases,
+  parseDocument,
+  phaseColor,
+} from "../src/components/matrix/core/model";
+import { parseImport } from "../src/components/matrix/core/importMatrix";
 import type { MatrixDocument, Unit } from "../src/components/matrix/core/model";
 
 function unit(id: string): Unit {
   return { id, label: id, type: "deposit" };
 }
 
-function doc(
-  unitIds: string[],
-  relations: [string, string, "above" | "same_as"][],
-): MatrixDocument {
+type TestRelation = [string, string, "above" | "same_as" | "contemporary"];
+
+function doc(unitIds: string[], relations: TestRelation[]): MatrixDocument {
   return {
     version: 3,
     units: unitIds.map(unit),
@@ -30,6 +34,9 @@ function doc(
       to,
       type,
     })),
+    groups: [],
+    positions: {},
+    phaseOrder: [],
   };
 }
 
@@ -80,7 +87,7 @@ describe("transitive reduction", () => {
 
   it("reduces a long chain with every shortcut recorded", () => {
     const ids = ["1", "2", "3", "4", "5"];
-    const relations: [string, string, "above"][] = [];
+    const relations: TestRelation[] = [];
     for (let i = 0; i < ids.length; i += 1) {
       for (let j = i + 1; j < ids.length; j += 1) {
         relations.push([ids[i], ids[j], "above"]);
@@ -255,7 +262,7 @@ describe("contradictions", () => {
 describe("scale", () => {
   it("handles a deep sequence without overflowing the stack", () => {
     const ids = Array.from({ length: 400 }, (_, i) => `u${i}`);
-    const relations: [string, string, "above"][] = [];
+    const relations: TestRelation[] = [];
     for (let i = 0; i < ids.length - 1; i += 1) {
       relations.push([ids[i], ids[i + 1], "above"]);
     }
@@ -308,5 +315,125 @@ describe("parsing stored documents", () => {
     expect(parseDocument(null).units).toEqual([]);
     expect(parseDocument("nonsense").units).toEqual([]);
     expect(parseDocument({}).units).toEqual([]);
+  });
+});
+
+describe("contemporary units", () => {
+  it("keeps contemporary deposits as separate nodes", () => {
+    // Same-as merges; contemporary must not, or one context is erased.
+    const graph = buildGraph(doc(["A", "B"], [["A", "B", "contemporary"]]));
+
+    expect(graph.nodes).toHaveLength(2);
+    expect(graph.contemporaries).toHaveLength(1);
+    expect(graph.correlations).toHaveLength(0);
+  });
+
+  it("rejects units that are contemporary and also stratified", () => {
+    const graph = buildGraph(
+      doc(
+        ["A", "B", "C"],
+        [
+          ["A", "B", "above"],
+          ["B", "C", "above"],
+          ["A", "C", "contemporary"],
+        ],
+      ),
+    );
+
+    expect(graph.problems.some((p) => p.kind === "contemporary_and_ordered")).toBe(
+      true,
+    );
+  });
+});
+
+describe("import", () => {
+  it("reads three-column CSV and creates units on first mention", () => {
+    const report = parseImport("1001,above,1002\n1002,above,1003");
+
+    expect(report.unitsAdded).toBe(3);
+    expect(report.relationsAdded).toBe(2);
+    expect(report.skipped).toEqual([]);
+    expect(report.doc.units.map((u) => u.label).sort()).toEqual([
+      "1001",
+      "1002",
+      "1003",
+    ]);
+  });
+
+  it("reads the same thing written as prose", () => {
+    const report = parseImport("1001 above 1002");
+    expect(report.relationsAdded).toBe(1);
+  });
+
+  it("flips reversed verbs so the upper unit is stored first", () => {
+    const report = parseImport("1001,below,1002");
+    const relation = report.doc.relations[0];
+    const label = (id: string) => report.doc.units.find((u) => u.id === id)!.label;
+
+    expect(label(relation.from)).toBe("1002");
+    expect(label(relation.to)).toBe("1001");
+  });
+
+  it("skips a header row without inventing contexts from it", () => {
+    const report = parseImport("upper,relation,lower\n1001,above,1002");
+    expect(report.unitsAdded).toBe(2);
+  });
+
+  it("reports unreadable lines instead of failing the file", () => {
+    const report = parseImport(
+      "1001,above,1002\n1003,sideways,1004\nnonsense\n1005,above,1006",
+    );
+
+    expect(report.relationsAdded).toBe(2);
+    expect(report.skipped).toHaveLength(2);
+    expect(report.skipped[0].line).toBe(2);
+    expect(report.skipped[0].reason).toContain("sideways");
+  });
+
+  it("merges into an existing document without duplicating units", () => {
+    const first = parseImport("1001,above,1002");
+    const second = parseImport("1002,above,1003", first.doc);
+
+    expect(second.unitsAdded).toBe(1);
+    expect(second.doc.units).toHaveLength(3);
+  });
+
+  it("ignores a relationship it already holds", () => {
+    const first = parseImport("1001,above,1002");
+    const second = parseImport("1001,above,1002", first.doc);
+    expect(second.relationsAdded).toBe(0);
+  });
+
+  it("handles quoted fields containing commas", () => {
+    const report = parseImport('"1001","above","1002"');
+    expect(report.relationsAdded).toBe(1);
+  });
+
+  it("imports a matrix that is consistent once built", () => {
+    const report = parseImport(
+      ["1001,above,1002", "1002,above,1003", "1001,above,1003"].join("\n"),
+    );
+    const graph = buildGraph(report.doc);
+
+    // The recorded shortcut is kept in the record but not drawn.
+    expect(graph.edges.filter((e) => !e.redundant)).toHaveLength(2);
+    expect(graph.problems.filter((p) => p.severity === "error")).toHaveLength(0);
+  });
+});
+
+describe("phases", () => {
+  it("gives a phase the same colour wherever it is typed", () => {
+    expect(phaseColor("Roman")).toBe(phaseColor("Roman"));
+    expect(phaseColor("Roman")).not.toBe(phaseColor("Medieval"));
+  });
+
+  it("lists phases in the document's order, then the rest alphabetically", () => {
+    const base = doc(["A", "B", "C"], []);
+    base.units[0].phase = "Medieval";
+    base.units[1].phase = "Roman";
+    base.units[2].phase = "Iron Age";
+    base.phaseOrder = ["Roman"];
+
+    expect(listPhases(base)).toEqual(["Roman", "Iron Age", "Medieval"]);
   });
 });
