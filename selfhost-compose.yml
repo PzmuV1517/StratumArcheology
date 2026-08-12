@@ -97,6 +97,7 @@ services:
       apk add --no-cache bash &&
       npm install --include=dev &&
       npm run build:web &&
+      cp serve.json dist/serve.json &&
       npx serve@14.2.4 dist -l 19006
       "
     ports:

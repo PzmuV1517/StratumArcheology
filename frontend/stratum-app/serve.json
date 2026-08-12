@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/project/:id", "destination": "/project/[id]/index" },
+    { "source": "/project/:id/:tab", "destination": "/project/[id]/:tab.html" },
+    { "source": "/artefact/:id", "destination": "/artefact/[id].html" },
+    { "source": "/profile/:userId", "destination": "/profile/[userId].html" },
+    {
+      "source": "/public-project/:id",
+      "destination": "/public-project/[id].html"
+    },
+    { "source": "/voice-note/:id", "destination": "/voice-note/[id].html" },
+    { "source": "/dm/:userId", "destination": "/dm/[userId].html" }
+  ]
+}
