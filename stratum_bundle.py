@@ -130,11 +130,16 @@ def _materialize_embedded_project_root() -> Path | None:
     current_version = ""
     if RUNTIME_PAYLOAD_VERSION_FILE.exists():
         try:
-            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(encoding="utf-8").strip()
+            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(
+                encoding="utf-8"
+            ).strip()
         except Exception:
             current_version = ""
 
-    if _has_project_layout(RUNTIME_PROJECT_ROOT) and current_version == BUNDLE_PAYLOAD_VERSION:
+    if (
+        _has_project_layout(RUNTIME_PROJECT_ROOT)
+        and current_version == BUNDLE_PAYLOAD_VERSION
+    ):
         return RUNTIME_PROJECT_ROOT
 
     runtime_parent = RUNTIME_PROJECT_ROOT.parent
@@ -291,6 +296,47 @@ def _compose_cmd(*args: str) -> list[str]:
     if env_file.exists():
         cmd += ["--env-file", str(env_file)]
     return [*cmd, *args]
+
+
+def _pin_origins() -> None:
+    """Point CORS at this machine, wherever DHCP has put it today.
+
+    backend/.env carries whatever origins its author last needed, so a bundle
+    started on a field laptop tends to inherit a stale LAN address and reject
+    every browser request. The stack only ever serves these four origins, so
+    derive them instead of expecting an operator to maintain the list.
+    """
+    host_ip = _get_host_ip()
+    origins = [
+        "http://localhost:19006",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        f"http://{host_ip}:19006",
+        f"http://{host_ip}:5173",
+        f"http://{host_ip}:8000",
+    ]
+    os.environ["ALLOWED_ORIGINS"] = ",".join(origins)
+
+
+def _pin_auth_mode() -> None:
+    """Pin the stack to local auth before any Compose command runs.
+
+    backend/.env is handed to Compose as --env-file so it can resolve the
+    generated credentials. That also exposes a developer's own
+    AUTH_MODE=firebase plus their production Firebase admin key, which would
+    point this bundle at the live user directory and make every login depend
+    on reaching Google. The bundle exists to run standalone, so local auth
+    wins unless the operator opts in explicitly. Compose reads the process
+    environment before --env-file, so setting it here overrides backend/.env.
+    """
+    opt_in = os.environ.get("STRATUM_BUNDLE_AUTH_MODE", "").strip().lower()
+    os.environ["AUTH_MODE"] = opt_in or "local"
+    if opt_in and opt_in != "local":
+        _print(
+            f"WARNING: AUTH_MODE={opt_in}. This stack will use the Firebase "
+            "project configured in backend/.env, so its accounts are shared "
+            "with that project and login will require internet access."
+        )
 
 
 def _run(
@@ -676,7 +722,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     up_parser.set_defaults(func=cmd_up)
 
-    down_parser = sub.add_parser("down", help="Stop and remove running stack containers")
+    down_parser = sub.add_parser(
+        "down", help="Stop and remove running stack containers"
+    )
     down_parser.set_defaults(func=cmd_down)
 
     restart_parser = sub.add_parser("restart", help="Restart the self-host stack")
@@ -691,7 +739,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ps_parser = sub.add_parser("ps", help="Show compose service process status")
     ps_parser.set_defaults(func=cmd_ps)
 
-    status_parser = sub.add_parser("status", help="Show process + runtime status summary")
+    status_parser = sub.add_parser(
+        "status", help="Show process + runtime status summary"
+    )
     status_parser.set_defaults(func=cmd_status)
 
     logs_parser = sub.add_parser("logs", help="Show compose logs")
@@ -769,12 +819,16 @@ def main() -> None:
 
     parser = _build_parser()
     args = parser.parse_args()
+    _pin_auth_mode()
+    _pin_origins()
 
     try:
         args.func(args)
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip() if exc.stderr else ""
-        _fail(stderr or f"Command failed with exit code {exc.returncode}", exc.returncode)
+        _fail(
+            stderr or f"Command failed with exit code {exc.returncode}", exc.returncode
+        )
 
 
 if __name__ == "__main__":

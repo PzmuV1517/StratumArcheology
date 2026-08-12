@@ -15,11 +15,11 @@ import secrets
 import uuid
 from datetime import datetime, timedelta
 
+import bcrypt
 import firebase_admin.auth as firebase_auth
 import httpx
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.auth_provider import (
@@ -57,7 +57,39 @@ FIREBASE_SEND_OOB_URL = (
 LOCAL_PROVIDER_ID = "local"
 LOCAL_UID_PREFIX = "LOCAL-"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt reads at most 72 bytes of a password and ignores the rest.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _password_bytes(password: str) -> bytes:
+    # passlib truncated silently here; bcrypt 5 raises instead. Truncating
+    # keeps hashes written by the old code verifiable.
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
+
+class _BcryptHasher:
+    """The two bcrypt calls this module needs.
+
+    passlib has been unmaintained since 2020 and its bcrypt backend reads
+    bcrypt.__about__, dropped in bcrypt 4.1, so on bcrypt 5 every local
+    registration failed with a bogus "password cannot be longer than 72
+    bytes". Calling bcrypt directly removes the broken layer.
+    """
+
+    @staticmethod
+    def hash(password: str) -> str:
+        return bcrypt.hashpw(_password_bytes(password), bcrypt.gensalt()).decode()
+
+    @staticmethod
+    def verify(password: str, password_hash: str) -> bool:
+        try:
+            return bcrypt.checkpw(_password_bytes(password), password_hash.encode())
+        except ValueError:
+            # Stored hash is malformed; treat as a failed login, not a 500.
+            return False
+
+
+pwd_context = _BcryptHasher()
 
 
 def _issue_api_jwt(user_id: str, firebase_uid: str, email: str) -> str:

@@ -14,7 +14,7 @@ Use is permitted only for the owners above and parties explicitly licensed in wr
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserRole(str, Enum):
@@ -38,7 +38,9 @@ class LoginRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str
+    # In local auth mode nothing upstream enforces a password policy, and
+    # bcrypt ignores anything past 72 bytes, so bound it at both ends here.
+    password: str = Field(min_length=8, max_length=72)
     display_name: str
     username: str
 

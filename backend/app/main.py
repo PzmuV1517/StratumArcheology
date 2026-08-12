@@ -196,6 +196,18 @@ def _service_checks() -> dict[str, bool]:
     }
 
 
+def _firebase_label() -> str:
+    """Describe Firebase for humans reading /health.
+
+    A disabled Firebase counts as healthy, but reporting it as "connected"
+    claims a live link to the identity provider that does not exist and hides
+    which user directory the server is really using.
+    """
+    if not settings.firebase_auth_enabled:
+        return "disabled"
+    return "connected" if get_firebase_status().get("ready") else "unavailable"
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -273,7 +285,7 @@ async def system_status(request: Request):
         "services": {
             "database": "connected" if checks["database"] else "unavailable",
             "storage": "connected" if checks["storage"] else "unavailable",
-            "firebase": "connected" if checks["firebase"] else "unavailable",
+            "firebase": _firebase_label(),
             "backup": backup_schedule,
         },
         "urls": {
@@ -296,7 +308,7 @@ async def health_check():
         "status": "healthy" if healthy else "degraded",
         "database": "connected" if checks["database"] else "unavailable",
         "storage": "connected" if checks["storage"] else "unavailable",
-        "firebase": "connected" if checks["firebase"] else "unavailable",
+        "firebase": _firebase_label(),
         "auth_mode": settings.auth_mode_normalized,
         "deployment_mode": settings.deployment_mode_normalized,
         "uptime_seconds": round(_get_uptime_seconds(), 2),
