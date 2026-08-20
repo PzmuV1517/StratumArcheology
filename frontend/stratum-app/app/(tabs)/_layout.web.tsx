@@ -182,10 +182,10 @@ export default function TabLayout() {
         onComplete={handleUsernameComplete}
       />
 
-      {/* Outer shell — full viewport, column direction */}
+      {/* Outer shell - full viewport, column direction */}
       <View style={[s.shell, { backgroundColor: pageBackground }]}>
         {/* ══════════════════════════════════════════
-         *  HEADER ROW — burger + STRATUM (never collapses)
+         *  HEADER ROW - burger + STRATUM (never collapses)
          * ════════════════════════════════════════ */}
         <View style={s.headerRow}>
           <TouchableOpacity style={s.burgerBtn} onPress={toggle} activeOpacity={0.8}>
@@ -269,10 +269,10 @@ export default function TabLayout() {
         )}
 
         {/* ══════════════════════════════════════════
-         *  BODY ROW  — sidebar nav + page content
+         *  BODY ROW - sidebar nav + page content
          * ════════════════════════════════════════ */}
         <View style={s.bodyRow}>
-          {/* Sidebar nav — also driven by widthAnim */}
+          {/* Sidebar nav - also driven by widthAnim */}
           <Animated.View
             style={[
               s.sidebar,
@@ -341,13 +341,13 @@ export default function TabLayout() {
  *  Styles
  * ─────────────────────────────────────────── */
 const s = StyleSheet.create({
-  /* Outer container — column */
+  /* Outer container - column */
   shell: {
     flex: 1,
     flexDirection: "column",
   },
 
-  /* ── Header row — always full width, never animates ─── */
+  /* ── Header row - always full width, never animates ─── */
   headerRow: {
     height: ROW_H,
     flexDirection: "row",
@@ -375,7 +375,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
   },
 
-  /* Sidebar nav — same bg as page for seamless look */
+  /* Sidebar nav - same bg as page for seamless look */
   sidebar: {
     overflow: "hidden",
     paddingTop: 4,
@@ -405,7 +405,7 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* Fixed-width icon column — icons stay centred when collapsed */
+  /* Fixed-width icon column - icons stay centred when collapsed */
   iconSlot: {
     width: COLLAPSED_W - 10,
     height: 44,

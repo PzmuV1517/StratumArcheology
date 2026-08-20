@@ -220,7 +220,6 @@ export const FileUploadMenu: React.FC<FileUploadMenuProps> = ({
     >
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.container}>
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Upload</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>

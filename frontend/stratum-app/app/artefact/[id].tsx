@@ -40,6 +40,8 @@ import {
   ArtefactManifest,
 } from "../../src/utils/artefactManifest";
 import api from "../../src/services/api";
+import { listContexts } from "@/components/matrix/core/contexts";
+import type { MatrixContextSummary } from "@/components/matrix/core/contexts";
 
 const isIOS = Platform.OS === "ios";
 
@@ -91,7 +93,7 @@ export default function ArtefactDetail() {
   const [qrExpanded, setQrExpanded] = useState(false);
 
   // Harris Matrix context info
-  type HMContext = { id: string; type: string; description: string };
+  type HMContext = MatrixContextSummary;
   const [hmContextInfo, setHmContextInfo] = useState<HMContext | null>(null);
   const [hmContexts, setHmContexts] = useState<HMContext[]>([]);
   const [showHmPicker, setShowHmPicker] = useState(false);
@@ -221,8 +223,7 @@ export default function ArtefactDetail() {
       let parsedMeta: ArtefactMeta | null = null;
       if (metaFile) {
         try {
-          const res = await fileService.downloadFile(metaFile.id);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(metaFile.id);
           if (text) {
             parsedMeta = JSON.parse(text);
             setMeta(parsedMeta);
@@ -234,24 +235,13 @@ export default function ArtefactDetail() {
       if (loadedProjectId && parsedMeta?.harrisMatrixContextId) {
         try {
           const hmRes = await api.get(`/projects/${loadedProjectId}/harris-matrix`);
-          const hmData = hmRes.data?.data;
-          if (hmData?.contexts) {
-            const ctxs: HMContext[] = (hmData.contexts as [string, any][]).map(
-              ([cid, ctx]) => ({
-                id: cid,
-                type: ctx.type || "layer",
-                description: ctx.description || "",
-              }),
-            );
-            setHmContexts(ctxs);
-            const found = ctxs.find(
-              (c) => c.id === parsedMeta!.harrisMatrixContextId,
-            );
-            if (found) setHmContextInfo(found);
-          }
+          const ctxs = listContexts(hmRes.data?.data);
+          setHmContexts(ctxs);
+          const found = ctxs.find((c) => c.id === parsedMeta!.harrisMatrixContextId);
+          if (found) setHmContextInfo(found);
         } catch {}
       }
-      // Load preview image — prefer preview.* file, fall back to first image
+      // Load preview image - prefer preview.* file, fall back to first image
       const pv = ch.find(
         (c: any) =>
           c.type === "file" && /^preview\.(png|jpg|jpeg|webp)$/i.test(c.name),
@@ -298,8 +288,7 @@ export default function ArtefactDetail() {
     } else {
       if (!noteContents.has(noteId)) {
         try {
-          const res = await fileService.downloadFile(noteId);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(noteId);
           setNoteContents((prev) => new Map(prev).set(noteId, text));
         } catch (e) {
           console.error("Failed to load note", e);
@@ -384,8 +373,7 @@ export default function ArtefactDetail() {
       let existing: Partial<ArtefactManifest> | undefined = undefined;
       if (existingMetaFile) {
         try {
-          const res = await fileService.downloadFile(existingMetaFile.id);
-          const text = await res.blob.text();
+          const text = await fileService.downloadFileAsText(existingMetaFile.id);
           if (text) existing = JSON.parse(text);
         } catch {}
       }
@@ -428,8 +416,7 @@ export default function ArtefactDetail() {
       if (!existingMetaFile) return;
       let existing: any = {};
       try {
-        const res = await fileService.downloadFile(existingMetaFile.id);
-        const text = await res.blob.text();
+        const text = await fileService.downloadFileAsText(existingMetaFile.id);
         if (text) existing = JSON.parse(text);
       } catch {}
       const updated = { ...existing, ...patch, updatedAt: new Date().toISOString() };
@@ -509,7 +496,7 @@ export default function ArtefactDetail() {
     <View style={s.container}>
       <Stack.Screen
         options={{
-          title: meta?.name ? `${meta.name} #${meta.number ?? "—"}` : "Artefact",
+          title: meta?.name ? `${meta.name} #${meta.number ?? "-"}` : "Artefact",
           headerTransparent: isIOS,
           headerBlurEffect: isIOS ? "systemChromeMaterial" : undefined,
           headerStyle: isIOS
@@ -601,17 +588,7 @@ export default function ArtefactDetail() {
                     const hmRes = await api.get(
                       `/projects/${projectId}/harris-matrix`,
                     );
-                    const hmData = hmRes.data?.data;
-                    if (hmData?.contexts) {
-                      const ctxs: HMContext[] = (
-                        hmData.contexts as [string, any][]
-                      ).map(([cid, ctx]) => ({
-                        id: cid,
-                        type: ctx.type || "layer",
-                        description: ctx.description || "",
-                      }));
-                      setHmContexts(ctxs);
-                    }
+                    setHmContexts(listContexts(hmRes.data?.data));
                   } catch {}
                 }
                 setShowHmPicker(true);
@@ -661,7 +638,7 @@ export default function ArtefactDetail() {
                     fontWeight: "600",
                   }}
                 >
-                  {hmContextInfo.id}
+                  {hmContextInfo.label}
                   <Text
                     style={{
                       color:
@@ -920,7 +897,7 @@ export default function ArtefactDetail() {
                       printQr(
                         qrDataUrl,
                         `${meta?.name || "artefact"}-qr.png`,
-                        `${meta?.name || "Artefact"} #${meta?.number ?? "—"}`,
+                        `${meta?.name || "Artefact"} #${meta?.number ?? "-"}`,
                       )
                     }
                   >
@@ -944,7 +921,7 @@ export default function ArtefactDetail() {
               <View style={{ alignItems: "center", marginTop: 12 }}>
                 <QRCodeView
                   value={qrUrl || ""}
-                  label={`${meta?.name || "Artefact"} #${meta?.number ?? "—"}`}
+                  label={`${meta?.name || "Artefact"} #${meta?.number ?? "-"}`}
                   onReadyDataUrl={setQrDataUrl}
                 />
               </View>
@@ -991,7 +968,7 @@ export default function ArtefactDetail() {
                   fontWeight: "700",
                 }}
               >
-                {meta?.name || "—"}
+                {meta?.name || "-"}
               </Text>
             </Text>
             <TextInput
@@ -1218,7 +1195,7 @@ export default function ArtefactDetail() {
                           fontWeight: "600",
                         }}
                       >
-                        {item.id}
+                        {item.label}
                         <Text
                           style={{
                             color: typeColors[item.type] || "#9A9A9A",
@@ -1397,7 +1374,7 @@ export default function ArtefactDetail() {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — matching new-project / join-project design language
+// Styles - matching new-project / join-project design language
 // ---------------------------------------------------------------------------
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({
@@ -1495,7 +1472,6 @@ const createStyles = (isDarkMode: boolean) =>
       gap: 8,
     },
     emptyText: { fontSize: 14, color: isDarkMode ? "#666666" : "#7A7A7A" },
-    // Input
     input: {
       backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
       borderRadius: 12,

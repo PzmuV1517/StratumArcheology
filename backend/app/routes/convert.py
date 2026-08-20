@@ -298,7 +298,6 @@ def parse_las_ascii(
                 return j
         return -1
 
-    # Read ASCII data rows
     data_rows: list[list[float]] = []
     i = idx_ascii + 1
     # Determine how many columns to expect: curves length if >0, else infer from first numeric line
@@ -394,7 +393,6 @@ def parse_las_ascii(
     pick_var_indices: tuple[int, int] | None = None
     if (x_idx < 0 or y_idx < 0) and not use_latlon and curve_names:
         cols = len(curve_names)
-        # sample up to 1000 rows evenly
         sample_n = min(1000, len(data_rows))
         sample_step = max(1, len(data_rows) // max(sample_n, 1))
         means = [0.0] * cols

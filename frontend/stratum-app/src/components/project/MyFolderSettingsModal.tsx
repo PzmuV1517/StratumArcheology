@@ -186,7 +186,6 @@ export default function MyFolderSettingsModal({
     >
       <View style={styles.backdrop}>
         <View style={styles.modalContainer}>
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>My Folder Settings</Text>
             <TouchableOpacity
@@ -200,7 +199,6 @@ export default function MyFolderSettingsModal({
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Default Permissions */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Default Permissions</Text>
               <Text style={styles.sectionDescription}>
@@ -252,9 +250,7 @@ export default function MyFolderSettingsModal({
               accessibilityLabel="Toggle per-member permissions"
               accessibilityState={{ expanded: showAdvanced }}
             >
-              <Text style={styles.advancedToggleText}>
-                Per-Member Permissions
-              </Text>
+              <Text style={styles.advancedToggleText}>Per-Member Permissions</Text>
               <Text style={styles.advancedToggleHint}>
                 Override defaults for specific members
               </Text>
@@ -366,7 +362,6 @@ export default function MyFolderSettingsModal({
             )}
           </ScrollView>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity
               style={styles.cancelButton}

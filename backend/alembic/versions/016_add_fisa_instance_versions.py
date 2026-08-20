@@ -46,9 +46,7 @@ def upgrade() -> None:
         sa.Column("rejection_reason", sa.Text(), nullable=True),
         sa.Column("changed_by", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["changed_by"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["changed_by"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(
             ["fisa_instance_id"], ["fisa_instances.id"], ondelete="CASCADE"
         ),

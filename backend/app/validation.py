@@ -36,14 +36,12 @@ FILE_MAGIC_BYTES = {
     # Documents
     b"%PDF": "application/pdf",
     b"PK\x03\x04": "application/zip",  # ZIP, XLSX, DOCX
-    # Audio
     b"ID3": "audio/mpeg",  # MP3 with ID3 tag
     b"\xff\xfb": "audio/mpeg",  # MP3 without ID3
     b"\xff\xfa": "audio/mpeg",
     b"OggS": "audio/ogg",
     b"fLaC": "audio/flac",
     b"RIFF....WAVE": "audio/wav",
-    # Video
     b"\x00\x00\x00\x1c": "video/mp4",  # MP4/M4V
     b"\x00\x00\x00\x18": "video/mp4",
     b"\x00\x00\x00\x14": "video/mp4",
@@ -51,7 +49,6 @@ FILE_MAGIC_BYTES = {
     b"\x1aE\xdf\xa3": "video/webm",
 }
 
-# Allowed MIME types for file uploads
 ALLOWED_MIME_TYPES = {
     # Images
     "image/jpeg",
@@ -75,7 +72,6 @@ ALLOWED_MIME_TYPES = {
     "application/vnd.ms-excel",  # XLS
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # DOCX
     "application/msword",  # DOC
-    # Audio
     "audio/mpeg",
     "audio/mp3",
     "audio/wav",
@@ -84,7 +80,6 @@ ALLOWED_MIME_TYPES = {
     "audio/aac",
     "audio/m4a",
     "audio/flac",
-    # Video
     "video/mp4",
     "video/webm",
     "video/quicktime",

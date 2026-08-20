@@ -586,7 +586,7 @@ const AudioAttachmentPlayer = ({
 };
 
 // ---------------------------------------------------------------------------
-// Styles — matching new-project / join-project design language
+// Styles - matching new-project / join-project design language
 // ---------------------------------------------------------------------------
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({

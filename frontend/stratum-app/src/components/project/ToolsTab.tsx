@@ -292,7 +292,6 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
-      // Use dynamic import for expo-clipboard
       const Clipboard = await import("expo-clipboard").catch(() => null);
       if (Clipboard) {
         await Clipboard.setStringAsync(text);
@@ -409,7 +408,6 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Compass Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Compass</Text>
         <View style={styles.compassContainer}>
@@ -502,7 +500,6 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               </Text>
             </TouchableOpacity>
 
-            {/* Altitude */}
             {location.altitude !== null && (
               <TouchableOpacity
                 style={styles.coordinateRow}
@@ -522,7 +519,6 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               </TouchableOpacity>
             )}
 
-            {/* Accuracy */}
             {location.accuracy !== null && (
               <View style={styles.coordinateRow}>
                 <Text style={styles.coordinateLabelText}>Accuracy</Text>
@@ -550,13 +546,10 @@ export default function ToolsTab({ projectId: _projectId }: ToolsTabProps) {
               }}
             >
               <Text style={styles.copyAllButtonText}>
-                {copyFeedback === "Coordinates"
-                    ? "Copied!"
-                    : "Copy Coordinates"}
+                {copyFeedback === "Coordinates" ? "Copied!" : "Copy Coordinates"}
               </Text>
             </TouchableOpacity>
 
-            {/* Last Updated Timestamp */}
             <Text style={styles.timestampText}>
               Last updated: {new Date(location.timestamp).toLocaleTimeString()}
             </Text>

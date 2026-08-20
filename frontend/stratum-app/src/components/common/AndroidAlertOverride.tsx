@@ -60,7 +60,7 @@ if (Platform.OS === "android") {
     if (showCustomAlert) {
       showCustomAlert(entry);
     } else {
-      // Component not mounted yet — queue it
+      // Component not mounted yet - queue it
       pendingQueue.push(entry);
     }
   };

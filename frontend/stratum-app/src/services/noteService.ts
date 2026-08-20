@@ -25,8 +25,11 @@ export interface NoteServiceMethods {
   createNote: (data: any) => Promise<any>;
   updateNote: (noteId: string, data: any) => Promise<any>;
   deleteNote: (noteId: string) => Promise<void>;
-  uploadAudio: (noteId: string, audioData: any, filename?: string) => Promise<any>;
-  uploadAudioBlob?: (noteId: string, blob: Blob, filename?: string) => Promise<any>;
+  uploadAudio: (
+    noteId: string,
+    audioData: Blob | string,
+    filename?: string,
+  ) => Promise<any>;
   uploadPhoto: (noteId: string, photoData: any) => Promise<any>;
   uploadAttachment: (noteId: string, ...args: any[]) => Promise<any>;
   updateTranscription: (noteId: string, text: string) => Promise<any>;

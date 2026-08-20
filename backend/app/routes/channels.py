@@ -83,7 +83,7 @@ def _ensure_default_channel(
     """Ensure a default #general channel exists for the project, creating it if needed."""
     ch = (
         db.query(Channel)
-        .filter(Channel.project_id == project_id, Channel.is_default == True)
+        .filter(Channel.project_id == project_id, Channel.is_default.is_(True))
         .first()
     )
     if ch:
@@ -130,7 +130,6 @@ async def list_channels(
     if role is None:
         raise HTTPException(status_code=403, detail="Not a project member")
 
-    # Ensure default channel exists
     _ensure_default_channel(db, project_id, current_user.id)
 
     channels = (

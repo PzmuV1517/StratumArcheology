@@ -11,7 +11,7 @@
  * No license is granted. Unauthorized copying, modification, distribution, or use is prohibited.
  * Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
  */
-// Must be imported BEFORE tweetnacl — polyfills crypto.getRandomValues
+// Must be imported BEFORE tweetnacl - polyfills crypto.getRandomValues
 import "react-native-get-random-values";
 import nacl from "tweetnacl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -117,7 +117,7 @@ export async function decryptMessage(
   if (!content.startsWith(E2EE_PREFIX)) return content;
 
   const keyB64 = await getProjectKey(projectId);
-  if (!keyB64) return "[Encrypted — key not available]";
+  if (!keyB64) return "[Encrypted - key not available]";
 
   try {
     const key = fromBase64(keyB64);
@@ -127,11 +127,11 @@ export async function decryptMessage(
     const ciphertext = packed.slice(nacl.secretbox.nonceLength);
 
     const plaintext = nacl.secretbox.open(ciphertext, nonce, key);
-    if (!plaintext) return "[Encrypted — wrong key]";
+    if (!plaintext) return "[Encrypted - wrong key]";
 
     return new TextDecoder().decode(plaintext);
   } catch {
-    return "[Encrypted — decryption failed]";
+    return "[Encrypted - decryption failed]";
   }
 }
 
@@ -143,7 +143,7 @@ export function isEncrypted(content: string): boolean {
 /* ── Auto-setup ─────────────────────────────────────────────────────── */
 
 /**
- * Ensure a project has an E2EE key — fetch from server or generate & push.
+ * Ensure a project has an E2EE key - fetch from server or generate & push.
  * Call this once when the chat is opened. Stores the key locally.
  */
 export async function ensureProjectKey(

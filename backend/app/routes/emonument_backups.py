@@ -127,7 +127,9 @@ async def diff_backup(
     try:
         data = backup_service.diff_with_live(backup_id, db)
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found"
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -146,7 +148,9 @@ async def restore_backup(
     try:
         record = await asyncio.to_thread(backup_service.restore_backup, backup_id)
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found"
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -63,20 +63,20 @@ export default function UnearthedScreen() {
   const textSecondary = isDarkMode ? "#9A9A9A" : "#666666";
   const avatarPlaceholder = isDarkMode ? "#2A2A2A" : "#E3E3E3";
   const coverGradient = isDarkMode
-    ? [
+    ? ([
         "#1A1A1A",
         "rgba(26,26,26,0.92)",
         "rgba(26,26,26,0.5)",
         "rgba(26,26,26,0.15)",
         "transparent",
-      ]
-    : [
+      ] as const)
+    : ([
         "#FFFFFF",
         "rgba(255,255,255,0.9)",
         "rgba(255,255,255,0.55)",
         "rgba(255,255,255,0.2)",
         "transparent",
-      ];
+      ] as const);
 
   const isSearching = searchQuery.trim().length >= 3;
 
@@ -209,7 +209,7 @@ export default function UnearthedScreen() {
               Updated{" "}
               {project.updated_at
                 ? new Date(project.updated_at).toLocaleDateString()
-                : "—"}
+                : "-"}
             </Text>
             {memberCount != null && memberCount > 0 && (
               <View style={styles.memberBadge}>
@@ -307,7 +307,6 @@ export default function UnearthedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: pageBackground }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: pageBackground }]}>
         <Text style={[styles.headerTitle, { color: textPrimary }]}>Unearthed</Text>
         <Text style={[styles.headerSubtitle, { color: textSecondary }]}>

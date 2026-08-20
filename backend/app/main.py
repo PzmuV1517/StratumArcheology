@@ -66,7 +66,6 @@ logger = get_logger(__name__)
 _process_started_monotonic = time.monotonic()
 _process_started_at = datetime.now(UTC)
 
-# Initialize Firebase based on auth mode.
 firebase_ready = initialize_firebase(
     strict=settings.auth_mode_normalized == "firebase"
 )
@@ -75,7 +74,9 @@ if firebase_ready:
 elif settings.firebase_auth_enabled:
     logger.warning("Firebase unavailable - Google/Firebase auth will be disabled")
 else:
-    logger.info("Firebase auth disabled by configuration", auth_mode=settings.AUTH_MODE)
+    logger.info(
+        "Firebase auth disabled by configuration", auth_mode=settings.AUTH_MODE
+    )
 
 # =============================================================================
 # DATABASE MIGRATIONS
@@ -85,7 +86,6 @@ else:
 # Run migrations with: alembic upgrade head
 # =============================================================================
 
-# Create FastAPI app
 app = FastAPI(
     title="STRATUM API",
     description="Archaeological site management and collaboration platform",
@@ -95,7 +95,6 @@ app.state.started_at_iso = _process_started_at.isoformat()
 app.state.started_monotonic = _process_started_monotonic
 app.state.firebase_ready = firebase_ready
 
-# Attach the rate limiter to the app
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -124,6 +123,7 @@ async def _capture_base_url(request: Request, call_next):
     if request.url.path.startswith("/api"):
         response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
     return response
+
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
@@ -196,6 +196,18 @@ def _service_checks() -> dict[str, bool]:
     }
 
 
+def _firebase_label() -> str:
+    """Describe Firebase for humans reading /health.
+
+    A disabled Firebase counts as healthy, but reporting it as "connected"
+    claims a live link to the identity provider that does not exist and hides
+    which user directory the server is really using.
+    """
+    if not settings.firebase_auth_enabled:
+        return "disabled"
+    return "connected" if get_firebase_status().get("ready") else "unavailable"
+
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -262,7 +274,9 @@ async def system_status(request: Request):
     base_url = str(request.base_url).rstrip("/")
     return {
         "status": "operational" if healthy else "degraded",
-        "started_at": getattr(app.state, "started_at_iso", _process_started_at.isoformat()),
+        "started_at": getattr(
+            app.state, "started_at_iso", _process_started_at.isoformat()
+        ),
         "uptime_seconds": round(_get_uptime_seconds(), 2),
         "resources": {
             "memory_rss_mb": _get_memory_rss_mb(),
@@ -271,7 +285,7 @@ async def system_status(request: Request):
         "services": {
             "database": "connected" if checks["database"] else "unavailable",
             "storage": "connected" if checks["storage"] else "unavailable",
-            "firebase": "connected" if checks["firebase"] else "unavailable",
+            "firebase": _firebase_label(),
             "backup": backup_schedule,
         },
         "urls": {
@@ -294,7 +308,7 @@ async def health_check():
         "status": "healthy" if healthy else "degraded",
         "database": "connected" if checks["database"] else "unavailable",
         "storage": "connected" if checks["storage"] else "unavailable",
-        "firebase": "connected" if checks["firebase"] else "unavailable",
+        "firebase": _firebase_label(),
         "auth_mode": settings.auth_mode_normalized,
         "deployment_mode": settings.deployment_mode_normalized,
         "uptime_seconds": round(_get_uptime_seconds(), 2),
@@ -309,7 +323,9 @@ async def _start_backup_scheduler():
 @app.on_event("startup")
 async def _load_whisper():
     if settings.DISABLE_WHISPER:
-        logger.info("Whisper disabled via DISABLE_WHISPER=true — skipping model load")
+        logger.info(
+            "Whisper disabled via DISABLE_WHISPER=true - skipping model load"
+        )
         return
     try:
         loop = __import__("asyncio").get_running_loop()
@@ -334,6 +350,5 @@ if __name__ == "__main__":
     )
 
 
-# Mount Socket.IO app
 # This must be done after all routes are registered
 app.mount("/ws", sio_app)

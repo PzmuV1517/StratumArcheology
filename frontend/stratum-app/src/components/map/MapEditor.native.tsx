@@ -254,8 +254,7 @@ export const MapEditorMobile: React.FC<{
                 (c.name === "artefact.json" || c.name.endsWith(".json")),
             );
             if (!metaFile) continue;
-            const res = await fileService.downloadFile(metaFile.id);
-            const text = await res.blob.text();
+            const text = await fileService.downloadFileAsText(metaFile.id);
             if (!text) continue;
             const manifest = JSON.parse(text);
             if (
@@ -477,7 +476,7 @@ export const MapEditorMobile: React.FC<{
           <ActivityIndicator size="large" color={SITE_COLOR} />
           <Text style={styles.loadingHint}>Se încarcă harta…</Text>
           <Text style={styles.loadingSubHint}>
-            Dacă vezi un ecran alb, așteaptă puțin — încărcarea depinde de conexiune.
+            Dacă vezi un ecran alb, așteaptă puțin - încărcarea depinde de conexiune.
           </Text>
         </View>
       ) : (

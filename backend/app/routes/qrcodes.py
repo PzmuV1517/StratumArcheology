@@ -43,7 +43,7 @@ def _unique_code(db: Session, max_attempts: int = 10) -> str:
         code = _generate_code()
         if not db.query(QRCode).filter(QRCode.code == code).first():
             return code
-    # Extremely unlikely fallback – use a longer random part
+    # Extremely unlikely fallback - use a longer random part
     return _generate_code(length=12)
 
 

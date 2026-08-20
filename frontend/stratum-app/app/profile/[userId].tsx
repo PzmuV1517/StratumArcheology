@@ -132,14 +132,13 @@ export default function ProfileViewScreen() {
           <Text style={styles.backArrowText}>← Back</Text>
         </TouchableOpacity>
         {isOwnProfile && (
-          <TouchableOpacity onPress={() => router.push("/(tabs)/profile")}>
+          <TouchableOpacity onPress={() => router.push("/settings")}>
             <Text style={styles.editLink}>Edit</Text>
           </TouchableOpacity>
         )}
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        {/* Banner */}
         {profile.banner_url ? (
           <Image source={{ uri: profile.banner_url }} style={styles.banner} />
         ) : (
@@ -171,12 +170,11 @@ export default function ProfileViewScreen() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>🕐 Local time</Text>
             <Text style={styles.infoValue}>
-              {localTime || "—"} ({profile.timezone})
+              {localTime || "-"} ({profile.timezone})
             </Text>
           </View>
         )}
 
-        {/* Description */}
         {profile.description ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
@@ -211,7 +209,6 @@ export default function ProfileViewScreen() {
           </View>
         )}
 
-        {/* Phone */}
         {profile.phone ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact</Text>

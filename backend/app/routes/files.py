@@ -37,7 +37,7 @@ from app.dependencies import (
     get_current_user,
     get_current_user_or_token,
 )
-from app.minio_client import minio_client
+from app.minio_client import minio_client, verify_storage_signature
 from app.models import (
     FileNode,
     FileNodeType,
@@ -72,7 +72,6 @@ async def upload_profile_picture(
     db: Session = Depends(get_db),
 ):
     """Upload a profile picture for the current user"""
-    # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -93,7 +92,6 @@ async def upload_profile_picture(
     filename = f"profile_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
     storage_path = f"profiles/{current_user.id}/{filename}"
 
-    # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
     # Store object path (NOT a presigned URL) so it never expires
@@ -118,7 +116,6 @@ async def upload_banner_image(
     db: Session = Depends(get_db),
 ):
     """Upload a banner image for the current user"""
-    # Validate file type
     allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -139,7 +136,6 @@ async def upload_banner_image(
     filename = f"banner_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
     storage_path = f"banners/{current_user.id}/{filename}"
 
-    # Upload to MinIO
     await minio_client.upload_file(content, storage_path, file.content_type)
 
     # Store object path (NOT a presigned URL) so it never expires
@@ -153,7 +149,7 @@ async def upload_banner_image(
 
 
 # =============================================================================
-# STORAGE PROXY  –  streams MinIO objects through the API server so mobile
+# STORAGE PROXY  -  streams MinIO objects through the API server so mobile
 # and remote clients don't need direct access to the MinIO endpoint.
 # =============================================================================
 
@@ -165,14 +161,31 @@ _ALLOWED_BUCKETS: set[str] = {
 
 
 @router.get("/storage/{bucket}/{path:path}")
-async def storage_proxy(bucket: str, path: str):
+async def storage_proxy(
+    bucket: str,
+    path: str,
+    exp: str = Query("", description="Signature expiry (unix seconds)"),
+    sig: str = Query("", description="HMAC signature for this object"),
+):
     """Stream a MinIO object through the API.
 
     This makes stored files reachable from any device that can reach the
     API, avoiding direct MinIO ``localhost`` presigned URLs.
+
+    Unauthenticated by design so <img>/<video> tags and native downloads
+    can fetch without an Authorization header; the ``exp``/``sig`` pair
+    from :func:`sign_storage_path` is what gates access.
     """
     if bucket not in _ALLOWED_BUCKETS:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Not found"
+        )
+
+    if not verify_storage_signature(bucket, path, exp, sig):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired storage link",
+        )
 
     if not minio_client.client:
         raise HTTPException(
@@ -200,7 +213,7 @@ async def storage_proxy(bucket: str, path: str):
             headers={"Cache-Control": "public, max-age=3600"},
         )
     except Exception as exc:
-        # Catch S3Error or anything else – return 404 for missing keys
+        # Catch S3Error or anything else - return 404 for missing keys
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File not found",
@@ -487,7 +500,6 @@ async def create_my_folder(
             detail="Guests cannot create personal folders. Only researchers and project leaders can create a My Folder.",
         )
 
-    # Ensure the /users folder exists
     users_folder = await ensure_users_folder(project_id, db)
 
     # Check if user already has a folder in /users (by owner_id)
@@ -545,7 +557,6 @@ async def create_my_folder(
     return my_folder
 
 
-# Request model for folder permission settings
 class FolderPermissionSettings(BaseModel):
     """Request body for updating personal folder permission settings.
 
@@ -606,7 +617,6 @@ async def update_my_folder_permissions(
         if perm.get("can_view", False):
             shared_with.append(perm["user_id"])
 
-    # Update the folder's privacy and shared_with
     if not settings.default_can_view and len(shared_with) == 0:
         my_folder.privacy = PrivacyLevel.PRIVATE
     elif settings.default_can_view:
@@ -792,7 +802,6 @@ async def list_children(
         raise HTTPException(status_code=404, detail="Folder not found")
     check_project_permission(node.project_id, current_user, db)
 
-    # Check if user can access the parent folder
     if not can_access_file(node, current_user, db):
         raise HTTPException(status_code=403, detail="Access denied to this folder")
 
@@ -896,7 +905,6 @@ async def create_folder(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -963,7 +971,6 @@ async def move_node(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
@@ -1048,7 +1055,6 @@ async def rename_node(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=node.project_id,
@@ -1096,7 +1102,6 @@ async def delete_node(
         children = db.query(FileNode).filter(FileNode.parent_id == n.id).all()
         for c in children:
             await _delete_subtree(c)
-        # delete storage if file
         if n.type == FileNodeType.FILE and n.storage_path:
             await minio_client.delete_file(n.storage_path)
         db.delete(n)
@@ -1107,7 +1112,6 @@ async def delete_node(
     await _delete_subtree(node)
     db.commit()
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1261,7 +1265,6 @@ async def upload_file(
     db.commit()
     db.refresh(node)
 
-    # Log activity
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1424,7 +1427,6 @@ async def replace_file_content(
     if not new_file:
         raise HTTPException(status_code=422, detail="No file provided")
 
-    # Read new content
     data = await new_file.read()
 
     # Save current version to history before overwriting
@@ -1449,7 +1451,6 @@ async def replace_file_content(
         new_file.content_type or node.mime_type or "application/octet-stream",
     )
 
-    # Calculate new checksum
     new_checksum = hashlib.md5(data).hexdigest()
 
     # Update metadata
@@ -1778,37 +1779,6 @@ async def get_files_shared_by_me(
     return files
 
 
-@router.get("/project/{project_id}/users-folder", response_model=list[FileNodeBase])
-async def list_users_folder(
-    project_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """List contents of users folder with privacy filtering"""
-    check_project_permission(project_id, current_user, db)
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    users_folder = await ensure_users_folder(project_id, db)
-
-    # Get all user folders
-    user_folders = (
-        db.query(FileNode)
-        .filter(
-            FileNode.parent_id == users_folder.id,
-            FileNode.type == FileNodeType.FOLDER,
-        )
-        .all()
-    )
-
-    # Project leader can see all folders
-    if project.owner_id == current_user.id:
-        return user_folders
-
-    # Regular users can only see their own folder
-    visible_folders = [f for f in user_folders if f.owner_id == current_user.id]
-    return visible_folders
-
-
 @router.get("/info/{node_id}", response_model=FileNodeBase)
 async def get_file_info(
     node_id: str,
@@ -1826,29 +1796,3 @@ async def get_file_info(
         raise HTTPException(status_code=403, detail="Access denied")
 
     return node
-
-
-@router.get("/project/{project_id}/files-info", response_model=list[FileNodeBase])
-async def get_files_info_batch(
-    project_id: str,
-    node_ids: str,  # Comma-separated list of node IDs
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Get info for multiple files at once (for offline sync)"""
-    check_project_permission(project_id, current_user, db)
-
-    ids = [id.strip() for id in node_ids.split(",") if id.strip()]
-    if not ids:
-        return []
-
-    nodes = (
-        db.query(FileNode)
-        .filter(FileNode.id.in_(ids), FileNode.project_id == project_id)
-        .all()
-    )
-
-    # Filter by access
-    accessible_nodes = [n for n in nodes if can_access_file(n, current_user, db)]
-
-    return accessible_nodes

@@ -19,12 +19,10 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """All configuration for the app, pulled from environment variables."""
 
-    # Auth + Deployment mode
     AUTH_MODE: Literal["firebase", "local", "hybrid"] = "firebase"
     DEPLOYMENT_MODE: Literal["cloud", "self_hosted"] = "cloud"
     SELF_HOST_BUNDLE: bool = False
 
-    # Firebase
     FIREBASE_WEB_API_KEY: str | None = None
     FIREBASE_PROJECT_ID: str | None = None
     FIREBASE_PRIVATE_KEY_ID: str | None = None
@@ -46,7 +44,6 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     DATABASE_URL: str
 
-    # MinIO
     MINIO_ENDPOINT: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
@@ -66,25 +63,26 @@ class Settings(BaseSettings):
     BACKUP_PSQL_BIN: str = "psql"
     BACKUP_DATABASES: str = ""
 
-    # App
     APP_SECRET_KEY: str
-    APP_DEBUG: bool = True
+    # Off by default: debug logging is verbose and echoes request detail, so
+    # a deployment that forgets to set it should get the quiet, safe mode.
+    APP_DEBUG: bool = False
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     ALLOWED_ORIGINS: str
 
-    # JWT
     JWT_SECRET_KEY: str
     JWT_EXPIRATION_HOURS: int = 24
 
-    # Environment
     ENVIRONMENT: str = "development"
 
-    # AI Summary
-    AI_SUMMARY_CHANGE_THRESHOLD: int = 15  # activities since last summary before refresh is offered
+    AI_SUMMARY_CHANGE_THRESHOLD: int = (
+        15  # activities since last summary before refresh is offered
+    )
 
-    # Transcription (local Whisper)
-    DISABLE_WHISPER: bool = False  # set True to skip model load and transcription entirely
+    DISABLE_WHISPER: bool = (
+        False  # set True to skip model load and transcription entirely
+    )
     WHISPER_MODEL: str = "base"  # tiny | base | small | medium | large
 
     # Rate Limiting
@@ -143,6 +141,27 @@ class Settings(BaseSettings):
                 f"{self.auth_mode_normalized}: {missing_csv}"
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_production_hardening(self) -> "Settings":
+        """Refuse to boot a production server with obviously unsafe config."""
+        if self.ENVIRONMENT.strip().lower() != "production":
+            return self
+
+        problems = []
+        if len(self.JWT_SECRET_KEY) < 32:
+            problems.append("JWT_SECRET_KEY must be at least 32 characters")
+        if len(self.MAINTAINER_PASSWORD) < 16:
+            problems.append("MAINTAINER_PASSWORD must be at least 16 characters")
+        if "*" in self.allowed_origins_list:
+            problems.append(
+                "ALLOWED_ORIGINS cannot be '*' while credentials are allowed"
+            )
+        if problems:
+            raise ValueError(
+                "Unsafe production configuration: " + "; ".join(problems)
+            )
         return self
 
     @property

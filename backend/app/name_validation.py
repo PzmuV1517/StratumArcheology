@@ -3,13 +3,13 @@ Human-name and username validation for STRATUM signup.
 
 Two public entry points:
 
-- ``validate_display_name`` — the strict "does this look like a real person's
+- ``validate_display_name`` - the strict "does this look like a real person's
   name?" check. Applied to the ``display_name`` a user chooses at signup /
   profile edit. Rejects profanity (any language), Morse code, ASCII art /
   symbol soup, digits, keyboard mashing and other gibberish that no real name
   would contain.
 
-- ``validate_username`` — the lenient check. A username is allowed to be a
+- ``validate_username`` - the lenient check. A username is allowed to be a
   handle rather than a real name, so it is only rejected when it contains a
   derogatory / profane term (in any language).
 
@@ -152,7 +152,7 @@ _SUBSTRING_BLOCK = {
     "vaffanculo",
     "troia",
     "puttana",
-    # Romanian (home language of the team — moderated carefully).
+    # Romanian (home language of the team - moderated carefully).
     # Strong vulgarities + slurs, matched anywhere. Accent-folding means the
     # diacritic spellings (pizdă, căcat, curvă, pulă, muișt, țigan…) all map
     # onto these ASCII forms before matching.
@@ -230,14 +230,14 @@ _WORD_BLOCK = {
     "dumb",
     "stupid",
     "loser",
-    # Romanian — milder insults and short words that can collide with real
+    # Romanian - milder insults and short words that can collide with real
     # surnames (e.g. "porc" in nothing common, but "cur" in "Curtea"), so only
     # blocked as a standalone token, never inside a longer name.
     "prostituata",
     "prost",  # stupid
     "prostanac",
     "prostovan",
-    "tampit",  # tâmpit — moron
+    "tampit",  # tâmpit - moron
     "dobitoc",
     "handicapat",
     "nesimtit",
@@ -254,8 +254,8 @@ _WORD_BLOCK = {
     "laba",  # masturbation slang
     "suge",  # suck (imperative insult)
     "sugi",  # you suck
-    "scarba",  # scârbă — disgust / scumbag
-    "tigan",  # țigan — ethnic slur (Roma)
+    "scarba",  # scârbă - disgust / scumbag
+    "tigan",  # țigan - ethnic slur (Roma)
     "tiganca",
     "admin",
     "root",
@@ -267,7 +267,7 @@ _WORD_BLOCK = {
 
 
 def _fold(text: str) -> str:
-    """Lowercase, strip accents and apply leet folding — no length change of
+    """Lowercase, strip accents and apply leet folding - no length change of
     meaningful letters, non-letters preserved for tokenisation."""
     text = text.lower().translate(_LEET_MAP)
     # Decompose accents (é -> e) and drop the combining marks.
@@ -385,7 +385,7 @@ def validate_display_name(raw: str) -> str:
         raise NameValidationError("This does not look like a real name.")
 
     # Character whitelist: Unicode letters (any script) plus name punctuation.
-    # Anything else (digits, emoji, symbols, control chars — i.e. ASCII soup)
+    # Anything else (digits, emoji, symbols, control chars - i.e. ASCII soup)
     # means it is not a name.
     for ch in name:
         if ch in _NAME_PUNCT:
@@ -399,7 +399,7 @@ def validate_display_name(raw: str) -> str:
     if not letters:
         raise NameValidationError("This does not look like a real name.")
 
-    # Punctuation must not dominate — real names are mostly letters.
+    # Punctuation must not dominate - real names are mostly letters.
     if len(letters) < len(name.replace(" ", "")) * 0.5:
         raise NameValidationError("This does not look like a real name.")
 

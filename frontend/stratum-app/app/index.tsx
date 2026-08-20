@@ -181,7 +181,7 @@ export default function LandingPage() {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>📊 View any format</Text>
                 <Text style={styles.cardBody}>
-                  CSV, Excel, Markdown, images, point clouds, 3D meshes, and JSON —
+                  CSV, Excel, Markdown, images, point clouds, 3D meshes, and JSON -
                   all with instant preview.
                 </Text>
               </View>
@@ -195,7 +195,7 @@ export default function LandingPage() {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>📱 Cross-platform</Text>
                 <Text style={styles.cardBody}>
-                  Seamless experience on web, iOS, and Android — work from the field
+                  Seamless experience on web, iOS, and Android - work from the field
                   or the lab.
                 </Text>
               </View>
@@ -230,7 +230,7 @@ export default function LandingPage() {
                   <Text style={styles.cardTitle}>Context-rich artefacts</Text>
                   <Text style={styles.cardBody}>
                     Every artefact carries its origin, linked notes, and related
-                    assets — results
+                    assets - results
                     {" aren't"} just files, {"they're"} stories with provenance.
                   </Text>
                 </View>
@@ -347,7 +347,6 @@ export default function LandingPage() {
             </View>
           </View>
 
-          {/* How it works */}
           <View style={styles.sectionBlock}>
             <Text style={styles.sectionHeading}>How it works</Text>
             <View style={styles.stepList}>

@@ -403,11 +403,7 @@ export default function CreateNoteScreen() {
           if (Platform.OS === "web") {
             const response = await fetch(recordedUri);
             const blob = await response.blob();
-            const uploadAudioBlob = noteService.uploadAudioBlob;
-            if (!uploadAudioBlob) {
-              throw new Error("Audio upload is unavailable on web");
-            }
-            await uploadAudioBlob(note.id, blob, `${safeBase}.webm`);
+            await noteService.uploadAudio(note.id, blob, `${safeBase}.webm`);
           } else {
             await noteService.uploadAudio(note.id, recordedUri, `${safeBase}.m4a`);
           }
@@ -632,7 +628,7 @@ export default function CreateNoteScreen() {
               <View style={styles.noiseWarning}>
                 <Ionicons name="warning-outline" size={15} color="#B45309" />
                 <Text style={styles.noiseWarningText}>
-                  High background noise detected — transcription may be less
+                  High background noise detected - transcription may be less
                   accurate. Try recording in a quieter spot.
                 </Text>
               </View>

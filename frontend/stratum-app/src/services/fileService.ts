@@ -19,13 +19,23 @@
 
 import { Platform } from "react-native";
 
-// Re-export types from core
 export * from "./fileService.core";
+
+/**
+ * The combined surface of both platform implementations.
+ *
+ * Members that exist on only one platform (pickFile and shareFile on
+ * native, openInNewTab on web) are present here, so call sites must keep
+ * guarding them with Platform.OS the way they already do. Methods shared
+ * by both platforms carry their real signatures rather than `any`.
+ */
+export type PlatformFileService = typeof import("./fileService.web").fileService &
+  typeof import("./fileService.native").fileService;
 
 // Platform-specific imports
 // Metro bundler will resolve these based on platform
 /** Platform-resolved file service instance (web or native). */
-let fileService: any;
+let fileService: PlatformFileService;
 
 if (Platform.OS === "web") {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

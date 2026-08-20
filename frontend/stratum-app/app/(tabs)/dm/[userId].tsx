@@ -111,7 +111,6 @@ export default function DirectMessageScreen() {
   return (
     <View style={[styles.container, { backgroundColor: pageBackground }]}>
       <View style={styles.contentWrapper}>
-        {/* Header */}
         <View style={[styles.header, { backgroundColor: pageBackground }]}>
           <View style={styles.headerTop}>
             <TouchableOpacity

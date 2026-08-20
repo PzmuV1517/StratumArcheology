@@ -196,7 +196,6 @@ CREATE INDEX IF NOT EXISTS idx_offline_files_node ON offline_files(node_id);
 CREATE INDEX IF NOT EXISTS idx_recent_projects_accessed ON recent_projects(accessed_at);
 `;
 
-// Insert initial metadata
 export const INIT_METADATA_SQL = `
 INSERT OR REPLACE INTO db_metadata (key, value) VALUES ('version', '${DB_VERSION}');
 INSERT OR REPLACE INTO db_metadata (key, value) VALUES ('initialized_at', datetime('now'));

@@ -131,14 +131,14 @@ function RootLayoutNav() {
               installing.state === "installed" &&
               navigator.serviceWorker.controller
             ) {
-              // New content is available – activate immediately
+              // New content is available - activate immediately
               installing.postMessage({ type: "SKIP_WAITING" });
             }
           };
         };
       })
       .catch(() => {
-        // SW file not present in dev mode – silently ignore
+        // SW file not present in dev mode - silently ignore
       });
   }, []);
 

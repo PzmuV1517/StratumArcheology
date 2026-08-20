@@ -181,7 +181,6 @@ function updateNetworkState(newState: NetworkState): void {
   const previousStatus = currentState.status;
   currentState = newState;
 
-  // Log status changes
   if (previousStatus !== newState.status) {
     console.log(
       `[NetworkService] Status changed: ${previousStatus} -> ${newState.status}`,
@@ -301,7 +300,6 @@ export async function executeWithOfflineFallback<T>(
       throw error;
     }
   } else {
-    // Offline - queue the request
     console.log("[NetworkService] Offline, queueing request");
     const { queueRequest } = await import("../db");
     await queueRequest({

@@ -35,6 +35,21 @@ from .logging_config import clear_request_id, get_logger, set_request_id
 
 logger = get_logger(__name__)
 
+# Query params that carry credentials. Download and streaming endpoints accept
+# ?token= because <video>/<img> cannot set an Authorization header, and storage
+# proxy links carry ?sig=; neither may reach the log files.
+_SECRET_QUERY_PARAMS = frozenset({"token", "sig", "access_token", "api_key"})
+
+
+def _redacted_query(request: Request) -> str | None:
+    """Render a request's query string with credential values masked."""
+    if not request.query_params:
+        return None
+    return "&".join(
+        f"{k}=REDACTED" if k.lower() in _SECRET_QUERY_PARAMS else f"{k}={v}"
+        for k, v in request.query_params.items()
+    )
+
 
 class UploadCleanupTracker:
     """
@@ -114,13 +129,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         # Start timing
         start_time = time.time()
 
-        # Create upload tracker for this request
         upload_tracker = UploadCleanupTracker()
         request.state.upload_tracker = upload_tracker
-
-        # Extract user info from request state (set by auth dependency)
-        user_id = None
-        project_id = None
 
         try:
             # Log incoming request
@@ -128,7 +138,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 "Request started",
                 method=request.method,
                 path=request.url.path,
-                query=str(request.query_params) if request.query_params else None,
+                query=_redacted_query(request),
             )
 
             # Process the request
@@ -149,7 +159,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 duration_ms=round(duration_ms, 2),
             )
 
-            # Add request ID to response headers
             response.headers["X-Request-ID"] = request_id
 
             return response
@@ -200,7 +209,6 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             )
 
         finally:
-            # Clear request context
             clear_request_id()
 
     def _get_user_message(self, exc: Exception) -> str:

@@ -152,7 +152,7 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
       setRenderUrl(res.data?.render_url ?? null);
       setRenderVersion(res.data?.render_version ?? null);
     } catch (e: unknown) {
-      // 404 means no Wheeler data saved yet — not an error
+      // 404 means no Wheeler data saved yet - not an error
       const status = (e as { response?: { status?: number } })?.response?.status;
       if (status === 404) {
         setDataState({ trenches: [], placements: [] });
@@ -268,7 +268,7 @@ export function useWheelerData(projectId: string): UseWheelerDataReturn {
       const serverVer: number = res.data?.version ?? 0;
       setHasServerChanges(serverVer > version);
     } catch {
-      // Silently ignore — we can't reach the server
+      // Silently ignore - we can't reach the server
     }
   }, [projectId, version]);
 

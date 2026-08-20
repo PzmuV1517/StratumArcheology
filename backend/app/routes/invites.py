@@ -84,7 +84,6 @@ async def create_invite(
         # default 14 days
         expires_at = datetime.utcnow() + timedelta(days=14)
 
-    # Generate unique short code
     short_code = generate_unique_code(db, project_id)
 
     invite = ProjectInvite(
@@ -182,7 +181,6 @@ async def accept_invite(
         invite.used = True
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=invite.project_id,
@@ -270,7 +268,6 @@ async def join_by_code(
         invite.used = True
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=invite.project_id,

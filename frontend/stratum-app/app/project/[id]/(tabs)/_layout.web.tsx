@@ -115,7 +115,7 @@ export default function ProjectTabsLayoutWeb() {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferLoading, setTransferLoading] = useState(false);
   const widthAnim = useRef(new Animated.Value(EXPANDED_W)).current;
-  // Always tracks the real animated sidebar edge — used to anchor the More menu
+  // Always tracks the real animated sidebar edge - used to anchor the More menu
   const menuLeft = useRef(Animated.add(widthAnim, new Animated.Value(8))).current;
 
   const toggle = useCallback(() => {
@@ -308,10 +308,10 @@ export default function ProjectTabsLayoutWeb() {
   return (
     <>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        {/* Outer shell — full viewport, column direction */}
+        {/* Outer shell - full viewport, column direction */}
         <View style={styles.shell}>
           {/* ══════════════════════════════════════════
-           *  HEADER ROW — burger + project name (never collapses)
+           *  HEADER ROW - burger + project name (never collapses)
            * ════════════════════════════════════════ */}
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -335,10 +335,10 @@ export default function ProjectTabsLayoutWeb() {
           </View>
 
           {/* ══════════════════════════════════════════
-           *  BODY ROW  — sidebar nav + page content
+           *  BODY ROW - sidebar nav + page content
            * ════════════════════════════════════════ */}
           <View style={styles.bodyRow}>
-            {/* Sidebar nav — driven by widthAnim */}
+            {/* Sidebar nav - driven by widthAnim */}
             <Animated.View style={[styles.sidebar, { width: widthAnim }]}>
               {/* Navigation items */}
               {PROJECT_NAV_ITEMS.map(({ name, label, icon }) => {
@@ -427,16 +427,16 @@ export default function ProjectTabsLayoutWeb() {
           </View>
         </View>
 
-        {/* More menu — anchored to right of sidebar */}
+        {/* More menu - anchored to right of sidebar */}
         {showMoreMenu && (
           <>
-            {/* Backdrop — full screen, dismisses menu */}
+            {/* Backdrop - full screen, dismisses menu */}
             <TouchableOpacity
               style={[StyleSheet.absoluteFillObject, { zIndex: 100 }]}
               activeOpacity={1}
               onPress={() => setShowMoreMenu(false)}
             />
-            {/* Card — follows the live animated sidebar edge */}
+            {/* Card - follows the live animated sidebar edge */}
             <Animated.View
               style={[
                 styles.moreMenuCard,
@@ -595,14 +595,14 @@ export default function ProjectTabsLayoutWeb() {
  * ─────────────────────────────────────────── */
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({
-    /* Outer container — column */
+    /* Outer container - column */
     shell: {
       flex: 1,
       flexDirection: "column",
       backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
     },
 
-    /* ── Header row — always full width, never animates ─── */
+    /* ── Header row - always full width, never animates ─── */
     headerRow: {
       height: ROW_H,
       flexDirection: "row",
@@ -647,7 +647,7 @@ const createStyles = (isDarkMode: boolean) =>
       flexDirection: "row",
     },
 
-    /* Sidebar nav — same bg as page for seamless look */
+    /* Sidebar nav - same bg as page for seamless look */
     sidebar: {
       backgroundColor: isDarkMode ? "#111111" : "#F7F7F7",
       overflow: "hidden",
@@ -678,7 +678,7 @@ const createStyles = (isDarkMode: boolean) =>
       fontWeight: "600",
     },
 
-    /* Fixed-width icon column — icons stay centred when collapsed */
+    /* Fixed-width icon column - icons stay centred when collapsed */
     iconSlot: {
       width: COLLAPSED_W - 10,
       height: 44,

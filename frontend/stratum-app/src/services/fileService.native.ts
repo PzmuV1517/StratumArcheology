@@ -46,7 +46,6 @@ const getCacheDir = (): string => {
   return dir;
 };
 
-// Re-export core methods
 export * from "./fileService.core";
 
 /** Native file service with Expo file system, document picker, and sharing support. */
@@ -277,109 +276,104 @@ export const fileService = {
       } else {
         // Android - show Alert with options
         return new Promise((resolve) => {
-          showAlert(
-            "Add File",
-            "Choose an option",
-            [
-              { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
-              {
-                text: "Take Photo",
-                onPress: async () => {
-                  try {
-                    const { status } =
-                      await ImagePicker.requestCameraPermissionsAsync();
-                    if (status !== "granted") {
-                      showAlert(
-                        "Permission Required",
-                        "Camera access is needed to take photos.",
-                      );
-                      return resolve(null);
-                    }
-
-                    const result = await ImagePicker.launchCameraAsync({
-                      mediaTypes: ["images"],
-                      quality: 0.8,
-                    });
-
-                    if (result.canceled || !result.assets?.length) {
-                      return resolve(null);
-                    }
-
-                    const asset = result.assets[0];
-                    resolve({
-                      uri: asset.uri,
-                      name: asset.fileName || `photo_${Date.now()}.jpg`,
-                      mimeType: asset.mimeType || "image/jpeg",
-                    });
-                  } catch (e) {
-                    console.error("Camera error:", e);
-                    resolve(null);
+          showAlert("Add File", "Choose an option", [
+            { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
+            {
+              text: "Take Photo",
+              onPress: async () => {
+                try {
+                  const { status } =
+                    await ImagePicker.requestCameraPermissionsAsync();
+                  if (status !== "granted") {
+                    showAlert(
+                      "Permission Required",
+                      "Camera access is needed to take photos.",
+                    );
+                    return resolve(null);
                   }
-                },
-              },
-              {
-                text: "Upload Photo",
-                onPress: async () => {
-                  try {
-                    const { status } =
-                      await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (status !== "granted") {
-                      showAlert(
-                        "Permission Required",
-                        "Photo library access is needed.",
-                      );
-                      return resolve(null);
-                    }
 
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ["images"],
-                      quality: 0.8,
-                    });
+                  const result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ["images"],
+                    quality: 0.8,
+                  });
 
-                    if (result.canceled || !result.assets?.length) {
-                      return resolve(null);
-                    }
-
-                    const asset = result.assets[0];
-                    resolve({
-                      uri: asset.uri,
-                      name: asset.fileName || `photo_${Date.now()}.jpg`,
-                      mimeType: asset.mimeType || "image/jpeg",
-                    });
-                  } catch (e) {
-                    console.error("Library error:", e);
-                    resolve(null);
+                  if (result.canceled || !result.assets?.length) {
+                    return resolve(null);
                   }
-                },
+
+                  const asset = result.assets[0];
+                  resolve({
+                    uri: asset.uri,
+                    name: asset.fileName || `photo_${Date.now()}.jpg`,
+                    mimeType: asset.mimeType || "image/jpeg",
+                  });
+                } catch (e) {
+                  console.error("Camera error:", e);
+                  resolve(null);
+                }
               },
-              {
-                text: "Upload Files",
-                onPress: async () => {
-                  try {
-                    const result = await DocumentPicker.getDocumentAsync({
-                      type: "*/*",
-                      copyToCacheDirectory: true,
-                    });
-
-                    if (result.canceled || !result.assets?.length) {
-                      return resolve(null);
-                    }
-
-                    const asset = result.assets[0];
-                    resolve({
-                      uri: asset.uri,
-                      name: asset.name,
-                      mimeType: asset.mimeType || "application/octet-stream",
-                    });
-                  } catch (e) {
-                    console.error("Document picker error:", e);
-                    resolve(null);
+            },
+            {
+              text: "Upload Photo",
+              onPress: async () => {
+                try {
+                  const { status } =
+                    await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (status !== "granted") {
+                    showAlert(
+                      "Permission Required",
+                      "Photo library access is needed.",
+                    );
+                    return resolve(null);
                   }
-                },
+
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ["images"],
+                    quality: 0.8,
+                  });
+
+                  if (result.canceled || !result.assets?.length) {
+                    return resolve(null);
+                  }
+
+                  const asset = result.assets[0];
+                  resolve({
+                    uri: asset.uri,
+                    name: asset.fileName || `photo_${Date.now()}.jpg`,
+                    mimeType: asset.mimeType || "image/jpeg",
+                  });
+                } catch (e) {
+                  console.error("Library error:", e);
+                  resolve(null);
+                }
               },
-            ],
-            { cancelable: true },
-          );
+            },
+            {
+              text: "Upload Files",
+              onPress: async () => {
+                try {
+                  const result = await DocumentPicker.getDocumentAsync({
+                    type: "*/*",
+                    copyToCacheDirectory: true,
+                  });
+
+                  if (result.canceled || !result.assets?.length) {
+                    return resolve(null);
+                  }
+
+                  const asset = result.assets[0];
+                  resolve({
+                    uri: asset.uri,
+                    name: asset.name,
+                    mimeType: asset.mimeType || "application/octet-stream",
+                  });
+                } catch (e) {
+                  console.error("Document picker error:", e);
+                  resolve(null);
+                }
+              },
+            },
+          ]);
         });
       }
     } catch (error) {
@@ -388,12 +382,21 @@ export const fileService = {
     }
   },
 
+  /**
+   * Replace a file's contents.
+   *
+   * Shares its signature with the web implementation so cross-platform
+   * callers type-check on both; native always takes the URI form.
+   */
   replaceFile: async (
     nodeId: string,
-    fileUri: string,
-    fileName: string,
-    mimeType: string,
+    fileUri: File | string,
+    fileName?: string,
+    mimeType?: string,
   ): Promise<FileNode> => {
+    if (typeof fileUri !== "string") {
+      throw new Error("replaceFile on native expects a file URI, not a File");
+    }
     const formData = new FormData();
     formData.append("file", {
       uri: fileUri,
@@ -564,6 +567,18 @@ export const fileService = {
   },
 
   // Read file content as text (for editing)
+  /**
+   * Download a stored file and return its contents as text.
+   *
+   * Present on both platforms so callers never have to branch: native
+   * downloads to a cache URI and reads it back, web reads the Blob.
+   */
+  downloadFileAsText: async (nodeId: string): Promise<string> => {
+    const { uri } = await fileService.downloadFile(nodeId);
+    if (!uri) throw new Error("Download returned no file data");
+    return await fileService.readFileAsText(uri);
+  },
+
   readFileAsText: async (uri: string): Promise<string> => {
     try {
       const content = await FileSystem.readAsStringAsync(uri);

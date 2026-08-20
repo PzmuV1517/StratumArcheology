@@ -24,12 +24,12 @@ export function useDelayedLoading(loading: boolean, delay = 400): boolean {
 
   useEffect(() => {
     if (!loading) {
-      // Data arrived — hide skeleton immediately
+      // Data arrived - hide skeleton immediately
       setShowSkeleton(false);
       return;
     }
 
-    // Still loading — only reveal skeleton after the delay threshold
+    // Still loading - only reveal skeleton after the delay threshold
     const timer = setTimeout(() => setShowSkeleton(true), delay);
     return () => clearTimeout(timer);
   }, [loading, delay]);

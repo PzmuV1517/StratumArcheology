@@ -83,7 +83,9 @@ class BackupService:
 
         return None
 
-    def _require_binary(self, path: str | None, binary_name: str, env_name: str) -> str:
+    def _require_binary(
+        self, path: str | None, binary_name: str, env_name: str
+    ) -> str:
         if path:
             return path
 
@@ -100,7 +102,9 @@ class BackupService:
     def interval_seconds(self) -> int:
         return max(60, settings.BACKUP_INTERVAL_MINUTES * 60)
 
-    def _touch_after_successful_backup(self, completed_at: datetime | None = None) -> None:
+    def _touch_after_successful_backup(
+        self, completed_at: datetime | None = None
+    ) -> None:
         now = completed_at or datetime.now(UTC)
         self._last_backup_at = now
         self._next_backup_at = now + timedelta(seconds=self.interval_seconds)
@@ -120,13 +124,20 @@ class BackupService:
         next_at = self._next_backup_at
         last_at = self._last_backup_at
 
-        if next_at and settings.BACKUP_AUTO_START and self._task and not self._task.done():
+        if (
+            next_at
+            and settings.BACKUP_AUTO_START
+            and self._task
+            and not self._task.done()
+        ):
             seconds_until_next = max(0, int((next_at - now).total_seconds()))
         else:
             seconds_until_next = None
 
         return {
-            "enabled": bool(settings.BACKUP_AUTO_START and self._task and not self._task.done()),
+            "enabled": bool(
+                settings.BACKUP_AUTO_START and self._task and not self._task.done()
+            ),
             "interval_minutes": settings.BACKUP_INTERVAL_MINUTES,
             "last_backup_at": last_at.isoformat() if last_at else None,
             "next_backup_at": next_at.isoformat() if next_at else None,
@@ -208,12 +219,19 @@ class BackupService:
         ]
 
         try:
-            result = subprocess.run(command, env=env, check=True, capture_output=True, text=True)
+            result = subprocess.run(
+                command, env=env, check=True, capture_output=True, text=True
+            )
         except Exception as exc:
-            logger.warning("Database discovery failed; falling back to POSTGRES_DB", error=str(exc))
+            logger.warning(
+                "Database discovery failed; falling back to POSTGRES_DB",
+                error=str(exc),
+            )
             return []
 
-        databases = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        databases = [
+            line.strip() for line in result.stdout.splitlines() if line.strip()
+        ]
         if not databases:
             return []
 
@@ -235,7 +253,9 @@ class BackupService:
             objects = minio_client.client.list_objects(bucket_name, recursive=True)
             for obj in objects:
                 source = CopySource(bucket_name, obj.object_name)
-                destination_key = f"{backup_id}/minio/{bucket_name}/{obj.object_name}"
+                destination_key = (
+                    f"{backup_id}/minio/{bucket_name}/{obj.object_name}"
+                )
                 minio_client.client.copy_object(
                     self.bucket_name,
                     destination_key,
@@ -252,7 +272,9 @@ class BackupService:
         for bucket_name in record.storage_bucket_names:
             minio_client.ensure_bucket(bucket_name)
 
-            existing_objects = minio_client.client.list_objects(bucket_name, recursive=True)
+            existing_objects = minio_client.client.list_objects(
+                bucket_name, recursive=True
+            )
             for existing in existing_objects:
                 minio_client.client.remove_object(bucket_name, existing.object_name)
 
@@ -273,7 +295,9 @@ class BackupService:
                 preferred=settings.BACKUP_PGDUMP_BIN,
                 default_name="pg_dump",
             )
-        pg_dump_bin = self._require_binary(self._pg_dump_bin, "pg_dump", "BACKUP_PGDUMP_BIN")
+        pg_dump_bin = self._require_binary(
+            self._pg_dump_bin, "pg_dump", "BACKUP_PGDUMP_BIN"
+        )
         env = os.environ.copy()
         env["PGPASSWORD"] = settings.POSTGRES_PASSWORD
         command = [
@@ -332,7 +356,11 @@ class BackupService:
                 self.bucket_name,
                 recursive=True,
             )
-            metadata_keys = [obj.object_name for obj in objects if obj.object_name.endswith("/metadata.json")]
+            metadata_keys = [
+                obj.object_name
+                for obj in objects
+                if obj.object_name.endswith("/metadata.json")
+            ]
             for metadata_key in metadata_keys:
                 data = minio_client.client.get_object(self.bucket_name, metadata_key)
                 raw = data.read()
@@ -343,11 +371,15 @@ class BackupService:
                 if isinstance(parsed_dump_keys, list):
                     dump_keys = [str(item) for item in parsed_dump_keys if item]
                 else:
-                    single_dump_key = parsed.get("dump_key") or metadata_key.replace("metadata.json", "dump.sql")
+                    single_dump_key = parsed.get("dump_key") or metadata_key.replace(
+                        "metadata.json", "dump.sql"
+                    )
                     dump_keys = [single_dump_key]
 
                 parsed_db_names = parsed.get("database_names")
-                if isinstance(parsed_db_names, list) and len(parsed_db_names) == len(dump_keys):
+                if isinstance(parsed_db_names, list) and len(parsed_db_names) == len(
+                    dump_keys
+                ):
                     database_names = [str(item) for item in parsed_db_names]
                 else:
                     database_names = []
@@ -358,19 +390,35 @@ class BackupService:
                         else:
                             database_names.append(settings.POSTGRES_DB)
 
-                parsed_storage = parsed.get("storage") if isinstance(parsed.get("storage"), dict) else {}
-                parsed_storage_buckets = parsed_storage.get("bucket_names") if isinstance(parsed_storage, dict) else []
+                parsed_storage = (
+                    parsed.get("storage")
+                    if isinstance(parsed.get("storage"), dict)
+                    else {}
+                )
+                parsed_storage_buckets = (
+                    parsed_storage.get("bucket_names")
+                    if isinstance(parsed_storage, dict)
+                    else []
+                )
                 if isinstance(parsed_storage_buckets, list):
-                    storage_bucket_names = [str(item) for item in parsed_storage_buckets if item]
+                    storage_bucket_names = [
+                        str(item) for item in parsed_storage_buckets if item
+                    ]
                 else:
                     storage_bucket_names = []
 
-                storage_object_count = int(parsed_storage.get("object_count", 0)) if isinstance(parsed_storage, dict) else 0
+                storage_object_count = (
+                    int(parsed_storage.get("object_count", 0))
+                    if isinstance(parsed_storage, dict)
+                    else 0
+                )
 
                 total_size = 0
                 for dump_key in dump_keys:
                     try:
-                        stat = minio_client.client.stat_object(self.bucket_name, dump_key)
+                        stat = minio_client.client.stat_object(
+                            self.bucket_name, dump_key
+                        )
                         total_size += int(stat.size)
                     except Exception:
                         continue
@@ -386,7 +434,9 @@ class BackupService:
                         storage_object_count=storage_object_count,
                         metadata_key=metadata_key,
                         sql_size_bytes=total_size,
-                        stats={k: int(v) for k, v in (parsed.get("stats") or {}).items()},
+                        stats={
+                            k: int(v) for k, v in (parsed.get("stats") or {}).items()
+                        },
                     )
                 )
         except S3Error as exc:
@@ -411,11 +461,17 @@ class BackupService:
                 try:
                     minio_client.client.remove_object(self.bucket_name, dump_key)
                 except Exception:
-                    logger.warning("Failed deleting backup dump object", key=dump_key)
+                    logger.warning(
+                        "Failed deleting backup dump object", key=dump_key
+                    )
             try:
-                minio_client.client.remove_object(self.bucket_name, record.metadata_key)
+                minio_client.client.remove_object(
+                    self.bucket_name, record.metadata_key
+                )
             except Exception:
-                logger.warning("Failed deleting backup metadata object", key=record.metadata_key)
+                logger.warning(
+                    "Failed deleting backup metadata object", key=record.metadata_key
+                )
 
     def create_backup(self, trigger: str = "manual") -> BackupRecord:
         self._ensure_bucket()
@@ -435,12 +491,16 @@ class BackupService:
 
         temp_dump_paths: list[str] = []
         for db_name in database_names:
-            with tempfile.NamedTemporaryFile(suffix=f"-{db_name}.sql", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(
+                suffix=f"-{db_name}.sql", delete=False
+            ) as tmp:
                 temp_dump_paths.append(tmp.name)
 
         try:
             dump_payloads: list[bytes] = []
-            for db_name, temp_dump_path in zip(database_names, temp_dump_paths, strict=True):
+            for db_name, temp_dump_path in zip(
+                database_names, temp_dump_paths, strict=True
+            ):
                 self._run_pg_dump(temp_dump_path, db_name)
                 with open(temp_dump_path, "rb") as f:
                     dump_payloads.append(f.read())
@@ -450,7 +510,9 @@ class BackupService:
                 total_size += len(dump_payload)
                 self._upload_bytes(dump_key, dump_payload, "application/sql")
 
-            storage_bucket_names, storage_object_count = self._backup_minio_objects(backup_id)
+            storage_bucket_names, storage_object_count = self._backup_minio_objects(
+                backup_id
+            )
 
             metadata = {
                 "backup_id": backup_id,
@@ -504,13 +566,17 @@ class BackupService:
 
         temp_paths: list[str] = []
         try:
-            for db_name, dump_key in zip(record.database_names, record.dump_keys, strict=True):
+            for db_name, dump_key in zip(
+                record.database_names, record.dump_keys, strict=True
+            ):
                 obj = minio_client.client.get_object(self.bucket_name, dump_key)
                 dump_payload = obj.read()
                 obj.close()
                 obj.release_conn()
 
-                with tempfile.NamedTemporaryFile(suffix=f"-{db_name}.sql", delete=False) as tmp:
+                with tempfile.NamedTemporaryFile(
+                    suffix=f"-{db_name}.sql", delete=False
+                ) as tmp:
                     temp_dump_path = tmp.name
                     tmp.write(dump_payload)
                     temp_paths.append(temp_dump_path)
@@ -561,7 +627,9 @@ class BackupService:
         )
 
         if self._next_backup_at is None:
-            self._next_backup_at = datetime.now(UTC) + timedelta(seconds=self.interval_seconds)
+            self._next_backup_at = datetime.now(UTC) + timedelta(
+                seconds=self.interval_seconds
+            )
 
         while True:
             now = datetime.now(UTC)
@@ -570,7 +638,9 @@ class BackupService:
 
             if wait_seconds > 0 and self._wake_event is not None:
                 try:
-                    await asyncio.wait_for(self._wake_event.wait(), timeout=wait_seconds)
+                    await asyncio.wait_for(
+                        self._wake_event.wait(), timeout=wait_seconds
+                    )
                     self._wake_event.clear()
                     continue
                 except TimeoutError:
@@ -582,7 +652,9 @@ class BackupService:
                 logger.info("Scheduled backup finished")
             except Exception as exc:
                 logger.exception("Scheduled backup failed", error=str(exc))
-                self._next_backup_at = datetime.now(UTC) + timedelta(seconds=self.interval_seconds)
+                self._next_backup_at = datetime.now(UTC) + timedelta(
+                    seconds=self.interval_seconds
+                )
 
     async def start_scheduler(self) -> None:
         if not settings.BACKUP_AUTO_START:
@@ -607,7 +679,9 @@ class BackupService:
 
         self._wake_event = asyncio.Event()
         # First backup is scheduled one full interval after startup.
-        self._next_backup_at = datetime.now(UTC) + timedelta(seconds=self.interval_seconds)
+        self._next_backup_at = datetime.now(UTC) + timedelta(
+            seconds=self.interval_seconds
+        )
         self._task = asyncio.create_task(self._scheduled_loop())
 
     async def stop_scheduler(self) -> None:

@@ -43,8 +43,6 @@ from app.models import (
     UserRole,
     project_members,
 )
-
-_log = get_logger(__name__)
 from app.schemas import (
     ProjectCreate,
     ProjectMemberAdd,
@@ -62,6 +60,8 @@ from app.websocket import (
     log_activity,
 )
 from app.wheeler_renderer import generate_wheeler_svg
+
+_log = get_logger(__name__)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -136,7 +136,6 @@ async def get_public_project_detail(
             status_code=status.HTTP_404_NOT_FOUND, detail="Public project not found"
         )
 
-    # Members -----------------------------------------------------------
     members_with_roles = db.execute(
         select(User, project_members.c.role)
         .join(project_members, User.id == project_members.c.user_id)
@@ -200,7 +199,6 @@ async def get_public_project_detail(
         except Exception:
             pass
 
-    # Cover image presigned URL -----------------------------------------
     cover_presigned: str | None = None
     if project.cover_image_url:
         try:
@@ -273,7 +271,9 @@ async def _generate_history_background(project_id: str) -> None:
 
         prompt = PROMPT_SITE_HISTORY.format(
             project_name=project.name,
-            lmi_line=f"LMI Code: {project.ran_lmi_id}\n" if project.ran_lmi_id else "",
+            lmi_line=f"LMI Code: {project.ran_lmi_id}\n"
+            if project.ran_lmi_id
+            else "",
             description=project.description or "No description provided.",
             created_at=(
                 project.created_at.strftime("%B %d, %Y")
@@ -281,8 +281,11 @@ async def _generate_history_background(project_id: str) -> None:
                 else "Unknown"
             ),
             member_count=db.execute(
-                select(func.count()).where(project_members.c.project_id == project_id)
-            ).scalar() or 0,
+                select(func.count()).where(
+                    project_members.c.project_id == project_id
+                )
+            ).scalar()
+            or 0,
             note_count=len(notes),
             notes_text=notes_text,
             activity_count=len(activities),
@@ -293,7 +296,7 @@ async def _generate_history_background(project_id: str) -> None:
             history_text, provider = await generate_summary(
                 prompt, model=CLAUDE_SONNET, max_tokens=3000
             )
-            history_text = history_text.replace("—", ", ")
+            history_text = history_text.replace("\u2014", ", ")
         except Exception as exc:
             _log.error(
                 "History generation failed", project_id=project_id, error=str(exc)
@@ -394,7 +397,7 @@ async def set_e2ee_key(
         raise HTTPException(status_code=404, detail="Project not found")
 
     if project.e2ee_key and key:
-        # Key already exists — only owner can rotate
+        # Key already exists - only owner can rotate
         if project.owner_id != current_user.id:
             raise HTTPException(
                 status_code=403,
@@ -472,7 +475,6 @@ async def create_project(
     db.add(notes_folder)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project.id,
@@ -820,7 +822,6 @@ async def add_project_member(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -858,7 +859,6 @@ async def remove_project_member(
             detail="Project owner cannot leave. Transfer leadership or delete the project instead.",
         )
 
-    # Get current user's role
     if project.owner_id == current_user.id:
         current_user_role = "leader"
     else:
@@ -903,7 +903,6 @@ async def remove_project_member(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     removed_user = db.query(User).filter(User.id == user_id).first()
     await log_activity(
         db=db,
@@ -937,7 +936,6 @@ async def update_member_role(
 
     project = db.query(Project).filter(Project.id == project_id).first()
 
-    # Get current user's role
     if project.owner_id == current_user.id:
         current_user_role = "leader"
     else:
@@ -967,8 +965,6 @@ async def update_member_role(
         if isinstance(role_data.role, str)
         else role_data.role.value
     )
-
-    role_hierarchy = {"leader": 3, "researcher": 2, "guest": 1}
 
     # Leaders can do anything (except promote to leader, that's transfer)
     if current_user_role == "leader":
@@ -1007,7 +1003,6 @@ async def update_member_role(
     db.execute(stmt)
     db.commit()
 
-    # Log activity for timeline
     target_user = db.query(User).filter(User.id == user_id).first()
     await log_activity(
         db=db,
@@ -1072,7 +1067,6 @@ async def transfer_ownership(
             detail="New owner must be a project member",
         )
 
-    # Update project owner
     old_owner_id = project.owner_id
     project.owner_id = new_owner_id
 
@@ -1163,7 +1157,6 @@ async def update_harris_matrix(
 
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,
@@ -1217,6 +1210,7 @@ async def get_wheeler_data(
         "render_version": project.wheeler_render_version,
     }
 
+
 @router.get("/{project_id}/wheeler/render")
 async def get_wheeler_render(
     project_id: str,
@@ -1242,7 +1236,9 @@ async def get_wheeler_render(
             "wheeler-renders", project.wheeler_render_path
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Could not generate presigned URL: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Could not generate presigned URL: {exc}"
+        ) from exc
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -1254,7 +1250,9 @@ async def get_wheeler_render(
             headers={"Cache-Control": "private, max-age=300"},
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch SVG: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Failed to fetch SVG: {exc}"
+        ) from exc
 
 
 @router.put("/{project_id}/wheeler")
@@ -1309,7 +1307,6 @@ async def update_wheeler_data(
     except Exception as exc:
         print(f"⚠ Wheeler SVG render/upload failed (non-fatal): {exc}")
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,

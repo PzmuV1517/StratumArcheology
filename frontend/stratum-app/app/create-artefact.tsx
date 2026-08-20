@@ -37,6 +37,8 @@ import { showAlert } from "../src/utils/alert";
 import QRCodeView from "../src/components/common/QRCodeView";
 import api from "../src/services/api";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { listContexts } from "@/components/matrix/core/contexts";
+import type { MatrixContextSummary } from "@/components/matrix/core/contexts";
 
 const isIOS = Platform.OS === "ios";
 
@@ -63,7 +65,7 @@ export default function CreateArtefactScreen() {
   const [qrCode, setQrCode] = useState<string | null>(null);
 
   // Harris Matrix context linking
-  type HMContext = { id: string; type: string; description: string };
+  type HMContext = MatrixContextSummary;
   const [hmContexts, setHmContexts] = useState<HMContext[]>([]);
   const [selectedHmContext, setSelectedHmContext] = useState<string | null>(null);
   const [showHmPicker, setShowHmPicker] = useState(false);
@@ -139,17 +141,7 @@ export default function CreateArtefactScreen() {
     (async () => {
       try {
         const res = await api.get(`/projects/${projectId}/harris-matrix`);
-        const data = res.data?.data;
-        if (data?.contexts) {
-          const ctxs: HMContext[] = (data.contexts as [string, any][]).map(
-            ([id, ctx]) => ({
-              id,
-              type: ctx.type || "layer",
-              description: ctx.description || "",
-            }),
-          );
-          setHmContexts(ctxs);
-        }
+        setHmContexts(listContexts(res.data?.data));
       } catch {
         // No HM data or not available
       }
@@ -249,7 +241,7 @@ export default function CreateArtefactScreen() {
           });
           fd.append("file", file, "preview.jpg");
           const up = await fileService.uploadFormData(projectId, fd);
-          previewFileId = up.id || up.file_id || up.node_id || up?.file?.id;
+          previewFileId = up.id;
         } catch (e) {
           console.warn("Preview generation failed", e);
         }
@@ -578,7 +570,7 @@ export default function CreateArtefactScreen() {
                   ? (() => {
                       const ctx = hmContexts.find((c) => c.id === selectedHmContext);
                       return ctx
-                        ? `[${ctx.type.toUpperCase()}] ${ctx.id}${ctx.description ? " — " + ctx.description : ""}`
+                        ? `[${ctx.type.toUpperCase()}] ${ctx.label}${ctx.description ? " - " + ctx.description : ""}`
                         : selectedHmContext;
                     })()
                   : "Select a context…"}
@@ -661,7 +653,7 @@ export default function CreateArtefactScreen() {
           <View style={{ alignItems: "center", marginTop: 8 }}>
             <QRCodeView
               value={qrCode || qrPreviewValue}
-              label={`${name || "Artefact"} #—`}
+              label={`${name || "Artefact"} #-`}
               onReadyDataUrl={setQrDataUrl}
             />
           </View>
@@ -680,7 +672,7 @@ export default function CreateArtefactScreen() {
                   printQr(
                     qrDataUrl,
                     `${name || "artefact"}-qr.png`,
-                    `${name || "Artefact"} #—`,
+                    `${name || "Artefact"} #-`,
                   )
                 }
               >
@@ -822,7 +814,7 @@ export default function CreateArtefactScreen() {
                           fontWeight: "600",
                         }}
                       >
-                        {item.id}
+                        {item.label}
                         <Text
                           style={{
                             color: typeColors[item.type] || "#9A9A9A",
@@ -939,7 +931,7 @@ function printQr(dataUrl: string, _filename: string, label?: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — matches modal.tsx / join-project.tsx pattern
+// Styles - matches modal.tsx / join-project.tsx pattern
 // ---------------------------------------------------------------------------
 const createStyles = (isDarkMode: boolean) =>
   StyleSheet.create({

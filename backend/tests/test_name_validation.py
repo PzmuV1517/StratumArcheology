@@ -110,7 +110,7 @@ class TestInvalidDisplayNames:
 
 
 class TestUsernames:
-    """Usernames may be handles — only derogatory language is blocked."""
+    """Usernames may be handles - only derogatory language is blocked."""
 
     @pytest.mark.parametrize(
         "username",

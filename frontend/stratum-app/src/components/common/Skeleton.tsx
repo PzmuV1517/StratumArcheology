@@ -33,13 +33,13 @@ const SHIMMER_DURATION = 1200; // ms
 
 // ─── Core Skeleton Element ──────────────────────────────────────────────────
 interface SkeletonProps {
-  /** Width — number (px) or percentage string */
+  /** Width - number (px) or percentage string */
   width?: DimensionValue;
   /** Height in px */
   height?: number;
   /** Border radius; defaults to 8 */
   borderRadius?: number;
-  /** Render as a circle instead — `size` sets both width & height */
+  /** Render as a circle instead - `size` sets both width & height */
   circle?: boolean;
   /** Shortcut for circle diameter */
   size?: number;

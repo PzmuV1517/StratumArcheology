@@ -87,7 +87,10 @@ export default function ProjectOverlays() {
     try {
       await projectService.togglePublicise(project.id);
       await refreshProject();
-      showAlert("Success", project.is_public ? "Project is now private" : "Project is now public");
+      showAlert(
+        "Success",
+        project.is_public ? "Project is now private" : "Project is now public",
+      );
     } catch (error) {
       console.error("Failed to toggle publicity:", error);
       showAlert("Error", "Failed to change project visibility");

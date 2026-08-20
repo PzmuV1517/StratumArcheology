@@ -1,6 +1,6 @@
 /**
  * @file
- * Messages tab — DM conversation list (Slack-style inbox).
+ * Messages tab - DM conversation list (Slack-style inbox).
  *
  * Shows all direct-message conversations the user has,
  * ordered by most recent. Tapping opens the DM thread.

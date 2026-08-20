@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import check_project_permission, get_current_user
 from app.models import Project, ProjectGPS, User
 from app.websocket import log_activity
 
@@ -62,23 +62,35 @@ class GPSState(BaseModel):
 
 
 @router.get("/projects/{project_id}/gps", response_model=GPSState)
-def get_project_gps(project_id: str, db: Session = Depends(get_db)):
+def get_project_gps(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Retrieve the GPS coordinate state for a project.
+
+    Restricted to project members: site coordinates identify unexcavated
+    ground and are a looting risk if published. Public projects expose
+    their GPS through /projects/public/{id} instead.
 
     Args:
         project_id: The project UUID.
         db: Database session.
+        current_user: The authenticated user making the request.
 
     Returns:
         GPSState with the current work area and site polygons.
 
     Raises:
-        HTTPException: 404 if the project does not exist.
+        HTTPException: 404 if the project does not exist, 403 if the user
+            is not a member.
     """
     # Validate project exists
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    check_project_permission(project_id, current_user, db)
 
     row = db.query(ProjectGPS).filter(ProjectGPS.project_id == project_id).first()
     if not row or not row.data:
@@ -117,6 +129,10 @@ async def put_project_gps(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    check_project_permission(
+        project_id, current_user, db, required_role="researcher"
+    )
+
     row = db.query(ProjectGPS).filter(ProjectGPS.project_id == project_id).first()
     payload = state.model_dump()
     data_str = json.dumps(payload)
@@ -127,7 +143,6 @@ async def put_project_gps(
         db.add(row)
     db.commit()
 
-    # Log activity for timeline
     await log_activity(
         db=db,
         project_id=project_id,

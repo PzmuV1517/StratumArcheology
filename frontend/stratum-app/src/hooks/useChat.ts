@@ -1,12 +1,12 @@
 /**
  * @file
- * Chat hook — real-time messaging with REST history.
+ * Chat hook - real-time messaging with REST history.
  *
  * Manages message state, real-time Socket.IO events, initial history
  * fetching, and infinite scroll. Supports project rooms, channels, and DMs.
  *
  * Architecture: all closures read from refs (never stale) and effects
- * depend only on primitive values. Zero useCallback — immune to React
+ * depend only on primitive values. Zero useCallback - immune to React
  * Compiler memoisation bugs on native.
  *
  * STRATUM - Proprietary and Confidential
@@ -72,7 +72,7 @@ export function useChat({
   const [hasMore, setHasMore] = useState(true);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
-  /* ── refs (all closures read from here — never stale) ──────────── */
+  /* ── refs (all closures read from here - never stale) ──────────── */
   const socketRef = useRef(socket);
   const userRef = useRef(user);
   const channelIdRef = useRef(channelId);
@@ -207,7 +207,7 @@ export function useChat({
     return () => {
       cancelled = true;
     };
-    // Only primitive deps — no functions
+    // Only primitive deps - no functions
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, projectId, otherUserId]);
 
@@ -220,7 +220,7 @@ export function useChat({
       const pid = projectIdRef.current;
       const ouid = otherUserIdRef.current;
 
-      // Filter — only accept messages for our current context
+      // Filter - only accept messages for our current context
       if (cid && String(data.channel_id) !== String(cid)) return;
       if (!cid && pid && data.project_id !== pid) return;
       if (ouid && data.sender_id !== ouid && data.recipient_id !== ouid) return;
@@ -295,7 +295,7 @@ export function useChat({
   }, [socket]);
 
   /* ================================================================ *
-   *  Actions (plain functions — read everything from refs)           *
+   *  Actions (plain functions - read everything from refs)           *
    * ================================================================ */
 
   async function loadMore(): Promise<void> {
@@ -359,7 +359,6 @@ export function useChat({
       mentions: mentions ?? null,
     };
 
-    // Optimistic
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     const optimistic: ChatMessage = {
       id: tempId,

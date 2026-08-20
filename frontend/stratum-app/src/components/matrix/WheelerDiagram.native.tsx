@@ -72,7 +72,7 @@ const TYPE_COLORS: Record<string, string> = {
 interface WheelerDiagramProps {
   /** The project ID to load Wheeler data for. */
   projectId: string;
-  /** Whether the user can edit (ignored on mobile — always read-only). */
+  /** Whether the user can edit (ignored on mobile - always read-only). */
   canEdit?: boolean;
 }
 
@@ -468,7 +468,6 @@ export default function WheelerDiagram({
 
   return (
     <View style={s.container}>
-      {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Wheeler Diagram</Text>
         {isPlaceholder && (
@@ -789,7 +788,7 @@ export default function WheelerDiagram({
         </View>
       )}
 
-      {/* Legend — only shown in diagram mode */}
+      {/* Legend - only shown in diagram mode */}
       {viewMode === "diagram" && (
         <View style={s.legend}>
           {Object.entries(TYPE_COLORS).map(([type, color]) => (

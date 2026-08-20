@@ -40,7 +40,7 @@ _executor = ThreadPoolExecutor(max_workers=1)  # one transcription at a time
 def load_whisper_model() -> None:
     """
     Load (and download if needed) the Whisper model.
-    Called from the FastAPI startup event — blocks briefly while downloading
+    Called from the FastAPI startup event - blocks briefly while downloading
     on first run, then is instant on subsequent starts because Whisper caches
     the weights in ~/.cache/whisper/.
     """
@@ -58,7 +58,7 @@ def load_whisper_model() -> None:
 
 
 def _run_transcription(audio_path: str) -> str:
-    """Synchronous transcription — runs inside the thread-pool executor."""
+    """Synchronous transcription - runs inside the thread-pool executor."""
     if _model is None:
         raise RuntimeError("Whisper model is not loaded")
     result = _model.transcribe(audio_path, language="en")
@@ -80,7 +80,9 @@ async def transcribe_note_audio(
     'completed' or 'failed'. Emits a WebSocket note update on finish.
     """
     if _model is None:
-        logger.warning("Whisper model not loaded — transcription skipped for %s", note_id)
+        logger.warning(
+            "Whisper model not loaded - transcription skipped for %s", note_id
+        )
         db = SessionLocal()
         try:
             note = db.query(Note).filter(Note.id == note_id).first()
@@ -101,10 +103,11 @@ async def transcribe_note_audio(
         note.transcription_status = "processing"
         db.commit()
 
-        # Download audio bytes from MinIO
         audio_bytes = await minio_client.get_file(storage_path)
         if not audio_bytes:
-            raise RuntimeError(f"Could not download audio from MinIO: {storage_path}")
+            raise RuntimeError(
+                f"Could not download audio from MinIO: {storage_path}"
+            )
 
         # Write to a temp file (Whisper needs a path, not raw bytes)
         ext = filename.rsplit(".", 1)[-1] if "." in filename else "webm"
@@ -139,7 +142,9 @@ async def transcribe_note_audio(
                 note.transcription_status = "failed"
                 db.commit()
         except Exception:
-            logger.exception("Failed to mark transcription as failed for note %s", note_id)
+            logger.exception(
+                "Failed to mark transcription as failed for note %s", note_id
+            )
         return
     finally:
         db.close()

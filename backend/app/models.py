@@ -95,7 +95,6 @@ class ActivityType(str, enum.Enum):
     # GPS activities
     GPS_UPDATED = "gps_updated"
 
-    # Harris Matrix activities
     HARRIS_MATRIX_UPDATED = "harris_matrix_updated"
 
     # Wheeler Diagram activities
@@ -105,7 +104,6 @@ class ActivityType(str, enum.Enum):
     MESSAGE_SENT = "message_sent"
 
 
-# Association table for project members
 project_members = Table(
     "project_members",
     Base.metadata,
@@ -659,7 +657,7 @@ class UserGroupMember(Base):
 
 
 class ChatMessage(Base):
-    """A single chat message — channel message, project room message, or DM.
+    """A single chat message - channel message, project room message, or DM.
 
     * channel_id set  → channel message (Slack-like)
     * project_id set + channel_id NULL + recipient_id NULL  → legacy project room
@@ -918,7 +916,10 @@ class ProjectAISummary(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     project_id = Column(
-        String, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+        String,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     user_id = Column(
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False

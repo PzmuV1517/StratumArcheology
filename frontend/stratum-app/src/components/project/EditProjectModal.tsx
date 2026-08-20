@@ -205,7 +205,6 @@ export default function EditProjectModal({ visible, onClose }: Props) {
               </View>
 
               <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
-                {/* Cover Image */}
                 <Text style={s.label}>Cover Image</Text>
                 {coverImageUrl ? (
                   <View style={s.coverContainer}>
@@ -246,7 +245,11 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                     ) : (
                       <>
                         <View style={s.coverPlaceholderIcon}>
-                          <IconSymbol name="photo.on.rectangle" size={22} color="#FF2A2A" />
+                          <IconSymbol
+                            name="photo.on.rectangle"
+                            size={22}
+                            color="#FF2A2A"
+                          />
                         </View>
                         <Text style={s.coverPlaceholderText}>Add Cover Photo</Text>
                       </>
@@ -254,7 +257,6 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                   </TouchableOpacity>
                 )}
 
-                {/* Name */}
                 <Text style={s.label}>Project Name *</Text>
                 <TextInput
                   style={s.input}
@@ -264,7 +266,6 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                   onChangeText={setName}
                 />
 
-                {/* RAN/LMI */}
                 <Text style={s.label}>RAN/LMI ID</Text>
                 <TextInput
                   style={s.input}
@@ -274,7 +275,6 @@ export default function EditProjectModal({ visible, onClose }: Props) {
                   onChangeText={setRanLmiId}
                 />
 
-                {/* Description */}
                 <Text style={s.label}>Description</Text>
                 <TextInput
                   style={[s.input, s.textArea]}

@@ -1178,7 +1178,10 @@ export default function FilesOverlay({
                 const displayName =
                   idx === 0 ? "Root" : getBreadcrumbDisplayName(crumb.name, idx);
                 return (
-                  <View key={`${crumb.id ?? "root"}-${idx}`} style={styles.breadcrumbItem}>
+                  <View
+                    key={`${crumb.id ?? "root"}-${idx}`}
+                    style={styles.breadcrumbItem}
+                  >
                     {idx < arr.length - 1 ? (
                       <TouchableOpacity
                         onPress={() => {
@@ -1213,7 +1216,9 @@ export default function FilesOverlay({
                         else setSelectedIds(new Set(selectableIds));
                       }}
                       accessibilityRole="button"
-                      accessibilityLabel={allSelected ? "Deselect all" : "Select all"}
+                      accessibilityLabel={
+                        allSelected ? "Deselect all" : "Select all"
+                      }
                       accessibilityState={{ disabled: selectableIds.length === 0 }}
                     >
                       <View
@@ -1280,7 +1285,9 @@ export default function FilesOverlay({
                               selectedIds.has(node.id) && styles.checkboxChecked,
                             ]}
                           >
-                              {selectedIds.has(node.id) && <View style={styles.checkboxDot} />}
+                            {selectedIds.has(node.id) && (
+                              <View style={styles.checkboxDot} />
+                            )}
                           </View>
                         </TouchableOpacity>
                       )
@@ -1638,7 +1645,10 @@ const createStyles = (isDarkMode: boolean) => {
       alignItems: "center",
       justifyContent: "center",
     },
-    exactBoxChecked: { backgroundColor: palette.accent, borderColor: palette.accent },
+    exactBoxChecked: {
+      backgroundColor: palette.accent,
+      borderColor: palette.accent,
+    },
     exactBoxDot: {
       width: 8,
       height: 8,
@@ -1732,7 +1742,10 @@ const createStyles = (isDarkMode: boolean) => {
       borderWidth: 1,
       borderColor: palette.border,
     },
-    fileRowSelected: { borderColor: palette.accent, backgroundColor: palette.surface },
+    fileRowSelected: {
+      borderColor: palette.accent,
+      backgroundColor: palette.surface,
+    },
     fileNamePressable: { flex: 1 },
     rowActions: { flexDirection: "row", gap: 8, marginLeft: 8 },
     rowActionText: { color: palette.textSecondary },
@@ -1752,7 +1765,10 @@ const createStyles = (isDarkMode: boolean) => {
       backgroundColor: palette.surfaceMuted,
     },
     checkboxSpacer: { width: 20, height: 20, marginRight: 10 },
-    checkboxChecked: { backgroundColor: palette.accent, borderColor: palette.accent },
+    checkboxChecked: {
+      backgroundColor: palette.accent,
+      borderColor: palette.accent,
+    },
     checkboxDot: {
       width: 9,
       height: 9,

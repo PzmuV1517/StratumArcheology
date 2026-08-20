@@ -13,7 +13,6 @@
  */
 // Export all services from a single entry point
 
-// API
 export { default as api } from "./api";
 
 // Auth

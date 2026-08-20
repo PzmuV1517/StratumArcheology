@@ -835,7 +835,6 @@ export default function SettingsScreen() {
    * ==================================================== */
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backText}>← Back</Text>
@@ -1278,7 +1277,6 @@ export default function SettingsScreen() {
               </>
             )}
 
-            {/* Downloaded Projects */}
             <Text style={[styles.sectionTitle, { marginTop: 32 }]}>
               Downloaded Projects
             </Text>
@@ -1397,7 +1395,6 @@ export default function SettingsScreen() {
                 <Text style={styles.profileEditHint}>Tap to change photo</Text>
               </View>
 
-              {/* Display Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Display Name</Text>
                 <TextInput
@@ -1410,7 +1407,6 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              {/* Username */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Username</Text>
                 <TextInput
@@ -1426,7 +1422,6 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              {/* Bio */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Bio</Text>
                 <TextInput
@@ -1443,7 +1438,6 @@ export default function SettingsScreen() {
                 <Text style={styles.charCount}>{newBio.length}/300</Text>
               </View>
 
-              {/* Description */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Description</Text>
                 <TextInput
@@ -1457,7 +1451,6 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              {/* Phone */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone</Text>
                 <TextInput
@@ -1470,7 +1463,6 @@ export default function SettingsScreen() {
                 />
               </View>
 
-              {/* Timezone */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Timezone</Text>
                 <TouchableOpacity
@@ -1492,7 +1484,6 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Social Links */}
               <Text style={[styles.inputLabel, { marginTop: 8, marginBottom: 4 }]}>
                 Social Links
               </Text>

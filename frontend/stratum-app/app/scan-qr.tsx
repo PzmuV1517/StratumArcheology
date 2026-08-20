@@ -106,7 +106,7 @@ function ResultModal({
 export default function ScanQRScreen() {
   // Redirect away on web
   if (Platform.OS === "web") {
-    return <Redirect href="/(tabs)/profile" />;
+    return <Redirect href="/(tabs)/projects" />;
   }
 
   return <ScannerContent />;
@@ -260,7 +260,7 @@ function ScannerContent() {
             return;
           }
 
-          // Unknown type from registry – show what we got
+          // Unknown type from registry - show what we got
           setResultModal({
             title: `QR: ${resolved.type}`,
             message: `Resource: ${resolved.resource_id}`,
@@ -269,7 +269,7 @@ function ScannerContent() {
           setProcessing(false);
           return;
         } catch {
-          // Code not found in registry – fall through to legacy handling
+          // Code not found in registry - fall through to legacy handling
         }
 
         // ── 2. Legacy: stratum:artefact: prefix ────────────────────────
@@ -388,7 +388,6 @@ function ScannerContent() {
     );
   }
 
-  // Animated viewport size
   const animatedSize = viewportScale.interpolate({
     inputRange: [VIEWPORT_LOCKED_SIZE / VIEWPORT_SIZE, 1],
     outputRange: [VIEWPORT_LOCKED_SIZE, VIEWPORT_SIZE],
@@ -427,7 +426,7 @@ function ScannerContent() {
                 overflow: "hidden",
               }}
             >
-              {/* Corner markers — rounded */}
+              {/* Corner markers - rounded */}
               <View style={[styles.corner, styles.cornerTL]} />
               <View style={[styles.corner, styles.cornerTR]} />
               <View style={[styles.corner, styles.cornerBL]} />
@@ -465,7 +464,7 @@ function ScannerContent() {
           </View>
         </View>
 
-        {/* "Freeze" overlay — darkens camera when QR is detected */}
+        {/* "Freeze" overlay - darkens camera when QR is detected */}
         <Animated.View
           style={[styles.freezeOverlay, { opacity: lockOpacity }]}
           pointerEvents="none"
@@ -585,7 +584,6 @@ const createStyles = (isDarkMode: boolean) =>
     },
     backButton: { paddingVertical: 14, paddingHorizontal: 32 },
     backButtonText: { color: isDarkMode ? "#9A9A9A" : "#666666", fontSize: 16 },
-    // Overlay
     overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "center" },
     overlayTop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
     overlayMiddle: { flexDirection: "row", alignSelf: "center" },
@@ -614,7 +612,7 @@ const createStyles = (isDarkMode: boolean) =>
       marginTop: 20,
     },
     rescanText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-    // Corner markers — rounded
+    // Corner markers - rounded
     corner: {
       position: "absolute",
       width: 36,

@@ -135,7 +135,9 @@ def _validate_section(
             )
 
 
-def _apply_cross_rules(data: dict, strict: bool, issues: list[ValidationIssue]) -> None:
+def _apply_cross_rules(
+    data: dict, strict: bool, issues: list[ValidationIssue]
+) -> None:
     """Cross-section rules extracted from the XLSX guidance."""
 
     if not strict:

@@ -16,12 +16,23 @@ import api from "./api";
 import { fileServiceCore, FileNode, DownloadResult } from "./fileService.core";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Re-export core methods
 export * from "./fileService.core";
 
 /** Web-specific file service with browser download and upload support. */
 export const fileService = {
   ...fileServiceCore,
+
+  /**
+   * Download a stored file and return its contents as text.
+   *
+   * Present on both platforms so callers never have to branch: web reads
+   * the Blob, native downloads to a cache URI and reads it back.
+   */
+  downloadFileAsText: async (nodeId: string): Promise<string> => {
+    const { blob } = await fileService.downloadFile(nodeId);
+    if (!blob) throw new Error("Download returned no file data");
+    return await blob.text();
+  },
 
   // Web-specific upload using FormData with File objects
   uploadFile: async (
@@ -55,7 +66,21 @@ export const fileService = {
     return res.data;
   },
 
-  replaceFile: async (nodeId: string, file: File): Promise<FileNode> => {
+  /**
+   * Replace a file's contents.
+   *
+   * Shares its signature with the native implementation so cross-platform
+   * callers type-check on both; web always takes the File form.
+   */
+  replaceFile: async (
+    nodeId: string,
+    file: File | string,
+    _fileName?: string,
+    _mimeType?: string,
+  ): Promise<FileNode> => {
+    if (typeof file === "string") {
+      throw new Error("replaceFile on web expects a File, not a URI");
+    }
     const formData = new FormData();
     formData.append("file", file);
     const res = await api.put(`/files/${nodeId}/content`, formData, {

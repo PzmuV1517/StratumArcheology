@@ -454,7 +454,6 @@ export default function MapEditor({
             shape.markers.push(mk);
             shape.points.push(ll);
           });
-          // layer
           if (shape.closed && shape.points.length >= 3) {
             shape.layer = (L as any)
               .polygon(shape.points, {

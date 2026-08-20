@@ -289,7 +289,10 @@ export default function NotesSection({
         <TouchableOpacity
           onPress={() =>
             isVoice
-              ? router.push({ pathname: "/voice-note/[id]", params: { id: item.id } })
+              ? router.push({
+                  pathname: "/voice-note/[id]",
+                  params: { id: item.id },
+                })
               : onNotePress(item.id)
           }
           activeOpacity={0.7}

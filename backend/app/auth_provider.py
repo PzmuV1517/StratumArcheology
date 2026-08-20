@@ -41,9 +41,7 @@ def extract_provider_ids_from_firebase_user(
         if provider_id and provider_id not in providers:
             providers.append(provider_id)
 
-    user_provider = _normalize_provider(
-        getattr(firebase_user, "provider_id", None)
-    )
+    user_provider = _normalize_provider(getattr(firebase_user, "provider_id", None))
     if user_provider and user_provider not in providers:
         providers.append(user_provider)
 

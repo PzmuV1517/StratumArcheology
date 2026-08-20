@@ -1,5 +1,5 @@
 """
-Wheeler Stratigraphic Notation – SVG publication renderer.
+Wheeler Stratigraphic Notation - SVG publication renderer.
 
 Generates a 1964-style black-and-white Wheeler Space–Time diagram as a
 standalone SVG string.
@@ -37,8 +37,8 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
 
     Args:
         data: dict with keys:
-            ``trenches``   – list of ``{id, label, order}`` dicts
-            ``placements`` – list of ``{contextId, trenchIds, rowStart, rowEnd}``
+            ``trenches``   - list of ``{id, label, order}`` dicts
+            ``placements`` - list of ``{contextId, trenchIds, rowStart, rowEnd}``
 
     Returns:
         A self-contained SVG string (UTF-8).
@@ -98,7 +98,7 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
     total_h = PAD_T + graph_h + PAD_B
 
     # ── Row extents (leftmost / rightmost occupied column per row) ────────────
-    row_exts: list[tuple[int, int]] = []  # (left, right) — -1 if empty
+    row_exts: list[tuple[int, int]] = []  # (left, right) - -1 if empty
     for r in range(total_rows):
         left = -1
         right = -1
@@ -134,7 +134,6 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             }
         )
 
-    # ── Build closed polygon for each sequence ───────────────────────────────
     def build_sequence_polygon(seq: dict) -> str:
         pts: list[str] = []
         exts = seq["extents"]
@@ -209,7 +208,6 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
 
     parts: list[str] = []
 
-    # ── <defs> ────────────────────────────────────────────────────────────────
     parts.append(f"""<defs>
   <!-- Diagonal hatching for degradation vacuity -->
   <pattern id="pub-vacuity" patternUnits="userSpaceOnUse" width="6" height="6"
@@ -299,7 +297,6 @@ def generate_wheeler_svg(data: dict[str, Any]) -> str:
             f'<line x1="{PAD_L}" y1="{y_bot:.1f}" x2="{PAD_L + graph_w}" y2="{y_bot:.1f}" '
             f'stroke="{STROKE}" stroke-width="1.5" stroke-dasharray="10,5"/>'
         )
-        # Label
         label_y = (y_top + y_bot) / 2
         parts.append(
             f'<text x="{PAD_L + 12}" y="{label_y + 4:.1f}" '

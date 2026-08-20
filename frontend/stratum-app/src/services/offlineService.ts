@@ -342,7 +342,6 @@ export const offlineFilesStorage = {
       const file = files.find((f) => f.node_id === nodeId);
 
       if (file && Platform.OS !== "web") {
-        // Delete local file
         const fileInfo = await FileSystem.getInfoAsync(file.local_path);
         if (fileInfo.exists) {
           await FileSystem.deleteAsync(file.local_path);

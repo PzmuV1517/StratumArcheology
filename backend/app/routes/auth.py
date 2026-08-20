@@ -11,14 +11,15 @@ No license is granted. Unauthorized copying, modification, distribution, or use 
 Use is permitted only for the owners above and parties explicitly licensed in writing by Ferritworks S.R.L.
 """
 
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
+import bcrypt
 import firebase_admin.auth as firebase_auth
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
-from passlib.context import CryptContext
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.auth_provider import (
@@ -38,6 +39,7 @@ from app.name_validation import (
     validate_display_name,
     validate_username,
 )
+from app.rate_limiter import limiter
 from app.schemas import (
     AuthResponse,
     FirebaseTokenRequest,
@@ -60,7 +62,39 @@ FIREBASE_SEND_OOB_URL = (
 LOCAL_PROVIDER_ID = "local"
 LOCAL_UID_PREFIX = "LOCAL-"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt reads at most 72 bytes of a password and ignores the rest.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _password_bytes(password: str) -> bytes:
+    # passlib truncated silently here; bcrypt 5 raises instead. Truncating
+    # keeps hashes written by the old code verifiable.
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
+
+class _BcryptHasher:
+    """The two bcrypt calls this module needs.
+
+    passlib has been unmaintained since 2020 and its bcrypt backend reads
+    bcrypt.__about__, dropped in bcrypt 4.1, so on bcrypt 5 every local
+    registration failed with a bogus "password cannot be longer than 72
+    bytes". Calling bcrypt directly removes the broken layer.
+    """
+
+    @staticmethod
+    def hash(password: str) -> str:
+        return bcrypt.hashpw(_password_bytes(password), bcrypt.gensalt()).decode()
+
+    @staticmethod
+    def verify(password: str, password_hash: str) -> bool:
+        try:
+            return bcrypt.checkpw(_password_bytes(password), password_hash.encode())
+        except ValueError:
+            # Stored hash is malformed; treat as a failed login, not a 500.
+            return False
+
+
+pwd_context = _BcryptHasher()
 
 
 def _issue_api_jwt(user_id: str, firebase_uid: str, email: str) -> str:
@@ -193,15 +227,21 @@ async def send_firebase_oob_code(
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    """Login with email and password — verified against Firebase Auth."""
+@limiter.limit("10 per minute")
+async def login(
+    request: Request,
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+):
+    """Login with email and password - verified against Firebase Auth."""
     try:
-        normalized_email = request.email.strip().lower()
+        normalized_email = payload.email.strip().lower()
 
         # Maintainer account is managed from backend env variables.
-        if (
-            normalized_email == settings.MAINTAINER_EMAIL.strip().lower()
-            and request.password == settings.MAINTAINER_PASSWORD
+        # compare_digest: the maintainer bypasses every project permission
+        # check, so its password must not be guessable by timing.
+        if normalized_email == settings.MAINTAINER_EMAIL.strip().lower() and (
+            secrets.compare_digest(payload.password, settings.MAINTAINER_PASSWORD)
         ):
             maintainer_user = build_maintainer_user()
             jwt_token = _issue_api_jwt(
@@ -216,7 +256,9 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 
         # Local auth first (for local mode and local users in hybrid mode).
         if settings.local_auth_enabled:
-            local_user = _authenticate_local_user(normalized_email, request.password, db)
+            local_user = _authenticate_local_user(
+                normalized_email, payload.password, db
+            )
             if local_user:
                 jwt_token = _issue_api_jwt(
                     user_id=local_user.id,
@@ -238,7 +280,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         _ensure_firebase_auth_enabled()
 
         # 1. Verify password against Firebase Auth REST API
-        await verify_password_with_firebase(normalized_email, request.password)
+        await verify_password_with_firebase(normalized_email, payload.password)
 
         # 2. Read provider and status from Firebase account
         firebase_user = firebase_auth.get_user_by_email(normalized_email)
@@ -281,12 +323,10 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 detail="This account is configured for local sign-in",
             )
 
-        # 4. Update last login
         _set_user_auth_provider(user, resolved_provider)
         user.last_login = datetime.utcnow()
         db.commit()
 
-        # 5. Issue our API JWT
         jwt_token = _issue_api_jwt(
             user_id=user.id,
             firebase_uid=user.firebase_uid,
@@ -301,19 +341,24 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.exception(
-            "Login failed with unexpected error", email=request.email, error=str(e)
+            "Login failed with unexpected error", email=payload.email, error=str(e)
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authentication failed: {str(e)}",
+            detail="Authentication failed",
         )
 
 
 @router.post("/register", response_model=AuthResponse)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("5 per minute")
+async def register(
+    request: Request,
+    payload: RegisterRequest,
+    db: Session = Depends(get_db),
+):
     """Register new user and require immediate Firebase email verification."""
     try:
-        normalized_email = request.email.strip().lower()
+        normalized_email = payload.email.strip().lower()
 
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == normalized_email).first()
@@ -329,7 +374,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # This also strips the reserved-name override prefix, so run it before
         # the character-set check below.
         try:
-            username = validate_username(request.username)
+            username = validate_username(payload.username)
         except NameValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -355,7 +400,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         # The display name must look like a genuine person's name (no
         # profanity, Morse, ASCII soup, digits or gibberish).
         try:
-            display_name = validate_display_name(request.display_name)
+            display_name = validate_display_name(payload.display_name)
         except NameValidationError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -370,7 +415,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
                 username=username,
                 display_name=display_name,
                 auth_provider=LOCAL_PROVIDER_ID,
-                password_hash=pwd_context.hash(request.password),
+                password_hash=pwd_context.hash(payload.password),
                 created_at=datetime.utcnow(),
                 last_login=datetime.utcnow(),
             )
@@ -391,10 +436,9 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
         _ensure_firebase_auth_enabled()
 
-        # Create user in Firebase
         firebase_user = firebase_auth.create_user(
             email=normalized_email,
-            password=request.password,
+            password=payload.password,
             display_name=display_name,
         )
 
@@ -415,7 +459,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
         try:
             sign_in = await verify_password_with_firebase(
-                normalized_email, request.password
+                normalized_email, payload.password
             )
             id_token = sign_in.get("idToken")
             if not id_token:
@@ -506,7 +550,10 @@ async def verify_firebase_token(
 
         resolved_provider = infer_auth_provider(decoded_token, firebase_user)
 
-        if not is_google_provider(resolved_provider) and not firebase_user.email_verified:
+        if (
+            not is_google_provider(resolved_provider)
+            and not firebase_user.email_verified
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Email not verified. Check your inbox for the verification link.",
@@ -534,7 +581,6 @@ async def verify_firebase_token(
             user.last_login = datetime.utcnow()
             db.commit()
 
-        # Generate JWT token for our API
         access_token = _issue_api_jwt(
             user_id=user.id,
             firebase_uid=user.firebase_uid,

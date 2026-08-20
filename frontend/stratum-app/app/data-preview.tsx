@@ -204,7 +204,6 @@ export default function DataPreviewScreen() {
             return;
           }
 
-          // PDF
           if (ext.endsWith(".pdf") || kind === "pdf") {
             if (!cancelled) {
               setPdfUrl(res.uri);
@@ -251,6 +250,7 @@ export default function DataPreviewScreen() {
 
         // Web: downloadFile returns { blob, contentLength, mimeType }
         const { blob } = await fileService.downloadFile(nodeId);
+        if (!blob) throw new Error("Download returned no file data");
 
         // AUDIO FIRST (handles audio/webm)
         const isBlobAudio = blob.type && /^audio\//.test(blob.type);
@@ -272,7 +272,6 @@ export default function DataPreviewScreen() {
           return;
         }
 
-        // PDF
         if (ext.endsWith(".pdf") || kind === "pdf") {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
@@ -303,7 +302,6 @@ export default function DataPreviewScreen() {
           return;
         }
 
-        // MESH
         if (/\.(glb|gltf)$/i.test(ext) || kind === "mesh") {
           const url = window.URL.createObjectURL(blob);
           if (!cancelled) {
@@ -334,7 +332,6 @@ export default function DataPreviewScreen() {
         }
 
         // TEXT / CSV / EXCEL (unchanged below)
-        // Handle text files (txt, md, json)
         if (ext.endsWith(".txt") || ext.endsWith(".md") || ext.endsWith(".json")) {
           const text = await blob.text();
           // Handle empty files gracefully - set empty string instead of null
@@ -368,7 +365,7 @@ export default function DataPreviewScreen() {
           } else if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
             if (!XLSX) {
               setTextContent(
-                '[xlsx library not installed – install "xlsx" to preview Excel files]',
+                '[xlsx library not installed - install "xlsx" to preview Excel files]',
               );
             } else {
               const arrayBuffer = await blob.arrayBuffer();
@@ -407,6 +404,7 @@ export default function DataPreviewScreen() {
       if (Platform.OS === "web") {
         // Web: downloadFile returns { blob, contentLength, mimeType }
         const { blob } = await fileService.downloadFile(nodeId);
+        if (!blob) throw new Error("Download returned no file data");
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -570,7 +568,7 @@ export default function DataPreviewScreen() {
           if (!XLSX) {
             showAlert(
               "Error",
-              "xlsx library not installed – cannot save Excel files",
+              "xlsx library not installed - cannot save Excel files",
             );
             return;
           }
@@ -591,15 +589,13 @@ export default function DataPreviewScreen() {
         return;
       }
 
-      // Upload via replaceFile
-      const formData = new FormData();
+      // replaceFile builds its own FormData, so hand it the File directly.
       // On web, wrap blob in File so filename is sent
       const file =
         Platform.OS === "web"
           ? new File([blob], finalFilename, { type: blob.type })
           : (blob as any);
-      formData.append("file", file as any, finalFilename);
-      await fileService.replaceFile(nodeId as string, formData);
+      await fileService.replaceFile(nodeId as string, file);
       // Keep current editing mode; do not force exit on save
       setDirty(false);
       // Clear draft after successful save

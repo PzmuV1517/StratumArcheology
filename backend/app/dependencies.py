@@ -80,7 +80,6 @@ async def get_current_user(
     token = credentials.credentials
 
     try:
-        # Verify our JWT token
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
 
@@ -167,7 +166,6 @@ async def get_current_user_or_token(
         )
 
     try:
-        # Verify our JWT token
         payload = jwt.decode(
             jwt_token, settings.JWT_SECRET_KEY, algorithms=["HS256"]
         )

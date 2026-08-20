@@ -63,7 +63,7 @@ export default function EditProjectScreen() {
   const [ranLmiId, setRanLmiId] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  // Crop modal state (web only — native uses system crop UI)
+  // Crop modal state (web only - native uses system crop UI)
   const [cropImage, setCropImage] = useState<{
     uri: string;
     mimeType: string;
@@ -79,7 +79,8 @@ export default function EditProjectScreen() {
   const stackScreenOptions = {
     title: "Edit Project",
     headerTransparent: Platform.OS === "ios",
-    headerBlurEffect: Platform.OS === "ios" ? "systemChromeMaterial" : undefined,
+    headerBlurEffect:
+      Platform.OS === "ios" ? ("systemChromeMaterial" as const) : undefined,
     headerStyle: Platform.OS === "ios" ? {} : { backgroundColor: pageBackground },
     headerTintColor: "#FF2A2A",
     headerTitleStyle: {
@@ -236,7 +237,7 @@ export default function EditProjectScreen() {
       // On web, show our custom crop modal
       setCropImage({ uri: asset.uri, mimeType });
     } else {
-      // On native, the system already cropped — upload directly
+      // On native, the system already cropped - upload directly
       await uploadCoverImage(asset.uri, mimeType);
     }
   };
@@ -305,7 +306,6 @@ export default function EditProjectScreen() {
         <View style={styles.form}>
           <Text style={styles.pageTitle}>Edit Project</Text>
 
-          {/* Cover Image */}
           <Text style={styles.label}>Cover Image</Text>
           {coverImageUrl ? (
             <View style={styles.coverImageContainer}>

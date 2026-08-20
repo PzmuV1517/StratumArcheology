@@ -6,7 +6,17 @@ module.exports = {
   ],
   testPathIgnorePatterns: ["/node_modules/"],
   transform: {
-    "^.+\\.tsx?$": ["babel-jest", { presets: ["@babel/preset-typescript"] }],
+    // preset-env compiles the import statements: without it a test can only
+    // re-declare the logic it claims to cover, never import the real module.
+    "^.+\\.tsx?$": [
+      "babel-jest",
+      {
+        presets: [
+          ["@babel/preset-env", { targets: { node: "current" } }],
+          "@babel/preset-typescript",
+        ],
+      },
+    ],
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
 };

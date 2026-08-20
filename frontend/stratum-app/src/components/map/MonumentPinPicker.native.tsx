@@ -25,7 +25,8 @@ function parsePinValue(value: unknown): Coordinates | null {
   const latitude = Number(parts[0]);
   const longitude = Number(parts[1]);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)
+    return null;
 
   return { latitude, longitude };
 }
@@ -68,11 +69,16 @@ export default function MonumentPinPicker({
         onPress={handleMapPress}
       >
         {pinCoordinate ? (
-          <Marker coordinate={pinCoordinate} draggable={editable} onDragEnd={handleDragEnd} />
+          <Marker
+            coordinate={pinCoordinate}
+            draggable={editable}
+            onDragEnd={handleDragEnd}
+          />
         ) : null}
       </MapView>
       <Text style={styles.pinHelperText}>
-        Apasa pe harta pentru a seta PIN-ul exact. Poti trage marker-ul pentru ajustare fina.
+        Apasa pe harta pentru a seta PIN-ul exact. Poti trage marker-ul pentru
+        ajustare fina.
       </Text>
       <Text style={styles.pinValueText}>
         {pinCoordinate

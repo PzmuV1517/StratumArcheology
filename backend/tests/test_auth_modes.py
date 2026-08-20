@@ -46,7 +46,9 @@ def db_session() -> Session:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
     Base.metadata.create_all(bind=engine)
 
     session = TestingSessionLocal()
@@ -121,7 +123,9 @@ def test_register_local_mode_creates_password_hash(
     assert payload["user"]["email"] == "local.user@example.com"
     assert payload["user"]["auth_provider"] == auth_routes.LOCAL_PROVIDER_ID
 
-    created = db_session.query(User).filter(User.email == "local.user@example.com").one()
+    created = (
+        db_session.query(User).filter(User.email == "local.user@example.com").one()
+    )
     assert created.password_hash
     assert created.password_hash != "StrongPass123!"
     assert created.password_hash == "mock-hash::StrongPass123!"
@@ -204,11 +208,15 @@ def test_hybrid_mode_prefers_local_login_before_firebase(
     async def _fail_if_called(*_args, **_kwargs):
         raise AssertionError("Firebase password flow should not run for local user")
 
-    monkeypatch.setattr(auth_routes, "verify_password_with_firebase", _fail_if_called)
+    monkeypatch.setattr(
+        auth_routes, "verify_password_with_firebase", _fail_if_called
+    )
     monkeypatch.setattr(
         auth_routes.firebase_auth,
         "get_user_by_email",
-        lambda _email: SimpleNamespace(disabled=False, email_verified=True, provider_data=[]),
+        lambda _email: SimpleNamespace(
+            disabled=False, email_verified=True, provider_data=[]
+        ),
     )
 
     response = client.post(

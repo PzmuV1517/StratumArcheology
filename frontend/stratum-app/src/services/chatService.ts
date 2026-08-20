@@ -132,10 +132,7 @@ export const chatService = {
   // ── Mentionables ───────────────────────────────────────────────────────
 
   /** Search mentionable users and groups in a project. */
-  getMentionables: async (
-    projectId: string,
-    query = "",
-  ): Promise<Mentionable> => {
+  getMentionables: async (projectId: string, query = ""): Promise<Mentionable> => {
     try {
       const res = await api.get(`/projects/${projectId}/mentionables`, {
         params: { q: query },

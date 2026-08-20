@@ -10,7 +10,10 @@ const fs = require("fs");
 const path = require("path");
 
 const DIST = path.resolve(__dirname, "../dist");
-const SITE_URL = (process.env.SITE_URL || "https://stratumarcheology.com").replace(/\/+$/, "");
+const SITE_URL = (process.env.SITE_URL || "https://stratumarcheology.com").replace(
+  /\/+$/,
+  "",
+);
 const URLSET_OUTPUT = path.join(DIST, "sitemap.xml");
 const INDEX_OUTPUT = path.join(DIST, "sitemap_index.xml");
 

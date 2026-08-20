@@ -130,11 +130,16 @@ def _materialize_embedded_project_root() -> Path | None:
     current_version = ""
     if RUNTIME_PAYLOAD_VERSION_FILE.exists():
         try:
-            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(encoding="utf-8").strip()
+            current_version = RUNTIME_PAYLOAD_VERSION_FILE.read_text(
+                encoding="utf-8"
+            ).strip()
         except Exception:
             current_version = ""
 
-    if _has_project_layout(RUNTIME_PROJECT_ROOT) and current_version == BUNDLE_PAYLOAD_VERSION:
+    if (
+        _has_project_layout(RUNTIME_PROJECT_ROOT)
+        and current_version == BUNDLE_PAYLOAD_VERSION
+    ):
         return RUNTIME_PROJECT_ROOT
 
     runtime_parent = RUNTIME_PROJECT_ROOT.parent
@@ -282,7 +287,56 @@ def _find_compose_base_cmd() -> list[str]:
 
 
 def _compose_cmd(*args: str) -> list[str]:
-    return [*_find_compose_base_cmd(), "-f", str(_compose_file()), *args]
+    # Compose reads .env next to the compose file, but the generated
+    # credentials live in backend/.env, so point it there explicitly.
+    # Without this the compose file cannot resolve POSTGRES_PASSWORD or
+    # MINIO_SECRET_KEY and refuses to start.
+    cmd = [*_find_compose_base_cmd(), "-f", str(_compose_file())]
+    env_file = _backend_env_file()
+    if env_file.exists():
+        cmd += ["--env-file", str(env_file)]
+    return [*cmd, *args]
+
+
+def _pin_origins() -> None:
+    """Point CORS at this machine, wherever DHCP has put it today.
+
+    backend/.env carries whatever origins its author last needed, so a bundle
+    started on a field laptop tends to inherit a stale LAN address and reject
+    every browser request. The stack only ever serves these four origins, so
+    derive them instead of expecting an operator to maintain the list.
+    """
+    host_ip = _get_host_ip()
+    origins = [
+        "http://localhost:19006",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        f"http://{host_ip}:19006",
+        f"http://{host_ip}:5173",
+        f"http://{host_ip}:8000",
+    ]
+    os.environ["ALLOWED_ORIGINS"] = ",".join(origins)
+
+
+def _pin_auth_mode() -> None:
+    """Pin the stack to local auth before any Compose command runs.
+
+    backend/.env is handed to Compose as --env-file so it can resolve the
+    generated credentials. That also exposes a developer's own
+    AUTH_MODE=firebase plus their production Firebase admin key, which would
+    point this bundle at the live user directory and make every login depend
+    on reaching Google. The bundle exists to run standalone, so local auth
+    wins unless the operator opts in explicitly. Compose reads the process
+    environment before --env-file, so setting it here overrides backend/.env.
+    """
+    opt_in = os.environ.get("STRATUM_BUNDLE_AUTH_MODE", "").strip().lower()
+    os.environ["AUTH_MODE"] = opt_in or "local"
+    if opt_in and opt_in != "local":
+        _print(
+            f"WARNING: AUTH_MODE={opt_in}. This stack will use the Firebase "
+            "project configured in backend/.env, so its accounts are shared "
+            "with that project and login will require internet access."
+        )
 
 
 def _run(
@@ -308,11 +362,15 @@ def _random_secret() -> str:
 
 
 def _default_backend_env() -> str:
+    # Every credential here is generated per install. Shipping fixed defaults
+    # would put the admin password of every self-hosted deployment in this
+    # public repo, and the maintainer account bypasses project permissions.
     postgres_user = "stratum_user"
-    postgres_password = "stratum_secure_pass_2025"
+    postgres_password = _random_secret()
     postgres_db = "stratum_db"
     minio_access = "stratum_minio_access"
-    minio_secret = "stratum_minio_secret_2026"
+    minio_secret = _random_secret()
+    maintainer_password = _random_secret()
 
     return "\n".join(
         [
@@ -332,7 +390,7 @@ def _default_backend_env() -> str:
             "MINIO_BUCKET_NAME=stratum-files",
             "MINIO_USE_SSL=false",
             "MAINTAINER_EMAIL=maintainer@localhost",
-            "MAINTAINER_PASSWORD=maintainer-local-password",
+            f"MAINTAINER_PASSWORD={maintainer_password}",
             "APP_SECRET_KEY=" + _random_secret(),
             "APP_DEBUG=False",
             "APP_HOST=0.0.0.0",
@@ -355,8 +413,17 @@ def _ensure_backend_env() -> None:
     if backend_env_file.exists():
         return
 
-    backend_env_file.write_text(_default_backend_env(), encoding="utf-8")
-    _print(f"Created {backend_env_file} with local self-host defaults")
+    env_text = _default_backend_env()
+    backend_env_file.write_text(env_text, encoding="utf-8")
+    backend_env_file.chmod(0o600)
+    _print(f"Created {backend_env_file} with freshly generated credentials")
+
+    # The maintainer password is randomly generated, so show it once here.
+    # There is no other way for the operator to learn it.
+    for line in env_text.splitlines():
+        if line.startswith(("MAINTAINER_EMAIL=", "MAINTAINER_PASSWORD=")):
+            _print(f"  {line}")
+    _print(f"  (stored in {backend_env_file}, keep it out of version control)")
 
 
 def _http_get_json(url: str, timeout: float = 2.0) -> dict[str, Any] | None:
@@ -655,7 +722,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     up_parser.set_defaults(func=cmd_up)
 
-    down_parser = sub.add_parser("down", help="Stop and remove running stack containers")
+    down_parser = sub.add_parser(
+        "down", help="Stop and remove running stack containers"
+    )
     down_parser.set_defaults(func=cmd_down)
 
     restart_parser = sub.add_parser("restart", help="Restart the self-host stack")
@@ -670,7 +739,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ps_parser = sub.add_parser("ps", help="Show compose service process status")
     ps_parser.set_defaults(func=cmd_ps)
 
-    status_parser = sub.add_parser("status", help="Show process + runtime status summary")
+    status_parser = sub.add_parser(
+        "status", help="Show process + runtime status summary"
+    )
     status_parser.set_defaults(func=cmd_status)
 
     logs_parser = sub.add_parser("logs", help="Show compose logs")
@@ -748,12 +819,16 @@ def main() -> None:
 
     parser = _build_parser()
     args = parser.parse_args()
+    _pin_auth_mode()
+    _pin_origins()
 
     try:
         args.func(args)
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip() if exc.stderr else ""
-        _fail(stderr or f"Command failed with exit code {exc.returncode}", exc.returncode)
+        _fail(
+            stderr or f"Command failed with exit code {exc.returncode}", exc.returncode
+        )
 
 
 if __name__ == "__main__":

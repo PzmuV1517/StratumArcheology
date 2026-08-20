@@ -19,22 +19,29 @@ import os
 import threading
 from typing import NamedTuple
 
-import anthropic
 import httpx
 from dotenv import dotenv_values
 
+# Optional: the self-host image installs requirements-selfhost.txt, which
+# leaves out the cloud AI SDKs. Importing it eagerly made the whole API fail
+# to boot there, so absence is handled at the call site instead.
+try:
+    import anthropic
+except ModuleNotFoundError:  # pragma: no cover - depends on install profile
+    anthropic = None
+
 # ---------------------------------------------------------------------------
-# Model constants — import and pass to generate_summary() at each call site
+# Model constants - import and pass to generate_summary() at each call site
 # ---------------------------------------------------------------------------
 
 # Anthropic Claude
-CLAUDE_HAIKU = "claude-haiku-4-5-20251001"  # fast, cheap — routine tasks
-CLAUDE_SONNET = "claude-sonnet-4-6"         # balanced — most tasks
-CLAUDE_OPUS = "claude-opus-4-7"             # most capable — complex reasoning
+CLAUDE_HAIKU = "claude-haiku-4-5-20251001"  # fast, cheap - routine tasks
+CLAUDE_SONNET = "claude-sonnet-4-6"  # balanced - most tasks
+CLAUDE_OPUS = "claude-opus-4-7"  # most capable - complex reasoning
 
 # Google Gemini
 GEMINI_FLASH_LITE = "gemini-2.0-flash-lite"  # fast, high RPM
-GEMINI_FLASH = "gemini-2.0-flash"            # standard
+GEMINI_FLASH = "gemini-2.0-flash"  # standard
 
 # ---------------------------------------------------------------------------
 # Provider defaults (used when the caller passes model=None)
@@ -45,8 +52,7 @@ _PROVIDER_DEFAULT_MODELS: dict[str, str] = {
 }
 
 _GEMINI_BASE_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models"
-    "/{model}:generateContent"
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 )
 
 # Path to the backend .env file (two levels up: app/ → backend/)
@@ -119,9 +125,9 @@ async def generate_summary(
         (response_text, display_provider_name).
 
     Raises:
-        ValueError               — misconfiguration (no keys, unsupported provider).
-        anthropic.APIStatusError — Anthropic HTTP / API errors.
-        httpx.HTTPStatusError    — Gemini HTTP errors.
+        ValueError              - misconfiguration (no keys, unsupported provider).
+        anthropic.APIStatusError - Anthropic HTTP / API errors.
+        httpx.HTTPStatusError   - Gemini HTTP errors.
     """
     cfg = _next()
     if cfg is None:
@@ -135,7 +141,9 @@ async def generate_summary(
     if cfg.provider == "ANTHROPIC":
         resolved_model = resolved_model or CLAUDE_HAIKU
         text = await _call_anthropic(cfg.api_key, prompt, resolved_model, max_tokens)
-        tier = resolved_model.split("-")[1].capitalize()  # haiku -> Haiku, sonnet -> Sonnet
+        tier = resolved_model.split("-")[
+            1
+        ].capitalize()  # haiku -> Haiku, sonnet -> Sonnet
         return text, f"Claude {tier}"
 
     if cfg.provider == "GEMINI":
@@ -149,7 +157,14 @@ async def generate_summary(
     )
 
 
-async def _call_anthropic(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
+async def _call_anthropic(
+    api_key: str, prompt: str, model: str, max_tokens: int = 1024
+) -> str:
+    if anthropic is None:
+        raise ValueError(
+            "Anthropic support is not installed on this server "
+            "(pip install anthropic to enable AI summaries)."
+        )
     client = anthropic.AsyncAnthropic(api_key=api_key)
     message = await client.messages.create(
         model=model,
@@ -159,7 +174,9 @@ async def _call_anthropic(api_key: str, prompt: str, model: str, max_tokens: int
     return message.content[0].text
 
 
-async def _call_gemini(api_key: str, prompt: str, model: str, max_tokens: int = 1024) -> str:
+async def _call_gemini(
+    api_key: str, prompt: str, model: str, max_tokens: int = 1024
+) -> str:
     url = _GEMINI_BASE_URL.format(model=model)
     headers = {
         "Content-Type": "application/json",

@@ -1,6 +1,6 @@
 /**
  * @file
- * WheelerPublicationView – Web component.
+ * WheelerPublicationView - Web component.
  *
  * Fetches the server-generated publication-quality (1964-style B&W) Wheeler
  * SVG from a presigned MinIO URL and renders it inline for in-app viewing.
@@ -192,7 +192,7 @@ export function WheelerPublicationView({
         <div style={bannerStyle}>
           <span>Notice</span>
           <span>
-            This diagram has unsaved changes — the displayed render may be outdated.
+            This diagram has unsaved changes - the displayed render may be outdated.
             Save to refresh.
           </span>
         </div>

@@ -236,7 +236,10 @@ async def list_monuments(
         _assert_collect_access(current_user)
         query = (
             query.join(Monument.instances, isouter=True)
-            .filter((FisaInstance.user_id == current_user.id) | (FisaInstance.id.is_(None)))
+            .filter(
+                (FisaInstance.user_id == current_user.id)
+                | (FisaInstance.id.is_(None))
+            )
             .distinct()
         )
 
@@ -304,7 +307,9 @@ async def create_instance(
     db.add(instance)
     db.flush()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
@@ -335,7 +340,9 @@ async def update_instance(
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     _assert_instance_access(current_user, instance, db)
 
@@ -364,7 +371,9 @@ async def update_instance(
     instance.version += 1
     instance.updated_at = datetime.utcnow()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
@@ -381,7 +390,9 @@ async def submit_for_verification(
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     _assert_instance_access(current_user, instance, db)
 
@@ -413,7 +424,9 @@ async def submit_for_verification(
     instance.version += 1
     instance.updated_at = datetime.utcnow()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
@@ -430,7 +443,9 @@ async def send_to_approval(
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     if instance.status != FisaInstanceStatus.IN_VERIFICARE:
         raise HTTPException(
@@ -442,7 +457,9 @@ async def send_to_approval(
     instance.version += 1
     instance.updated_at = datetime.utcnow()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
@@ -459,7 +476,9 @@ async def approve_instance(
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     if instance.status != FisaInstanceStatus.IN_APROBARE:
         raise HTTPException(
@@ -472,7 +491,9 @@ async def approve_instance(
     instance.version += 1
     instance.updated_at = datetime.utcnow()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
@@ -490,9 +511,14 @@ async def return_instance(
 
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
-    if instance.status not in {FisaInstanceStatus.IN_VERIFICARE, FisaInstanceStatus.IN_APROBARE}:
+    if instance.status not in {
+        FisaInstanceStatus.IN_VERIFICARE,
+        FisaInstanceStatus.IN_APROBARE,
+    }:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only IN_VERIFICARE or IN_APROBARE instances can be returned",
@@ -510,14 +536,18 @@ async def return_instance(
     instance.version += 1
     instance.updated_at = datetime.utcnow()
 
-    _snapshot(db, instance, None if _is_maintainer(current_user) else current_user.id)
+    _snapshot(
+        db, instance, None if _is_maintainer(current_user) else current_user.id
+    )
 
     db.commit()
     db.refresh(instance)
     return FisaResponse.model_validate(instance)
 
 
-@router.get("/instances/{instance_id}/versions", response_model=list[FisaVersionResponse])
+@router.get(
+    "/instances/{instance_id}/versions", response_model=list[FisaVersionResponse]
+)
 async def list_instance_versions(
     instance_id: str,
     current_user: User = Depends(get_current_user),
@@ -525,7 +555,9 @@ async def list_instance_versions(
 ):
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     _assert_instance_access(current_user, instance, db)
 
@@ -547,7 +579,9 @@ async def delete_instance(
     """Delete a form instance and all its version snapshots."""
     instance = db.query(FisaInstance).filter(FisaInstance.id == instance_id).first()
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     _assert_instance_access(current_user, instance, db)
 

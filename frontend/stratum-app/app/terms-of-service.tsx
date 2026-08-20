@@ -26,15 +26,15 @@ export default function TermsOfServiceScreen() {
 
         <Text style={styles.heading}>1. Acceptance</Text>
         <Text style={styles.paragraph}>
-          By accessing or using STRATUM, you agree to these Terms of Service and
-          the Privacy Policy.
+          By accessing or using STRATUM, you agree to these Terms of Service and the
+          Privacy Policy.
         </Text>
 
         <Text style={styles.heading}>2. Mandatory Cookies and Session Controls</Text>
         <Text style={styles.paragraph}>
-          STRATUM requires essential cookies and similar storage for
-          authentication and security. These controls are mandatory. If they are
-          disabled, you cannot use the service.
+          STRATUM requires essential cookies and similar storage for authentication
+          and security. These controls are mandatory. If they are disabled, you
+          cannot use the service.
         </Text>
 
         <Text style={styles.heading}>3. Accounts and Security</Text>
@@ -58,8 +58,8 @@ export default function TermsOfServiceScreen() {
 
         <Text style={styles.heading}>6. Availability and Changes</Text>
         <Text style={styles.paragraph}>
-          Features may change, pause, or be removed. We may update these terms,
-          and continued use after updates indicates acceptance.
+          Features may change, pause, or be removed. We may update these terms, and
+          continued use after updates indicates acceptance.
         </Text>
 
         <Text style={styles.heading}>7. Disclaimer</Text>
