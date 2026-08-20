@@ -34,6 +34,11 @@ from app.database import get_db
 from app.dependencies import build_maintainer_user, get_current_user
 from app.middleware import get_logger
 from app.models import User
+from app.name_validation import (
+    NameValidationError,
+    validate_display_name,
+    validate_username,
+)
 from app.rate_limiter import limiter
 from app.schemas import (
     AuthResponse,
@@ -363,15 +368,23 @@ async def register(
                 detail="Email already registered",
             )
 
-        # Validate username
-        username = payload.username.strip().lower()
+        import re
+
+        # Usernames may be handles, so only block derogatory / reserved terms.
+        # This also strips the reserved-name override prefix, so run it before
+        # the character-set check below.
+        try:
+            username = validate_username(payload.username)
+        except NameValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=e.message,
+            )
         if len(username) < 3 or len(username) > 30:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username must be 3-30 characters",
             )
-        import re
-
         if not re.match(r"^[a-z0-9_.-]+$", username):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -384,13 +397,23 @@ async def register(
                 detail="Username already taken",
             )
 
+        # The display name must look like a genuine person's name (no
+        # profanity, Morse, ASCII soup, digits or gibberish).
+        try:
+            display_name = validate_display_name(payload.display_name)
+        except NameValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=e.message,
+            )
+
         if settings.auth_mode_normalized == "local":
             user = User(
                 id=str(uuid.uuid4()),
                 firebase_uid=f"{LOCAL_UID_PREFIX}{uuid.uuid4().hex}",
                 email=normalized_email,
                 username=username,
-                display_name=payload.display_name,
+                display_name=display_name,
                 auth_provider=LOCAL_PROVIDER_ID,
                 password_hash=pwd_context.hash(payload.password),
                 created_at=datetime.utcnow(),
@@ -416,7 +439,7 @@ async def register(
         firebase_user = firebase_auth.create_user(
             email=normalized_email,
             password=payload.password,
-            display_name=payload.display_name,
+            display_name=display_name,
         )
 
         # Create user in our database
@@ -425,7 +448,7 @@ async def register(
             firebase_uid=firebase_user.uid,
             email=normalized_email,
             username=username,
-            display_name=payload.display_name,
+            display_name=display_name,
             auth_provider=PASSWORD_PROVIDER_ID,
             created_at=datetime.utcnow(),
             last_login=None,
@@ -600,7 +623,15 @@ async def update_profile(
     if request.username is not None:
         import re
 
-        username = request.username.strip().lower()
+        # Strips the override prefix and blocks derogatory / reserved terms;
+        # run before the character-set check below.
+        try:
+            username = validate_username(request.username)
+        except NameValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=e.message,
+            )
         if len(username) < 3 or len(username) > 30:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -624,7 +655,13 @@ async def update_profile(
         current_user.username = username
 
     if request.display_name is not None:
-        current_user.display_name = request.display_name
+        try:
+            current_user.display_name = validate_display_name(request.display_name)
+        except NameValidationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=e.message,
+            )
     if request.photo_url is not None:
         current_user.photo_url = request.photo_url
     if request.banner_url is not None:
@@ -719,7 +756,10 @@ async def check_username(
     """Check if a username is available. Public endpoint (no auth required)."""
     import re
 
-    username = username.strip().lower()
+    try:
+        username = validate_username(username)
+    except NameValidationError as e:
+        return {"available": False, "reason": e.message}
     if len(username) < 3 or len(username) > 30:
         return {"available": False, "reason": "Username must be 3-30 characters"}
     if not re.match(r"^[a-z0-9_.-]+$", username):

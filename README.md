@@ -8,8 +8,6 @@
 
 **STRATUM** (Latin for "layer") is a comprehensive digital platform for archaeologists to plan excavations, document findings, collaborate in real-time, and export standardized data.
 
-Built for the **FLL 2025-2026 UNEARTHED** Innovation Project by the **QuantumBits Team**.
-
 ---
 
 ## 📖 Documentation
